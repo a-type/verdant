@@ -1,0 +1,24 @@
+{
+	"$schema": "https://turborepo.org/schema.json",
+	"baseBranch": "origin/main",
+	"pipeline": {
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": [".next/**", "dist/**"]
+		},
+		"ci:test": {
+			"outputs": [],
+			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
+		},
+		"dev": {
+			"cache": false
+		},
+		"gen": {
+			"cache": false,
+			"outputs": ["**/.generated/*.ts"]
+		},
+		"preview": {
+			"cache": false
+		}
+	}
+}

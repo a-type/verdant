@@ -1,0 +1,15 @@
+{
+	"name": "@lofi/server",
+	"version": "0.1.0",
+	"main": "src/index.ts",
+	"type": "module",
+	"scripts": {},
+	"dependencies": {
+		"@lofi/common": "workspace:*",
+		"better-sqlite3": "^7.6.2"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.0",
+		"typescript": "^4.7.4"
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"name": "@lofi/common",
+	"version": "0.1.0",
+	"private": true,
+	"main": "src/index.ts",
+	"type": "module",
+	"module": "src/index.ts",
+	"scripts": {
+		"test": "vitest",
+		"ci:test": "vitest run"
+	},
+	"dependencies": {
+		"fast-json-patch": "^3.1.1",
+		"uuid": "^8.3.2"
+	},
+	"devDependencies": {
+		"@types/uuid": "^8.3.4",
+		"typescript": "^4.7.4",
+		"vitest": "^0.22.1"
+	}
+}
