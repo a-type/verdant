@@ -1,10 +1,16 @@
 {
 	"name": "@lofi/react",
 	"version": "0.1.0",
-	"main": "src/index.ts",
-	"module": "src/index.ts",
 	"type": "module",
-	"scripts": {},
+	"types": "./dist/esm/index.d.ts",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"files": [
+		"dist/"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+	},
 	"peerDependencies": {
 		"react": "^18.2.0"
 	},

@@ -1,13 +1,17 @@
 {
 	"name": "@lofi/web",
 	"version": "0.1.0",
-	"private": true,
-	"main": "src/index.ts",
-	"module": "src/index.ts",
 	"type": "module",
+	"types": "./dist/esm/index.d.ts",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"files": [
+		"dist/"
+	],
 	"scripts": {
 		"test": "vitest",
-		"ci:test": "vitest run"
+		"ci:test": "vitest run",
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
 	},
 	"dependencies": {
 		"@lofi/common": "workspace:*",

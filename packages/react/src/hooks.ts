@@ -7,9 +7,10 @@ import {
 	CollectionInMemoryFilters,
 	LiveDocument,
 	StorageCollection,
+	Presence as BasePresence,
+	Profile as BaseProfile,
 } from '@lofi/web';
 import {
-	BasePresence,
 	CollectionIndexFilter,
 	CollectionIndexName,
 	StorageCollectionSchema,
@@ -100,7 +101,7 @@ export function createHooks<
 	Schema extends StorageSchema<{
 		[k: string]: StorageCollectionSchema<any, any, any>;
 	}>,
-	Profile,
+	Profile extends BaseProfile,
 	Presence extends BasePresence,
 >(
 	storage: Storage<Schema, Profile, Presence>,

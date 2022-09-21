@@ -1,9 +1,16 @@
 {
 	"name": "@lofi/server",
 	"version": "0.1.0",
-	"main": "src/index.ts",
 	"type": "module",
-	"scripts": {},
+	"types": "./dist/esm/index.d.ts",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"files": [
+		"dist/"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+	},
 	"dependencies": {
 		"@lofi/common": "workspace:*",
 		"better-sqlite3": "^7.6.2"

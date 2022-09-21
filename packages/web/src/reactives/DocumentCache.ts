@@ -11,7 +11,7 @@ export interface DocumentMutations {
 }
 
 export class DocumentCache<
-	Collection extends StorageCollectionSchema<any, any>,
+	Collection extends StorageCollectionSchema<any, any, any>,
 > {
 	private docs: Map<string, LiveDocument<StorageDocument<Collection>>> =
 		new Map();
