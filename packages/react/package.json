@@ -1,6 +1,7 @@
 {
 	"name": "@lofi/react",
 	"version": "0.1.0",
+	"access": "public",
 	"type": "module",
 	"types": "./dist/esm/index.d.ts",
 	"main": "./dist/cjs/index.js",
