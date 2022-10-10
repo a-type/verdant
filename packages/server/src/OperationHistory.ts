@@ -1,18 +1,31 @@
-import { SyncOperation } from '@lofi/common';
+import { Operation } from '@lofi/common';
 import { Database } from 'better-sqlite3';
-import { OperationHistoryItemSpec } from './types.js';
+
+type StoredOperationHistoryItem = Omit<Operation, 'data'> & {
+	data: string;
+	libraryId: string;
+	replicaId: string;
+};
+
+export type OperationHistoryItem = Operation & {
+	replicaId: string;
+};
 
 export class OperationHistory {
 	constructor(private db: Database, private libraryId: string) {}
 
-	private hydrateOperation = (operation: OperationHistoryItemSpec) => {
+	private hydratePatch = ({
+		libraryId: _,
+		data,
+		...rest
+	}: StoredOperationHistoryItem): OperationHistoryItem => {
 		return {
-			...operation,
-			patch: JSON.parse(operation.patch),
+			...rest,
+			data: JSON.parse(data),
 		};
 	};
 
-	getAllFor = (documentId: string): SyncOperation[] => {
+	getAllFor = (documentId: string) => {
 		return this.db
 			.prepare(
 				`
@@ -22,10 +35,10 @@ export class OperationHistory {
     `,
 			)
 			.all(this.libraryId, documentId)
-			.map(this.hydrateOperation);
+			.map(this.hydratePatch);
 	};
 
-	getEarliest = (count: number): SyncOperation[] => {
+	getEarliest = (count: number) => {
 		return this.db
 			.prepare(
 				`
@@ -36,10 +49,10 @@ export class OperationHistory {
     `,
 			)
 			.all(this.libraryId, count)
-			.map(this.hydrateOperation);
+			.map(this.hydratePatch);
 	};
 
-	getAfter = (timestamp: string | null = null): SyncOperation[] => {
+	getAfter = (timestamp: string | null = null) => {
 		if (timestamp === null) {
 			return this.db
 				.prepare(
@@ -50,7 +63,7 @@ export class OperationHistory {
 				`,
 				)
 				.all(this.libraryId)
-				.map(this.hydrateOperation);
+				.map(this.hydratePatch);
 		}
 		return this.db
 			.prepare(
@@ -61,14 +74,14 @@ export class OperationHistory {
     `,
 			)
 			.all(this.libraryId, timestamp)
-			.map(this.hydrateOperation);
+			.map(this.hydratePatch);
 	};
 
 	/**
 	 * Returns all operations before the given timestamp
 	 * in ascending chronological order
 	 */
-	getBefore = (before: string): SyncOperation[] => {
+	getBefore = (before: string) => {
 		return this.db
 			.prepare(
 				`
@@ -78,48 +91,42 @@ export class OperationHistory {
 		`,
 			)
 			.all(this.libraryId, before)
-			.map(this.hydrateOperation);
+			.map(this.hydratePatch);
 	};
 
-	insert = (item: SyncOperation) => {
+	insert = (replicaId: string, item: Operation) => {
 		return this.db
 			.prepare(
 				`
-      INSERT OR REPLACE INTO OperationHistory (id, libraryId, collection
-      , documentId, patch, timestamp, replicaId)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId)
+      VALUES (?, ?, ?, ?, ?)
     `,
 			)
 			.run(
-				item.id,
 				this.libraryId,
-				item.collection,
-				item.documentId,
-				JSON.stringify(item.patch),
+				item.oid,
+				JSON.stringify(item.data),
 				item.timestamp,
-				item.replicaId,
+				replicaId,
 			);
 	};
 
-	insertAll = async (items: SyncOperation[]) => {
+	insertAll = async (replicaId: string, items: Operation[]) => {
 		const insertStatement = this.db.prepare(
 			`
-			INSERT OR REPLACE INTO OperationHistory (id, libraryId, collection
-			, documentId, patch, timestamp, replicaId)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId)
+			VALUES (?, ?, ?, ?, ?)
 			`,
 		);
 
 		const tx = this.db.transaction(() => {
 			for (const item of items) {
 				insertStatement.run(
-					item.id,
 					this.libraryId,
-					item.collection,
-					item.documentId,
-					JSON.stringify(item.patch),
+					item.oid,
+					JSON.stringify(item.data),
 					item.timestamp,
-					item.replicaId,
+					replicaId,
 				);
 			}
 		});
@@ -127,17 +134,22 @@ export class OperationHistory {
 		tx();
 	};
 
-	dropAll = async (items: SyncOperation[]) => {
+	dropAll = async (items: OperationHistoryItem[]) => {
 		const deleteStatement = this.db.prepare(
 			`
 			DELETE FROM OperationHistory
-			WHERE id = ?
+			WHERE libraryId = ? AND replicaId = ? AND oid = ? AND timestamp = ?
 			`,
 		);
 
 		this.db.transaction(() => {
 			for (const item of items) {
-				deleteStatement.run(item.id);
+				deleteStatement.run(
+					this.libraryId,
+					item.replicaId,
+					item.oid,
+					item.timestamp,
+				);
 			}
 		})();
 	};

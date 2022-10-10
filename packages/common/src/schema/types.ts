@@ -18,3 +18,13 @@ export type StorageSchema<
 		[k: string]: StorageCollectionSchema<any, any, any>;
 	},
 > = { version: number; collections: Collections };
+
+export type SchemaCollectionName<Schema extends StorageSchema<any>> =
+	Schema extends StorageSchema<infer Cs>
+		? Exclude<keyof Cs, number | symbol>
+		: never;
+
+export type SchemaCollection<
+	Schema extends StorageSchema<any>,
+	Name extends SchemaCollectionName<Schema>,
+> = Schema extends StorageSchema<infer Cs> ? Cs[Name] : never;

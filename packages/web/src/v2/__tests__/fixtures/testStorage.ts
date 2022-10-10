@@ -1,6 +1,8 @@
-import { createDefaultMigration } from '@lofi/common';
+import { collection, createDefaultMigration, schema } from '@lofi/common';
+// @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { Storage, collection, schema } from '../../src/index.js';
+import { WebsocketSync } from '../../Sync.js';
+import { StorageDescriptor } from '../../index.js';
 
 export const todoCollection = collection({
 	name: 'todo',
@@ -49,17 +51,16 @@ const testSchema = schema({
 	},
 });
 
-export async function createTestStorage() {
+export function createTestStorage() {
 	const idb = new IDBFactory();
-	const storage = new Storage({
+	const storage = new StorageDescriptor({
 		schema: testSchema,
-		indexedDB: idb,
-		syncOptions: {
-			host: 'none',
-		},
-		initialPresence: {},
 		migrations: [createDefaultMigration(testSchema)],
-	});
-	await storage.ready;
+		indexedDb: idb,
+		sync: new WebsocketSync({
+			host: 'none',
+		}),
+		initialPresence: {},
+	}).open();
 	return storage;
 }

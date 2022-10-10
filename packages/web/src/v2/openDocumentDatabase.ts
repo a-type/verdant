@@ -2,16 +2,16 @@ import {
 	Migration,
 	StorageSchema,
 	cloneDeep,
-	createPatch,
-	createDefaultMigration,
 	migrationRange,
+	diffToPatches,
+	getOid,
 } from '@lofi/common';
-import { Meta } from './Meta.js';
+import { Metadata } from './Metadata.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
 
-export function initializeDatabases<Schema extends StorageSchema<any>>({
+export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 	schema,
 	indexedDB = globalIDB,
 	migrations,
@@ -20,7 +20,7 @@ export function initializeDatabases<Schema extends StorageSchema<any>>({
 	schema: Schema;
 	migrations: Migration[];
 	indexedDB?: IDBFactory;
-	meta: Meta;
+	meta: Metadata;
 }) {
 	const { collections, version } = schema;
 	// initialize collections as indexddb databases
@@ -44,7 +44,7 @@ export function initializeDatabases<Schema extends StorageSchema<any>>({
 			for (const migration of toRun as Migration[]) {
 				for (const newCollection of migration.addedCollections) {
 					db.createObjectStore(newCollection, {
-						keyPath: collections[newCollection].primaryKey,
+						keyPath: migration.newSchema.collections[newCollection].primaryKey,
 						autoIncrement: false,
 					});
 				}
@@ -56,9 +56,8 @@ export function initializeDatabases<Schema extends StorageSchema<any>>({
 					const store = transaction.objectStore(collection);
 					// apply new indexes
 					for (const newIndex of migration.addedIndexes[collection] || []) {
-						const unique = newIndex.unique;
 						store.createIndex(newIndex.name, newIndex.name, {
-							unique,
+							unique: newIndex.unique,
 							multiEntry: newIndex.multiEntry,
 						});
 					}
@@ -74,6 +73,9 @@ export function initializeDatabases<Schema extends StorageSchema<any>>({
 						return new Promise((resolve, reject) => {
 							const store = transaction.objectStore(collection);
 							const cursorReq = store.openCursor();
+							function getMigrationNow() {
+								return meta.sync.time.zero(migration.version);
+							}
 							cursorReq.onsuccess = (event) => {
 								const cursor = cursorReq.result;
 								if (cursor) {
@@ -83,18 +85,13 @@ export function initializeDatabases<Schema extends StorageSchema<any>>({
 										// the migration has altered the shape of our document. we need
 										// to create the operation from the diff and write it to meta
 										// then recompute the document.
-										const patch = createPatch(original, newValue);
-										if (patch.length > 0) {
-											meta
-												.createMigrationOperation({
-													targetVersion: migration.version,
-													collection,
-													patch,
-													documentId: cursor.primaryKey.toString(),
-												})
-												.then((operation) => {
-													meta.insertLocalOperation(operation);
-												});
+										const patches = diffToPatches(
+											original,
+											newValue,
+											getMigrationNow,
+										);
+										if (patches.length > 0) {
+											meta.insertLocalOperation(patches);
 										}
 									}
 									cursor.continue();

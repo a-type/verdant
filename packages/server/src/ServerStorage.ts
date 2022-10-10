@@ -63,13 +63,12 @@ export class ServerStorage {
 				.prepare(
 					`
         CREATE TABLE IF NOT EXISTS OperationHistory (
-					id TEXT PRIMARY KEY NOT NULL,
           libraryId TEXT NOT NULL,
 					replicaId TEXT NOT NULL,
-          collection TEXT NOT NULL,
-          documentId TEXT NOT NULL,
-          patch TEXT NOT NULL,
-          timestamp INTEGER NOT NULL
+          oid TEXT NOT NULL,
+          data TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+					PRIMARY KEY (libraryId, replicaId, oid, timestamp)
         );
       `,
 				)
@@ -79,24 +78,10 @@ export class ServerStorage {
 				.prepare(
 					`
         CREATE TABLE IF NOT EXISTS DocumentBaseline (
-          documentId TEXT PRIMARY KEY NOT NULL,
+          oid TEXT PRIMARY KEY NOT NULL,
           snapshot TEXT,
           timestamp TEXT NOT NULL,
 					libraryId TEXT NOT NULL
-        );
-      `,
-				)
-				.run();
-
-			this.db
-				.prepare(
-					`
-        CREATE TABLE IF NOT EXISTS Document (
-          id TEXT PRIMARY KEY NOT NULL,
-          libraryId TEXT NOT NULL,
-          collection TEXT NOT NULL,
-          snapshot TEXT,
-          timestamp TEXT NOT NULL
         );
       `,
 				)

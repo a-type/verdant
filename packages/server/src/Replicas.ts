@@ -1,4 +1,3 @@
-import { ReplicaInfo, SERVER_REPLICA_ID } from '@lofi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfoSpec } from './types.js';
 
@@ -7,21 +6,9 @@ export class ReplicaInfos {
 
 	getOrCreate = (
 		replicaId: string,
-		clientId: string | null,
-	): ReplicaInfoSpec => {
-		if (replicaId !== SERVER_REPLICA_ID && clientId === null) {
-			throw new Error('Client ID must be provided for non-server replicas');
-		}
-
-		this.db
-			.prepare(
-				`
-      INSERT OR IGNORE INTO ReplicaInfo (id, libraryId, clientId)
-      VALUES (?, ?, ?)
-    `,
-			)
-			.run(replicaId, this.libraryId, clientId);
-		return this.db
+		clientId: string,
+	): { created: boolean; replicaInfo: ReplicaInfoSpec } => {
+		const replicaInfo = this.db
 			.prepare(
 				`
 			SELECT * FROM ReplicaInfo
@@ -29,6 +16,34 @@ export class ReplicaInfos {
 			`,
 			)
 			.get(replicaId);
+
+		if (!replicaInfo) {
+			this.db
+				.prepare(
+					`
+			INSERT INTO ReplicaInfo (id, clientId, libraryId)
+			VALUES (?, ?, ?)
+			`,
+				)
+				.run(replicaId, clientId, this.libraryId);
+
+			return {
+				created: true,
+				replicaInfo: {
+					id: replicaId,
+					clientId,
+					ackedLogicalTime: null,
+					oldestOperationLogicalTime: null,
+					lastSeenWallClockTime: null,
+					libraryId: this.libraryId,
+				},
+			};
+		}
+
+		return {
+			created: false,
+			replicaInfo,
+		};
 	};
 
 	getAll = (): ReplicaInfoSpec[] => {
@@ -89,5 +104,16 @@ export class ReplicaInfos {
 		`,
 			)
 			.get(this.libraryId).ackedLogicalTime;
+	};
+
+	delete = (replicaId: string) => {
+		return this.db
+			.prepare(
+				`
+			DELETE FROM ReplicaInfo
+			WHERE id = ?
+		`,
+			)
+			.run(replicaId);
 	};
 }

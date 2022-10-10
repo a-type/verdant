@@ -11,7 +11,14 @@ import {
 } from './fields.js';
 import { StorageSyntheticIndices } from './synthetics.js';
 
-export type ShapeFromProperty<T extends StoragePropertySchema<any>> =
+type StoragePropertyIsNullable<T extends StoragePropertySchema<any>> =
+	T extends { nullable?: boolean }
+		? T['nullable'] extends boolean
+			? true
+			: false
+		: false;
+
+export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
 	T['type'] extends 'string'
 		? string
 		: T['type'] extends 'number'
@@ -24,6 +31,11 @@ export type ShapeFromProperty<T extends StoragePropertySchema<any>> =
 		? ShapeFromFields<T['properties']>
 		: never;
 
+export type ShapeFromProperty<T extends StoragePropertySchema<any>> =
+	StoragePropertyIsNullable<T> extends true
+		? BaseShapeFromProperty<T> | null
+		: BaseShapeFromProperty<T>;
+
 export type ShapeFromFields<
 	T extends StorageFieldsSchema | NestedStorageFieldsSchema,
 > = {
@@ -35,6 +47,10 @@ export type ShapeFromComputeds<T extends StorageSyntheticIndices<any>> = {
 };
 
 export type StorageDocument<
+	Collection extends StorageCollectionSchema<any, any, any>,
+> = ShapeFromFields<Collection['fields']>;
+
+export type StorageDocumentInit<
 	Collection extends StorageCollectionSchema<any, any, any>,
 > = ShapeFromFields<Collection['fields']>;
 

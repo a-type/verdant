@@ -77,7 +77,7 @@ function expandArrayIndex(fields: IndexableFieldValue[]): string[] {
 			value = newValue;
 		} else {
 			for (const item of value) {
-				item.push(field.toString());
+				item.push(`${field}`);
 			}
 		}
 	}

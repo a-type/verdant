@@ -1,15 +1,15 @@
-import { ServerMessage, UserInfo } from '@lofi/common';
-import { EventSubscriber } from './EventSubscriber.js';
-import { Meta } from './Meta.js';
+import { ServerMessage, EventSubscriber } from '@lofi/common';
+import { Metadata } from './Metadata.js';
 import { Sync } from './Sync.js';
+import type { Presence, Profile, UserInfo } from '../index.js';
 
 export class PresenceManager<Profile, Presence> extends EventSubscriber<{
 	peerChanged: (userId: string, presence: any) => void;
 	selfChanged: (presence: any) => void;
 	peersChanged: (peers: Record<string, any>) => void;
 }> {
-	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
-	private _self = { profile: {} } as UserInfo<Profile, Presence>;
+	private _peers = {} as Record<string, UserInfo>;
+	private _self = { profile: {} } as UserInfo;
 	private _peerIds = new Array<string>();
 
 	get self() {
@@ -30,13 +30,13 @@ export class PresenceManager<Profile, Presence> extends EventSubscriber<{
 		return everyone;
 	}
 
-	constructor(private sync: Sync, private meta: Meta) {
+	constructor(private sync: Sync, private meta: Metadata) {
 		super();
 		this.sync.subscribe('message', this.onMessage);
 	}
 
 	private onMessage = async (message: ServerMessage) => {
-		const localReplicaInfo = await this.meta.getLocalReplicaInfo();
+		const localReplicaInfo = await this.meta.localReplica.get();
 
 		let peersChanged = false;
 		const peerIdsSet = new Set<string>(this.peerIds);
@@ -75,7 +75,7 @@ export class PresenceManager<Profile, Presence> extends EventSubscriber<{
 
 	update = async (presence: Partial<Presence>) => {
 		this.sync.send(
-			await this.meta.getPresenceUpdate({
+			await this.meta.messageCreator.createPresenceUpdate({
 				...this.self.presence,
 				...presence,
 			}),

@@ -3,15 +3,18 @@ import {
 	HybridLogicalClockTimestampProvider,
 	ServerMessage,
 	TimestampProvider,
+	EventSubscriber,
 } from '@lofi/common';
-import { EventSubscriber } from './EventSubscriber.js';
 
 export interface Sync {
 	subscribe(
 		event: 'message',
 		handler: (message: ServerMessage) => void,
 	): () => void;
-	subscribe(event: 'onlineChange', handler: () => void): () => void;
+	subscribe(
+		event: 'onlineChange',
+		handler: (online: boolean) => void,
+	): () => void;
 
 	send(message: ClientMessage): void;
 

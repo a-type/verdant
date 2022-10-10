@@ -1,147 +1,221 @@
-import jsp, { Operation } from 'fast-json-patch';
-const { compare, applyOperation, escapePathComponent, getValueByPointer } = jsp;
+/**
+ * High-level patch creation for use with complex nested objects.
+ */
 
-export type ListMoveOperation = {
-	op: 'list-move';
-	path: string;
-	from: number;
-	to: number;
-};
-export type ListPushOperation = {
-	op: 'list-push';
-	path: string;
-	value: any;
-};
-export type ListOperation = ListMoveOperation | ListPushOperation;
-export type PatchOperation = Operation | ListOperation;
-export type SyncPatchDiff = PatchOperation[];
-export type SyncPatch = SyncPatchDiff | 'DELETE';
+import { createRef, createSubOid, ObjectIdentifier } from './oids.js';
+import {
+	diffToPatches,
+	initialToPatches,
+	ObjectRef,
+	Operation,
+	PropertyName,
+} from './operation.js';
+import { isObject } from './utils.js';
 
-type KeyPath = (string | number | symbol)[];
+export class PatchCreator {
+	constructor(
+		private getNow: () => string,
+		private createSubId?: () => string,
+	) {}
 
-function constructNested(obj: any, path: KeyPath) {
-	let current: any = {};
-	const root = current;
-	for (let i = 0; i < path.length; i++) {
-		let level = i === path.length - 1 ? obj : {};
-		current[path[i]] = level;
-		current = level;
-	}
-	return root;
-}
+	createDiff = (from: any, to: any) => {
+		return diffToPatches(from, to, this.getNow, this.createSubId);
+	};
 
-export function createPatch(
-	from: any,
-	to: any,
-	keyPath?: KeyPath,
-): SyncPatchDiff {
-	if (keyPath?.length) {
-		return compare(
-			constructNested(from, keyPath),
-			constructNested(to, keyPath),
-		);
-	}
-	return compare(from, to);
-}
+	createInitialize = (obj: any, oid: ObjectIdentifier) => {
+		return initialToPatches(obj, oid, this.getNow, this.createSubId);
+	};
 
-function applyListMove(obj: any, operation: ListMoveOperation) {
-	const array = getValueByPointer(obj, operation.path);
-	if (!Array.isArray(array)) {
-		throw new Error(`Expected array at ${operation.path}, got ${array}`);
-	}
-	while (operation.to >= array.length) {
-		array.push(undefined);
-	}
-	array.splice(operation.to, 0, array.splice(operation.from, 1)[0]);
-	return applyOperation(obj, {
-		op: 'replace',
-		path: operation.path,
-		value: array,
-	}).newDocument;
-}
+	createSet = (
+		oid: ObjectIdentifier,
+		key: PropertyName,
+		value: any,
+	): Operation[] => {
+		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
+		// must be created
+		if (!isObject(value)) {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'set',
+						name: key,
+						value,
+					},
+				},
+			];
+		} else {
+			const itemOid = createSubOid(oid, this.createSubId);
+			return [
+				// since we're setting a complex nested object, we can initialize it wholesale.
+				// no diffing to do.
+				...initialToPatches(value, itemOid, this.getNow),
+				// then set the reference to the object
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'set',
+						value: createRef(itemOid),
+						name: key,
+					},
+				},
+			];
+		}
+	};
 
-function applyListPush(obj: any, operation: ListPushOperation) {
-	const array = getValueByPointer(obj, operation.path);
-	if (!Array.isArray(array)) {
-		throw new Error(`Expected array at ${operation.path}, got ${array}`);
-	}
-	array.push(operation.value);
-	return applyOperation(obj, {
-		op: 'replace',
-		path: operation.path,
-		value: array,
-	}).newDocument;
-}
+	createRemove = (oid: ObjectIdentifier, key: PropertyName): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'remove',
+					name: key,
+				},
+			},
+		];
+	};
 
-export function applyPatchOperation(obj: any, operation: PatchOperation): any {
-	if (operation.op === 'list-move') {
-		return applyListMove(obj, operation);
-	}
-	if (operation.op === 'list-push') {
-		return applyListPush(obj, operation);
-	}
-	return applyOperation(obj, operation).newDocument;
-}
+	createListPush = (oid: ObjectIdentifier, value: any): Operation[] => {
+		if (!isObject(value)) {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-push',
+						value,
+					},
+				},
+			];
+		} else {
+			const itemOid = createSubOid(oid, this.createSubId);
+			return [
+				...initialToPatches(value, itemOid, this.getNow),
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-push',
+						value: createRef(itemOid),
+					},
+				},
+			];
+		}
+	};
 
-export function applyPatch<T>(base: T, patch: SyncPatch) {
-	if (patch === 'DELETE') {
-		return undefined;
-	}
-	let cur = base;
-	for (const operation of patch) {
-		cur = applyPatchOperation(base, operation);
-	}
-	return cur;
-}
+	createListInsert = (
+		oid: ObjectIdentifier,
+		index: number,
+		value: any,
+	): Operation[] => {
+		if (!isObject(value)) {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-insert',
+						value,
+						index,
+					},
+				},
+			];
+		} else {
+			const itemOid = createSubOid(oid, this.createSubId);
+			return [
+				...initialToPatches(value, itemOid, this.getNow),
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-insert',
+						value: createRef(itemOid),
+						index,
+					},
+				},
+			];
+		}
+	};
 
-export function createListPushPatch(
-	item: any,
-	keyPath: KeyPath,
-): SyncPatchDiff {
-	return [
-		{
-			op: 'list-push',
-			path: `${keyPathToJsonPointer(keyPath)}`,
-			value: item,
-		},
-	];
-}
+	createListRemove = (oid: ObjectIdentifier, value: any): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'list-remove',
+					value,
+				},
+			},
+		];
+	};
 
-export function createListMovePatch(
-	from: number,
-	to: number,
-	keyPath: KeyPath,
-): SyncPatchDiff {
-	return [
-		{
-			op: 'list-move',
-			path: keyPathToJsonPointer(keyPath),
-			from,
-			to,
-		},
-	];
-}
+	createListDelete = (
+		oid: ObjectIdentifier,
+		index: number,
+		count: number = 1,
+	): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'list-delete',
+					index,
+					count,
+				},
+			},
+		];
+	};
 
-export function createAssignPatch(
-	item: any,
-	path: string | number | symbol,
-	keyPath: KeyPath,
-): SyncPatchDiff {
-	return [
-		{
-			op: 'replace',
-			path: keyPathToJsonPointer(keyPath.concat(path)),
-			value: item,
-		},
-	];
-}
+	createListMoveByRef = (
+		oid: ObjectIdentifier,
+		value: ObjectRef,
+		index: number,
+	): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'list-move-by-ref',
+					value,
+					index,
+				},
+			},
+		];
+	};
 
-export function keyPathToJsonPointer(keyPath: KeyPath) {
-	return (
-		'/' +
-		keyPath
-			.map((i) => i.toString())
-			.map(escapePathComponent)
-			.join('/')
-	);
+	createListMoveByIndex = (
+		oid: ObjectIdentifier,
+		fromIndex: number,
+		toIndex: number,
+	): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'list-move-by-index',
+					from: fromIndex,
+					to: toIndex,
+				},
+			},
+		];
+	};
+
+	createDelete = (oid: ObjectIdentifier): Operation[] => {
+		return [
+			{
+				oid,
+				timestamp: this.getNow(),
+				data: {
+					op: 'delete',
+				},
+			},
+		];
+	};
 }

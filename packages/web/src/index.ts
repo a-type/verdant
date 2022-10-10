@@ -1,10 +1,6 @@
-export { Storage, storage } from './Storage.js';
-export { StorageCollection } from './StorageCollection.js';
-export type { CollectionInMemoryFilters } from './StorageCollection.js';
+export * from './v2/index.js';
 export { collection, schema } from '@lofi/common';
 export type { StorageDocument } from '@lofi/common';
-export { subscribe, LiveQuery } from './reactives/index.js';
-export type { LiveDocument } from './reactives/index.js';
 
 export interface Presence {}
 

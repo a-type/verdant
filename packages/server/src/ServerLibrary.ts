@@ -1,26 +1,26 @@
 import {
 	AckMessage,
+	applyPatch,
 	ClientMessage,
 	HeartbeatMessage,
+	omit,
+	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
 	ReplicaInfo,
 	SERVER_REPLICA_ID,
 	SyncMessage,
-	SyncOperation,
 	SyncStep2Message,
 } from '@lofi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
 import { MessageSender } from './MessageSender.js';
-import { OperationHistory } from './OperationHistory.js';
-import { ServerCollectionManager } from './ServerCollection.js';
+import { OperationHistory, OperationHistoryItem } from './OperationHistory.js';
 import { Baselines } from './Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 
 export class ServerLibrary {
-	private collections = new ServerCollectionManager(this.db, this.id);
 	private replicas = new ReplicaInfos(this.db, this.id);
 	private operations = new OperationHistory(this.db, this.id);
 	private baselines = new Baselines(this.db, this.id);
@@ -32,7 +32,6 @@ export class ServerLibrary {
 		private profiles: UserProfileLoader<any>,
 		public readonly id: string,
 	) {
-		this.setupServerReplica();
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
@@ -61,51 +60,56 @@ export class ServerLibrary {
 	};
 
 	private handleOperation = (message: OperationMessage) => {
-		const collection = this.collections.open(message.op.collection);
-
 		const run = this.db.transaction(() => {
-			// apply the operation to the document
-			collection.receive(message);
+			// insert patches into history
+			this.operations.insertAll(message.replicaId, message.operations);
 
 			// update client's oldest timestamp
-			this.replicas.updateOldestOperationTimestamp(
-				message.op.replicaId,
-				message.op.timestamp,
-			);
+			if (message.oldestHistoryTimestamp) {
+				this.replicas.updateOldestOperationTimestamp(
+					message.replicaId,
+					message.oldestHistoryTimestamp,
+				);
+			}
 		});
 
 		run();
 
-		// update replica's oldest operation
-		this.replicas.updateOldestOperationTimestamp(
-			message.op.replicaId,
-			message.oldestHistoryTimestamp,
-		);
-
 		this.enqueueRebase();
 
 		// rebroadcast to whole library except the sender
-		this.rebroadcastOperations([message.op], [message.op.replicaId]);
+		this.rebroadcastOperations(message.replicaId, message.operations);
 	};
 
-	private rebroadcastOperations = (
-		ops: SyncOperation[],
-		ignoreReplicas: string[],
-	) => {
+	private removeExtraOperationData = (
+		operation: OperationHistoryItem,
+	): Operation => {
+		return omit(operation, ['replicaId']);
+	};
+
+	private rebroadcastOperations = (replicaId: string, ops: Operation[]) => {
 		this.sender.broadcast(
 			this.id,
 			{
 				type: 'op-re',
-				ops,
+				operations: ops,
+				replicaId,
 				globalAckTimestamp: this.replicas.getGlobalAck(),
 			},
-			ignoreReplicas,
+			[replicaId],
 		);
 	};
 
 	private handleSync = (message: SyncMessage, clientId: string) => {
 		const replicaId = message.replicaId;
-		const clientReplicaInfo = this.replicas.getOrCreate(replicaId, clientId);
+
+		if (message.resyncAll) {
+			// forget our local understanding of the replica and reset it
+			this.replicas.delete(replicaId);
+		}
+
+		const { created: isNewReplica, replicaInfo: clientReplicaInfo } =
+			this.replicas.getOrCreate(replicaId, clientId);
 
 		// respond to client
 
@@ -117,15 +121,16 @@ export class ServerLibrary {
 
 		this.sender.send(this.id, replicaId, {
 			type: 'sync-resp',
-			ops,
+			operations: ops.map(this.removeExtraOperationData),
 			baselines: baselines.map((baseline) => ({
-				documentId: baseline.documentId,
+				oid: baseline.oid,
 				snapshot: baseline.snapshot,
 				timestamp: baseline.timestamp,
 			})),
 			provideChangesSince: clientReplicaInfo.ackedLogicalTime,
 			globalAckTimestamp: this.replicas.getGlobalAck(),
 			peerPresence: this.presences.all(),
+			overwriteLocalData: !!message.resyncAll || isNewReplica,
 		});
 	};
 
@@ -133,22 +138,18 @@ export class ServerLibrary {
 		// store all incoming operations and baselines
 		this.baselines.insertAll(message.baselines);
 
-		console.debug('Storing', message.ops.length, 'operations');
-		this.operations.insertAll(message.ops);
-		this.rebroadcastOperations(message.ops, [message.replicaId]);
+		console.debug('Storing', message.operations.length, 'operations');
+		this.operations.insertAll(message.replicaId, message.operations);
+		this.rebroadcastOperations(message.replicaId, message.operations);
 
 		// update the client's ackedLogicalTime
-		const lastOperation = message.ops[message.ops.length - 1];
+		const lastOperation = message.operations[message.operations.length - 1];
 		if (lastOperation) {
 			this.replicas.updateAcknowledged(
 				message.replicaId,
 				lastOperation.timestamp,
 			);
 		}
-	};
-
-	private setupServerReplica = () => {
-		this.replicas.getOrCreate(SERVER_REPLICA_ID, null);
 	};
 
 	private handleAck = (message: AckMessage, clientId: string) => {
@@ -192,13 +193,16 @@ export class ServerLibrary {
 			.reduce((a, b) => (a && b && a > b ? a : b), '');
 
 		if (!newestOldestTimestamp) {
+			console.debug(
+				'Cannot rebase; some replicas do not have oldest history timestamp',
+			);
 			return;
 		}
 
 		// these are in forward chronological order
 		const ops = this.operations.getBefore(newestOldestTimestamp);
 
-		const opsToApply: Record<string, SyncOperation[]> = {};
+		const opsToApply: Record<string, OperationHistoryItem[]> = {};
 		// if we encounter a sequential operation in history which does
 		// not meet our conditions, we must ignore subsequent operations
 		// applied to that document.
@@ -211,14 +215,14 @@ export class ServerLibrary {
 				creator.oldestOperationLogicalTime > op.timestamp;
 			const isBeforeGlobalAck = globalAck > op.timestamp;
 			if (
-				!hardStops[op.documentId] &&
+				!hardStops[op.oid] &&
 				isBeforeCreatorsOldestHistory &&
 				isBeforeGlobalAck
 			) {
-				opsToApply[op.documentId] = opsToApply[op.documentId] || [];
-				opsToApply[op.documentId].push(op);
+				opsToApply[op.oid] = opsToApply[op.oid] || [];
+				opsToApply[op.oid].push(op);
 			} else {
-				hardStops[op.documentId] = true;
+				hardStops[op.oid] = true;
 			}
 		}
 
@@ -231,15 +235,16 @@ export class ServerLibrary {
 		// now that we know exactly which operations can be squashed,
 		// we can summarize that for the clients so they don't have to
 		// do this work!
-		const rebases = Object.entries(opsToApply).map(([documentId, ops]) => ({
-			documentId,
-			collection: ops[0].collection,
+		const rebases = Object.entries(opsToApply).map(([oid, ops]) => ({
+			oid,
 			upTo: ops[ops.length - 1].timestamp,
 		}));
-		this.sender.broadcast(this.id, {
-			type: 'rebases',
-			rebases,
-		});
+		if (rebases.length) {
+			this.sender.broadcast(this.id, {
+				type: 'rebases',
+				rebases,
+			});
+		}
 	};
 
 	private handleHeartbeat = (message: HeartbeatMessage, clientId: string) => {
@@ -282,6 +287,17 @@ export class ServerLibrary {
 			replicaId,
 			userId,
 		});
+	};
+
+	private applyOperations = (baseline: any, operations: Operation[]) => {
+		for (const op of operations) {
+			baseline = this.applyOperation(baseline, op);
+		}
+		return baseline;
+	};
+
+	private applyOperation = (baseline: any, operation: Operation) => {
+		return applyPatch(baseline, operation.data);
 	};
 }
 

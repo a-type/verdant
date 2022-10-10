@@ -59,7 +59,7 @@ export const outgoingMessages = new OutgoingMessages();
 Create a new instance of `ServerStorage` and pass in a file path where you want your SQLite database to be created. You must also pass in an implementation of the `UserProfiles` interface which provides basic immutable user information for the realtime presence features. This can be nothing if you don't need profiles in presence.
 
 ```ts
-import { ServerStorage, UserProfiles } from '@aglio/storage-server';
+import { ServerStorage, UserProfiles } from '@lofi/server';
 
 const storageDb = create(storageDbFile);
 
@@ -266,7 +266,7 @@ If you change the shape of your data, though, you will need to write a full migr
 Once you have a schema, you create a client like this
 
 ```ts
-import { Storage } from '@lofi/web';
+import { StorageDescriptor, WebSocketSync } from '@lofi/web';
 import { v1Schema, migration } from './v1.js';
 
 // extend built-in types to specify presence information
@@ -281,33 +281,33 @@ declare module '@lofi/web' {
 	}
 }
 
-const todos = new Storage({
-	syncOptions: {
-		host: 'wss://your-websocket-server.com',
-		schema: v1Schema,
-		// this array should be in order, 1 migration for each version
-		migrations: [migration],
-		initialPresence: {
-			emoji: '',
-		},
+const todosDesc = new StorageDescriptor({
+	sync: new WebSocketSync('wss://your-websocket-server.com'),
+	schema: v1Schema,
+	migrations: [migration],
+	initialPresence: {
+		emoji: '',
 	},
 });
+
+// asynchronously opens the database and performs migrations
+const todos = await todosDesc.open();
 ```
+
+Client startup is asynchronous, but you can access metadata on StorageDescriptor or pass it around to anything which needs storage context synchronously. Synchronous code which will need access to the same Storage instance can await `StorageDescriptor.open()` individually; they will all get the same final instance.
 
 #### Queries and mutations
 
-You can use this client in your app now to store and query data. Retrieve document collections with `.get`, which expose mutations and queries to use.
+You can use this client in your app now to store and query data. Use the root storage instance to create queries to find documents.
 
 ```ts
-const todoItems = todos.get('todoItems');
-
-const firstDoneItemQuery = todoItems.findOne({
+const firstDoneItemQuery = todos.findOne({
 	where: 'indexableDone',
 	equals: 'true',
 });
 
 // subscribe to changes in the query
-const unsubscribe = todoItems.subscribe(firstDoneItemQuery, (item) => {
+const unsubscribe = firstDoneItemQuery.subscribe((item) => {
 	console.log(item);
 });
 
@@ -315,50 +315,32 @@ const unsubscribe = todoItems.subscribe(firstDoneItemQuery, (item) => {
 const oneDoneItem = await firstDoneItemQuery.resolved;
 
 // modify a document
-await todoItems.update(oneDoneItem.id, {
-	done: false,
-});
+oneDoneItem.set('done', false);
 ```
 
-There are a few quirks to usage (hence why I'm considering redoing the query/document APIs).
+There are a few quirks to usage:
 
 - Queries return query objects immediately with empty data. Await `.resolved` to get the final results, or use `<source collection>.subscribe(query, callback)` to subscribe to changes over time.
 - Subscribed queries stay in memory and updating until you unsubscribe all subscribers
 - Subscribed queries of the same kind are cached - if you query the same exact thing twice, you'll get back the original query _if it has been subscribed_. Queries are only disposed when all subscribers leave.
 
-#### Live objects
+#### Documents and Entities
 
-Queries return "live objects," which are Proxies. They should give access to all properties on your document. They are also subscribable individually - so you can retrieve a document with a one-off query, and then listen for any changes made to it over time. Use the exported `subscribe` function for this, not the method on the collection. I know, sorry, this will get better.
+Queries return Documents. A Document provides a `.get` method to retrieve properties, and a `.set` to set them - as well as other utility methods depending on its type. All root documents are Object Entities, which also provide `.update`. Since Documents can contain arbitrary sub-objects, you can retrieve lists off them, which comes as List Entities and provide some common list methods too.
 
-```ts
-import { subscribe } from '@lofi/web';
-
-subscribe(oneDoneItem, () => {
-	console.log(oneDoneItem);
-});
-```
-
-Live objects also have helper methods depending on if it's an object or array. These are also pretty WIP, but the gist is
+These methods are, of course, typed based on the shape of your schema definitions!
 
 ```ts
-oneDoneItem.$update({ done: false });
+oneDoneItem.set('done', false);
 
-anItemWithAnArrayField.arrayField.push('foo');
+anItemWithAnArrayField.get('arrayField').push('foo');
 ```
 
-These will immediately update the in-memory document across all its subscribers (documents are also cached by identity). The change will propagate to storage and sync asynchronously. When the change is stored, the document will update and drop the in-memory changes.
-
-You can also assign properties directly:
-
-```ts
-oneDoneItem.done = false;
-```
-
-Proxies are good for that kind of thing, although I'm not sure the tradeoff is worth it.
+These will immediately update the in-memory document across all its subscribers (Entities are also cached by identity). The change will propagate to storage and sync asynchronously. When the change is stored, the document will update and drop the in-memory changes.
 
 ### Syncing
 
-Lofi doesn't sync by default. It's offline-first. I built it that way because my goal is to support nice local-only anonymous experiences, and add sync & realtime on as an incentive to sign up (and potentially subscribe) to your app.
+Lofi doesn't sync by default. It's offline-first, sync-optional. I built it that way because my goal is to support nice local-only anonymous experiences, and add sync & realtime on as an incentive to sign up (and potentially subscribe) to your app.
 
 To start syncing, call `storage.sync.start` (where `storage` is your instance of Storage, i.e. `todos` above) This will connect to your websocket server. It's up to you to add any authentication and authorization to reject unregistered or unsubscribed clients if you want to limit access to sync. Lofi itself will sync whoever you let connect.
 

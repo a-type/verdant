@@ -201,11 +201,7 @@ export function migrate<
           - Removed collections: ${removedCollections.join(', ')}
           - Changed collections: ${changedCollections.join(', ')}
           - New indexes: ${Object.keys(addedIndexes)
-						.map((col) =>
-							addedIndexes[col].map(
-								(i) => `${col}.${i.name}${i.multiEntry ? ' (multi)' : ''}`,
-							),
-						)
+						.map((col) => addedIndexes[col].map((i) => `${col}.${i.name}`))
 						.flatMap((i) => i)
 						.join(', ')}
           - Removed indexes: ${Object.keys(removedIndexes)
@@ -220,6 +216,8 @@ export function migrate<
 		allCollections: Object.keys(newSchema.collections),
 		changedCollections,
 		addedCollections,
+		oldSchema,
+		newSchema,
 	};
 }
 
@@ -231,6 +229,8 @@ export interface MigrationIndexDescription {
 
 export interface Migration {
 	version: number;
+	oldSchema: StorageSchema<any>;
+	newSchema: StorageSchema<any>;
 	migrate: (engine: MigrationEngine) => Promise<void>;
 	addedCollections: string[];
 	removedCollections: string[];

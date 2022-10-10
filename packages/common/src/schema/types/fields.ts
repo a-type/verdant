@@ -2,22 +2,27 @@ export type StorageStringFieldSchema = {
 	type: 'string';
 	indexed?: boolean;
 	unique?: boolean;
+	nullable?: boolean;
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';
 	indexed?: boolean;
 	unique?: boolean;
+	nullable?: boolean;
 };
 export type StorageBooleanFieldSchema = {
 	type: 'boolean';
+	nullable?: boolean;
 };
 export type StorageArrayFieldSchema = {
 	type: 'array';
 	items: NestedStorageFieldSchema;
+	nullable?: boolean;
 };
 export type StorageObjectFieldSchema = {
 	type: 'object';
 	properties: NestedStorageFieldsSchema;
+	nullable?: boolean;
 };
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
@@ -29,9 +34,11 @@ export type StorageFieldSchema =
 // nested versions don't have index info
 export type NestedStorageStringFieldSchema = {
 	type: 'string';
+	nullable?: boolean;
 };
 export type NestedStorageNumberFieldSchema = {
 	type: 'number';
+	nullable?: boolean;
 };
 
 export type NestedStorageFieldSchema =

@@ -1,7 +1,7 @@
 // client ID, and therefore library ID, is inferred
 
 import { DocumentBaseline } from './baseline.js';
-import { SyncOperation } from './operation.js';
+import { Operation, OperationPatch } from './operation.js';
 import { UserInfo } from './presence.js';
 
 export type HeartbeatMessage = {
@@ -25,17 +25,18 @@ export type AckMessage = {
 	timestamp: string;
 };
 
-// from connection metadata.
 export type OperationMessage = {
 	type: 'op';
 	replicaId: string;
-	op: SyncOperation;
-	oldestHistoryTimestamp: string;
+	operations: Operation[];
+	timestamp: string;
+	oldestHistoryTimestamp?: string;
 };
 
 export type OperationRebroadcastMessage = {
 	type: 'op-re';
-	ops: SyncOperation[];
+	operations: Operation[];
+	replicaId: string;
 	globalAckTimestamp: string;
 };
 
@@ -47,12 +48,18 @@ export type SyncMessage = {
 	timestamp: string;
 	/** the schema version known by this client */
 	schemaVersion: number;
+	/**
+	 * the client may have lost its local data, in which
+	 * case it may set this flag to be treated as a new client
+	 * and receive a full baseline
+	 */
+	resyncAll?: boolean;
 };
 
 export type SyncResponseMessage = {
 	type: 'sync-resp';
 	// operations this client should apply
-	ops: SyncOperation[];
+	operations: Operation[];
 	// baselines this client should apply
 	baselines: DocumentBaseline[];
 	/**
@@ -60,6 +67,14 @@ export type SyncResponseMessage = {
 	 * Null means all changes.
 	 */
 	provideChangesSince: string | null;
+	/**
+	 * If this flag is set, the client should discard local data
+	 * and reset to incoming data only. Used when a client requested
+	 * resyncAll in its sync message, or for clients which have been
+	 * offline for too long. When specified true, provideChangesSince
+	 * should be ignored.
+	 */
+	overwriteLocalData: boolean;
 	/**
 	 * Update client on the global ack
 	 */
@@ -75,7 +90,7 @@ export type SyncStep2Message = {
 	type: 'sync-step2';
 	replicaId: string;
 	/** Any new operations created since the requested time */
-	ops: SyncOperation[];
+	operations: Operation[];
 	/** Any new baselines created since the requested time */
 	baselines: DocumentBaseline[];
 	/** The time this message was sent. Can be used for ack. */
@@ -89,7 +104,7 @@ export type RebasesMessage = {
 	 * for this document before this timestamp can
 	 * be applied and dropped.
 	 */
-	rebases: { collection: string; documentId: string; upTo: string }[];
+	rebases: { oid: string; upTo: string }[];
 };
 
 export type PresenceUpdateMessage = {

@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { StorageCollection } from '../src/StorageCollection.js';
-import { createTestStorage, todoCollection } from './fixtures/testStorage.js';
+import { createTestStorage } from './fixtures/testStorage.js';
+import type { Storage } from '../index.js';
 
 describe('storage queries', () => {
-	async function addTestingItems(
-		todos: StorageCollection<typeof todoCollection>,
-	) {
-		let items = new Array<any>();
+	async function addTestingItems(storage: Storage<any>) {
+		let items = [];
 
 		for (const item of [
 			{
@@ -52,18 +50,17 @@ describe('storage queries', () => {
 				category: 'specific',
 			},
 		]) {
-			items.push(await todos.create(item));
+			items.push(await storage.create('todo', item));
 		}
 		return items;
 	}
 
 	it('can query simple compound indexes by match and order', async () => {
 		const storage = await createTestStorage();
-		const todos = storage.get('todo');
 
-		const items = await addTestingItems(todos);
+		const items = await addTestingItems(storage);
 
-		const query = todos.getAll({
+		const query = storage.queryMaker.findAll('todo', {
 			where: 'categorySortedByDone',
 			match: {
 				category: 'general',
@@ -72,22 +69,19 @@ describe('storage queries', () => {
 		});
 		const results = await query.resolved;
 
-		expect(results.map((i) => i.id)).toEqual([
-			items[0].id,
-			items[2].id,
-			items[1].id,
+		expect(results.map((i) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+			items[1].get('id'),
 		]);
 	});
 
 	it('can query array-based compound indexes by match and order', async () => {
 		const storage = await createTestStorage();
-		const todos = storage.get('todo');
 
-		const items = await addTestingItems(todos);
+		const items = await addTestingItems(storage);
 
-		console.log(await todos.__unsafe__test_api__.getAllRaw());
-
-		const query = todos.getAll({
+		const query = storage.queryMaker.findAll('todo', {
 			where: 'tagsSortedByDone',
 			match: {
 				tags: 'a',
@@ -96,11 +90,11 @@ describe('storage queries', () => {
 		});
 		const results = await query.resolved;
 
-		expect(results.map((i) => i.id)).toEqual([
-			items[0].id,
-			items[4].id,
-			items[1].id,
-			items[5].id,
+		expect(results.map((i) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[4].get('id'),
+			items[1].get('id'),
+			items[5].get('id'),
 		]);
 	});
 });

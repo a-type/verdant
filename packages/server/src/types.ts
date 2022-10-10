@@ -1,22 +1,9 @@
-import { DocumentBaseline, ReplicaInfo, SyncOperation } from '@lofi/common';
-
-export type OperationHistoryItemSpec = Omit<SyncOperation, 'patch'> & {
-	libraryId: string;
-	patch: string;
-};
+import { DocumentBaseline, Operation, ReplicaInfo } from '@lofi/common';
 
 export interface DocumentBaselineSpec
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {
 	snapshot: string;
 	libraryId: string;
-}
-
-export interface DocumentSpec {
-	id: string;
-	libraryId: string;
-	collection: string;
-	snapshot: any;
-	timestamp: string;
 }
 
 export interface ReplicaInfoSpec extends ReplicaInfo {
