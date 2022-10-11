@@ -1,6 +1,6 @@
 {
 	"name": "@lofi-db/react",
-	"version": "0.1.0-rc.1",
+	"version": "0.1.0-rc.2",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -18,7 +18,7 @@
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",
-		"@lofi-db/web": "^0.1.0-rc.1"
+		"@lofi-db/web": "^0.1.0-rc.2"
 	},
 	"dependencies": {
 		"@lofi-db/common": "workspace:*",
