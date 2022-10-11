@@ -27,159 +27,50 @@ Here's a rough list of things which may change in the near future:
 
 ### Server
 
-The server code needs to be plugged into a websocket server. Right now you also have to do a little bookkeeping to manage client identities. Hopefully the DX of this will improve soon.
+The server can be run standalone, or plugged into an existing HTTP server. It requires a few things to be constructed:
 
-#### Sending messages to clients
+- A path to a SQLite database to store data
+- An authorization function which it uses to determine connected client identity and library access
+- Optional: an interface implementation to provide more detailed user profile information for presence features
 
-First you need to create a class which implements `MessageSender`, which lofi's server code will use to emit messages back to clients. A simple implementation could be an EventEmitter, which your socket server could listen to and forward those messages to the appropriate client socket connection.
-
-```ts
-import { ServerMessage, MessageSender } from '@lofi-db/server';
-
-class OutgoingMessages extends EventEmitter implements MessageSender {
-	broadcast = (
-		libraryId: string,
-		message: ServerMessage,
-		omitReplicas: string[] = [],
-	) => {
-		this.emit(`broadcast`, libraryId, message, omitReplicas);
-	};
-
-	send = (libraryId: string, replicaId: string, message: ServerMessage) => {
-		this.emit(`send`, replicaId, message);
-	};
-}
-
-// exposing a singleton to be used by the socket server
-export const outgoingMessages = new OutgoingMessages();
-```
-
-#### Creating the storage layer
-
-Create a new instance of `ServerStorage` and pass in a file path where you want your SQLite database to be created. You must also pass in an implementation of the `UserProfiles` interface which provides basic immutable user information for the realtime presence features. This can be nothing if you don't need profiles in presence.
+Create a server like this:
 
 ```ts
-import { ServerStorage, UserProfiles } from '@lofi-db/server';
+import { Server } from '@lofi-db/server';
 
-const storageDb = create(storageDbFile);
+const server = new Server({
+	databaseFile: 'path/to/db.sqlite',
+	authorize: (req: IncomingMessage) => {
+		// here you may, for example, lookup a cookie on the request to log the user in.
 
-class Profiles implements UserProfiles<any> {
-	get = (userId: string) => {
-		// for example, if you have your own database with registered users, you
-		// can load them here. results will be cached.
-		return prisma.profile.findUnique({ where: { id: userId } });
-	};
-}
-
-export const storage = new ServerStorage(
-	storageDb,
-	outgoingMessages,
-	new Profiles(),
-);
-```
-
-#### Connecting storage and messaging to your socket server
-
-Now what remains is to hook these pieces up to a server that can manage incoming websocket connections. As mentioned, at the moment there is some bookkeeping to do so we can associate which messages come from which connection, and which connections belong to which library. With no authentication, this might look like this...
-
-```ts
-import { WebSocketServer, WebSocket } from 'ws';
-import { ServerMessage, ClientMessage } from '@lofi-db/server';
-import { storage } from './storage.js';
-import { outgoingMessages } from './outgoingMessages.js';
-
-const wss = new WebSocketServer();
-
-/**
- * Once a connection identifies its replicaId (via the
- * initial sync message), we associate them so we can deliver
- * replica-specific messages to the right client.
- */
-const replicaToConnectionMap = new Map<string, WebSocket>();
-/**
- * The reverse lookup map
- */
-const connectionToReplicaIdMap = new WeakMap<WebSocket, string>();
-/**
- * Likewise we group clients by libraryId so we can broadcast
- * to all clients in a library.
- */
-const libraryToConnectionMap = new Map<string, WebSocket[]>();
-
-wss.on('connection', (ws: WebSocket) => {
-	// add the client to its library group
-	const libraryId = identity.planId;
-	const connections = libraryToConnectionMap.get(libraryId) || [];
-	connections.push(ws);
-	libraryToConnectionMap.set(libraryId, connections);
-
-	ws.on('message', (message) => {
-		const data = JSON.parse(message.toString()) as ClientMessage;
-
-		// the first message from a connection is always "sync" -
-		// this is where we detect replicaId and store that association.
-		if (data.type === 'sync') {
-			replicaToConnectionMap.set(data.replicaId, ws);
-			connectionToReplicaIdMap.set(ws, data.replicaId);
-		}
-
-		// if you have authentication and users in your app, you'll want
-		// to associate this websocket connection to one and reference their
-		// userId here. this can be done in a variety of ways, like with a special
-		// starting message. I prefer to use HTTP cookies which are detected on
-		// the UPGRADE event of the socket just like a normal request, but that
-		// code is more complicated than this example.
-		// https://github.com/websockets/ws#client-authentication
-		const userId = 'anonymous';
-		storage.receive(identity.planId, data, userId);
-	});
-
-	// when a client disconnects, we remove them from presence using the
-	// replicaId and library associations we establish above
-	ws.on('close', () => {
-		const replicaId = connectionToReplicaIdMap.get(ws);
-		if (!replicaId) {
-			console.warn('Unknown replica disconnected');
-			return;
-		}
-
-		// this is the line which removes the client's presence
-		storage.remove(identity.planId, replicaId);
-
-		if (replicaToConnectionMap.has(replicaId)) {
-			replicaToConnectionMap.delete(replicaId);
-		}
-		const connections = libraryToConnectionMap.get(libraryId);
-		if (connections) {
-			connections.splice(connections.indexOf(ws), 1);
-		}
-	});
-});
-
-// listen for outgoing messages on our bus and
-// forward them to the appropriate clients
-outgoingMessages.on(
-	'broadcast',
-	(libraryId: string, message: ServerMessage, omitReplicas: string[]) => {
-		const connections = libraryToConnectionMap.get(libraryId) || [];
-		connections.forEach((connection) => {
-			const replicaId = connectionToReplicaIdMap.get(connection);
-			if (replicaId && !omitReplicas.includes(replicaId)) {
-				connection.send(JSON.stringify(message));
-			}
-		});
+		// below is an idea for anonymous access: the client connects to
+		// /lofi/<library ID> and gets a randomly assigned userId.
+		const libraryId = req.url.replace('/lofi/', '');
+		return {
+			libraryId,
+			userId: uuid(),
+		};
 	},
-);
+	// below fields are optional
+	profiles: {
+		get: async (userId: string) => {
+			// you could fetch a profile record from a database here to augment
+			// this profile with name, image, etc.
+			// values will be cached, so don't worry too much about timing.
+			return { id: userId };
+		},
+	},
+	// supposing you're using Express or another server already,
+	// you can attach lofi to it instead of running it separately.
+	httpServer: myExistingServer,
+});
 
-outgoingMessages.on('send', (replicaId: string, message: ServerMessage) => {
-	const connection = replicaToConnectionMap.get(replicaId);
-	if (connection) {
-		connection.send(JSON.stringify(message));
-	}
+// if you did not provide your own http server, call listen to begin
+// serving requests
+server.listen(8080, () => {
+	console.log('Ready!');
 });
 ```
-
-This is not the simplest code, and not nearly as easy to set up as I'd like it to be! Bear with me as I identify ways to internalize some of these concerns into lofi itself.
 
 ### Client
 
