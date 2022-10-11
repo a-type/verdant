@@ -1,7 +1,6 @@
-import { assert } from '@aglio/tools';
 import { v4 } from 'uuid';
 import { ObjectRef } from './operation.js';
-import { isObject } from './utils.js';
+import { isObject, assert } from './utils.js';
 
 export type ObjectIdentifier = string;
 

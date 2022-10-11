@@ -9,8 +9,8 @@ import {
 	StorageDocument,
 	StorageDocumentInit,
 	StorageSchema,
+	assert,
 } from '@lofi-db/common';
-import { assert } from '@aglio/tools';
 import { ObjectEntity } from './Entity.js';
 import { EntityStore } from './EntityStore.js';
 import { Metadata } from './Metadata.js';

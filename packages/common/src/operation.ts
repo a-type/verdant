@@ -1,4 +1,3 @@
-import { assert } from '@aglio/tools';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -10,7 +9,7 @@ import {
 	ObjectIdentifier,
 	removeOid,
 } from './oids.js';
-import { isObject } from './utils.js';
+import { isObject, assert } from './utils.js';
 
 // export type ObjectIdentifier<
 // 	CollectionName extends string = string,

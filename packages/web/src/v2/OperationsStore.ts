@@ -5,8 +5,8 @@ import {
 	getOidRoot,
 	ObjectIdentifier,
 	Operation,
+	assert,
 } from '@lofi-db/common';
-import { assert } from '@aglio/tools';
 import { IDBService } from './IDBService.js';
 
 export type ClientOperation = Operation & {

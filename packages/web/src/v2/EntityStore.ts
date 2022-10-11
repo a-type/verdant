@@ -10,13 +10,13 @@ import {
 	OperationPatch,
 	StorageCollectionSchema,
 	StorageSchema,
+	assert,
 } from '@lofi-db/common';
 import { Sync } from './Sync.js';
 import { EntityBase, ObjectEntity, updateEntity } from './Entity.js';
 import { storeRequestPromise } from './idb.js';
 import { Metadata } from './Metadata.js';
 import { computeCompoundIndices, computeSynthetics } from './indexes.js';
-import { assert } from '@aglio/tools';
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
