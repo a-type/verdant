@@ -1,4 +1,4 @@
-import { UserInfo } from '@lofi/common';
+import { UserInfo } from '@lofi-db/common';
 import EventEmitter from 'events';
 
 /**

@@ -1,5 +1,5 @@
 {
-	"name": "@lofi/common",
+	"name": "@lofi-db/common",
 	"version": "0.1.0-rc.1",
 	"access": "public",
 	"type": "module",

@@ -1,4 +1,4 @@
-import { collection, createDefaultMigration, schema } from '@lofi/common';
+import { collection, createDefaultMigration, schema } from '@lofi-db/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { WebsocketSync } from '../../Sync.js';

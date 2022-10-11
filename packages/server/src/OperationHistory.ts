@@ -1,4 +1,4 @@
-import { Operation } from '@lofi/common';
+import { Operation } from '@lofi-db/common';
 import { Database } from 'better-sqlite3';
 
 type StoredOperationHistoryItem = Omit<Operation, 'data'> & {

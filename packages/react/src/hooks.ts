@@ -7,14 +7,14 @@ import {
 	UserInfo,
 	Entity,
 	StorageDescriptor,
-} from '@lofi/web';
+} from '@lofi-db/web';
 import {
 	CollectionIndexFilter,
 	CollectionIndexName,
 	SchemaCollectionName,
 	StorageCollectionSchema,
 	StorageSchema,
-} from '@lofi/common';
+} from '@lofi-db/common';
 
 type QueryHookResult<T> = T;
 

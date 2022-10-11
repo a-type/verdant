@@ -10,7 +10,7 @@ import {
 	OperationPatch,
 	StorageCollectionSchema,
 	StorageSchema,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { Sync } from './Sync.js';
 import { EntityBase, ObjectEntity, updateEntity } from './Entity.js';
 import { storeRequestPromise } from './idb.js';

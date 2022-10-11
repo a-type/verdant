@@ -1,4 +1,4 @@
-import { applyPatch, DocumentBaseline, Operation } from '@lofi/common';
+import { applyPatch, DocumentBaseline, Operation } from '@lofi-db/common';
 import { Database } from 'better-sqlite3';
 import { DocumentBaselineSpec } from './types.js';
 

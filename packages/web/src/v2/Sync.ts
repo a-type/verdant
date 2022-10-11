@@ -4,7 +4,7 @@ import {
 	ServerMessage,
 	TimestampProvider,
 	EventSubscriber,
-} from '@lofi/common';
+} from '@lofi-db/common';
 
 export interface Sync {
 	subscribe(

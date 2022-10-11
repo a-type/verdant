@@ -11,7 +11,7 @@ import {
 	SERVER_REPLICA_ID,
 	SyncMessage,
 	SyncStep2Message,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
 import { MessageSender } from './MessageSender.js';

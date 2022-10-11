@@ -1,5 +1,5 @@
 {
-	"name": "@lofi/react",
+	"name": "@lofi-db/react",
 	"version": "0.1.0-rc.1",
 	"access": "public",
 	"type": "module",
@@ -16,8 +16,8 @@
 		"react": "^18.2.0"
 	},
 	"dependencies": {
-		"@lofi/common": "workspace:*",
-		"@lofi/web": "workspace:*",
+		"@lofi-db/common": "workspace:*",
+		"@lofi-db/web": "workspace:*",
 		"suspend-react": "^0.0.8"
 	},
 	"devDependencies": {

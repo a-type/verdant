@@ -6,7 +6,7 @@ import {
 	PatchCreator,
 	StorageSchema,
 	substituteRefsWithObjects,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
 import { getSizeOfObjectStore } from './idb.js';

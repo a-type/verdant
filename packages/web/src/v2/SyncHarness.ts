@@ -4,7 +4,7 @@ import {
 	ServerMessage,
 	EventSubscriber,
 	getOidRoot,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import type { Sync } from './Sync.js';
 import { EntityStore } from './EntityStore.js';
 import { Metadata } from './Metadata.js';

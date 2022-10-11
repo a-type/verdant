@@ -11,7 +11,7 @@ import {
 	Operation,
 	OperationPatch,
 	removeOid,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { EntityStore } from './EntityStore.js';
 
 export const UPDATE = '@@update';

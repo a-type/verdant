@@ -1,4 +1,4 @@
-import { ServerMessage, EventSubscriber } from '@lofi/common';
+import { ServerMessage, EventSubscriber } from '@lofi-db/common';
 import { Metadata } from './Metadata.js';
 import { Sync } from './Sync.js';
 import type { Presence, Profile, UserInfo } from '../index.js';

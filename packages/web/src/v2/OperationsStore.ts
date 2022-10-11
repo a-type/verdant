@@ -5,7 +5,7 @@ import {
 	getOidRoot,
 	ObjectIdentifier,
 	Operation,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { assert } from '@aglio/tools';
 import { IDBService } from './IDBService.js';
 

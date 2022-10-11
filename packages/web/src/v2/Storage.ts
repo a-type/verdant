@@ -1,4 +1,8 @@
-import { Migration, SchemaCollectionName, StorageSchema } from '@lofi/common';
+import {
+	Migration,
+	SchemaCollectionName,
+	StorageSchema,
+} from '@lofi-db/common';
 import { Sync } from './Sync.js';
 import { Metadata, openMetadataDatabase } from './Metadata.js';
 import { QueryMaker } from './QueryMaker.js';

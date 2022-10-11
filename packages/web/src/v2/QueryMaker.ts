@@ -13,7 +13,7 @@ import {
 	StorageDocumentInit,
 	SchemaCollection,
 	SchemaCollectionName,
-} from '@lofi/common';
+} from '@lofi-db/common';
 import { assert } from '@aglio/tools';
 import { ObjectEntity } from './Entity.js';
 import { Query } from './Query.js';
