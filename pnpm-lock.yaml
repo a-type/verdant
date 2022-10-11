@@ -29,8 +29,8 @@ importers:
 
   packages/react:
     specifiers:
-      '@lofi/common': workspace:*
-      '@lofi/web': workspace:*
+      '@lofi-db/common': workspace:*
+      '@lofi-db/web': workspace:*
       '@types/react': ^18.0.17
       jsdom: ^20.0.0
       react: ^18.2.0
@@ -38,10 +38,10 @@ importers:
       typescript: ^4.7.4
       vitest: ^0.22.1
     dependencies:
-      '@lofi/common': link:../common
-      '@lofi/web': link:../web
+      '@lofi-db/common': link:../common
       suspend-react: 0.0.8_react@18.2.0
     devDependencies:
+      '@lofi-db/web': link:../web
       '@types/react': 18.0.20
       jsdom: 20.0.0
       react: 18.2.0
