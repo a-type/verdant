@@ -61,6 +61,7 @@ export function createTestStorage() {
 			host: 'none',
 		}),
 		initialPresence: {},
+		namespace: 'test',
 	}).open();
 	return storage;
 }

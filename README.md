@@ -179,6 +179,7 @@ const todosDesc = new StorageDescriptor({
 	initialPresence: {
 		emoji: '',
 	},
+	namespace: 'todos',
 });
 
 // asynchronously opens the database and performs migrations

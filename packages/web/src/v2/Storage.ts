@@ -41,6 +41,7 @@ export class Storage<Schema extends StorageSchema<any>> {
 		private documentDb: IDBDatabase,
 		public sync: Sync,
 		initialPresence: Presence,
+		private namespace: string,
 	) {
 		this.collectionNames = Object.keys(
 			schema.collections,
@@ -116,8 +117,10 @@ export class Storage<Schema extends StorageSchema<any>> {
 
 	__dangerous__resetLocal = async () => {
 		this.sync.stop();
-		const req1 = indexedDB.deleteDatabase('meta');
-		const req2 = indexedDB.deleteDatabase('collections');
+		const req1 = indexedDB.deleteDatabase([this.namespace, 'meta'].join('_'));
+		const req2 = indexedDB.deleteDatabase(
+			[this.namespace, 'collections'].join('_'),
+		);
 		await Promise.all([
 			new Promise((resolve, reject) => {
 				req1.onsuccess = resolve;
@@ -138,6 +141,7 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	sync: Sync;
 	indexedDb?: IDBFactory;
 	initialPresence: Presence;
+	namespace: string;
 }
 
 /**
@@ -153,12 +157,14 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 	private rejectReady!: (err: Error) => void;
 	private _resolvedValue: Storage<Schema> | undefined;
 	private _initializing = false;
+	private _namespace: string;
 
 	constructor(private readonly init: StorageInitOptions<Schema>) {
 		this._readyPromise = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
 			this.rejectReady = reject;
 		});
+		this._namespace = init.namespace;
 	}
 
 	private initialize = async (init: StorageInitOptions<Schema>) => {
@@ -167,10 +173,14 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		}
 		this._initializing = true;
 		try {
-			const metaDb = await openMetadataDatabase(init.indexedDb);
+			const metaDb = await openMetadataDatabase(
+				this._namespace,
+				init.indexedDb,
+			);
 			const meta = new Metadata(metaDb, init.sync, init.schema);
 
 			const documentDb = await openDocumentDatabase({
+				namespace: this._namespace,
 				schema: init.schema,
 				meta,
 				migrations: init.migrations,
@@ -184,6 +194,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				documentDb,
 				init.sync,
 				init.initialPresence,
+				this._namespace,
 			);
 			this.resolveReady(storage);
 			this._resolvedValue = storage;

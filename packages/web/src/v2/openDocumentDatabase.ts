@@ -16,18 +16,23 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 	indexedDB = globalIDB,
 	migrations,
 	meta,
+	namespace,
 }: {
 	schema: Schema;
 	migrations: Migration[];
 	indexedDB?: IDBFactory;
 	meta: Metadata;
+	namespace: string;
 }) {
 	const { collections, version } = schema;
 	// initialize collections as indexddb databases
 	const keys = Object.keys(collections);
 	console.log('Initializing database for:', keys);
 	const database = new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open('collections', version);
+		const request = indexedDB.open(
+			[namespace, 'collections'].join('_'),
+			version,
+		);
 		request.onupgradeneeded = async (event) => {
 			const db = request.result;
 

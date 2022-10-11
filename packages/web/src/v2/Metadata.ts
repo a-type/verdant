@@ -295,9 +295,12 @@ export class Metadata {
 	};
 }
 
-export function openMetadataDatabase(indexedDB: IDBFactory = window.indexedDB) {
+export function openMetadataDatabase(
+	namespace: string,
+	indexedDB: IDBFactory = window.indexedDB,
+) {
 	return new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open('meta', 1);
+		const request = indexedDB.open([namespace, 'meta'].join('_'), 1);
 		request.onupgradeneeded = (event) => {
 			const db = request.result;
 			// version 1: operations list, baselines, and local info
