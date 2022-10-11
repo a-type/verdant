@@ -1,5 +1,10 @@
 export * from './v2/index.js';
-export { collection, schema } from '@lofi-db/common';
+export {
+	collection,
+	schema,
+	createDefaultMigration,
+	migrate,
+} from '@lofi-db/common';
 export type { StorageDocument } from '@lofi-db/common';
 
 export interface Presence {}
