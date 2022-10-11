@@ -34,7 +34,7 @@ The server code needs to be plugged into a websocket server. Right now you also 
 First you need to create a class which implements `MessageSender`, which lofi's server code will use to emit messages back to clients. A simple implementation could be an EventEmitter, which your socket server could listen to and forward those messages to the appropriate client socket connection.
 
 ```ts
-import { ServerMessage, MessageSender } from '@lofi/server';
+import { ServerMessage, MessageSender } from '@lofi-db/server';
 
 class OutgoingMessages extends EventEmitter implements MessageSender {
 	broadcast = (
@@ -59,7 +59,7 @@ export const outgoingMessages = new OutgoingMessages();
 Create a new instance of `ServerStorage` and pass in a file path where you want your SQLite database to be created. You must also pass in an implementation of the `UserProfiles` interface which provides basic immutable user information for the realtime presence features. This can be nothing if you don't need profiles in presence.
 
 ```ts
-import { ServerStorage, UserProfiles } from '@lofi/server';
+import { ServerStorage, UserProfiles } from '@lofi-db/server';
 
 const storageDb = create(storageDbFile);
 
@@ -84,7 +84,7 @@ Now what remains is to hook these pieces up to a server that can manage incoming
 
 ```ts
 import { WebSocketServer, WebSocket } from 'ws';
-import { ServerMessage, ClientMessage } from '@lofi/server';
+import { ServerMessage, ClientMessage } from '@lofi-db/server';
 import { storage } from './storage.js';
 import { outgoingMessages } from './outgoingMessages.js';
 
@@ -188,7 +188,7 @@ This is not the simplest code, and not nearly as easy to set up as I'd like it t
 The first step client-side is to define a schema of what kind of documents you are working with. A schema looks like this:
 
 ```ts
-import { collection, schema, createDefaultMigration } from '@lofi/web';
+import { collection, schema, createDefaultMigration } from '@lofi-db/web';
 
 const todoItemCollection = collection({
 	name: 'todoItem',
@@ -266,12 +266,12 @@ If you change the shape of your data, though, you will need to write a full migr
 Once you have a schema, you create a client like this
 
 ```ts
-import { StorageDescriptor, WebSocketSync } from '@lofi/web';
+import { StorageDescriptor, WebSocketSync } from '@lofi-db/web';
 import { v1Schema, migration } from './v1.js';
 
 // extend built-in types to specify presence information
 // so it's typed throughout your app
-declare module '@lofi/web' {
+declare module '@lofi-db/web' {
 	export interface Presence {
 		emoji: string;
 	}
@@ -358,7 +358,7 @@ To update your presence, use `presence.update`.
 
 ### React
 
-Lofi has a React bindings library, `@lofi/react`. It exports one function, `createHooks`. Pass your Storage instance into that.
+Lofi has a React bindings library, `@lofi-db/react`. It exports one function, `createHooks`. Pass your Storage instance into that.
 
 It will generate named hooks based on each document collection, plus a few utility hooks. For example, if you have the collection `todoItems`, you will get these hooks:
 
