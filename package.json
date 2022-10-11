@@ -9,7 +9,7 @@
 		"dev": "turbo run dev",
 		"build": "turbo run build",
 		"test": "turbo run ci:test",
-		"pub": "pnpm -r publish"
+		"pub": "pnpm run build && pnpm -r publish"
 	},
 	"repository": "https://github.com/a-type/lofi",
 	"author": "Grant Forrest <gaforres@gmail.com>",
