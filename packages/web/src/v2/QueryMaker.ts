@@ -14,7 +14,7 @@ import {
 	SchemaCollection,
 	SchemaCollectionName,
 	assert,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 import { Query } from './Query.js';
 import { QueryStore } from './QueryStore.js';

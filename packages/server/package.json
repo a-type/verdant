@@ -1,5 +1,5 @@
 {
-	"name": "@lofi-db/server",
+	"name": "@lo-fi/server",
 	"version": "0.1.0-rc.7",
 	"access": "public",
 	"type": "module",
@@ -23,7 +23,7 @@
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
 	},
 	"dependencies": {
-		"@lofi-db/common": "workspace:*",
+		"@lo-fi/common": "workspace:*",
 		"better-sqlite3": "^7.6.2",
 		"ws": "^8.9.0"
 	},

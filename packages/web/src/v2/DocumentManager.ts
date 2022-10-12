@@ -10,7 +10,7 @@ import {
 	StorageDocumentInit,
 	StorageSchema,
 	assert,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 import { EntityStore } from './EntityStore.js';
 import { Metadata } from './Metadata.js';

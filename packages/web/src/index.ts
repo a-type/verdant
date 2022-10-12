@@ -4,13 +4,13 @@ export {
 	schema,
 	createDefaultMigration,
 	migrate,
-} from '@lofi-db/common';
-export type { StorageDocument } from '@lofi-db/common';
+} from '@lo-fi/common';
+export type { StorageDocument } from '@lo-fi/common';
 
 export interface Presence {}
 
 export interface Profile {}
 
-import type { UserInfo as BaseUserInfo } from '@lofi-db/common';
+import type { UserInfo as BaseUserInfo } from '@lo-fi/common';
 
 export type UserInfo = BaseUserInfo<Profile, Presence>;

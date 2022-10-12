@@ -1,4 +1,4 @@
-import { roughSizeOfObject } from '@lofi-db/common';
+import { roughSizeOfObject } from '@lo-fi/common';
 
 export function storeRequestPromise<T>(request: IDBRequest<T>) {
 	return new Promise<T>((resolve, reject) => {

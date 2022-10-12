@@ -6,7 +6,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	assert,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import { IDBService } from './IDBService.js';
 
 export type ClientOperation = Operation & {

@@ -1,5 +1,5 @@
 import { Database } from 'better-sqlite3';
-import { ClientMessage } from '@lofi-db/common';
+import { ClientMessage } from '@lo-fi/common';
 import { ServerLibraryManager } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';

@@ -4,7 +4,7 @@ import {
 	createCompoundIndexValue,
 	StorageCollectionSchema,
 	StorageSyntheticIndexSchema,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 
 export function computeSynthetics(
 	schema: StorageCollectionSchema<any, any, any>,

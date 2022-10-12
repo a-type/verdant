@@ -1,8 +1,4 @@
-import {
-	DocumentBaseline,
-	getOidRange,
-	ObjectIdentifier,
-} from '@lofi-db/common';
+import { DocumentBaseline, getOidRange, ObjectIdentifier } from '@lo-fi/common';
 import { IDBService } from './IDBService.js';
 
 export class BaselinesStore extends IDBService {

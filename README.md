@@ -1,4 +1,4 @@
-# lofi
+# lo-fi
 
 An IndexedDB-powered database and data sync solution for lightweight, local-first web apps.
 
@@ -36,7 +36,7 @@ The server can be run standalone, or plugged into an existing HTTP server. It re
 Create a server like this:
 
 ```ts
-import { Server } from '@lofi-db/server';
+import { Server } from '@lo-fi/server';
 
 const server = new Server({
 	databaseFile: 'path/to/db.sqlite',
@@ -44,8 +44,8 @@ const server = new Server({
 		// here you may, for example, lookup a cookie on the request to log the user in.
 
 		// below is an idea for anonymous access: the client connects to
-		// /lofi/<library ID> and gets a randomly assigned userId.
-		const libraryId = req.url.replace('/lofi/', '');
+		// /lo-fi/<library ID> and gets a randomly assigned userId.
+		const libraryId = req.url.replace('/lo-fi/', '');
 		return {
 			libraryId,
 			userId: uuid(),
@@ -61,7 +61,7 @@ const server = new Server({
 		},
 	},
 	// supposing you're using Express or another server already,
-	// you can attach lofi to it instead of running it separately.
+	// you can attach lo-fi to it instead of running it separately.
 	httpServer: myExistingServer,
 });
 
@@ -79,7 +79,7 @@ server.listen(8080, () => {
 The first step client-side is to define a schema of what kind of documents you are working with. A schema looks like this:
 
 ```ts
-import { collection, schema, createDefaultMigration } from '@lofi-db/web';
+import { collection, schema, createDefaultMigration } from '@lo-fi/web';
 
 const todoItemCollection = collection({
 	name: 'todoItem',
@@ -157,12 +157,12 @@ If you change the shape of your data, though, you will need to write a full migr
 Once you have a schema, you create a client like this
 
 ```ts
-import { StorageDescriptor, WebSocketSync } from '@lofi-db/web';
+import { StorageDescriptor, WebSocketSync } from '@lo-fi/web';
 import { v1Schema, migration } from './v1.js';
 
 // extend built-in types to specify presence information
 // so it's typed throughout your app
-declare module '@lofi-db/web' {
+declare module '@lo-fi/web' {
 	export interface Presence {
 		emoji: string;
 	}
@@ -250,7 +250,7 @@ To update your presence, use `presence.update`.
 
 ### React
 
-Lofi has a React bindings library, `@lofi-db/react`. It exports one function, `createHooks`. Pass your Storage instance into that.
+Lofi has a React bindings library, `@lo-fi/react`. It exports one function, `createHooks`. Pass your Storage instance into that.
 
 It will generate named hooks based on each document collection, plus a few utility hooks. For example, if you have the collection `todoItems`, you will get these hooks:
 

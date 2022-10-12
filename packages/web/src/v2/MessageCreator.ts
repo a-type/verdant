@@ -9,7 +9,7 @@ import {
 	OperationPatch,
 	OperationMessage,
 	Operation,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import cuid from 'cuid';
 
 import { Metadata } from './Metadata.js';

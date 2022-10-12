@@ -1,4 +1,4 @@
-import { hashObject } from '@lofi-db/common';
+import { hashObject } from '@lo-fi/common';
 import { storeRequestPromise } from './idb.js';
 import { EntityStore } from './EntityStore.js';
 import { Query, UPDATE } from './Query.js';

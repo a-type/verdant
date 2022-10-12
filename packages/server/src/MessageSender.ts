@@ -1,4 +1,4 @@
-import { ServerMessage } from '@lofi-db/common';
+import { ServerMessage } from '@lo-fi/common';
 
 export interface MessageSender {
 	broadcast(

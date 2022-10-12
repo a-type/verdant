@@ -1,4 +1,4 @@
-import { StorageSchema } from '@lofi-db/common';
+import { StorageSchema } from '@lo-fi/common';
 import { storeRequestPromise } from './idb.js';
 
 type StoredSchema = {

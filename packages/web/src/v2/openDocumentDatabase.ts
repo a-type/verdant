@@ -5,7 +5,7 @@ import {
 	migrationRange,
 	diffToPatches,
 	getOid,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import { Metadata } from './Metadata.js';
 
 const globalIDB =

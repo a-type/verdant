@@ -1,4 +1,4 @@
-import { StorageCollectionSchema, StorageDocument } from '@lofi-db/common';
+import { StorageCollectionSchema, StorageDocument } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 
 export type Document<

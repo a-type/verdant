@@ -1,4 +1,4 @@
-import { DocumentBaseline, Operation, ReplicaInfo } from '@lofi-db/common';
+import { DocumentBaseline, Operation, ReplicaInfo } from '@lo-fi/common';
 
 export interface DocumentBaselineSpec
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {

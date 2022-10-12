@@ -1,4 +1,4 @@
-import { ClientMessage, ServerMessage } from '@lofi-db/common';
+import { ClientMessage, ServerMessage } from '@lo-fi/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';

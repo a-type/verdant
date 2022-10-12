@@ -11,7 +11,7 @@ import {
 	StorageCollectionSchema,
 	StorageSchema,
 	assert,
-} from '@lofi-db/common';
+} from '@lo-fi/common';
 import { Sync } from './Sync.js';
 import { EntityBase, ObjectEntity, updateEntity } from './Entity.js';
 import { storeRequestPromise } from './idb.js';
