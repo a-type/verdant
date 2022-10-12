@@ -29,8 +29,8 @@ importers:
 
   packages/react:
     specifiers:
-      '@lofi-db/common': workspace:*
-      '@lofi-db/web': workspace:*
+      '@lo-fi/common': workspace:*
+      '@lo-fi/web': workspace:*
       '@types/react': ^18.0.17
       jsdom: ^20.0.0
       react: ^18.2.0
@@ -38,10 +38,10 @@ importers:
       typescript: ^4.7.4
       vitest: ^0.22.1
     dependencies:
-      '@lofi-db/common': link:../common
+      '@lo-fi/common': link:../common
       suspend-react: 0.0.8_react@18.2.0
     devDependencies:
-      '@lofi-db/web': link:../web
+      '@lo-fi/web': link:../web
       '@types/react': 18.0.20
       jsdom: 20.0.0
       react: 18.2.0
@@ -50,14 +50,14 @@ importers:
 
   packages/server:
     specifiers:
-      '@lofi-db/common': workspace:*
+      '@lo-fi/common': workspace:*
       '@types/better-sqlite3': ^7.6.0
       '@types/ws': ^8.5.3
       better-sqlite3: ^7.6.2
       typescript: ^4.7.4
       ws: ^8.9.0
     dependencies:
-      '@lofi-db/common': link:../common
+      '@lo-fi/common': link:../common
       better-sqlite3: 7.6.2
       ws: 8.9.0
     devDependencies:
@@ -67,14 +67,14 @@ importers:
 
   packages/web:
     specifiers:
-      '@lofi-db/common': workspace:*
+      '@lo-fi/common': workspace:*
       cuid: ^2.1.8
       fake-indexeddb: ^4.0.0
       jsdom: ^20.0.0
       typescript: ^4.7.4
       vitest: ^0.22.1
     dependencies:
-      '@lofi-db/common': link:../common
+      '@lo-fi/common': link:../common
       cuid: 2.1.8
     devDependencies:
       fake-indexeddb: 4.0.0
