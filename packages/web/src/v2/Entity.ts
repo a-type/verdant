@@ -211,14 +211,10 @@ export abstract class EntityBase<T> {
 		return this.subObjectCache.get(oid);
 	};
 
-	get = <Key extends AccessibleEntityProperty<T>>(
+	protected wrapValue = <Key extends AccessibleEntityProperty<T>>(
+		value: any,
 		key: Key,
 	): EntityPropertyValue<T, Key> => {
-		if (this._deleted) {
-			throw new Error('Cannot access deleted entity');
-		}
-
-		const value = this.value[key];
 		if (value === undefined) {
 			throw new Error(
 				`Property ${key.toString()} does not exist on ${JSON.stringify(
@@ -237,6 +233,17 @@ export abstract class EntityBase<T> {
 			);
 		}
 		return value;
+	};
+
+	get = <Key extends AccessibleEntityProperty<T>>(
+		key: Key,
+	): EntityPropertyValue<T, Key> => {
+		if (this._deleted) {
+			throw new Error('Cannot access deleted entity');
+		}
+
+		const value = this.value[key];
+		return this.wrapValue(value, key);
 	};
 
 	/**
@@ -327,6 +334,46 @@ export class ListEntity<T> extends EntityBase<T[]> {
 				createRef(this.getItemOid(item)),
 			),
 		);
+	};
+
+	// list implements an iterator which maps items to wrapped
+	// versions
+	[Symbol.iterator]() {
+		let index = 0;
+		return {
+			next: () => {
+				if (index < this.value.length) {
+					return {
+						value: this.get(index++),
+						done: false,
+					};
+				}
+				return {
+					value: undefined,
+					done: true,
+				};
+			},
+		};
+	}
+
+	// additional access methods
+
+	private getAsWrapped = (): EntityPropertyValue<T, number>[] => {
+		return this.value.map(this.wrapValue);
+	};
+
+	map = <U>(
+		callback: (value: EntityPropertyValue<T, number>, index: number) => U,
+	) => {
+		return this.getAsWrapped().map(callback);
+	};
+
+	filter = (
+		callback: (value: EntityPropertyValue<T, number>, index: number) => boolean,
+	) => {
+		return this.getAsWrapped().filter((val, index) => {
+			return callback(val, index);
+		});
 	};
 }
 
