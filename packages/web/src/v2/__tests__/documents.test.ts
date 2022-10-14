@@ -29,6 +29,7 @@ describe('storage documents', () => {
 			done: false,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 		await storage.create('todo', {
 			id: cuid(),
@@ -36,6 +37,7 @@ describe('storage documents', () => {
 			done: true,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 
 		const singleItemQuery = storage.queryMaker.get('todo', item1.get('id'));
@@ -60,6 +62,7 @@ describe('storage documents', () => {
 			done: false,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 
 		item1.set('done', true);
@@ -75,6 +78,7 @@ describe('storage documents', () => {
 			done: false,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 
 		const liveItem1 = await storage.queryMaker.get('todo', item1.get('id'))
@@ -96,6 +100,7 @@ describe('storage documents', () => {
 			done: true,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 	});
 
@@ -108,6 +113,7 @@ describe('storage documents', () => {
 			done: false,
 			tags: [],
 			category: 'general',
+			attachments: [],
 		});
 
 		const callback = vi.fn();
@@ -132,6 +138,46 @@ describe('storage documents', () => {
 			done: false,
 			tags: ['tag 1', 'tag 3', 'tag 2'],
 			category: 'general',
+			attachments: [],
 		});
+	});
+
+	it('should expose array accessors on nested arrays', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('todo', {
+			id: cuid(),
+			content: 'item 1',
+			done: false,
+			tags: ['tag 1', 'tag 2'],
+			category: 'general',
+			attachments: [
+				{
+					name: 'attachment 1',
+				},
+			],
+		});
+
+		for (const attachment of item1.get('attachments')) {
+			expect(attachment.get('name')).toBe('attachment 1');
+		}
+
+		let i = 0;
+		for (const tag of item1.get('tags')) {
+			expect(tag).toBe('tag ' + ++i);
+		}
+
+		expect(item1.get('tags').filter((tag) => tag === 'tag 1')).toEqual([
+			'tag 1',
+		]);
+
+		item1.get('attachments').push({
+			name: 'attachment 2',
+		});
+
+		expect(item1.get('attachments').getSnapshot()).toEqual([
+			{ name: 'attachment 1' },
+			{ name: 'attachment 2' },
+		]);
 	});
 });

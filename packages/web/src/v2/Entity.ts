@@ -4,6 +4,7 @@ import {
 	cloneDeep,
 	createRef,
 	EventSubscriber,
+	isObject,
 	isObjectRef,
 	maybeGetOid,
 	normalizeFirstLevel,
@@ -192,10 +193,13 @@ export abstract class EntityBase<T> {
 		for (const patch of operations) {
 			if (patch.oid === this.oid) {
 				// apply it to _override
-				this._override = this._override || cloneDeep(this._current);
-				applyPatch(this._override, patch.data);
+				this._override = applyPatch(
+					this._override || cloneDeep(this._current),
+					patch.data,
+				);
 			}
 		}
+		this.addMissingSubObjectsForMemoryChanges();
 
 		for (const entity of this.subObjectCache.values()) {
 			entity.propagateImmediateOperations(operations);
@@ -205,6 +209,36 @@ export abstract class EntityBase<T> {
 		this.cachedSnapshot = null;
 		// inform subscribers of change
 		this.events.emit('change');
+	};
+
+	/**
+	 * Creates empty sub-objects for any missing object refs in
+	 * children of this object according to its in-memory immediate
+	 * value. This is used to prep sub-objects when applying immediate
+	 * propagated changes before those sub-objects have been created
+	 * and exist in storage.
+	 */
+	protected addMissingSubObjectsForMemoryChanges = () => {
+		if (!this._override) {
+			return;
+		}
+
+		if (Array.isArray(this._override)) {
+			for (let i = 0; i < this._override.length; i++) {
+				const value = this._override[i];
+				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
+					const entity = this.createSubObject(value.id, undefined);
+					this.subObjectCache.set(value.id, entity);
+				}
+			}
+		} else if (isObject(this._override)) {
+			for (const [key, value] of Object.entries(this._override)) {
+				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
+					const entity = this.createSubObject(value.id, undefined);
+					this.subObjectCache.set(value.id, entity);
+				}
+			}
+		}
 	};
 
 	protected getSubObject = (oid: ObjectIdentifier) => {
@@ -276,7 +310,10 @@ export abstract class EntityBase<T> {
 	};
 }
 
-export class ListEntity<T> extends EntityBase<T[]> {
+export class ListEntity<T>
+	extends EntityBase<T[]>
+	implements Iterable<EntityPropertyValue<T[], number>>
+{
 	private getItemOid = (item: T) => {
 		const itemOid = maybeGetOid(item);
 		if (!itemOid || !this.subObjectCache.has(itemOid)) {
@@ -344,14 +381,14 @@ export class ListEntity<T> extends EntityBase<T[]> {
 			next: () => {
 				if (index < this.value.length) {
 					return {
-						value: this.get(index++),
+						value: this.get(index++) as EntityPropertyValue<T[], number>,
 						done: false,
-					};
+					} as const;
 				}
 				return {
 					value: undefined,
 					done: true,
-				};
+				} as const;
 			},
 		};
 	}

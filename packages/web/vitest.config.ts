@@ -5,6 +5,6 @@ export default defineConfig({
 		environment: 'jsdom',
 		clearMocks: true,
 
-		setupFiles: ['tests/setup/indexedDB.ts'],
+		setupFiles: ['src/v2/__tests__/setup/indexedDB.ts'],
 	},
 });

@@ -26,6 +26,17 @@ export const todoCollection = collection({
 		category: {
 			type: 'string',
 		},
+		attachments: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					name: {
+						type: 'string',
+					},
+				},
+			},
+		},
 	},
 	synthetics: {
 		example: {
