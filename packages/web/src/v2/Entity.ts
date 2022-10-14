@@ -395,18 +395,21 @@ export class ListEntity<T>
 
 	// additional access methods
 
-	private getAsWrapped = (): EntityPropertyValue<T, number>[] => {
+	private getAsWrapped = (): EntityPropertyValue<T[], number>[] => {
 		return this.value.map(this.wrapValue);
 	};
 
 	map = <U>(
-		callback: (value: EntityPropertyValue<T, number>, index: number) => U,
+		callback: (value: EntityPropertyValue<T[], number>, index: number) => U,
 	) => {
 		return this.getAsWrapped().map(callback);
 	};
 
 	filter = (
-		callback: (value: EntityPropertyValue<T, number>, index: number) => boolean,
+		callback: (
+			value: EntityPropertyValue<T[], number>,
+			index: number,
+		) => boolean,
 	) => {
 		return this.getAsWrapped().filter((val, index) => {
 			return callback(val, index);
