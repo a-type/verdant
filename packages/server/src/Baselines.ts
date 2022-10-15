@@ -51,7 +51,7 @@ export class Baselines {
 					.run(
 						this.libraryId,
 						baseline.oid,
-						baseline.snapshot,
+						JSON.stringify(baseline.snapshot),
 						baseline.timestamp,
 					);
 			}

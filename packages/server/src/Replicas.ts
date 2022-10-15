@@ -4,6 +4,28 @@ import { ReplicaInfoSpec } from './types.js';
 export class ReplicaInfos {
 	constructor(private db: Database, private libraryId: string) {}
 
+	get = (replicaId: string): ReplicaInfoSpec | null => {
+		const row = this.db
+			.prepare(
+				`
+					SELECT * FROM ReplicaInfo
+					WHERE id = ?
+				`,
+			)
+			.get(replicaId);
+		if (!row) {
+			return null;
+		}
+		return {
+			id: row.id,
+			libraryId: row.libraryId,
+			clientId: row.clientId,
+			lastSeenWallClockTime: row.lastSeenWallClockTime,
+			ackedLogicalTime: row.ackedLogicalTime,
+			oldestOperationLogicalTime: row.oldestOperationLogicalTime,
+		};
+	};
+
 	getOrCreate = (
 		replicaId: string,
 		clientId: string,

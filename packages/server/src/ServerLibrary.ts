@@ -35,20 +35,36 @@ export class ServerLibrary {
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
-	receive = (message: ClientMessage, clientId: string) => {
+	/**
+	 * Validates a user's access to a replica. If the replica does not
+	 * exist, a user may create it. But if it does exist, its user (clientId)
+	 * must match the user making the request.
+	 */
+	private validateReplicaAccess = (replicaId: string, userId: string) => {
+		const replica = this.replicas.get(replicaId);
+		if (replica && replica.clientId !== userId) {
+			throw new Error(
+				`Replica ${replicaId} does not belong to client ${userId}`,
+			);
+		}
+	};
+
+	receive = (message: ClientMessage, userId: string) => {
+		this.validateReplicaAccess(message.replicaId, userId);
+
 		switch (message.type) {
 			case 'op':
 				return this.handleOperation(message);
 			case 'sync':
-				return this.handleSync(message, clientId);
+				return this.handleSync(message, userId);
 			case 'sync-step2':
-				return this.handleSyncStep2(message, clientId);
+				return this.handleSyncStep2(message, userId);
 			case 'ack':
-				return this.handleAck(message, clientId);
+				return this.handleAck(message, userId);
 			case 'heartbeat':
-				return this.handleHeartbeat(message, clientId);
+				return this.handleHeartbeat(message, userId);
 			case 'presence-update':
-				return this.handlePresenceUpdate(message, clientId);
+				return this.handlePresenceUpdate(message, userId);
 			default:
 				console.log('Unknown message type', (message as any).type);
 				break;
