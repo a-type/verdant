@@ -2,7 +2,15 @@ import { Database } from 'better-sqlite3';
 import { ReplicaInfoSpec } from './types.js';
 
 export class ReplicaInfos {
-	constructor(private db: Database, private libraryId: string) {}
+	constructor(
+		private db: Database,
+		private libraryId: string,
+		private readonly replicaTruancyMinutes: number,
+	) {}
+
+	private get truantCutoff() {
+		return Date.now() - this.replicaTruancyMinutes * 60 * 1000;
+	}
 
 	get = (replicaId: string): ReplicaInfoSpec | null => {
 		const row = this.db
@@ -29,7 +37,10 @@ export class ReplicaInfos {
 	getOrCreate = (
 		replicaId: string,
 		clientId: string,
-	): { created: boolean; replicaInfo: ReplicaInfoSpec } => {
+	): {
+		status: 'new' | 'existing' | 'truant';
+		replicaInfo: ReplicaInfoSpec;
+	} => {
 		const replicaInfo = this.db
 			.prepare(
 				`
@@ -50,7 +61,7 @@ export class ReplicaInfos {
 				.run(replicaId, clientId, this.libraryId);
 
 			return {
-				created: true,
+				status: 'new',
 				replicaInfo: {
 					id: replicaId,
 					clientId,
@@ -62,21 +73,34 @@ export class ReplicaInfos {
 			};
 		}
 
+		if (replicaInfo.clientId !== clientId) {
+			throw new Error(
+				`Replica ${replicaId} already exists with a different clientId`,
+			);
+		}
+
+		if (replicaInfo.lastSeenWallClockTime < this.truantCutoff) {
+			return {
+				status: 'truant',
+				replicaInfo,
+			};
+		}
+
 		return {
-			created: false,
+			status: 'existing',
 			replicaInfo,
 		};
 	};
 
-	getAll = (): ReplicaInfoSpec[] => {
+	getAllNonTruant = (): ReplicaInfoSpec[] => {
 		return this.db
 			.prepare(
 				`
 			SELECT * FROM ReplicaInfo
-			WHERE libraryId = ?
+			WHERE libraryId = ? AND lastSeenWallClockTime > ?
 		`,
 			)
-			.all(this.libraryId);
+			.all(this.libraryId, this.truantCutoff);
 	};
 
 	updateOldestOperationTimestamp = (replicaId: string, timestamp: string) => {
@@ -117,15 +141,16 @@ export class ReplicaInfos {
 	};
 
 	getGlobalAck = () => {
+		// filters out replicas that haven't been seen in a while
 		return this.db
 			.prepare(
 				`
 			SELECT MIN(ackedLogicalTime) AS ackedLogicalTime
 			FROM ReplicaInfo
-			WHERE libraryId = ?
+			WHERE libraryId = ? AND lastSeenWallClockTime > ?
 		`,
 			)
-			.get(this.libraryId).ackedLogicalTime;
+			.get(this.libraryId, this.truantCutoff).ackedLogicalTime;
 	};
 
 	delete = (replicaId: string) => {

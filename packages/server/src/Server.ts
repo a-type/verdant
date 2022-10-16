@@ -33,6 +33,11 @@ export interface ServerOptions {
 	 * and can be used to identify users with information like name or profile image.
 	 */
 	profiles?: UserProfiles<any>;
+	/**
+	 * How many minutes of inactivity before a replica is considered truant and
+	 * removed from the library. Defaults to 30 days.
+	 */
+	replicaTruancyMinutes?: number;
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
@@ -53,11 +58,12 @@ export class Server extends EventEmitter implements MessageSender {
 	constructor(options: ServerOptions) {
 		super();
 
-		this.storage = new ServerStorage(
-			create(options.databaseFile),
-			this,
-			options.profiles || new DefaultProfiles(),
-		);
+		this.storage = new ServerStorage({
+			db: create(options.databaseFile),
+			sender: this,
+			profiles: options.profiles || new DefaultProfiles(),
+			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
+		});
 
 		this.wss = new WebSocketServer({
 			noServer: true,

@@ -4,22 +4,35 @@ import { ServerLibraryManager } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
 
+interface ServerStorageOptions {
+	db: Database;
+	sender: MessageSender;
+	profiles: UserProfiles<any>;
+	replicaTruancyMinutes: number;
+}
+
 export class ServerStorage {
 	private profileLoader;
 	private libraries;
+	private db;
+	private sender;
 
-	constructor(
-		private db: Database,
-		private sender: MessageSender,
-		profiles: UserProfiles<any>,
-	) {
+	constructor({
+		db,
+		sender,
+		profiles,
+		replicaTruancyMinutes,
+	}: ServerStorageOptions) {
+		this.db = db;
+		this.sender = sender;
 		this.createSchema();
 		this.profileLoader = new UserProfileLoader(profiles);
-		this.libraries = new ServerLibraryManager(
-			this.db,
-			this.sender,
-			this.profileLoader,
-		);
+		this.libraries = new ServerLibraryManager({
+			db: this.db,
+			sender: this.sender,
+			profileLoader: this.profileLoader,
+			replicaTruancyMinutes,
+		});
 	}
 
 	/**

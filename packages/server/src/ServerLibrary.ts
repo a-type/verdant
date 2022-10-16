@@ -21,17 +21,35 @@ import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 
 export class ServerLibrary {
-	private replicas = new ReplicaInfos(this.db, this.id);
-	private operations = new OperationHistory(this.db, this.id);
-	private baselines = new Baselines(this.db, this.id);
+	private db;
+	private sender;
+	private profiles;
+	private id;
+	private replicas;
+	private operations;
+	private baselines;
 	private presences = new Presence();
 
-	constructor(
-		private db: Database,
-		private sender: MessageSender,
-		private profiles: UserProfileLoader<any>,
-		public readonly id: string,
-	) {
+	constructor({
+		db,
+		sender,
+		profiles,
+		id,
+		replicaTruancyMinutes,
+	}: {
+		db: Database;
+		sender: MessageSender;
+		profiles: UserProfileLoader<any>;
+		id: string;
+		replicaTruancyMinutes: number;
+	}) {
+		this.db = db;
+		this.sender = sender;
+		this.profiles = profiles;
+		this.id = id;
+		this.replicas = new ReplicaInfos(this.db, this.id, replicaTruancyMinutes);
+		this.operations = new OperationHistory(this.db, this.id);
+		this.baselines = new Baselines(this.db, this.id);
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
@@ -54,21 +72,28 @@ export class ServerLibrary {
 
 		switch (message.type) {
 			case 'op':
-				return this.handleOperation(message);
+				this.handleOperation(message);
+				break;
 			case 'sync':
-				return this.handleSync(message, userId);
+				this.handleSync(message, userId);
+				break;
 			case 'sync-step2':
-				return this.handleSyncStep2(message, userId);
+				this.handleSyncStep2(message, userId);
+				break;
 			case 'ack':
-				return this.handleAck(message, userId);
+				this.handleAck(message, userId);
+				break;
 			case 'heartbeat':
-				return this.handleHeartbeat(message, userId);
+				this.handleHeartbeat(message, userId);
+				break;
 			case 'presence-update':
-				return this.handlePresenceUpdate(message, userId);
+				this.handlePresenceUpdate(message, userId);
+				break;
 			default:
 				console.log('Unknown message type', (message as any).type);
 				break;
 		}
+		this.replicas.updateLastSeen(message.replicaId);
 	};
 
 	remove = (replicaId: string) => {
@@ -124,16 +149,36 @@ export class ServerLibrary {
 			this.replicas.delete(replicaId);
 		}
 
-		const { created: isNewReplica, replicaInfo: clientReplicaInfo } =
+		const { status, replicaInfo: clientReplicaInfo } =
 			this.replicas.getOrCreate(replicaId, clientId);
+
+		if (status === 'truant') {
+			console.log('A truant replica has reconnected', replicaId);
+		}
 
 		// respond to client
 
+		const changesSince =
+			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
+
 		// lookup operations after the last ack the client gave us
-		const ops = this.operations.getAfter(clientReplicaInfo.ackedLogicalTime);
-		const baselines = this.baselines.getAllAfter(
-			clientReplicaInfo.ackedLogicalTime,
-		);
+		const ops = this.operations.getAfter(changesSince);
+		const baselines = this.baselines.getAllAfter(changesSince);
+
+		// new, unseen replicas should reset their existing storage
+		// to that of the server when joining a library.
+		// truant replicas should also reset their storage.
+		const replicaShouldReset = !!message.resyncAll || status !== 'existing';
+		// We detect that a library is new by checking if it has any history.
+		// If there are no existing operations or baselines (and the requested
+		// history timerange was "everything", i.e. "from null"), then this is
+		// a fresh library which should receive the first client's history as its
+		// own. Otherwise, if the client requested a reset, we should send them
+		// the full history of the library.
+		// the definition of this field could be improved to be more explicit
+		// and not rely on seemingly unrelated data.
+		const isEmptyLibrary =
+			changesSince === null && ops.length === 0 && baselines.length === 0;
 
 		this.sender.send(this.id, replicaId, {
 			type: 'sync-resp',
@@ -146,7 +191,10 @@ export class ServerLibrary {
 			provideChangesSince: clientReplicaInfo.ackedLogicalTime,
 			globalAckTimestamp: this.replicas.getGlobalAck(),
 			peerPresence: this.presences.all(),
-			overwriteLocalData: !!message.resyncAll || isNewReplica,
+			// only request the client to overwrite local data if a reset is requested
+			// and there is data to overwrite it. otherwise the client may still
+			// send its own history to us.
+			overwriteLocalData: replicaShouldReset && !isEmptyLibrary,
 		});
 	};
 
@@ -195,7 +243,7 @@ export class ServerLibrary {
 		// grab that slice of the operations history, then iterate over it
 		// and check if any rebase conditions are met.
 
-		const replicas = this.replicas.getAll();
+		const replicas = this.replicas.getAllNonTruant();
 		// more convenient access
 		const replicaMap = replicas.reduce((map, replica) => {
 			map[replica.id] = replica;
@@ -318,19 +366,40 @@ export class ServerLibrary {
 }
 
 export class ServerLibraryManager {
+	private db;
+	private sender;
+	private profileLoader;
+	private replicaTruancyMinutes;
 	private cache = new Map<string, ServerLibrary>();
 
-	constructor(
-		private db: Database,
-		private sender: MessageSender,
-		private profiles: UserProfileLoader<any>,
-	) {}
+	constructor({
+		db,
+		sender,
+		profileLoader,
+		replicaTruancyMinutes,
+	}: {
+		db: Database;
+		sender: MessageSender;
+		profileLoader: UserProfileLoader<any>;
+		replicaTruancyMinutes: number;
+	}) {
+		this.db = db;
+		this.sender = sender;
+		this.profileLoader = profileLoader;
+		this.replicaTruancyMinutes = replicaTruancyMinutes;
+	}
 
 	open = (id: string) => {
 		if (!this.cache.has(id)) {
 			this.cache.set(
 				id,
-				new ServerLibrary(this.db, this.sender, this.profiles, id),
+				new ServerLibrary({
+					db: this.db,
+					sender: this.sender,
+					profiles: this.profileLoader,
+					id,
+					replicaTruancyMinutes: this.replicaTruancyMinutes,
+				}),
 			);
 		}
 
