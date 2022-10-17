@@ -8,7 +8,9 @@
 	"scripts": {
 		"dev": "turbo run dev",
 		"build": "turbo run build",
-		"test": "turbo run ci:test"
+		"test": "turbo run ci:test",
+		"ci:version": "pnpm changeset version",
+		"ci:publish": "pnpm changeset publish"
 	},
 	"repository": "https://github.com/a-type/lofi",
 	"author": "Grant Forrest <gaforres@gmail.com>",
