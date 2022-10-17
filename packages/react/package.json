@@ -20,7 +20,8 @@
 		"dist/"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"prepublish": "pnpm run build"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",

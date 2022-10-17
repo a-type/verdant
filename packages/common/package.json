@@ -22,7 +22,8 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test": "vitest run",
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"prepublish": "pnpm run build"
 	},
 	"dependencies": {
 		"fast-json-patch": "^3.1.1",
