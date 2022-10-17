@@ -1,0 +1,2 @@
+!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):((e="undefined"!=typeof globalThis?globalThis:e||self).Typeson=e.Typeson||{},e.Typeson.types=e.Typeson.types||{},e.Typeson.types.nan=n())}(this,(function(){"use strict";return{nan:{test:function test(e){return Number.isNaN(e)},replace:function replace(e){return"NaN"},revive:function revive(e){return Number.NaN}}}}));
+//# sourceMappingURL=nan.js.map

@@ -1,0 +1,2 @@
+!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):((e="undefined"!=typeof globalThis?globalThis:e||self).Typeson=e.Typeson||{},e.Typeson.types=e.Typeson.types||{},e.Typeson.types.bigint=n())}(this,(function(){"use strict";return{bigint:{test:function test(e){return"bigint"==typeof e},replace:function replace(e){return String(e)},revive:function revive(e){return BigInt(e)}}}}));
+//# sourceMappingURL=bigint.js.map

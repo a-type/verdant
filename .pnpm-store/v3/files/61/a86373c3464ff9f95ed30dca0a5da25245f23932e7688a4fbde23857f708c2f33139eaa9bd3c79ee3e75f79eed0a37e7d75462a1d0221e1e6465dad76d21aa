@@ -1,0 +1,2 @@
+!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):((e="undefined"!=typeof globalThis?globalThis:e||self).Typeson=e.Typeson||{},e.Typeson.types=e.Typeson.types||{},e.Typeson.types.negativeInfinity=n())}(this,(function(){"use strict";return{negativeInfinity:{test:function test(e){return e===Number.NEGATIVE_INFINITY},replace:function replace(e){return"-Infinity"},revive:function revive(e){return Number.NEGATIVE_INFINITY}}}}));
+//# sourceMappingURL=negative-infinity.js.map

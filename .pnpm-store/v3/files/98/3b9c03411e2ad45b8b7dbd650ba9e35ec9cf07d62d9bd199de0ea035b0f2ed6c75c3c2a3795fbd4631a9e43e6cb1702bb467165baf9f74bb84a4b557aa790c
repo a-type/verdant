@@ -1,0 +1,42 @@
+{
+  "name": "realistic-structured-clone",
+  "version": "3.0.0",
+  "description": "A pure JS implementation of the structured clone algorithm (or at least something pretty close to that)",
+  "homepage": "https://github.com/dumbmatter/realistic-structured-clone",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dumbmatter/realistic-structured-clone.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dumbmatter/realistic-structured-clone/issues"
+  },
+  "keywords": [
+    "structured",
+    "clone",
+    "structured-clone"
+  ],
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rm -rf dist && mkdir dist && browserify index.js --node -s realisticStructuredClone -t [ babelify --global --presets [ es2015 ] ] | derequire > dist/index.js",
+    "prepublish": "npm run build",
+    "test": "npm run build && mocha --recursive"
+  },
+  "author": "Jeremy Scheff <jdscheff@gmail.com> (http://dumbmatter.com/)",
+  "license": "Apache-2.0",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "domexception": "^1.0.1",
+    "typeson": "^6.1.0",
+    "typeson-registry": "^1.0.0-alpha.20"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babelify": "^8.0.0",
+    "browserify": "^17.0.0",
+    "derequire": "^2.0.6",
+    "mocha": "^9.2.2"
+  }
+}

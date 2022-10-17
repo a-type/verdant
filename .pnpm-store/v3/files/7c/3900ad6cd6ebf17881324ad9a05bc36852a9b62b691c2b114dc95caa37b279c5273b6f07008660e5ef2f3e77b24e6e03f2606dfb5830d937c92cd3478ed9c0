@@ -1,0 +1,116 @@
+{
+  "name": "typeson-registry",
+  "version": "1.0.0-alpha.39",
+  "description": "The type registry for typeson",
+  "author": "dfahlander",
+  "contributors": [
+    "Brett Zamir"
+  ],
+  "main": "./dist/all.js",
+  "module": "./index.js",
+  "scripts": {
+    "prepublishOnly": "yarn",
+    "eslint": "eslint --ext js,md,html .",
+    "start": "http-server -p 8085",
+    "rollup": "node -r esm ./build.js",
+    "mocha": "mocha --delay --require esm test/test-node",
+    "open-coverage": "open-cli http://localhost:8085/coverage/ && npm start",
+    "coverage": "rm -Rf node_modules/.cache && nyc --all npm run mocha",
+    "test-nocov": "npm run rollup && npm run eslint && npm run coverage",
+    "test": "npm run rollup && npm run eslint && npm run coverage",
+    "test:worker-open": "open-cli http://localhost:8085/browser-test/worker.html && npm start",
+    "test:browser-open": "open-cli http://localhost:8085/browser-test/ && npm start",
+    "test:browser": "npm run rollup && npm run eslint && npm run test:browser-open",
+    "windows": "node -r esm windows-devinstall"
+  },
+  "nyc": {
+    "reporter": [
+      "text",
+      "html"
+    ],
+    "check-coverage": true,
+    "branches": 100,
+    "lines": 100,
+    "functions": 100,
+    "statements": 100,
+    "exclude": [
+      "build.js",
+      "dist",
+      "windows-devinstall.js",
+      ".ncurc.js",
+      ".eslintrc.js",
+      "browser-test",
+      "coverage",
+      "test/**",
+      "node_modules/**"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dfahlander/typeson-registry.git"
+  },
+  "browserslist": [
+    "cover 100%"
+  ],
+  "keywords": [
+    "typeson",
+    "JSON",
+    "remoting",
+    "universal"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dfahlander/typeson-registry/issues"
+  },
+  "homepage": "https://github.com/dfahlander/typeson-registry#readme",
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.13.8",
+    "@babel/eslint-parser": "^7.13.8",
+    "@babel/preset-env": "^7.13.8",
+    "@brettz9/eslint-plugin": "^1.0.3",
+    "@rollup/plugin-babel": "^5.3.0",
+    "@rollup/plugin-commonjs": "^17.1.0",
+    "@rollup/plugin-node-resolve": "^11.2.0",
+    "canvas": "^2.6.1",
+    "chai": "^4.3.0",
+    "eslint": "^7.20.0",
+    "eslint-config-ash-nazg": "^29.8.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-array-func": "^3.1.7",
+    "eslint-plugin-chai-expect": "^2.2.0",
+    "eslint-plugin-chai-friendly": "^0.6.0",
+    "eslint-plugin-compat": "^3.9.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-html": "^6.1.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsdoc": "^32.2.0",
+    "eslint-plugin-markdown": "^2.0.0",
+    "eslint-plugin-no-unsanitized": "^3.1.4",
+    "eslint-plugin-no-use-extend-native": "^0.5.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.3.1",
+    "eslint-plugin-radar": "^0.2.1",
+    "eslint-plugin-standard": "^4.1.0",
+    "eslint-plugin-unicorn": "^28.0.2",
+    "esm": "^3.2.25",
+    "http-server": "^0.12.3",
+    "jsdom": "^16.4.0",
+    "mocha": "^8.3.0",
+    "node-webcrypto-ossl": "^2.1.2",
+    "nyc": "^15.1.0",
+    "open-cli": "^6.0.1",
+    "rollup": "^2.40.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "socket.io": "^3.1.2",
+    "socket.io-client": "^3.1.2"
+  },
+  "dependencies": {
+    "base64-arraybuffer-es6": "^0.7.0",
+    "typeson": "^6.0.0",
+    "whatwg-url": "^8.4.0"
+  },
+  "tonicExample": "var Typeson = require('typeson');\nvar TSON = new Typeson().register(require('typeson-registry/dist/presets/builtin'));\n\nTSON.stringify({foo: new Date()}, null, 2);"
+}
