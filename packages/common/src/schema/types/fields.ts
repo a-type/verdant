@@ -24,12 +24,16 @@ export type StorageObjectFieldSchema = {
 	properties: NestedStorageFieldsSchema;
 	nullable?: boolean;
 };
+export type StorageAnyFieldSchema = {
+	type: 'any';
+};
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
 	| StorageNumberFieldSchema
 	| StorageBooleanFieldSchema
 	| StorageArrayFieldSchema
-	| StorageObjectFieldSchema;
+	| StorageObjectFieldSchema
+	| StorageAnyFieldSchema;
 
 // nested versions don't have index info
 export type NestedStorageStringFieldSchema = {
@@ -46,7 +50,8 @@ export type NestedStorageFieldSchema =
 	| NestedStorageNumberFieldSchema
 	| StorageBooleanFieldSchema
 	| StorageArrayFieldSchema
-	| StorageObjectFieldSchema;
+	| StorageObjectFieldSchema
+	| StorageAnyFieldSchema;
 
 export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
 

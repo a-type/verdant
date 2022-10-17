@@ -16,6 +16,8 @@ type StoragePropertyIsNullable<T extends StoragePropertySchema<any>> =
 		? T['nullable'] extends boolean
 			? true
 			: false
+		: T['type'] extends 'any'
+		? true
 		: false;
 
 export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
@@ -29,6 +31,8 @@ export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
 		? ShapeFromProperty<T['items']>[]
 		: T extends StorageObjectFieldSchema
 		? ShapeFromFields<T['properties']>
+		: T['type'] extends 'any'
+		? any
 		: never;
 
 export type ShapeFromProperty<T extends StoragePropertySchema<any>> =
