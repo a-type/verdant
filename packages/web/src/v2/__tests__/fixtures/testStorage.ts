@@ -55,10 +55,24 @@ export const todoCollection = collection({
 	},
 });
 
+export const weirdCollection = collection({
+	name: 'weird',
+	primaryKey: 'id',
+	fields: {
+		id: { type: 'string', indexed: true, unique: true },
+		weird: {
+			type: 'any',
+		},
+	},
+	synthetics: {},
+	compounds: {},
+});
+
 const testSchema = schema({
 	version: 1,
 	collections: {
 		todo: todoCollection,
+		weird: weirdCollection,
 	},
 });
 

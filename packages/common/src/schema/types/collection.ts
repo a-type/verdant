@@ -20,6 +20,10 @@ export type StorageCollectionSchema<
 	Compounds extends CollectionCompoundIndices<Fields, Synthetics>,
 > = {
 	name: string;
+	/**
+	 * Optionally provide a plural name. Useful for some code generation purposes.
+	 */
+	pluralName?: string;
 	fields: Fields;
 	synthetics: Synthetics;
 	compounds: Compounds;

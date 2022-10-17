@@ -180,4 +180,37 @@ describe('storage documents', () => {
 			{ name: 'attachment 2' },
 		]);
 	});
+
+	it('should provide a reasonable way to interact with unknown data', async () => {
+		/**
+		 * 'any' field types should basically just stop type checking, but still
+		 * provide full reactive entity access for nested data.
+		 */
+
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('weird', {
+			id: cuid(),
+			weird: {
+				foo: 'bar',
+				baz: [
+					{
+						corge: 3,
+					},
+				],
+			},
+		});
+
+		expect(item1.get('weird').get('foo')).toBe('bar');
+		expect(item1.get('weird').get('baz').get(0).get('corge')).toBe(3);
+		expect(item1.get('weird').getSnapshot()).toEqual({
+			foo: 'bar',
+			baz: [{ corge: 3 }],
+		});
+		item1.get('weird').get('baz').push({ corge: 4 });
+		expect(item1.get('weird').get('baz').getSnapshot()).toEqual([
+			{ corge: 3 },
+			{ corge: 4 },
+		]);
+	});
 });
