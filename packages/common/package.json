@@ -14,7 +14,8 @@
 				"import": "./dist/esm/index.js",
 				"require": "./dist/cjs/index.js"
 			}
-		}
+		},
+		"access": "public"
 	},
 	"files": [
 		"dist/"
