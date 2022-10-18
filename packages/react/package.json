@@ -21,7 +21,8 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-		"prepublish": "pnpm run build"
+		"prepublish": "pnpm run build",
+		"test": "vitest"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",
@@ -34,6 +35,7 @@
 	"devDependencies": {
 		"@lo-fi/web": "workspace:*",
 		"@types/react": "^18.0.17",
+		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"react": "^18.2.0",
 		"typescript": "^4.7.4",

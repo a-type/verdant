@@ -18,17 +18,22 @@ import {
 
 type QueryHookResult<T> = T;
 
-type CollectionHooks<
+type PluralCapital<
 	Name extends string,
+	PluralName extends string | undefined,
+> = PluralName extends string ? Capitalize<PluralName> : `${Capitalize<Name>}s`;
+
+type CollectionHooks<
 	Collection extends StorageCollectionSchema<any, any, any>,
 > = {
-	[key in Name as `use${Capitalize<Name>}`]: (
+	[key in Collection['name'] as `use${Capitalize<Collection['name']>}`]: (
 		id: string,
 	) => QueryHookResult<Document<Collection>>;
 } & {
-	[key in Name as `useAll${Capitalize<Name>}`]: <
-		IndexName extends CollectionIndexName<Collection>,
-	>(config?: {
+	[key in Collection['name'] as `useAll${PluralCapital<
+		Collection['name'],
+		Collection['pluralName']
+	>}`]: <IndexName extends CollectionIndexName<Collection>>(config?: {
 		index?: CollectionIndexFilter<Collection, IndexName>;
 	}) => QueryHookResult<Document<Collection>[]>;
 };
@@ -50,7 +55,7 @@ type GeneratedHooks<
 	[CollectionName in Extract<
 		keyof Schema['collections'],
 		string
-	>]: CollectionHooks<CollectionName, Schema['collections'][CollectionName]>;
+	>]: CollectionHooks<Schema['collections'][CollectionName]>;
 }>;
 
 function useLiveQuery(liveQuery: Query<any>) {
@@ -152,8 +157,9 @@ export function createHooks<
 		storageDesc.schema.collections,
 	) as SchemaCollectionName<Schema>[];
 	for (const name of collectionNames) {
+		const collection = storageDesc.schema.collections[name];
 		const getOneHookName = `use${capitalize(
-			name,
+			collection.name,
 		)}` as `use${CapitalizedCollectionName<Schema>}`;
 		hooks[getOneHookName] = function useOne(id: string) {
 			const storage = useStorage();
@@ -166,7 +172,7 @@ export function createHooks<
 		};
 
 		const getAllHookName = `useAll${capitalize(
-			name,
+			collection.pluralName || collection.name + 's',
 		)}` as `useAll${CapitalizedCollectionName<Schema>}`;
 		hooks[getAllHookName] = function useAll(
 			config: {

@@ -34,6 +34,7 @@ importers:
       '@lo-fi/common': workspace:*
       '@lo-fi/web': workspace:*
       '@types/react': ^18.0.17
+      fake-indexeddb: ^4.0.0
       jsdom: ^20.0.0
       react: ^18.2.0
       suspend-react: ^0.0.8
@@ -45,6 +46,7 @@ importers:
     devDependencies:
       '@lo-fi/web': link:../web
       '@types/react': 18.0.20
+      fake-indexeddb: 4.0.0
       jsdom: 20.0.0
       react: 18.2.0
       typescript: 4.8.3
