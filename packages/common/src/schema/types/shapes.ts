@@ -7,6 +7,7 @@ import {
 	NestedStorageFieldsSchema,
 	StorageArrayFieldSchema,
 	StorageFieldsSchema,
+	StorageMapFieldSchema,
 	StorageObjectFieldSchema,
 } from './fields.js';
 import { StorageSyntheticIndices } from './synthetics.js';
@@ -31,6 +32,8 @@ export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
 		? ShapeFromProperty<T['items']>[]
 		: T extends StorageObjectFieldSchema
 		? ShapeFromFields<T['properties']>
+		: T extends StorageMapFieldSchema<any>
+		? Record<string, ShapeFromProperty<T['values']>>
 		: T['type'] extends 'any'
 		? any
 		: never;

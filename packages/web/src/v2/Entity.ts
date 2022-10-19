@@ -16,6 +16,7 @@ import {
 import { EntityStore } from './EntityStore.js';
 
 export const UPDATE = '@@update';
+export const DELETE = '@@delete';
 
 interface CacheEvents {
 	onSubscribed: () => void;
@@ -46,6 +47,10 @@ type EntityPropertyValue<T, K extends keyof T | number> = T extends Array<any>
 
 export function updateEntity(entity: EntityBase<any>, newValue: any) {
 	entity[UPDATE](newValue);
+}
+
+export function deleteEntity(entity: EntityBase<any>) {
+	entity[DELETE]();
 }
 
 export abstract class EntityBase<T> {
@@ -84,20 +89,20 @@ export abstract class EntityBase<T> {
 		this[UPDATE](initial);
 	}
 
-	protected [UPDATE] = (initial: T | undefined) => {
-		if (!initial) {
-			// entity was deleted
-			this._current = null;
-			this._override = null;
-			this.cachedSnapshot = null;
-			this.subObjectCache.clear();
-			this._deleted = true;
-			this.events.emit('delete');
-			return;
-		}
+	protected [DELETE] = () => {
+		// entity was deleted
+		this._current = null;
+		this._override = null;
+		this.cachedSnapshot = null;
+		this.subObjectCache.clear();
+		this._deleted = true;
+		this.events.emit('delete');
+	};
 
+	protected [UPDATE] = (initial: T | undefined) => {
 		const normalized = normalizeFirstLevel(initial);
-		this._current = removeOid(normalized.get(this.oid));
+		const self = normalized.get(this.oid);
+		this._current = self ? removeOid(self) : undefined;
 		// update any existing sub-object values
 		const droppedKeys = new Set<ObjectIdentifier>();
 		const newKeys = new Set<ObjectIdentifier>(normalized.keys());
@@ -133,7 +138,7 @@ export abstract class EntityBase<T> {
 		// reset snapshot dirty state
 		this.cachedSnapshot = null;
 
-		if (this._deleted) {
+		if (this._deleted && this._current) {
 			this._deleted = false;
 			this.events.emit('restore');
 		}
@@ -183,6 +188,13 @@ export abstract class EntityBase<T> {
 		this.propagateImmediateOperations(patches);
 	};
 
+	protected cloneCurrent = () => {
+		if (this._current === undefined) {
+			return undefined;
+		}
+		return cloneDeep(this._current);
+	};
+
 	/**
 	 * When an entity creates patches, it applies them in-memory for
 	 * immediate feedback. But not all patches will relate to its immediate
@@ -194,7 +206,7 @@ export abstract class EntityBase<T> {
 			if (patch.oid === this.oid) {
 				// apply it to _override
 				this._override = applyPatch(
-					this._override || cloneDeep(this._current),
+					this._override || this.cloneCurrent(),
 					patch.data,
 				);
 			}
@@ -249,13 +261,6 @@ export abstract class EntityBase<T> {
 		value: any,
 		key: Key,
 	): EntityPropertyValue<T, Key> => {
-		if (value === undefined) {
-			throw new Error(
-				`Property ${key.toString()} does not exist on ${JSON.stringify(
-					this.value,
-				)}`,
-			);
-		}
 		if (isObjectRef(value)) {
 			const oid = value.id;
 			const subObject = this.getSubObject(oid);

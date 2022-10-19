@@ -199,6 +199,8 @@ describe('storage documents', () => {
 					},
 				],
 			},
+			map: {},
+			objectMap: {},
 		});
 
 		expect(item1.get('weird').get('foo')).toBe('bar');
@@ -212,5 +214,34 @@ describe('storage documents', () => {
 			{ corge: 3 },
 			{ corge: 4 },
 		]);
+	});
+
+	it('should provide access and updates for map-type fields', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('weird', {
+			id: cuid(),
+			weird: null,
+			map: {
+				foo: 'bar',
+				baz: 'qux',
+			},
+			objectMap: {
+				foo: {
+					content: 'bar',
+				},
+			},
+		});
+
+		expect(item1.get('map').get('foo')).toBe('bar');
+		expect(item1.get('map').get('baz')).toBe('qux');
+		expect(item1.get('map').getSnapshot()).toEqual({
+			foo: 'bar',
+			baz: 'qux',
+		});
+		expect(item1.get('objectMap').get('foo').get('content')).toBe('bar');
+		expect(item1.get('objectMap').get('baz')).toBe(undefined);
+		item1.get('objectMap').set('baz', { content: 'qux' });
+		expect(item1.get('objectMap').get('baz').get('content')).toBe('qux');
 	});
 });

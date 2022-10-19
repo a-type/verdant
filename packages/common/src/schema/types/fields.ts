@@ -27,13 +27,18 @@ export type StorageObjectFieldSchema = {
 export type StorageAnyFieldSchema = {
 	type: 'any';
 };
+export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
+	type: 'map';
+	values: NestedStorageFieldSchema;
+};
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
 	| StorageNumberFieldSchema
 	| StorageBooleanFieldSchema
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
-	| StorageAnyFieldSchema;
+	| StorageAnyFieldSchema
+	| StorageMapFieldSchema<any>;
 
 // nested versions don't have index info
 export type NestedStorageStringFieldSchema = {

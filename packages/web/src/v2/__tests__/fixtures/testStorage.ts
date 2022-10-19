@@ -63,6 +63,23 @@ export const weirdCollection = collection({
 		weird: {
 			type: 'any',
 		},
+		map: {
+			type: 'map',
+			values: {
+				type: 'string',
+			},
+		},
+		objectMap: {
+			type: 'map',
+			values: {
+				type: 'object',
+				properties: {
+					content: {
+						type: 'string',
+					},
+				},
+			},
+		},
 	},
 	synthetics: {},
 	compounds: {},

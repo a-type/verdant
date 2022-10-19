@@ -13,7 +13,12 @@ import {
 	assert,
 } from '@lo-fi/common';
 import { Sync } from './Sync.js';
-import { EntityBase, ObjectEntity, updateEntity } from './Entity.js';
+import {
+	deleteEntity,
+	EntityBase,
+	ObjectEntity,
+	updateEntity,
+} from './Entity.js';
 import { storeRequestPromise } from './idb.js';
 import { Metadata } from './Metadata.js';
 import { computeCompoundIndices, computeSynthetics } from './indexes.js';
@@ -132,7 +137,11 @@ export class EntityStore extends EventSubscriber<{
 		await this.storeView(oid, view);
 		const entity = this.cache.get(oid);
 		if (entity) {
-			updateEntity(entity, view);
+			if (view === undefined) {
+				deleteEntity(entity);
+			} else {
+				updateEntity(entity, view);
+			}
 		}
 	};
 
