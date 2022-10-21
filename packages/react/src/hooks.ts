@@ -33,14 +33,14 @@ type CollectionHooks<
 	[key in Collection['name'] as `useAll${PluralCapital<
 		Collection['name'],
 		Collection['pluralName']
-	>}`]: <IndexName extends CollectionIndexName<Collection>>(config?: {
-		index?: CollectionIndexFilter<Collection, IndexName>;
+	>}`]: (config?: {
+		index?: CollectionIndexFilter;
 	}) => QueryHookResult<ObjectEntity<any>[]>;
 } & {
-	[key in Collection['name'] as `useOne${Capitalize<Collection['name']>}`]: <
-		IndexName extends CollectionIndexName<Collection>,
-	>(config?: {
-		index?: CollectionIndexFilter<Collection, IndexName>;
+	[key in Collection['name'] as `useOne${Capitalize<
+		Collection['name']
+	>}`]: (config?: {
+		index?: CollectionIndexFilter;
 	}) => QueryHookResult<ObjectEntity<any>>;
 };
 
@@ -180,14 +180,9 @@ export function createHooks<
 		const findOneHookName = `useOne${capitalize(
 			collection.name,
 		)}` as `useOne${CapitalizedCollectionName<Schema>}`;
-		hooks[findOneHookName] = function useOne<
-			IndexName extends CollectionIndexName<Schema['collections'][typeof name]>,
-		>(
+		hooks[findOneHookName] = function useOne(
 			config: {
-				index?: CollectionIndexFilter<
-					Schema['collections'][typeof name],
-					IndexName
-				>;
+				index?: CollectionIndexFilter;
 			} = {},
 		) {
 			const storage = useStorage();
@@ -203,7 +198,7 @@ export function createHooks<
 		)}` as `useAll${CapitalizedCollectionName<Schema>}`;
 		hooks[getAllHookName] = function useAll(
 			config: {
-				index?: CollectionIndexFilter<any, any>;
+				index?: CollectionIndexFilter;
 			} = {},
 		) {
 			const storage = useStorage();

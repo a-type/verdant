@@ -1,15 +1,11 @@
 import {
+	assert,
 	assignOid,
 	createOid,
 	diffToPatches,
-	initialToPatches,
 	SchemaCollection,
-	SchemaCollectionName,
-	ShapeFromFields,
 	StorageDocument,
-	StorageDocumentInit,
 	StorageSchema,
-	assert,
 } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 import { EntityStore } from './EntityStore.js';
@@ -44,7 +40,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 	create = async (collection: string, init: any) => {
 		const oid = this.getOid(collection, init);
 		// documents are always objects at the root
-		return this.entities.create(init, oid);
+		return this.entities.create(init, oid) as unknown as ObjectEntity<any>;
 	};
 
 	upsert = async (collection: string, init: any) => {

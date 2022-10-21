@@ -1,23 +1,19 @@
 import {
-	CollectionIndexName,
-	MatchCollectionIndexFilter,
-	CollectionFilter,
-	StorageCollectionSchema,
-	RangeCollectionIndexFilter,
 	CollectionCompoundIndexFilter,
+	CollectionFilter,
+	MatchCollectionIndexFilter,
+	RangeCollectionIndexFilter,
 } from './types.js';
 
-export function isMatchIndexFilter<
-	C extends StorageCollectionSchema<any, any, any>,
-	I extends CollectionIndexName<C>,
->(filter: CollectionFilter<C, I>): filter is MatchCollectionIndexFilter<C, I> {
+export function isMatchIndexFilter(
+	filter: CollectionFilter,
+): filter is MatchCollectionIndexFilter {
 	return !!(filter as any).equals;
 }
 
-export function isRangeIndexFilter<
-	C extends StorageCollectionSchema<any, any, any>,
-	I extends CollectionIndexName<C>,
->(filter: CollectionFilter<C, I>): filter is RangeCollectionIndexFilter<C, I> {
+export function isRangeIndexFilter(
+	filter: CollectionFilter,
+): filter is RangeCollectionIndexFilter {
 	return (
 		!!(filter as any).gte ||
 		!!(filter as any).lte ||
@@ -26,11 +22,8 @@ export function isRangeIndexFilter<
 	);
 }
 
-export function isCompoundIndexFilter<
-	C extends StorageCollectionSchema<any, any, any>,
-	I extends CollectionIndexName<C>,
->(
-	filter: CollectionFilter<C, I>,
-): filter is CollectionCompoundIndexFilter<C, I> {
+export function isCompoundIndexFilter(
+	filter: CollectionFilter,
+): filter is CollectionCompoundIndexFilter {
 	return !!(filter as any).match;
 }

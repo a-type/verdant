@@ -1,36 +1,26 @@
 import {
-	CollectionFilter,
-	CollectionIndexName,
-	RangeCollectionIndexFilter,
-	StorageSchema,
-	StorageCollectionSchema,
-	MatchCollectionIndexFilter,
+	assert,
 	CollectionCompoundIndexFilter,
+	CollectionFilter,
 	createLowerBoundIndexValue,
 	createUpperBoundIndexValue,
-	isRangeIndexFilter,
 	isMatchIndexFilter,
-	StorageDocumentInit,
-	SchemaCollection,
-	SchemaCollectionName,
-	assert,
+	isRangeIndexFilter,
+	MatchCollectionIndexFilter,
+	RangeCollectionIndexFilter,
+	StorageSchema,
 } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 import { Query } from './Query.js';
 import { QueryStore } from './QueryStore.js';
 
-export class QueryMaker<Schema extends StorageSchema<any>> {
+export class QueryMaker {
 	constructor(
 		private readonly queryStore: QueryStore,
 		private readonly schema: StorageSchema<any>,
 	) {}
 
-	get = <Collection extends SchemaCollectionName<Schema>>(
-		collection: Collection,
-		primaryKey: string,
-	): Query<
-		ObjectEntity<StorageDocumentInit<SchemaCollection<Schema, Collection>>>
-	> => {
+	get = (collection: string, primaryKey: string): Query<ObjectEntity<any>> => {
 		return this.queryStore.get({
 			collection: collection as string,
 			range: primaryKey,
@@ -38,47 +28,32 @@ export class QueryMaker<Schema extends StorageSchema<any>> {
 		});
 	};
 
-	findOne = <
-		Collection extends SchemaCollectionName<Schema>,
-		Index extends CollectionIndexName<Schema['collections'][Collection]>,
-	>(
-		collection: Collection,
-		query?: CollectionFilter<Schema['collections'][Collection], Index>,
-	): Query<
-		ObjectEntity<StorageDocumentInit<SchemaCollection<Schema, Collection>>>
-	> => {
+	findOne = (
+		collection: string,
+		query?: CollectionFilter,
+	): Query<ObjectEntity<any>> => {
 		return this.queryStore.get({
-			collection: collection as string,
-			range: this.getRange(collection as string, query),
+			collection,
+			range: this.getRange(collection, query),
 			single: true,
 			index: query?.where,
 			direction: query?.order === 'desc' ? 'prev' : 'next',
 		});
 	};
 
-	findAll = <
-		Collection extends SchemaCollectionName<Schema>,
-		Index extends CollectionIndexName<Schema['collections'][Collection]>,
-	>(
-		collection: Collection,
-		query?: CollectionFilter<Schema['collections'][Collection], Index>,
-	): Query<
-		ObjectEntity<StorageDocumentInit<SchemaCollection<Schema, Collection>>>[]
-	> => {
+	findAll = (
+		collection: string,
+		query?: CollectionFilter,
+	): Query<ObjectEntity<any>[]> => {
 		return this.queryStore.get({
-			collection: collection as string,
-			range: this.getRange(collection as string, query),
+			collection,
+			range: this.getRange(collection, query),
 			index: query?.where,
 			direction: query?.order === 'desc' ? 'prev' : 'next',
 		});
 	};
 
-	private rangeIndexToIdbKeyRange = (
-		filter: RangeCollectionIndexFilter<
-			StorageCollectionSchema<any, any, any>,
-			CollectionIndexName<StorageCollectionSchema<any, any, any>>
-		>,
-	) => {
+	private rangeIndexToIdbKeyRange = (filter: RangeCollectionIndexFilter) => {
 		const lower = filter.gte || filter.gt;
 		const upper = filter.lte || filter.lt;
 		if (lower === upper) {
@@ -93,21 +68,13 @@ export class QueryMaker<Schema extends StorageSchema<any>> {
 		}
 	};
 
-	private matchIndexToIdbKeyRange = (
-		filter: MatchCollectionIndexFilter<
-			StorageCollectionSchema<any, any, any>,
-			CollectionIndexName<StorageCollectionSchema<any, any, any>>
-		>,
-	) => {
+	private matchIndexToIdbKeyRange = (filter: MatchCollectionIndexFilter) => {
 		return IDBKeyRange.only(filter.equals as string | number);
 	};
 
 	private compoundIndexToIdbKeyRange = (
 		collection: string,
-		filter: CollectionCompoundIndexFilter<
-			StorageCollectionSchema<any, any, any>,
-			CollectionIndexName<StorageCollectionSchema<any, any, any>>
-		>,
+		filter: CollectionCompoundIndexFilter,
 	) => {
 		// validate the usage of the compound index:
 		// - all match fields must be contiguous at the start of the compound order
@@ -142,10 +109,7 @@ export class QueryMaker<Schema extends StorageSchema<any>> {
 		return IDBKeyRange.bound(lower, upper);
 	};
 
-	private getRange = (
-		collection: string,
-		index?: CollectionFilter<any, any>,
-	) => {
+	private getRange = (collection: string, index?: CollectionFilter) => {
 		if (!index) return undefined;
 		if (isRangeIndexFilter(index)) return this.rangeIndexToIdbKeyRange(index);
 		if (isMatchIndexFilter(index)) return this.matchIndexToIdbKeyRange(index);

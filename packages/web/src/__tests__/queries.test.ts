@@ -3,7 +3,7 @@ import { createTestStorage } from './fixtures/testStorage.js';
 import type { Storage } from '../index.js';
 
 describe('storage queries', () => {
-	async function addTestingItems(storage: Storage<any>) {
+	async function addTestingItems(storage: Storage) {
 		let items = [];
 
 		for (const item of [

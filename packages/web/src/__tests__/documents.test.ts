@@ -167,7 +167,7 @@ describe('storage documents', () => {
 			expect(tag).toBe('tag ' + ++i);
 		}
 
-		expect(item1.get('tags').filter((tag) => tag === 'tag 1')).toEqual([
+		expect(item1.get('tags').filter((tag: string) => tag === 'tag 1')).toEqual([
 			'tag 1',
 		]);
 
