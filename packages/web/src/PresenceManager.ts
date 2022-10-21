@@ -1,9 +1,9 @@
 import { ServerMessage, EventSubscriber } from '@lo-fi/common';
 import { Metadata } from './Metadata.js';
 import { Sync } from './Sync.js';
-import type { Presence, Profile, UserInfo } from '../index.js';
+import type { Presence, UserInfo } from './index.js';
 
-export class PresenceManager<Profile, Presence> extends EventSubscriber<{
+export class PresenceManager extends EventSubscriber<{
 	peerChanged: (userId: string, presence: any) => void;
 	selfChanged: (presence: any) => void;
 	peersChanged: (peers: Record<string, any>) => void;

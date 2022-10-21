@@ -1,0 +1,41 @@
+{
+	"name": "@lo-fi/schema",
+	"version": "0.1.0-rc.11",
+	"description": "Schema management tools for lo-fi",
+	"type": "module",
+	"bin": {
+		"migrate": "bin/migrate.js",
+		"generate": "bin/generate.js"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"bin/",
+		"src/"
+	],
+	"scripts": {
+		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r",
+		"test": "pnpm run pretest && vitest"
+	},
+	"dependencies": {
+		"@swc/core": "^1.3.8",
+		"prettier": "^2.7.1",
+		"change-case": "^4.1.2",
+		"yargs": "^17.6.0"
+	},
+	"devDependencies": {
+		"@lo-fi/common": "workspace:*",
+		"@lo-fi/web": "workspace:*",
+		"fake-indexeddb": "^4.0.0",
+		"jsdom": "^20.0.0",
+		"typescript": "^4.7.4",
+		"vitest": "^0.24.3"
+	}
+}

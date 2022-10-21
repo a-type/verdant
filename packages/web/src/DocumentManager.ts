@@ -14,7 +14,6 @@ import {
 import { ObjectEntity } from './Entity.js';
 import { EntityStore } from './EntityStore.js';
 import { Metadata } from './Metadata.js';
-import { Document } from './types.js';
 
 /**
  * Exposes functionality for creating documents,
@@ -42,21 +41,13 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return createOid(collection as string, primaryKey);
 	};
 
-	create = async <Collection extends SchemaCollectionName<Schema>>(
-		collection: Collection,
-		init: StorageDocumentInit<SchemaCollection<Schema, Collection>>,
-	) => {
+	create = async (collection: string, init: any) => {
 		const oid = this.getOid(collection, init);
 		// documents are always objects at the root
-		return this.entities.create(init, oid) as Promise<
-			Document<SchemaCollection<Schema, Collection>>
-		>;
+		return this.entities.create(init, oid);
 	};
 
-	upsert = async <Collection extends SchemaCollectionName<Schema>>(
-		collection: Collection,
-		init: StorageDocumentInit<SchemaCollection<Schema, Collection>>,
-	) => {
+	upsert = async (collection: string, init: any) => {
 		const oid = this.getOid(collection, init);
 		const existing = await this.entities.getFromOid(oid);
 		if (existing) {
@@ -73,10 +64,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		}
 	};
 
-	delete = async <Collection extends SchemaCollectionName<Schema>>(
-		collection: Collection,
-		primaryKey: string,
-	) => {
+	delete = async (collection: string, primaryKey: string) => {
 		const oid = createOid(collection as string, primaryKey);
 		return this.entities.delete(oid);
 	};

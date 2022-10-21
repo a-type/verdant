@@ -7,11 +7,11 @@ import { PresenceManager } from './PresenceManager.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
 import { DocumentManager } from './DocumentManager.js';
 import { EntityStore } from './EntityStore.js';
-import { getSizeOfObjectStore, storeRequestPromise } from './idb.js';
+import { getSizeOfObjectStore } from './idb.js';
 import { SyncHarness } from './SyncHarness.js';
-import type { Presence } from '../index.js';
+import type { Presence } from './index.js';
 
-export class Storage<Schema extends StorageSchema<any>> {
+export class Storage {
 	private entities = new EntityStore(
 		this.documentDb,
 		this.schema,
@@ -20,34 +20,42 @@ export class Storage<Schema extends StorageSchema<any>> {
 	);
 	private syncHarness;
 	private queryStore = new QueryStore(this.documentDb, this.entities);
-	queryMaker = new QueryMaker<Schema>(this.queryStore, this.schema);
-	documentManager = new DocumentManager<Schema>(
-		this.meta,
-		this.schema,
-		this.entities,
-	);
+	queryMaker = new QueryMaker(this.queryStore, this.schema);
+	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
 	readonly presence = new PresenceManager(this.sync, this.meta);
 
-	readonly collectionNames: SchemaCollectionName<Schema>[];
+	readonly collectionNames: string[];
 
 	constructor(
 		private meta: Metadata,
-		private schema: Schema,
+		private schema: StorageSchema<any>,
 		private metaDb: IDBDatabase,
 		private documentDb: IDBDatabase,
 		public sync: Sync,
 		initialPresence: Presence,
 		private namespace: string,
 	) {
-		this.collectionNames = Object.keys(
-			schema.collections,
-		) as SchemaCollectionName<Schema>[];
+		this.collectionNames = Object.keys(schema.collections);
 		this.syncHarness = new SyncHarness({
 			sync: this.sync,
 			meta: this.meta,
 			entities: this.entities,
 			initialPresence,
 		});
+
+		// self-assign collection shortcuts. these are not typed
+		// here but are typed in the generated code...
+		for (const collectionName of this.collectionNames) {
+			// @ts-ignore
+			this[collectionName] = {
+				create: (doc: any) => this.documentManager.create(collectionName, doc),
+				upsert: (doc: any) => this.documentManager.upsert(collectionName, doc),
+				delete: (id: string) => this.documentManager.delete(collectionName, id),
+				get: (id: string) => this.queryMaker.get(collectionName, id),
+				findOne: (query: any) => this.queryMaker.findOne(collectionName, query),
+				findAll: (query: any) => this.queryMaker.findAll(collectionName, query),
+			};
+		}
 	}
 
 	create: this['documentManager']['create'] = async (...args) => {
@@ -146,12 +154,12 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
  * be useful immediately.
  */
 export class StorageDescriptor<Schema extends StorageSchema<any>> {
-	private readonly _readyPromise: Promise<Storage<Schema>>;
+	private readonly _readyPromise: Promise<Storage>;
 	// assertions because these are defined by plucking them from
 	// Promise initializer
-	private resolveReady!: (storage: Storage<Schema>) => void;
+	private resolveReady!: (storage: Storage) => void;
 	private rejectReady!: (err: Error) => void;
-	private _resolvedValue: Storage<Schema> | undefined;
+	private _resolvedValue: Storage | undefined;
 	private _initializing = false;
 	private _namespace: string;
 
@@ -183,7 +191,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				indexedDB: init.indexedDb,
 			});
 
-			const storage = new Storage<Schema>(
+			const storage = new Storage(
 				meta,
 				init.schema,
 				metaDb,

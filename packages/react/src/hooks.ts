@@ -1,12 +1,12 @@
 import { useMemo, useRef, useSyncExternalStore } from 'react';
 import { suspend } from 'suspend-react';
 import {
-	Document,
 	Storage,
 	Query,
 	UserInfo,
 	Entity,
 	StorageDescriptor,
+	ObjectEntity,
 } from '@lo-fi/web';
 import {
 	CollectionIndexFilter,
@@ -28,14 +28,20 @@ type CollectionHooks<
 > = {
 	[key in Collection['name'] as `use${Capitalize<Collection['name']>}`]: (
 		id: string,
-	) => QueryHookResult<Document<Collection>>;
+	) => QueryHookResult<ObjectEntity<any>>;
 } & {
 	[key in Collection['name'] as `useAll${PluralCapital<
 		Collection['name'],
 		Collection['pluralName']
 	>}`]: <IndexName extends CollectionIndexName<Collection>>(config?: {
 		index?: CollectionIndexFilter<Collection, IndexName>;
-	}) => QueryHookResult<Document<Collection>[]>;
+	}) => QueryHookResult<ObjectEntity<any>[]>;
+} & {
+	[key in Collection['name'] as `useOne${Capitalize<Collection['name']>}`]: <
+		IndexName extends CollectionIndexName<Collection>,
+	>(config?: {
+		index?: CollectionIndexFilter<Collection, IndexName>;
+	}) => QueryHookResult<ObjectEntity<any>>;
 };
 
 type UnionToIntersection<T> = (T extends any ? (k: T) => void : never) extends (
@@ -88,7 +94,7 @@ type CreatedHooks<
 	usePeerIds(): string[];
 	usePeer(peerId: string): UserInfo;
 	useSyncStatus(): boolean;
-	useStorage(): Storage<Schema>;
+	useStorage(): Storage;
 };
 
 export function createHooks<
@@ -171,6 +177,27 @@ export function createHooks<
 			return data;
 		};
 
+		const findOneHookName = `useOne${capitalize(
+			collection.name,
+		)}` as `useOne${CapitalizedCollectionName<Schema>}`;
+		hooks[findOneHookName] = function useOne<
+			IndexName extends CollectionIndexName<Schema['collections'][typeof name]>,
+		>(
+			config: {
+				index?: CollectionIndexFilter<
+					Schema['collections'][typeof name],
+					IndexName
+				>;
+			} = {},
+		) {
+			const storage = useStorage();
+			const liveQuery = useMemo(() => {
+				return (storage as any).findOne(name, config.index);
+			}, [config?.index]);
+			const data = useLiveQuery(liveQuery);
+			return data;
+		};
+
 		const getAllHookName = `useAll${capitalize(
 			collection.pluralName || collection.name + 's',
 		)}` as `useAll${CapitalizedCollectionName<Schema>}`;
@@ -182,7 +209,7 @@ export function createHooks<
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
-			const liveQuery = storage.findAll(name, config.index);
+			const liveQuery = (storage as any).findAll(name, config.index);
 			const data = useLiveQuery(liveQuery);
 			return data;
 		};
