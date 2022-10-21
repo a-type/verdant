@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 0.1.1
+
+### Patch Changes
+
+- 3f71be4: Added CLI to generate client typings
+- Updated dependencies [3f71be4]
+  - @lo-fi/common@0.1.1
+  - @lo-fi/web@0.1.1
+
 ## 0.1.0
 
 ### Patch Changes
