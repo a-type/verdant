@@ -275,8 +275,9 @@ export class ServerLibrary {
 		for (const op of ops) {
 			const creator = replicaMap[op.replicaId];
 			const isBeforeCreatorsOldestHistory =
-				creator.oldestOperationLogicalTime &&
-				creator.oldestOperationLogicalTime > op.timestamp;
+				!creator ||
+				(creator.oldestOperationLogicalTime &&
+					creator.oldestOperationLogicalTime > op.timestamp);
 			const isBeforeGlobalAck = globalAck > op.timestamp;
 			if (
 				!hardStops[op.oid] &&
