@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 0.1.2
+
+### Patch Changes
+
+- fcf50cb: fix another typing bug
+
 ## 0.1.1
 
 ### Patch Changes
