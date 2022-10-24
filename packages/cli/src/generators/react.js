@@ -8,7 +8,7 @@ import type { Client, ClientDescriptor, ${collections
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
 		.join(', ')} } from './index.js';
-import type { UserInfo } from '@lo-fi/web';
+import type { UserInfo, ObjectEntity, ListEntity } from '@lo-fi/web';
 
 export interface GeneratedHooks {
   useStorage: () => Client;
@@ -16,6 +16,7 @@ export interface GeneratedHooks {
   usePeerIds: () => string[];
   usePeer: (peerId: string) => UserInfo;
   useSyncStatus: () => boolean;
+	useWatch: (entity: ObjectEntity<any | ListEntity<any>) => void;
   ${collections
 		.map((col) => {
 			const name = getObjectProperty(col, 'name').value;
@@ -28,7 +29,7 @@ use${pascalName}: (id: string) => ${pascalName};
 useOne${pascalName}: (config: {
   index: ${pascalName}Filter;
 }) => ${pascalName};
-useAll${pascalPlural}: (config: {
+useAll${pascalPlural}: (config?: {
   index: ${pascalName}Filter;
 }) => ${pascalName}[];
     `;

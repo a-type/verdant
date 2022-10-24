@@ -22,6 +22,7 @@ export class Client {
   ${pluralNames.map(getClientCollectionTypings).join(';\n')}
 
   presence: Storage['presence'];
+  sync: Storage['sync'];
 
   stats: () => Promise<any>;
 }

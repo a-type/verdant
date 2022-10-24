@@ -103,7 +103,7 @@ export interface ${filterName} {
 			.map(({ expression }) => {
 				const name = expression.value;
 				const ofField = indexableFields.get(name);
-				return `${name}: ${getFieldSnapshotTyping(ofField, {
+				return `${name}?: ${getFieldSnapshotTyping(ofField, {
 					flattenArrays: true,
 				})}`;
 			})
