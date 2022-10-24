@@ -4,8 +4,7 @@
 	"description": "Schema management tools for lo-fi",
 	"type": "module",
 	"bin": {
-		"migrate": "bin/migrate.js",
-		"generate": "bin/generate.js"
+		"lo-fi": "bin/generate.js"
 	},
 	"exports": {
 		".": {
@@ -33,6 +32,7 @@
 	"devDependencies": {
 		"@lo-fi/common": "workspace:*",
 		"@lo-fi/web": "workspace:*",
+		"@lo-fi/react": "workspace:*",
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"typescript": "^4.7.4",

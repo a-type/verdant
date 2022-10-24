@@ -78,7 +78,7 @@ async function run(input, output, includeReact) {
 		typingsFile += getCollectionTypings(name, definition);
 	}
 
-	typingsFile += getClientTypings(Object.keys(collections));
+	typingsFile += getClientTypings(Object.values(collections));
 
 	const typingsFilePath = path.resolve(process.cwd(), output, 'index.d.ts');
 	await fs.writeFile(

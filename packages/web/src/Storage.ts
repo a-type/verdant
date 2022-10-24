@@ -1,4 +1,9 @@
-import { Migration, SchemaCollectionName, StorageSchema } from '@lo-fi/common';
+import {
+	Migration,
+	SchemaCollection,
+	SchemaCollectionName,
+	StorageSchema,
+} from '@lo-fi/common';
 import { Sync } from './Sync.js';
 import { Metadata, openMetadataDatabase } from './Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
@@ -45,15 +50,20 @@ export class Storage {
 
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
-		for (const collectionName of this.collectionNames) {
+		for (const _collection of Object.values(schema.collections)) {
+			const collection = _collection as SchemaCollection<any, any>;
+			const collectionName = collection.pluralName ?? collection.name + 's';
 			// @ts-ignore
 			this[collectionName] = {
-				create: (doc: any) => this.documentManager.create(collectionName, doc),
-				upsert: (doc: any) => this.documentManager.upsert(collectionName, doc),
-				delete: (id: string) => this.documentManager.delete(collectionName, id),
-				get: (id: string) => this.queryMaker.get(collectionName, id),
-				findOne: (query: any) => this.queryMaker.findOne(collectionName, query),
-				findAll: (query: any) => this.queryMaker.findAll(collectionName, query),
+				create: (doc: any) => this.documentManager.create(collection.name, doc),
+				upsert: (doc: any) => this.documentManager.upsert(collection.name, doc),
+				delete: (id: string) =>
+					this.documentManager.delete(collection.name, id),
+				get: (id: string) => this.queryMaker.get(collection.name, id),
+				findOne: (query: any) =>
+					this.queryMaker.findOne(collection.name, query),
+				findAll: (query: any) =>
+					this.queryMaker.findAll(collection.name, query),
 			};
 		}
 	}

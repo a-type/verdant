@@ -1,7 +1,7 @@
 export const typingsPreamble = `
 import type { StorageSchema } from '@lo-fi/common';
-import type { StorageInitOptions, ObjectEntity, Query } from '@lo-fi/web';
-export type * from '@lo-fi/web';
+import type { Storage, StorageInitOptions, ObjectEntity, Query } from '@lo-fi/web';
+export * from '@lo-fi/web';
 
 `;
 

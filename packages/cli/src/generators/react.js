@@ -3,7 +3,7 @@ import { getObjectProperty } from './tools.js';
 
 export function getReactTypings(collections) {
 	return `
-import type { Client, ${collections
+import type { Client, ClientDescriptor, ${collections
 		.map((c) => getObjectProperty(c, 'name').value)
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
@@ -36,6 +36,6 @@ useAll${pascalPlural}: (config: {
 		.join('\n')}
 }
 
-export const createHooks: (client: Client) => GeneratedHooks;
+export const createHooks: (client: ClientDescriptor) => GeneratedHooks;
 `;
 }

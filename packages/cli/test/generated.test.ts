@@ -25,7 +25,7 @@ describe('generated client', () => {
 	it('should expose model accessors which produce usable models', async () => {
 		const client = await makeClient();
 
-		const item = await client.todo.create({
+		const item = await client.todos.create({
 			id: '1',
 			attachments: [],
 			category: null,
@@ -36,7 +36,7 @@ describe('generated client', () => {
 
 		expect(item.get('content')).toBe('test');
 
-		const query = client.todo.findAll({
+		const query = client.todos.findAll({
 			where: 'example',
 			gt: 'a',
 			lt: 'x',
@@ -48,9 +48,17 @@ describe('generated client', () => {
 
 describe('generated react hooks', () => {
 	it('should create all the hooks for each collection', async () => {
-		const client = await makeClient();
-
-		const hooks = createHooks(client);
+		const hooks = createHooks(
+			new ClientDescriptor({
+				namespace: 'test',
+				initialPresence: {},
+				migrations: [createDefaultMigration(schema)],
+				schema,
+				sync: new WebsocketSync({
+					host: 'fake',
+				}),
+			}),
+		);
 
 		expect(hooks.useTodo).toBeDefined();
 		expect(hooks.useAllTodos).toBeDefined();

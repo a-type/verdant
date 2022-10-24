@@ -94,3 +94,9 @@ export interface ${pascalName}Init {
 }
 `;
 }
+
+export function getCollectionPluralName(collection) {
+	const collectionName = getObjectProperty(collection, 'name').value;
+	const pluralName = getObjectProperty(collection, 'pluralName')?.value;
+	return pluralName ?? collectionName + 's';
+}
