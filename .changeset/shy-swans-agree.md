@@ -1,6 +1,6 @@
 ---
-'@lo-fi/cli': minor
-'@lo-fi/web': minor
+'@lo-fi/cli': patch
+'@lo-fi/web': patch
 ---
 
 plural client collection names, fix generator bugs
