@@ -16,7 +16,7 @@ export interface GeneratedHooks {
   usePeerIds: () => string[];
   usePeer: (peerId: string) => UserInfo;
   useSyncStatus: () => boolean;
-	useWatch: (entity: ObjectEntity<any | ListEntity<any>) => void;
+	useWatch: (entity: ObjectEntity<any> | ListEntity<any>) => void;
   ${collections
 		.map((col) => {
 			const name = getObjectProperty(col, 'name').value;
