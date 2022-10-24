@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 0.1.2
+
+### Patch Changes
+
+- c7e541f: plural client collection names, fix generator bugs
+
 ## 0.1.1
 
 ### Patch Changes
