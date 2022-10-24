@@ -50,20 +50,17 @@ export class Storage {
 
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
-		for (const _collection of Object.values(schema.collections)) {
+		for (const [name, _collection] of Object.entries(schema.collections)) {
 			const collection = _collection as SchemaCollection<any, any>;
 			const collectionName = collection.pluralName ?? collection.name + 's';
 			// @ts-ignore
 			this[collectionName] = {
-				create: (doc: any) => this.documentManager.create(collection.name, doc),
-				upsert: (doc: any) => this.documentManager.upsert(collection.name, doc),
-				delete: (id: string) =>
-					this.documentManager.delete(collection.name, id),
-				get: (id: string) => this.queryMaker.get(collection.name, id),
-				findOne: (query: any) =>
-					this.queryMaker.findOne(collection.name, query),
-				findAll: (query: any) =>
-					this.queryMaker.findAll(collection.name, query),
+				create: (doc: any) => this.documentManager.create(name, doc),
+				upsert: (doc: any) => this.documentManager.upsert(name, doc),
+				delete: (id: string) => this.documentManager.delete(name, id),
+				get: (id: string) => this.queryMaker.get(name, id),
+				findOne: (query: any) => this.queryMaker.findOne(name, query),
+				findAll: (query: any) => this.queryMaker.findAll(name, query),
 			};
 		}
 	}
