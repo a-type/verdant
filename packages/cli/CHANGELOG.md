@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 0.1.3
+
+### Patch Changes
+
+- fa2e4a8: bugfixes
+
 ## 0.1.2
 
 ### Patch Changes
