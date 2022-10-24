@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 0.1.2
+
+### Patch Changes
+
+- 9caecdb: nil check for replica info in baselining
+
 ## 0.1.1
 
 ### Patch Changes
