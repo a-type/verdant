@@ -328,6 +328,14 @@ server.listen(8080, () => {
 });
 ```
 
+If you want to attach to an existing HTTP server, you will also need to set up an HTTP endpoint to handle HTTP requests on the `/lofi` subpath. For example, using Express:
+
+```ts
+app.use('/lofi', server.handleRequest);
+```
+
+Custom HTTP server support is a little limited right now. It should support Connect/Express-like middleware.
+
 ### Configuring client sync
 
 To connect your client to the server, you must pass it a ServerSync instance. You can also pass an initial presence value.
@@ -342,6 +350,7 @@ const clientDesc = new ClientDescriptor({
 	schema,
 	migrations,
 	sync: new ServerSync({
+		// host should include the /lofi path.
 		host: 'https://your.server/lofi',
 	}),
 	initialPresence: {
@@ -383,6 +392,12 @@ You can get `presence.self`, `presence.peers`, or `presence.everyone`. You can a
 lo-fi distinguishes between "replica ID" (i.e. individual device) and "user ID." The intention is to allow one actual person to use multiple devices, but only have one presence which follows them between devices.
 
 To update your presence, use `presence.update`.
+
+### Switching transports
+
+lo-fi can sync over HTTP requests or WebSockets. By default, it automatically uses HTTP when a user is the only one connected to a library, and switches to WebSockets when other users are online.
+
+You can disable this functionality by passing `sync.automaticTransportSelection: false` to your client descriptor config, and change transport manually by using `sync.setMode('realtime' | 'pull')`.
 
 ### React
 
