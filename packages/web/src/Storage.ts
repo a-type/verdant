@@ -17,7 +17,7 @@ export class Storage {
 
 	readonly collectionNames: string[];
 
-	private sync: Sync;
+	readonly sync: Sync;
 
 	constructor(
 		private meta: Metadata,

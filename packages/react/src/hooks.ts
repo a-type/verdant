@@ -1,20 +1,19 @@
-import { useMemo, useRef, useSyncExternalStore } from 'react';
-import { suspend } from 'suspend-react';
-import {
-	Storage,
-	Query,
-	UserInfo,
-	Entity,
-	StorageDescriptor,
-	ObjectEntity,
-} from '@lo-fi/web';
 import {
 	CollectionIndexFilter,
-	CollectionIndexName,
 	SchemaCollectionName,
 	StorageCollectionSchema,
 	StorageSchema,
 } from '@lo-fi/common';
+import {
+	Entity,
+	ObjectEntity,
+	Query,
+	Storage,
+	StorageDescriptor,
+	UserInfo,
+} from '@lo-fi/web';
+import { useMemo, useSyncExternalStore } from 'react';
+import { suspend } from 'suspend-react';
 
 type QueryHookResult<T> = T;
 

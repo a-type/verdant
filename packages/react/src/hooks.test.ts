@@ -52,12 +52,8 @@ describe('generated hooks', () => {
 
 		const storage = new StorageDescriptor({
 			schema: testSchema,
-			initialPresence: {},
 			migrations: [],
 			namespace: 'test',
-			sync: new WebsocketSync({
-				host: 'fake',
-			}),
 		});
 
 		const hooks = createHooks(storage);
