@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 0.2.0
+
+### Minor Changes
+
+- dd0e3a8: Hybrid push/pull sync for solo clients
+
+### Patch Changes
+
+- Updated dependencies [dd0e3a8]
+  - @lo-fi/common@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes
