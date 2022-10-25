@@ -9,6 +9,7 @@ import {
 	OperationPatch,
 	OperationMessage,
 	Operation,
+	ObjectIdentifier,
 } from '@lo-fi/common';
 import cuid from 'cuid';
 
@@ -73,19 +74,22 @@ export class MessageCreator {
 		// collect all of our operations that are newer than the server's last operation
 		// if server replica isn't stored, we're syncing for the first time.
 		const operations: Operation[] = [];
+		const affectedDocs = new Set<ObjectIdentifier>();
 		await this.meta.operations.iterateOverAllLocalOperations(
 			(patch) => {
-				operations.push(patch);
+				operations.push({
+					data: patch.data,
+					oid: patch.oid,
+					timestamp: patch.timestamp,
+				});
+				affectedDocs.add(getOidRoot(patch.oid));
 			},
 			{
 				after: provideChangesSince,
 			},
 		);
 		// for now we just send every baseline for every
-		// affected document... TODO: optimize this
-		const affectedDocs = new Set(
-			operations.map((patch) => getOidRoot(patch.oid)),
-		);
+		// affected document...
 		const baselines = await this.meta.baselines.getAllForMultipleDocuments(
 			Array.from(affectedDocs),
 		);
