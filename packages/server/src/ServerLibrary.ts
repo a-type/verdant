@@ -137,6 +137,8 @@ export class ServerLibrary {
 		replicaId: string,
 		ops: Operation[],
 	) => {
+		if (ops.length === 0) return;
+
 		this.sender.broadcast(
 			this.id,
 			{
