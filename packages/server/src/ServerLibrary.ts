@@ -67,27 +67,27 @@ export class ServerLibrary {
 		}
 	};
 
-	receive = (message: ClientMessage, userId: string) => {
+	receive = (message: ClientMessage, clientKey: string, userId: string) => {
 		this.validateReplicaAccess(message.replicaId, userId);
 
 		switch (message.type) {
 			case 'op':
-				this.handleOperation(message);
+				this.handleOperation(message, clientKey);
 				break;
 			case 'sync':
-				this.handleSync(message, userId);
+				this.handleSync(message, clientKey, userId);
 				break;
 			case 'sync-step2':
-				this.handleSyncStep2(message, userId);
+				this.handleSyncStep2(message, clientKey, userId);
 				break;
 			case 'ack':
-				this.handleAck(message, userId);
+				this.handleAck(message, clientKey, userId);
 				break;
 			case 'heartbeat':
-				this.handleHeartbeat(message, userId);
+				this.handleHeartbeat(message, clientKey, userId);
 				break;
 			case 'presence-update':
-				this.handlePresenceUpdate(message, userId);
+				this.handlePresenceUpdate(message, clientKey, userId);
 				break;
 			default:
 				console.log('Unknown message type', (message as any).type);
@@ -100,7 +100,7 @@ export class ServerLibrary {
 		this.presences.removeReplica(replicaId);
 	};
 
-	private handleOperation = (message: OperationMessage) => {
+	private handleOperation = (message: OperationMessage, clientKey: string) => {
 		const run = this.db.transaction(() => {
 			// insert patches into history
 			this.operations.insertAll(message.replicaId, message.operations);
@@ -119,7 +119,11 @@ export class ServerLibrary {
 		this.enqueueRebase();
 
 		// rebroadcast to whole library except the sender
-		this.rebroadcastOperations(message.replicaId, message.operations);
+		this.rebroadcastOperations(
+			clientKey,
+			message.replicaId,
+			message.operations,
+		);
 	};
 
 	private removeExtraOperationData = (
@@ -128,7 +132,11 @@ export class ServerLibrary {
 		return omit(operation, ['replicaId']);
 	};
 
-	private rebroadcastOperations = (replicaId: string, ops: Operation[]) => {
+	private rebroadcastOperations = (
+		clientKey: string,
+		replicaId: string,
+		ops: Operation[],
+	) => {
 		this.sender.broadcast(
 			this.id,
 			{
@@ -137,11 +145,15 @@ export class ServerLibrary {
 				replicaId,
 				globalAckTimestamp: this.replicas.getGlobalAck(),
 			},
-			[replicaId],
+			[clientKey],
 		);
 	};
 
-	private handleSync = (message: SyncMessage, clientId: string) => {
+	private handleSync = (
+		message: SyncMessage,
+		clientKey: string,
+		clientId: string,
+	) => {
 		const replicaId = message.replicaId;
 
 		if (message.resyncAll) {
@@ -180,7 +192,7 @@ export class ServerLibrary {
 		const isEmptyLibrary =
 			changesSince === null && ops.length === 0 && baselines.length === 0;
 
-		this.sender.send(this.id, replicaId, {
+		this.sender.send(this.id, clientKey, {
 			type: 'sync-resp',
 			operations: ops.map(this.removeExtraOperationData),
 			baselines: baselines.map((baseline) => ({
@@ -198,13 +210,21 @@ export class ServerLibrary {
 		});
 	};
 
-	private handleSyncStep2 = (message: SyncStep2Message, clientId: string) => {
+	private handleSyncStep2 = (
+		message: SyncStep2Message,
+		clientKey: string,
+		clientId: string,
+	) => {
 		// store all incoming operations and baselines
 		this.baselines.insertAll(message.baselines);
 
 		console.debug('Storing', message.operations.length, 'operations');
 		this.operations.insertAll(message.replicaId, message.operations);
-		this.rebroadcastOperations(message.replicaId, message.operations);
+		this.rebroadcastOperations(
+			clientKey,
+			message.replicaId,
+			message.operations,
+		);
 
 		// update the client's ackedLogicalTime
 		const lastOperation = message.operations[message.operations.length - 1];
@@ -213,10 +233,19 @@ export class ServerLibrary {
 				message.replicaId,
 				lastOperation.timestamp,
 			);
+		} else {
+			// if no operation is available to take a timestamp from,
+			// use the less accurate message timestamp...
+			// TODO: why not just always do this?
+			this.replicas.updateAcknowledged(message.replicaId, message.timestamp);
 		}
 	};
 
-	private handleAck = (message: AckMessage, clientId: string) => {
+	private handleAck = (
+		message: AckMessage,
+		clientKey: string,
+		clientId: string,
+	) => {
 		this.replicas.updateAcknowledged(message.replicaId, message.timestamp);
 	};
 
@@ -312,14 +341,19 @@ export class ServerLibrary {
 		}
 	};
 
-	private handleHeartbeat = (message: HeartbeatMessage, clientId: string) => {
-		this.sender.send(this.id, message.replicaId, {
+	private handleHeartbeat = (
+		message: HeartbeatMessage,
+		clientKey: string,
+		clientId: string,
+	) => {
+		this.sender.send(this.id, clientKey, {
 			type: 'heartbeat-response',
 		});
 	};
 
 	private handlePresenceUpdate = async (
 		message: PresenceUpdateMessage,
+		clientKey: string,
 		clientId: string,
 	) => {
 		this.presences.set(clientId, {
@@ -352,17 +386,6 @@ export class ServerLibrary {
 			replicaId,
 			userId,
 		});
-	};
-
-	private applyOperations = (baseline: any, operations: Operation[]) => {
-		for (const op of operations) {
-			baseline = this.applyOperation(baseline, op);
-		}
-		return baseline;
-	};
-
-	private applyOperation = (baseline: any, operation: Operation) => {
-		return applyPatch(baseline, operation.data);
 	};
 }
 

@@ -1,7 +1,7 @@
 import cuid from 'cuid';
 import { IDBService } from './IDBService.js';
 
-type LocalReplicaInfo = {
+export type LocalReplicaInfo = {
 	type: 'localReplicaInfo';
 	id: string;
 	ackedLogicalTime: string | null;

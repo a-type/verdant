@@ -11,8 +11,8 @@ import {
 	StorageCollectionSchema,
 	StorageSchema,
 	assert,
+	ClientMessage,
 } from '@lo-fi/common';
-import { Sync } from './Sync.js';
 import {
 	deleteEntity,
 	EntityBase,
@@ -25,6 +25,7 @@ import { computeCompoundIndices, computeSynthetics } from './indexes.js';
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
+	message: (message: ClientMessage) => void;
 }> {
 	private cache = new Map<string, EntityBase<any>>();
 
@@ -32,7 +33,6 @@ export class EntityStore extends EventSubscriber<{
 		private readonly db: IDBDatabase,
 		private readonly schema: StorageSchema<any>,
 		public readonly meta: Metadata,
-		private readonly sync: Sync,
 	) {
 		super();
 	}
@@ -118,7 +118,7 @@ export class EntityStore extends EventSubscriber<{
 			operations,
 			oldestHistoryTimestamp,
 		});
-		this.sync.send(operation);
+		this.emit('message', operation);
 		const affectedDocuments = getRoots(operations.map((p) => p.oid));
 		await Promise.all(affectedDocuments.map(this.refresh));
 		// TODO: find a more efficient and straightforward way to update affected

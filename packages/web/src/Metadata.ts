@@ -1,6 +1,9 @@
 import {
 	applyPatch,
 	assignOid,
+	ClientMessage,
+	EventSubscriber,
+	HybridLogicalClockTimestampProvider,
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
@@ -15,9 +18,10 @@ import { LocalReplicaStore } from './LocalReplicaStore.js';
 import { MessageCreator } from './MessageCreator.js';
 import { ClientOperation, OperationsStore } from './OperationsStore.js';
 import { SchemaStore } from './SchemaStore.js';
-import type { Sync } from './Sync.js';
 
-export class Metadata {
+export class Metadata extends EventSubscriber<{
+	message: (message: ClientMessage) => void;
+}> {
 	readonly operations = new OperationsStore(this.db);
 	readonly baselines = new BaselinesStore(this.db);
 	readonly localReplica = new LocalReplicaStore(this.db);
@@ -26,15 +30,17 @@ export class Metadata {
 	readonly localHistory = new LocalHistoryStore(this.db);
 	readonly messageCreator = new MessageCreator(this);
 	readonly patchCreator = new PatchCreator(() => this.now);
+	readonly time = new HybridLogicalClockTimestampProvider();
 
 	constructor(
 		private readonly db: IDBDatabase,
-		readonly sync: Sync,
 		private readonly schemaDefinition: StorageSchema<any>,
-	) {}
+	) {
+		super();
+	}
 
 	get now() {
-		return this.sync.time.now(this.schema.currentVersion);
+		return this.time.now(this.schema.currentVersion);
 	}
 
 	/**
@@ -127,7 +133,7 @@ export class Metadata {
 	 */
 	ack = async (timestamp: string) => {
 		const localReplicaInfo = await this.localReplica.get();
-		this.sync.send({
+		this.emit('message', {
 			type: 'ack',
 			replicaId: localReplicaInfo.id,
 			timestamp,
@@ -147,7 +153,6 @@ export class Metadata {
 	insertLocalOperation = async (operations: Operation[]) => {
 		if (operations.length === 0) return;
 
-		const localReplicaInfo = await this.localReplica.get();
 		await this.operations.addOperations(
 			operations.map((patch) => ({
 				...patch,
@@ -219,8 +224,6 @@ export class Metadata {
 		if (!(await this.canAutonomouslyRebase())) {
 			return;
 		}
-
-		const localInfo = await this.localReplica.get();
 
 		// find all operations before the oldest history timestamp
 		const priorOperations = new Array<ClientOperation>();

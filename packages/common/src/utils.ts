@@ -1,3 +1,5 @@
+import { v4 } from 'uuid';
+
 export function take<T extends object, Keys extends keyof T>(
 	obj: T,
 	keys: Keys[],
@@ -102,4 +104,8 @@ export function assert(
 	if (!condition) {
 		throw new Error(message);
 	}
+}
+
+export function generateId(length = 16) {
+	return v4().replace('-', '').slice(0, length);
 }

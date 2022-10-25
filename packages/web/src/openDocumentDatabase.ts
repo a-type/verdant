@@ -79,7 +79,7 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 							const store = transaction.objectStore(collection);
 							const cursorReq = store.openCursor();
 							function getMigrationNow() {
-								return meta.sync.time.zero(migration.version);
+								return meta.time.zero(migration.version);
 							}
 							cursorReq.onsuccess = (event) => {
 								const cursor = cursorReq.result;

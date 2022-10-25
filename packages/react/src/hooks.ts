@@ -146,7 +146,7 @@ export function createHooks<
 		const storage = useStorage();
 		return useSyncExternalStore(
 			(callback) => storage.sync.subscribe('onlineChange', callback),
-			() => storage.sync.active,
+			() => storage.sync.isConnected,
 		);
 	}
 

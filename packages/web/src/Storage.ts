@@ -1,52 +1,41 @@
-import {
-	Migration,
-	SchemaCollection,
-	SchemaCollectionName,
-	StorageSchema,
-} from '@lo-fi/common';
-import { NoSync, Sync } from './Sync.js';
+import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
+import { NoSync, ServerSync, Sync } from './Sync.js';
 import { Metadata, openMetadataDatabase } from './Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
-import { PresenceManager } from './PresenceManager.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
 import { DocumentManager } from './DocumentManager.js';
 import { EntityStore } from './EntityStore.js';
 import { getSizeOfObjectStore } from './idb.js';
-import { SyncHarness } from './SyncHarness.js';
 import type { Presence } from './index.js';
 
 export class Storage {
-	private entities = new EntityStore(
-		this.documentDb,
-		this.schema,
-		this.meta,
-		this.sync,
-	);
-	private syncHarness;
+	private entities = new EntityStore(this.documentDb, this.schema, this.meta);
 	private queryStore = new QueryStore(this.documentDb, this.entities);
 	queryMaker = new QueryMaker(this.queryStore, this.schema);
 	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
-	readonly presence = new PresenceManager(this.sync, this.meta);
 
 	readonly collectionNames: string[];
+
+	private sync: Sync;
 
 	constructor(
 		private meta: Metadata,
 		private schema: StorageSchema<any>,
 		private metaDb: IDBDatabase,
 		private documentDb: IDBDatabase,
-		public sync: Sync,
-		initialPresence: Presence,
 		private namespace: string,
+		syncConfig?: StorageSyncConfig,
 	) {
 		this.collectionNames = Object.keys(schema.collections);
-		this.syncHarness = new SyncHarness({
-			sync: this.sync,
-			meta: this.meta,
-			entities: this.entities,
-			initialPresence,
-		});
+
+		this.sync = syncConfig
+			? new ServerSync({
+					...syncConfig,
+					meta: this.meta,
+					entities: this.entities,
+			  })
+			: new NoSync();
 
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
@@ -63,6 +52,13 @@ export class Storage {
 				findAll: (query: any) => this.queryMaker.findAll(name, query),
 			};
 		}
+	}
+
+	/**
+	 * @deprecated - use client.sync.presence instead
+	 */
+	get presence() {
+		return this.sync.presence;
 	}
 
 	create: this['documentManager']['create'] = async (...args) => {
@@ -146,12 +142,44 @@ export class Storage {
 	};
 }
 
+export interface StorageSyncConfig {
+	/**
+	 * When a client first connects, it will use this presence value.
+	 */
+	initialPresence: Presence;
+	/**
+	 * Provide a host URL for your sync server. To use TLS be sure
+	 * to specify the full https:// URL.
+	 */
+	host: string;
+	/**
+	 * Provide `false` to disable transport selection. Transport selection
+	 * automatically switches between HTTP and WebSocket based sync depending
+	 * on the number of peers connected. If a user is alone, they will use
+	 * HTTP push/pull to sync changes. If another user joins, both users will
+	 * be upgraded to websockets.
+	 *
+	 * Turning off this feature allows you more control over the transport
+	 * which can be useful for low-power devices or to save server traffic.
+	 * To modify transport modes manually, utilize `client.sync.setMode`.
+	 * The built-in behavior is essentially switching modes based on
+	 * the number of peers detected by client.sync.presence.
+	 */
+	automaticTransportSelection?: boolean;
+}
+
 export interface StorageInitOptions<Schema extends StorageSchema<any>> {
+	/** The schema used to create this client */
 	schema: Schema;
+	/** Migrations, in order, to upgrade to each successive version of the schema */
 	migrations: Migration[];
-	sync?: Sync;
+	/** Provide a sync config to turn on synchronization with a server */
+	sync?: StorageSyncConfig;
+	/** Optionally override the IndexedDB implementation */
 	indexedDb?: IDBFactory;
-	initialPresence?: Presence;
+	/**
+	 * Namespaces are used to separate data from different clients in IndexedDB.
+	 */
 	namespace: string;
 }
 
@@ -179,8 +207,6 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 	}
 
 	private initialize = async (init: StorageInitOptions<Schema>) => {
-		const sync = init.sync ?? new NoSync();
-
 		if (this._initializing) {
 			return this._readyPromise;
 		}
@@ -190,7 +216,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				this._namespace,
 				init.indexedDb,
 			);
-			const meta = new Metadata(metaDb, sync, init.schema);
+			const meta = new Metadata(metaDb, init.schema);
 
 			const documentDb = await openDocumentDatabase({
 				namespace: this._namespace,
@@ -205,9 +231,8 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				init.schema,
 				metaDb,
 				documentDb,
-				sync,
-				init.initialPresence || {},
 				this._namespace,
+				init.sync,
 			);
 			this.resolveReady(storage);
 			this._resolvedValue = storage;

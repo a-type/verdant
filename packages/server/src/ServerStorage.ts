@@ -38,13 +38,16 @@ export class ServerStorage {
 	/**
 	 * Call with any message from any replica
 	 */
-	receive = (libraryId: string, message: ClientMessage, clientId: string) => {
-		// TODO: validate clientID access to replicaID on the message.
-
+	receive = (
+		libraryId: string,
+		clientKey: string,
+		message: ClientMessage,
+		clientId: string,
+	) => {
 		console.debug('Received message', libraryId, clientId, message);
 
 		const library = this.libraries.open(libraryId);
-		library.receive(message, clientId);
+		library.receive(message, clientKey, clientId);
 	};
 
 	/**

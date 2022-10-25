@@ -44,9 +44,9 @@ export class MessageCreator {
 			type: 'op',
 			operations: init.operations.map((op) => ({
 				...op,
-				timestamp: this.meta.sync.time.zero(targetVersion),
+				timestamp: this.meta.time.zero(targetVersion),
 			})),
-			timestamp: this.meta.sync.time.zero(targetVersion),
+			timestamp: this.meta.time.zero(targetVersion),
 			replicaId: localInfo.id,
 		};
 	};

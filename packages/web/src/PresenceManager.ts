@@ -1,12 +1,12 @@
 import { ServerMessage, EventSubscriber } from '@lo-fi/common';
-import { Metadata } from './Metadata.js';
-import { Sync } from './Sync.js';
 import type { Presence, UserInfo } from './index.js';
+import { LocalReplicaInfo } from './LocalReplicaStore.js';
 
 export class PresenceManager extends EventSubscriber<{
 	peerChanged: (userId: string, presence: any) => void;
 	selfChanged: (presence: any) => void;
 	peersChanged: (peers: Record<string, any>) => void;
+	update: (presence: any) => void;
 }> {
 	private _peers = {} as Record<string, UserInfo>;
 	private _self = { profile: {} } as UserInfo;
@@ -30,14 +30,17 @@ export class PresenceManager extends EventSubscriber<{
 		return everyone;
 	}
 
-	constructor(private sync: Sync, private meta: Metadata) {
+	constructor(initialPresence?: Presence) {
 		super();
-		this.sync.subscribe('message', this.onMessage);
+		if (initialPresence) {
+			this.self.presence = initialPresence;
+		}
 	}
 
-	private onMessage = async (message: ServerMessage) => {
-		const localReplicaInfo = await this.meta.localReplica.get();
-
+	__handleMessage = async (
+		localReplicaInfo: LocalReplicaInfo,
+		message: ServerMessage,
+	) => {
 		let peersChanged = false;
 		const peerIdsSet = new Set<string>(this.peerIds);
 
@@ -74,11 +77,9 @@ export class PresenceManager extends EventSubscriber<{
 	};
 
 	update = async (presence: Partial<Presence>) => {
-		this.sync.send(
-			await this.meta.messageCreator.createPresenceUpdate({
-				...this.self.presence,
-				...presence,
-			}),
-		);
+		this.emit('update', {
+			...this.self.presence,
+			...presence,
+		});
 	};
 }

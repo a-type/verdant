@@ -1,20 +1,32 @@
 import {
 	ClientMessage,
-	HybridLogicalClockTimestampProvider,
 	ServerMessage,
-	TimestampProvider,
 	EventSubscriber,
+	ObjectIdentifier,
+	getOidRoot,
 } from '@lo-fi/common';
+import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
+import { EntityStore } from './EntityStore.js';
+import { Metadata } from './Metadata.js';
+import { PresenceManager } from './PresenceManager.js';
 
-export interface Sync {
-	subscribe(
-		event: 'message',
-		handler: (message: ServerMessage) => void,
-	): () => void;
+type SyncEvents = {
+	onlineChange: (isOnline: boolean) => void;
+};
+
+type SyncTransportEvents = SyncEvents & {
+	message: (message: ServerMessage) => void;
+};
+
+export interface SyncTransport {
 	subscribe(
 		event: 'onlineChange',
 		handler: (online: boolean) => void,
 	): () => void;
+
+	readonly presence: PresenceManager;
+
+	readonly mode: SyncTransportMode;
 
 	send(message: ClientMessage): void;
 
@@ -25,21 +37,18 @@ export interface Sync {
 
 	reconnect(): void;
 
-	readonly active: boolean;
-
-	readonly time: TimestampProvider;
+	readonly isConnected: boolean;
+	readonly status: 'active' | 'paused';
 }
 
-export class NoSync
-	extends EventSubscriber<{
-		message: (message: ServerMessage) => void;
-		onlineChange: (online: boolean) => void;
-	}>
-	implements Sync
-{
-	public readonly time = new HybridLogicalClockTimestampProvider();
+export interface Sync extends SyncTransport {
+	setMode(mode: SyncTransportMode): void;
+}
 
-	public send(message: ClientMessage): void {}
+export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
+	readonly mode = 'pull';
+
+	public send(): void {}
 
 	public start(): void {}
 
@@ -49,36 +58,240 @@ export class NoSync
 
 	public reconnect(): void {}
 
-	public get active(): boolean {
-		return false;
-	}
+	public setMode(): void {}
+
+	public readonly isConnected = false;
+	public readonly status = 'paused';
+
+	public readonly presence = new PresenceManager();
 }
 
-export class ServerSync
-	extends EventSubscriber<{
-		message: (message: ServerMessage) => void;
-		onlineChange: (online: boolean) => void;
-	}>
-	implements Sync
-{
-	readonly time: TimestampProvider;
-	private socket: WebSocket | null = null;
-	private messageQueue: ClientMessage[] = [];
-	private reconnectBackoffTime = 100;
-	private host: string;
-	private reconnectAttempt: NodeJS.Timer | null = null;
+export type SyncTransportMode = 'realtime' | 'pull';
+
+export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
+	private webSocketSync: WebSocketSync;
+	private pushPullSync: PushPullSync;
+	private activeSync: SyncTransport;
+
+	private meta: Metadata;
+	private entities: EntityStore;
+
+	readonly presence;
 
 	constructor({
 		host,
-		time: timestampProvider,
+		meta,
+		entities,
+		initialPresence,
+		automaticTransportSelection = true,
 	}: {
 		host: string;
-		time?: TimestampProvider;
+		meta: Metadata;
+		entities: EntityStore;
+		initialPresence: any;
+		automaticTransportSelection?: boolean;
 	}) {
 		super();
-		this.host = host;
-		this.time = timestampProvider || new HybridLogicalClockTimestampProvider();
+		this.meta = meta;
+		this.entities = entities;
+		this.presence = new PresenceManager(initialPresence);
+
+		this.webSocketSync = new WebSocketSync({
+			host,
+			meta,
+			presence: this.presence,
+		});
+		this.pushPullSync = new PushPullSync({
+			host,
+			meta,
+			presence: this.presence,
+		});
+		this.activeSync = this.pushPullSync;
+
+		this.presence.subscribe('update', this.handlePresenceUpdate);
+
+		this.entities.subscribe('message', this.send);
+		this.meta.subscribe('message', this.send);
+
+		this.webSocketSync.subscribe('message', this.handleMessage);
+		this.webSocketSync.subscribe('onlineChange', this.echoOnlineChange);
+
+		this.pushPullSync.subscribe('message', this.handleMessage);
+		this.pushPullSync.subscribe('onlineChange', this.echoOnlineChange);
+
+		if (automaticTransportSelection) {
+			// automatically shift between transport modes depending
+			// on whether any peers are present
+			this.presence.subscribe('peersChanged', (peers) => {
+				if (Object.keys(peers).length > 0) {
+					if (this.mode === 'pull') {
+						this.setMode('realtime');
+					}
+				} else {
+					if (this.mode === 'realtime') {
+						this.setMode('pull');
+					}
+				}
+			});
+		}
 	}
+
+	private handleMessage = async (message: ServerMessage) => {
+		// TODO: move this into metadata
+		if (message.type === 'op-re' || message.type === 'sync-resp') {
+			for (const op of message.operations) {
+				this.meta.time.update(op.timestamp);
+			}
+		}
+
+		let affectedOids: ObjectIdentifier[] | undefined = undefined;
+		switch (message.type) {
+			case 'op-re':
+				// rebroadcasted operations
+				affectedOids = await this.meta.insertRemoteOperations(
+					message.operations,
+				);
+				break;
+			case 'sync-resp':
+				if (message.overwriteLocalData) {
+					await this.meta.reset();
+					await this.entities.reset();
+				}
+
+				affectedOids = await this.meta.insertRemoteOperations(
+					message.operations,
+				);
+
+				await this.meta.ackInfo.setGlobalAck(message.globalAckTimestamp);
+
+				// respond to the server
+				this.activeSync.send(
+					await this.meta.messageCreator.createSyncStep2(
+						message.provideChangesSince,
+					),
+				);
+				await this.meta.updateLastSynced();
+				break;
+			case 'rebases':
+				const affectedSet = new Set<ObjectIdentifier>();
+				for (const rebase of message.rebases) {
+					await this.meta.rebase(rebase.oid, rebase.upTo);
+					affectedSet.add(getOidRoot(rebase.oid));
+				}
+				affectedOids = Array.from(affectedSet);
+				break;
+		}
+
+		// update presence if necessary
+		this.presence.__handleMessage(await this.meta.localReplica.get(), message);
+
+		if (affectedOids?.length) {
+			this.entities.refreshAll(affectedOids);
+		}
+	};
+	private echoOnlineChange = (online: boolean) => {
+		this.emit('onlineChange', online);
+	};
+	private handlePresenceUpdate = async (presence: any) => {
+		this.send(await this.meta.messageCreator.createPresenceUpdate(presence));
+	};
+
+	setMode = (transport: SyncTransportMode) => {
+		let newSync: SyncTransport;
+		if (transport === 'realtime') {
+			newSync = this.webSocketSync;
+		} else {
+			newSync = this.pushPullSync;
+		}
+
+		if (newSync === this.activeSync) return;
+
+		// transfer state to new sync
+		if (this.activeSync.status === 'active') {
+			newSync.start();
+		}
+		this.activeSync.stop();
+		this.activeSync = newSync;
+	};
+
+	public send = (message: ClientMessage) => {
+		return this.activeSync.send(message);
+	};
+
+	public start = () => {
+		return this.activeSync.start();
+	};
+
+	public stop = () => {
+		return this.activeSync.stop();
+	};
+
+	public dispose = () => {
+		this.webSocketSync.dispose();
+		this.pushPullSync.dispose();
+	};
+
+	public reconnect = () => {
+		return this.activeSync.reconnect();
+	};
+
+	public get isConnected(): boolean {
+		return this.activeSync.isConnected;
+	}
+
+	public get status() {
+		return this.activeSync.status;
+	}
+
+	public get mode() {
+		return this.activeSync.mode;
+	}
+}
+
+class WebSocketSync
+	extends EventSubscriber<SyncTransportEvents>
+	implements SyncTransport
+{
+	private meta: Metadata;
+	readonly presence: PresenceManager;
+	private socket: WebSocket | null = null;
+	private messageQueue: ClientMessage[] = [];
+	private host: string;
+	private _status: 'active' | 'paused' = 'paused';
+
+	readonly mode = 'realtime';
+
+	private heartbeat = new Heartbeat();
+
+	private reconnectScheduler = new BackoffScheduler(
+		new Backoff(60 * 1000, 1.5),
+	);
+
+	constructor({
+		host,
+		meta,
+		presence,
+	}: {
+		host: string;
+		meta: Metadata;
+		presence: PresenceManager;
+	}) {
+		super();
+		this.host = this.fixHost(host);
+		this.meta = meta;
+		this.presence = presence;
+
+		this.reconnectScheduler.subscribe('trigger', this.initializeSocket);
+		this.heartbeat.subscribe('beat', this.sendHeartbeat);
+	}
+
+	private fixHost = (host: string) => {
+		if (host.startsWith('ws')) return host;
+		if (host.startsWith('http')) {
+			return host.replace(/^http/, 'ws');
+		}
+		return `ws://${host}`;
+	};
 
 	private onOpen = () => {
 		if (!this.socket) {
@@ -90,42 +303,47 @@ export class ServerSync
 			}
 			this.messageQueue = [];
 		}
-		this.reconnectBackoffTime = 100;
 		console.info('Sync connected');
-		if (this.reconnectAttempt) {
-			clearTimeout(this.reconnectAttempt);
+		this.onOnlineChange(true);
+		this.reconnectScheduler.reset();
+	};
+
+	private onOnlineChange = async (online: boolean) => {
+		if (!online) {
+			this.heartbeat.stop();
+		} else {
+			const lastSyncTimestamp = await this.meta.lastSyncedTimestamp();
+			this.send(
+				await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
+			);
+			this.send(
+				await this.meta.messageCreator.createPresenceUpdate(
+					this.presence.self.presence,
+				),
+			);
+			this.heartbeat.start();
 		}
-		this.emit('onlineChange', true);
+		this.emit('onlineChange', online);
 	};
 
 	private onMessage = (event: MessageEvent) => {
 		const message = JSON.parse(event.data) as ServerMessage;
-		if ((message as any).timestamp) {
-			this.time.update((message as any).timestamp);
-		}
 		this.emit('message', message);
+		if (message.type === 'heartbeat-response') {
+			this.heartbeat.keepAlive();
+		}
 	};
 
 	private onError = (event: Event) => {
 		console.error(event);
-		console.info(
-			`Attempting reconnect in ${Math.round(
-				this.reconnectBackoffTime / 1000,
-			)} seconds`,
-		);
-		if (this.reconnectAttempt) {
-			clearTimeout(this.reconnectAttempt);
-		}
-		this.reconnectAttempt = setTimeout(() => {
-			console.info('Reconnecting...');
-			this.reconnectBackoffTime *= 2;
-			this.initializeSocket();
-		}, this.reconnectBackoffTime);
+		this.reconnectScheduler.next();
+
+		console.info(`Attempting reconnect to websocket sync`);
 	};
 
 	private onClose = (event: CloseEvent) => {
 		console.info('Sync disconnected');
-		this.emit('onlineChange', false);
+		this.onOnlineChange(false);
 		this.onError(event);
 	};
 
@@ -136,6 +354,10 @@ export class ServerSync
 		this.socket.addEventListener('error', this.onError);
 		this.socket.addEventListener('close', this.onClose);
 		return this.socket;
+	};
+
+	private sendHeartbeat = async () => {
+		this.send(await this.meta.messageCreator.createHeartbeat());
 	};
 
 	reconnect = () => {
@@ -161,19 +383,210 @@ export class ServerSync
 			return;
 		}
 		this.initializeSocket();
+		this._status = 'active';
 	};
 
 	stop = () => {
 		this.dispose();
 		this.socket = null;
+		this._status = 'paused';
 	};
 
-	get active() {
+	get isConnected() {
 		return this.socket?.readyState === WebSocket.OPEN;
+	}
+
+	get status() {
+		return this._status;
 	}
 }
 
-export interface HybridSyncOptions {
-	host: string;
-	timestampProvider?: TimestampProvider;
+class PushPullSync
+	extends EventSubscriber<SyncTransportEvents>
+	implements SyncTransport
+{
+	readonly meta: Metadata;
+	readonly presence: PresenceManager;
+	private host: string;
+	private heartbeat = new Heartbeat();
+
+	readonly mode = 'pull';
+
+	private _isConnected = false;
+	private _status: 'active' | 'paused' = 'paused';
+
+	constructor({
+		host,
+		meta,
+		presence,
+	}: {
+		host: string;
+		meta: Metadata;
+		presence: PresenceManager;
+	}) {
+		super();
+		this.meta = meta;
+		this.presence = presence;
+		this.host = this.fixHost(host);
+
+		this.heartbeat.subscribe('beat', this.onHeartbeat);
+		this.heartbeat.subscribe('missed', this.onHeartbeatMissed);
+	}
+
+	private fixHost = (host: string) => {
+		if (host.startsWith('http')) return host;
+		if (host.startsWith('ws')) {
+			return host.replace(/^ws/, 'http');
+		}
+		return `http://${host}`;
+	};
+
+	private sendRequest = async (messages: ClientMessage[]) => {
+		try {
+			const response = await fetch(this.host, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					messages,
+				}),
+				credentials: 'include',
+			});
+			if (response.ok) {
+				const json = (await response.json()) as {
+					messages: ServerMessage[];
+				};
+				for (const message of json.messages) {
+					this.handleServerMessage(message);
+				}
+				this.heartbeat.keepAlive();
+				if (!this._isConnected) {
+					this._isConnected = true;
+					this.emit('onlineChange', true);
+				}
+			} else {
+				throw new Error(
+					`Sync server responded with ${
+						response.status
+					}\n${await response.text()}`,
+				);
+			}
+		} catch (error) {
+			if (this._isConnected) {
+				this._isConnected = false;
+				this.emit('onlineChange', false);
+			}
+			console.error(error);
+		}
+	};
+
+	private handleServerMessage = (message: ServerMessage) => {
+		this.emit('message', message);
+	};
+
+	send = (message: ClientMessage) => {
+		// only certain messages are sent for pull-based sync.
+		switch (message.type) {
+			case 'presence-update':
+			case 'sync':
+			case 'sync-step2':
+				this.sendRequest([message]);
+				break;
+		}
+	};
+
+	start(): void {
+		this.heartbeat.start(true);
+		this._status = 'active';
+	}
+	stop(): void {
+		this.heartbeat.stop();
+		this._status = 'paused';
+	}
+
+	dispose(): void {}
+	reconnect(): void {}
+
+	// on a heartbeat, do a sync
+	private onHeartbeat = async () => {
+		const lastSyncTimestamp = await this.meta.lastSyncedTimestamp();
+		this.sendRequest([
+			await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
+			await this.meta.messageCreator.createPresenceUpdate(
+				this.presence.self.presence,
+			),
+		]);
+	};
+
+	// if the server fails to respond in a certain amount of time, we assume
+	// the connection is lost and go offline.
+	private onHeartbeatMissed = async () => {
+		this.emit('onlineChange', false);
+		this._isConnected = false;
+	};
+
+	get isConnected(): boolean {
+		return this._isConnected;
+	}
+	get status() {
+		return this._status;
+	}
+}
+
+class Heartbeat extends EventSubscriber<{
+	missed: () => void;
+	beat: () => void;
+}> {
+	private interval: number;
+	private deadlineLength: number;
+	private nextBeat: NodeJS.Timeout | null = null;
+	private deadline: NodeJS.Timeout | null = null;
+
+	constructor({
+		interval = 15 * 1000,
+		deadlineLength = 3 * 1000,
+	}: {
+		interval?: number;
+		deadlineLength?: number;
+	} = {}) {
+		super();
+		this.interval = interval;
+		this.deadlineLength = deadlineLength;
+	}
+
+	keepAlive = () => {
+		if (this.deadline) {
+			clearTimeout(this.deadline);
+			this.deadline = null;
+			this.start();
+		}
+	};
+
+	start = (immediate = false) => {
+		if (immediate) {
+			this.beat();
+		} else {
+			this.nextBeat = setTimeout(this.beat, this.interval);
+		}
+	};
+
+	stop = () => {
+		if (this.nextBeat) {
+			clearTimeout(this.nextBeat);
+		}
+		if (this.deadline) {
+			clearTimeout(this.deadline);
+		}
+	};
+
+	private beat = async () => {
+		this.emit('beat');
+		this.deadline = setTimeout(this.onDeadline, this.deadlineLength);
+	};
+
+	private onDeadline = () => {
+		this.deadline = null;
+		this.emit('missed');
+	};
 }

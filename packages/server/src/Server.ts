@@ -1,11 +1,14 @@
-import { ClientMessage, ServerMessage } from '@lo-fi/common';
+import { ClientMessage, generateId, ServerMessage } from '@lo-fi/common';
 import EventEmitter from 'events';
-import { IncomingMessage, Server as HttpServer } from 'http';
+import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { UserProfiles } from './Profiles.js';
 import { ServerStorage } from './ServerStorage.js';
 import create from 'better-sqlite3';
 import { MessageSender } from './MessageSender.js';
+import { URL } from 'url';
+import { ClientConnectionManager } from './ClientConnection.js';
+import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
 
 export interface ServerOptions {
 	/**
@@ -51,11 +54,12 @@ export class Server extends EventEmitter implements MessageSender {
 	private wss: WebSocketServer;
 	private storage: ServerStorage;
 
-	private replicaToConnectionMap = new Map<string, WebSocket>();
-	private libraryToConnectionMap = new Map<string, WebSocket[]>();
+	private clientConnections = new ClientConnectionManager();
+	private keepalives = new ReplicaKeepaliveTimers();
+
 	private connectionToReplicaIdMap = new WeakMap<WebSocket, string>();
 
-	constructor(options: ServerOptions) {
+	constructor(private options: ServerOptions) {
 		super();
 
 		this.storage = new ServerStorage({
@@ -71,7 +75,8 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.wss.on('connection', this.handleConnection);
 
-		this.httpServer = options.httpServer || new HttpServer();
+		this.httpServer =
+			options.httpServer || new HttpServer(this.internalServerHandleRequest);
 
 		this.httpServer.on('upgrade', async (req, socket, head) => {
 			try {
@@ -84,27 +89,99 @@ export class Server extends EventEmitter implements MessageSender {
 				socket.destroy();
 			}
 		});
+
+		this.keepalives.subscribe('lost', this.storage.remove);
 	}
+
+	private internalServerHandleRequest = (
+		req: IncomingMessage,
+		res: ServerResponse,
+	) => {
+		console.log(req.url);
+		const url = new URL(req.url || '', 'http://localhost');
+		if (url.pathname.startsWith('lofi')) {
+			return this.handleRequest(req, res);
+		} else {
+			res.writeHead(404);
+			res.end();
+		}
+	};
+
+	handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
+		try {
+			if (req.method === 'POST') {
+				const info = await this.options.authorize(req);
+
+				const key = generateId();
+
+				const finish = this.clientConnections.addRequest(
+					info.libraryId,
+					key,
+					req,
+					res,
+				);
+
+				// FIXME: extremely naive compatibility with connect-like
+				// servers...
+				const body: {
+					messages: ClientMessage[];
+				} =
+					(req as any).body ??
+					(await new Promise<string>((resolve, reject) => {
+						let body = '';
+						req.on('data', (chunk) => {
+							body += chunk;
+						});
+						req.on('end', () => {
+							resolve(JSON.parse(body));
+						});
+						req.on('error', (e) => {
+							reject(e);
+						});
+					}));
+
+				for (const message of body.messages) {
+					this.handleMessage(key, info, message);
+				}
+
+				// update our keepalive timers for presence management
+				const firstMessage = body.messages[0];
+				if (firstMessage) {
+					this.keepalives.refresh(info.libraryId, firstMessage.replicaId);
+				}
+
+				finish();
+			}
+		} catch (e) {
+			this.emit('error', e);
+			res.writeHead(500);
+			res.end();
+		}
+	};
 
 	broadcast = (
 		libraryId: string,
 		message: ServerMessage,
-		omitReplicas: string[] = [],
+		omitKeys: string[] = [],
 	) => {
-		const connections = this.libraryToConnectionMap.get(libraryId) || [];
-		for (const connection of connections) {
-			const replicaId = this.connectionToReplicaIdMap.get(connection);
-			if (replicaId && !omitReplicas.includes(replicaId)) {
-				connection.send(JSON.stringify(message));
-			}
-		}
+		this.clientConnections.broadcast(libraryId, message, omitKeys);
 	};
 
-	send = (libraryId: string, replicaId: string, message: ServerMessage) => {
-		const connection = this.replicaToConnectionMap.get(replicaId);
-		if (connection) {
-			connection.send(JSON.stringify(message));
-		}
+	send = (libraryId: string, key: string, message: ServerMessage) => {
+		this.clientConnections.respond(libraryId, key, message);
+	};
+
+	private handleMessage = (
+		clientKey: string,
+		info: { libraryId: string; userId: string },
+		message: ClientMessage,
+	) => {
+		return this.storage.receive(
+			info.libraryId,
+			clientKey,
+			message,
+			info.userId,
+		);
 	};
 
 	private handleConnection = (
@@ -112,19 +189,19 @@ export class Server extends EventEmitter implements MessageSender {
 		req: IncomingMessage,
 		info: { userId: string; libraryId: string },
 	) => {
-		const connections = this.libraryToConnectionMap.get(info.libraryId) || [];
-		connections.push(ws);
-		this.libraryToConnectionMap.set(info.libraryId, connections);
+		const key = generateId();
+
+		this.clientConnections.addSocket(info.libraryId, key, ws);
 
 		ws.on('message', (message: any) => {
 			const data = JSON.parse(message.toString()) as ClientMessage;
 
-			if (data.type === 'sync') {
-				this.replicaToConnectionMap.set(data.replicaId, ws);
+			if (data.replicaId) {
 				this.connectionToReplicaIdMap.set(ws, data.replicaId);
+				this.keepalives.refresh(info.libraryId, data.replicaId);
 			}
 
-			this.storage.receive(info.libraryId, data, info.userId);
+			this.handleMessage(key, info, data);
 		});
 
 		ws.on('close', () => {
@@ -135,11 +212,6 @@ export class Server extends EventEmitter implements MessageSender {
 			}
 
 			this.storage.remove(info.libraryId, replicaId);
-			this.replicaToConnectionMap.delete(replicaId);
-			const connections = this.libraryToConnectionMap.get(info.libraryId);
-			if (connections) {
-				connections.splice(connections.indexOf(ws), 1);
-			}
 		});
 	};
 

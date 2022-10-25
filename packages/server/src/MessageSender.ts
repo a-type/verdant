@@ -4,7 +4,7 @@ export interface MessageSender {
 	broadcast(
 		libraryId: string,
 		message: ServerMessage,
-		omitReplicas?: string[],
+		omitKeys?: string[],
 	): void;
-	send(libraryId: string, replicaId: string, message: ServerMessage): void;
+	send(libraryId: string, clientKey: string, message: ServerMessage): void;
 }

@@ -99,15 +99,17 @@ importers:
   packages/web:
     specifiers:
       '@lo-fi/common': workspace:*
+      '@types/node': 16.11.7
       cuid: ^2.1.8
       fake-indexeddb: ^4.0.0
       jsdom: ^20.0.0
-      typescript: ^4.7.4
+      typescript: ^4.8.3
       vitest: ^0.22.1
     dependencies:
       '@lo-fi/common': link:../common
       cuid: 2.1.8
     devDependencies:
+      '@types/node': 16.11.7
       fake-indexeddb: 4.0.0
       jsdom: 20.0.0
       typescript: 4.8.3
