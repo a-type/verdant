@@ -1,5 +1,17 @@
 # @lo-fi/web
 
+## 0.2.0
+
+### Minor Changes
+
+- dd0e3a8: Hybrid push/pull sync for solo clients
+
+### Patch Changes
+
+- 50f7ca0: rename sync to ServerSync, don't require it by default
+- Updated dependencies [dd0e3a8]
+  - @lo-fi/common@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes
