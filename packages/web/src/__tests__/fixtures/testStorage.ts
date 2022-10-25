@@ -1,7 +1,6 @@
 import { collection, createDefaultMigration, schema } from '@lo-fi/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { WebsocketSync } from '../../Sync.js';
 import { StorageDescriptor } from '../../index.js';
 
 export const todoCollection = collection({
@@ -99,10 +98,6 @@ export function createTestStorage() {
 		schema: testSchema,
 		migrations: [createDefaultMigration(testSchema)],
 		indexedDb: idb,
-		sync: new WebsocketSync({
-			host: 'none',
-		}),
-		initialPresence: {},
 		namespace: 'test',
 	}).open();
 	return storage;

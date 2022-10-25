@@ -30,7 +30,31 @@ export interface Sync {
 	readonly time: TimestampProvider;
 }
 
-export class WebsocketSync
+export class NoSync
+	extends EventSubscriber<{
+		message: (message: ServerMessage) => void;
+		onlineChange: (online: boolean) => void;
+	}>
+	implements Sync
+{
+	public readonly time = new HybridLogicalClockTimestampProvider();
+
+	public send(message: ClientMessage): void {}
+
+	public start(): void {}
+
+	public stop(): void {}
+
+	public dispose(): void {}
+
+	public reconnect(): void {}
+
+	public get active(): boolean {
+		return false;
+	}
+}
+
+export class ServerSync
 	extends EventSubscriber<{
 		message: (message: ServerMessage) => void;
 		onlineChange: (online: boolean) => void;

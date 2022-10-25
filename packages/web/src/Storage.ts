@@ -4,7 +4,7 @@ import {
 	SchemaCollectionName,
 	StorageSchema,
 } from '@lo-fi/common';
-import { Sync } from './Sync.js';
+import { NoSync, Sync } from './Sync.js';
 import { Metadata, openMetadataDatabase } from './Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
@@ -149,9 +149,9 @@ export class Storage {
 export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	schema: Schema;
 	migrations: Migration[];
-	sync: Sync;
+	sync?: Sync;
 	indexedDb?: IDBFactory;
-	initialPresence: Presence;
+	initialPresence?: Presence;
 	namespace: string;
 }
 
@@ -179,6 +179,8 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 	}
 
 	private initialize = async (init: StorageInitOptions<Schema>) => {
+		const sync = init.sync ?? new NoSync();
+
 		if (this._initializing) {
 			return this._readyPromise;
 		}
@@ -188,7 +190,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				this._namespace,
 				init.indexedDb,
 			);
-			const meta = new Metadata(metaDb, init.sync, init.schema);
+			const meta = new Metadata(metaDb, sync, init.schema);
 
 			const documentDb = await openDocumentDatabase({
 				namespace: this._namespace,
@@ -203,8 +205,8 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				init.schema,
 				metaDb,
 				documentDb,
-				init.sync,
-				init.initialPresence,
+				sync,
+				init.initialPresence || {},
 				this._namespace,
 			);
 			this.resolveReady(storage);
