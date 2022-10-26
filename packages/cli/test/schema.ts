@@ -84,8 +84,6 @@ const personCollection = collection({
 			},
 		},
 	},
-	synthetics: {},
-	compounds: {},
 });
 
 export default schema({

@@ -28,8 +28,8 @@ export type StorageCollectionSchema<
 	 */
 	pluralName?: string;
 	fields: Fields;
-	synthetics: Synthetics;
-	compounds: Compounds;
+	synthetics?: Synthetics;
+	compounds?: Compounds;
 	primaryKey: StorageIndexablePropertyName<Fields, Synthetics>;
 };
 

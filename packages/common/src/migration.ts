@@ -260,12 +260,12 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 
 	return [
 		...fields,
-		...Object.keys(collection.synthetics).map((key) => ({
+		...Object.keys(collection.synthetics || {}).map((key) => ({
 			name: key,
 			unique: collection.synthetics[key].unique,
 			multiEntry: collection.synthetics[key].type === 'array',
 		})),
-		...Object.keys(collection.compounds).map((key) => ({
+		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
 			unique: collection.compounds[key].unique,
 			multiEntry: collection.compounds[key].of.some(

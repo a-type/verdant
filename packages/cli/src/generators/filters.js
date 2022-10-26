@@ -22,12 +22,12 @@ export function getCollectionFilterTypings(collection) {
 			);
 		}
 	}
-	for (const compound of compounds.properties) {
+	for (const compound of compounds?.properties ?? []) {
 		filterTypings.push(
 			...getCollectionCompoundFilterTypings(collection, compound.key.value),
 		);
 	}
-	for (const synthetic of synthetics.properties) {
+	for (const synthetic of synthetics?.properties ?? []) {
 		filterTypings.push(
 			...getCollectionFieldFilterTypings(collection, true, synthetic.key.value),
 		);
@@ -114,8 +114,4 @@ export interface ${filterName} {
 `,
 		},
 	];
-}
-
-function getCollectionSyntheticFilterTypings(collection, name) {
-	return [];
 }

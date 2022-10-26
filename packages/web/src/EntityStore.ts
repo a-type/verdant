@@ -210,7 +210,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private stripIndexes = (collection: string, view: any) => {
-		const { synthetics, compounds } = this.schema.collections[
+		const { synthetics = {}, compounds = {} } = this.schema.collections[
 			collection
 		] as StorageCollectionSchema<any, any, any>;
 		for (const synthetic of Object.keys(synthetics)) {
