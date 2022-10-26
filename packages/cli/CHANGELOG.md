@@ -1,5 +1,12 @@
 # @lo-fi/cli
 
+## 0.1.4
+
+### Patch Changes
+
+- 7a333aa: default field values
+- 0497ebe: make schema indexes optional
+
 ## 0.1.3
 
 ### Patch Changes

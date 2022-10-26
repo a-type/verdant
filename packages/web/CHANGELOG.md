@@ -1,5 +1,15 @@
 # @lo-fi/web
 
+## 0.2.1
+
+### Patch Changes
+
+- 7a333aa: default field values
+- 0497ebe: make schema indexes optional
+- Updated dependencies [7a333aa]
+- Updated dependencies [0497ebe]
+  - @lo-fi/common@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

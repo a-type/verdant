@@ -1,7 +1,0 @@
----
-'@lo-fi/cli': patch
-'@lo-fi/common': patch
-'@lo-fi/web': patch
----
-
-default field values
