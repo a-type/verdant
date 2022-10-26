@@ -135,7 +135,7 @@ describe('normalizing the first level of an object', () => {
 		assignOid(initial, 'test/a');
 		assignOidsToAllSubObjects(initial, createSubId);
 
-		const result = normalizeFirstLevel(initial);
+		const { refs: result } = normalizeFirstLevel(initial);
 
 		expect(result.get('test/a')).toMatchInlineSnapshot(`
 			{

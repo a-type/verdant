@@ -21,18 +21,18 @@ export function getClientTypings(collections) {
 export class Client {
   ${pluralNames.map(getClientCollectionTypings).join(';\n')}
 
-  presence: Storage['presence'];
+  presence: Storage['sync']['presence'];
   sync: Storage['sync'];
 
   stats: () => Promise<any>;
 }
 
-export class ClientDescriptor<Schema extends StorageSchema<any>> {
-  constructor(init: StorageInitOptions<Schema>);
+export class ClientDescriptor {
+  constructor(init: StorageInitOptions<any>);
   open: () => Promise<Client>;
   readonly current: Client | null;
   readonly readyPromise: Promise<Client>;
-  readonly schema: Schema;
+  readonly schema: StorageSchema;
 }
 `;
 }

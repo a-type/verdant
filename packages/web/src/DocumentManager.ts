@@ -1,10 +1,14 @@
 import {
+	addFieldDefaults,
 	assert,
 	assignOid,
 	createOid,
 	diffToPatches,
 	SchemaCollection,
+	StorageCollectionSchema,
 	StorageDocument,
+	StorageFieldSchema,
+	StorageFieldsSchema,
 	StorageSchema,
 } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
@@ -32,19 +36,30 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		const primaryKey = init[primaryKeyName] as string;
 		assert(
 			primaryKey,
-			`Document must have a primary key: ${primaryKeyName.toString()}`,
+			`Document must have a primary key: ${primaryKeyName.toString()} (got: ${JSON.stringify(
+				init,
+			)})`,
 		);
 		return createOid(collection as string, primaryKey);
 	};
 
+	private addDefaults = (collectionName: string, init: any) => {
+		const collection = this.schema.collections[
+			collectionName
+		] as StorageCollectionSchema;
+		return addFieldDefaults(collection, init);
+	};
+
 	create = async (collection: string, init: any) => {
-		const oid = this.getOid(collection, init);
+		const defaulted = this.addDefaults(collection, init);
+		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
-		return this.entities.create(init, oid) as unknown as ObjectEntity<any>;
+		return this.entities.create(defaulted, oid) as unknown as ObjectEntity<any>;
 	};
 
 	upsert = async (collection: string, init: any) => {
-		const oid = this.getOid(collection, init);
+		const defaulted = this.addDefaults(collection, init);
+		const oid = this.getOid(collection, defaulted);
 		const existing = await this.entities.getFromOid(oid);
 		if (existing) {
 			const patches = diffToPatches(
@@ -56,7 +71,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 			return existing;
 		} else {
 			// documents are always objects at the root
-			return this.entities.create(init, oid) as Promise<ObjectEntity<any>>;
+			return this.entities.create(defaulted, oid) as Promise<ObjectEntity<any>>;
 		}
 	};
 

@@ -7,7 +7,12 @@ export const todoCollection = collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {
-		id: { type: 'string', indexed: true, unique: true },
+		id: {
+			type: 'string',
+			indexed: true,
+			unique: true,
+			default: () => Math.random().toString(36).slice(2, 9),
+		},
 		content: {
 			type: 'string',
 			indexed: false,
@@ -15,6 +20,7 @@ export const todoCollection = collection({
 		},
 		done: {
 			type: 'boolean',
+			default: false,
 		},
 		tags: {
 			type: 'array',
@@ -32,6 +38,10 @@ export const todoCollection = collection({
 				properties: {
 					name: {
 						type: 'string',
+					},
+					test: {
+						type: 'number',
+						default: 1,
 					},
 				},
 			},
@@ -58,7 +68,12 @@ export const weirdCollection = collection({
 	name: 'weird',
 	primaryKey: 'id',
 	fields: {
-		id: { type: 'string', indexed: true, unique: true },
+		id: {
+			type: 'string',
+			indexed: true,
+			unique: true,
+			default: () => Math.random().toString(36).slice(2, 9),
+		},
 		weird: {
 			type: 'any',
 		},

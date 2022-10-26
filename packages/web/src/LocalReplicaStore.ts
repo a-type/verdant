@@ -30,7 +30,7 @@ export class LocalReplicaStore extends IDBService {
 				ackedLogicalTime: null,
 				lastSyncedLogicalTime: null,
 			};
-			await this.run('info', (store) => store.add(replicaInfo), 'readwrite');
+			await this.run('info', (store) => store.put(replicaInfo), 'readwrite');
 			this.cached = replicaInfo;
 			return replicaInfo;
 		}

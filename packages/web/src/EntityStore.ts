@@ -31,7 +31,7 @@ export class EntityStore extends EventSubscriber<{
 
 	constructor(
 		private readonly db: IDBDatabase,
-		private readonly schema: StorageSchema<any>,
+		private readonly schema: StorageSchema,
 		public readonly meta: Metadata,
 	) {
 		super();
@@ -54,10 +54,19 @@ export class EntityStore extends EventSubscriber<{
 		const { collection } = decomposeOid(oid);
 		this.stripIndexes(collection, initial);
 
-		const entity: ObjectEntity<any> = new ObjectEntity(oid, initial, this, {
-			onSubscribed: () => this.onSubscribed(entity),
-			onAllUnsubscribed: () => this.onAllUnsubscribed(entity),
-		});
+		const entity: ObjectEntity<any> = new ObjectEntity(
+			oid,
+			initial,
+			this,
+			{
+				onSubscribed: () => this.onSubscribed(entity),
+				onAllUnsubscribed: () => this.onAllUnsubscribed(entity),
+			},
+			{
+				type: 'object',
+				properties: this.schema.collections[collection].fields as any,
+			},
+		);
 
 		return entity;
 	};

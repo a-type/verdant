@@ -15,9 +15,12 @@ import {
  * The main collection schema
  */
 export type StorageCollectionSchema<
-	Fields extends StorageFieldsSchema,
-	Synthetics extends StorageSyntheticIndices<Fields>,
-	Compounds extends CollectionCompoundIndices<Fields, Synthetics>,
+	Fields extends StorageFieldsSchema = StorageFieldsSchema,
+	Synthetics extends StorageSyntheticIndices<Fields> = StorageSyntheticIndices<Fields>,
+	Compounds extends CollectionCompoundIndices<
+		Fields,
+		Synthetics
+	> = CollectionCompoundIndices<Fields, Synthetics>,
 > = {
 	name: string;
 	/**

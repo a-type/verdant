@@ -4,7 +4,12 @@ const todoCollection = collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {
-		id: { type: 'string', indexed: true, unique: true },
+		id: {
+			type: 'string',
+			indexed: true,
+			unique: true,
+			default: () => Math.random().toString(36).slice(2, 9),
+		},
 		content: {
 			type: 'string',
 			indexed: false,
@@ -12,6 +17,7 @@ const todoCollection = collection({
 		},
 		done: {
 			type: 'boolean',
+			default: false,
 		},
 		tags: {
 			type: 'array',
@@ -30,6 +36,10 @@ const todoCollection = collection({
 				properties: {
 					name: {
 						type: 'string',
+					},
+					test: {
+						type: 'number',
+						default: 1,
 					},
 				},
 			},
@@ -57,7 +67,12 @@ const personCollection = collection({
 	pluralName: 'people',
 	primaryKey: 'id',
 	fields: {
-		id: { type: 'string', indexed: true, unique: true },
+		id: {
+			type: 'string',
+			indexed: true,
+			unique: true,
+			default: () => Math.random().toString(36).slice(2, 9),
+		},
 		name: {
 			type: 'string',
 			indexed: true,

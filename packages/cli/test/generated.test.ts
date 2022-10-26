@@ -1,21 +1,16 @@
 import {
 	ClientDescriptor,
 	createDefaultMigration,
-	WebsocketSync,
-} from './.generated';
+} from './.generated/index.js';
 import schema from './schema.js';
 import { describe, it, expect } from 'vitest';
-import { createHooks } from './.generated/react';
+import { createHooks } from './.generated/react.js';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
 		namespace: 'test',
-		initialPresence: {},
 		migrations: [createDefaultMigration(schema)],
 		schema,
-		sync: new WebsocketSync({
-			host: 'fake',
-		}),
 	});
 
 	return desc.open();
@@ -26,12 +21,9 @@ describe('generated client', () => {
 		const client = await makeClient();
 
 		const item = await client.todos.create({
-			id: '1',
 			attachments: [],
 			category: null,
 			content: 'test',
-			done: false,
-			tags: [],
 		});
 
 		expect(item.get('content')).toBe('test');
@@ -42,7 +34,16 @@ describe('generated client', () => {
 			lt: 'x',
 		});
 		const result = await query.resolved;
-		expect(result[0].get('id')).toBe('1');
+		expect(result[0].get('id')).toBeDefined();
+		expect(result[0].get('content')).toBe('test');
+
+		item.get('attachments').push({
+			name: 'new',
+		});
+
+		expect(item.get('attachments').getSnapshot()).toEqual([
+			{ name: 'new', test: 1 },
+		]);
 	});
 });
 
@@ -51,12 +52,8 @@ describe('generated react hooks', () => {
 		const hooks = createHooks(
 			new ClientDescriptor({
 				namespace: 'test',
-				initialPresence: {},
 				migrations: [createDefaultMigration(schema)],
 				schema,
-				sync: new WebsocketSync({
-					host: 'fake',
-				}),
 			}),
 		);
 

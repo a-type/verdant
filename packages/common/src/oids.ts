@@ -178,10 +178,9 @@ export function normalize(
  * Only normalizes direct children. The created map
  * of objects will still have nested objects.
  */
-export function normalizeFirstLevel(
-	obj: any,
-	refs: Map<ObjectIdentifier, any> = new Map(),
-): Map<ObjectIdentifier, any> {
+export function normalizeFirstLevel(obj: any) {
+	const refs = new Map<ObjectIdentifier, any>();
+	const oidKeyPairs = new Map<ObjectIdentifier, string | number>();
 	if (Array.isArray(obj)) {
 		const oid = getOid(obj);
 		const copy = assignOid([], oid);
@@ -191,6 +190,7 @@ export function normalizeFirstLevel(
 				const itemOid = getOid(value);
 				copy[i] = createRef(itemOid);
 				refs.set(itemOid, value);
+				oidKeyPairs.set(itemOid, i);
 			} else {
 				copy[i] = value;
 			}
@@ -205,13 +205,14 @@ export function normalizeFirstLevel(
 				const itemOid = getOid(value);
 				copy[key] = createRef(itemOid);
 				refs.set(itemOid, value);
+				oidKeyPairs.set(itemOid, key);
 			} else {
 				copy[key] = value;
 			}
 		}
 		refs.set(oid, copy);
 	}
-	return refs;
+	return { refs, oidKeyPairs };
 }
 
 export function getOidRoot(oid: ObjectIdentifier) {

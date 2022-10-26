@@ -3,16 +3,19 @@ export type StorageStringFieldSchema = {
 	indexed?: boolean;
 	unique?: boolean;
 	nullable?: boolean;
+	default?: string | (() => string);
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';
 	indexed?: boolean;
 	unique?: boolean;
 	nullable?: boolean;
+	default?: number | (() => number);
 };
 export type StorageBooleanFieldSchema = {
 	type: 'boolean';
 	nullable?: boolean;
+	default?: boolean | (() => boolean);
 };
 export type StorageArrayFieldSchema = {
 	type: 'array';
@@ -26,10 +29,11 @@ export type StorageObjectFieldSchema = {
 };
 export type StorageAnyFieldSchema = {
 	type: 'any';
+	default?: any;
 };
 export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 	type: 'map';
-	values: NestedStorageFieldSchema;
+	values: V;
 };
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
@@ -44,10 +48,12 @@ export type StorageFieldSchema =
 export type NestedStorageStringFieldSchema = {
 	type: 'string';
 	nullable?: boolean;
+	default?: string | (() => string);
 };
 export type NestedStorageNumberFieldSchema = {
 	type: 'number';
 	nullable?: boolean;
+	default?: number | (() => number);
 };
 
 export type NestedStorageFieldSchema =

@@ -60,7 +60,7 @@ function getCollectionDocumentTyping(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pascalName = changeCase.pascalCase(collectionName);
 
-	return `export type ${pascalName} = ObjectEntity<${pascalName}Snapshot>`;
+	return `export type ${pascalName} = ObjectEntity<${pascalName}Init>`;
 }
 
 function getCollectionSnapshotTyping(collection) {
@@ -89,7 +89,10 @@ function getCollectionInitTyping(collection) {
 	return `
 export interface ${pascalName}Init {
   ${fields
-		.map(([key, value]) => `${key}: ${getFieldInitTyping(value)}`)
+		.map(([key, value]) => {
+			const { type, optional } = getFieldInitTyping(value);
+			return `${key}${optional ? '?' : ''}: ${type}`;
+		})
 		.join(';\n')}
 }
 `;

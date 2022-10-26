@@ -20,11 +20,29 @@ async function waitForStoragePropagation(mock: MockedFunction<any>) {
 }
 
 describe('storage documents', () => {
+	it('should fill in default values', async () => {
+		const storage = await createTestStorage();
+
+		const item = await storage.create('todo', {
+			content: 'item',
+			category: 'general',
+			attachments: [
+				{
+					name: 'thing',
+				},
+			],
+		});
+
+		expect(item.get('id')).toBeDefined();
+		expect(item.get('done')).toBe(false);
+		expect(item.get('tags').length).toBe(0);
+		expect(item.get('attachments').get(0).get('test')).toBe(1);
+	});
+
 	it('should have a stable identity across different queries when subscribed', async () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('todo', {
-			id: cuid(),
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -32,7 +50,6 @@ describe('storage documents', () => {
 			attachments: [],
 		});
 		await storage.create('todo', {
-			id: cuid(),
 			content: 'item 2',
 			done: true,
 			tags: [],
@@ -57,7 +74,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('todo', {
-			id: cuid(),
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -73,7 +89,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('todo', {
-			id: cuid(),
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -108,7 +123,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('todo', {
-			id: cuid(),
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -146,7 +160,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('todo', {
-			id: cuid(),
 			content: 'item 1',
 			done: false,
 			tags: ['tag 1', 'tag 2'],
@@ -176,8 +189,8 @@ describe('storage documents', () => {
 		});
 
 		expect(item1.get('attachments').getSnapshot()).toEqual([
-			{ name: 'attachment 1' },
-			{ name: 'attachment 2' },
+			{ name: 'attachment 1', test: 1 },
+			{ name: 'attachment 2', test: 1 },
 		]);
 	});
 
@@ -190,7 +203,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('weird', {
-			id: cuid(),
 			weird: {
 				foo: 'bar',
 				baz: [
@@ -220,7 +232,6 @@ describe('storage documents', () => {
 		const storage = await createTestStorage();
 
 		const item1 = await storage.create('weird', {
-			id: cuid(),
 			weird: null,
 			map: {
 				foo: 'bar',

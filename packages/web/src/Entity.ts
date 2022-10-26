@@ -12,6 +12,9 @@ import {
 	Operation,
 	OperationPatch,
 	removeOid,
+	StorageFieldSchema,
+	StorageFieldsSchema,
+	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
 import { EntityStore } from './EntityStore.js';
 
@@ -29,19 +32,26 @@ type AccessibleEntityProperty<T> = T extends Array<any>
 	? keyof T
 	: never;
 
-type EntityPropertyValue<T, K extends keyof T | number> = T extends Array<any>
-	? T[K] extends Array<any>
-		? ListEntity<T[K][number]>
-		: T[K] extends object
-		? ObjectEntity<T[K]>
-		: T[K]
-	: T extends object
-	? K extends keyof T
-		? T[K] extends Array<any>
-			? ListEntity<T[K][number]>
-			: T[K] extends object
-			? ObjectEntity<T[K]>
-			: T[K]
+type DataFromInit<Init> = {
+	[Key in keyof Init]-?: Init[Key];
+};
+
+type EntityPropertyValue<
+	Init,
+	K extends keyof Init | number,
+> = Init extends Array<any>
+	? Init[K] extends Array<any>
+		? ListEntity<Init[K][number]>
+		: Init[K] extends object
+		? ObjectEntity<Init[K]>
+		: Init[K]
+	: Init extends object
+	? K extends keyof Init
+		? Init[K] extends Array<any>
+			? ListEntity<Init[K][number]>
+			: Init[K] extends object
+			? ObjectEntity<Init[K]>
+			: Init[K]
 		: never
 	: never;
 
@@ -53,7 +63,7 @@ export function deleteEntity(entity: EntityBase<any>) {
 	entity[DELETE]();
 }
 
-export abstract class EntityBase<T> {
+export abstract class EntityBase<Snapshot> {
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
 	// while changes are propagating, realtime alterations are set on this
@@ -82,12 +92,26 @@ export abstract class EntityBase<T> {
 
 	constructor(
 		readonly oid: ObjectIdentifier,
-		initial: T | undefined,
+		initial: Snapshot | undefined,
 		protected readonly store: EntityStore,
 		protected readonly cacheEvents: CacheEvents,
+		protected readonly fieldSchema: StorageFieldSchema | StorageFieldsSchema,
 	) {
 		this[UPDATE](initial);
 	}
+
+	protected getChildFieldSchema = (key: any) => {
+		if (this.fieldSchema.type === 'object') {
+			return this.fieldSchema.properties[key];
+		} else if (this.fieldSchema.type === 'array') {
+			return this.fieldSchema.items;
+		} else if (this.fieldSchema.type === 'map') {
+			return this.fieldSchema.values;
+		} else if (this.fieldSchema.type === 'any') {
+			return this.fieldSchema;
+		}
+		throw new Error('Invalid field schema');
+	};
 
 	protected [DELETE] = () => {
 		// entity was deleted
@@ -99,37 +123,37 @@ export abstract class EntityBase<T> {
 		this.events.emit('delete');
 	};
 
-	protected [UPDATE] = (initial: T | undefined) => {
-		const normalized = normalizeFirstLevel(initial);
-		const self = normalized.get(this.oid);
+	protected [UPDATE] = (initial: Snapshot | undefined) => {
+		const { refs, oidKeyPairs } = normalizeFirstLevel(initial);
+		const self = refs.get(this.oid);
 		this._current = self ? removeOid(self) : undefined;
 		// update any existing sub-object values
-		const droppedKeys = new Set<ObjectIdentifier>();
-		const newKeys = new Set<ObjectIdentifier>(normalized.keys());
-		newKeys.delete(this.oid); // remove own oid
+		const droppedOids = new Set<ObjectIdentifier>();
+		const newOids = new Set<ObjectIdentifier>(refs.keys());
+		newOids.delete(this.oid); // remove own oid
 
 		for (const [oid, entity] of this.subObjectCache) {
-			const incomingValue = normalized.get(oid);
+			const incomingValue = refs.get(oid);
 			entity[UPDATE](incomingValue);
 
 			// update our bookkeeping
 			if (incomingValue === undefined) {
-				droppedKeys.add(oid);
+				droppedOids.add(oid);
 			}
-			newKeys.delete(oid);
+			newOids.delete(oid);
 		}
 
 		// any new keys are new sub-objects that must
 		// be created
-		for (const oid of newKeys) {
-			const value = normalized.get(oid);
-			const entity = this.createSubObject(oid, value);
+		for (const oid of newOids) {
+			const value = refs.get(oid);
+			const entity = this.createSubObject(oid, value, oidKeyPairs.get(oid)!);
 			this.subObjectCache.set(oid, entity);
 		}
 
 		// any dropped keys are sub-objects that must be
 		// removed
-		for (const oid of droppedKeys) {
+		for (const oid of droppedOids) {
 			this.subObjectCache.delete(oid);
 		}
 
@@ -149,11 +173,24 @@ export abstract class EntityBase<T> {
 	protected createSubObject = (
 		oid: ObjectIdentifier,
 		value: any,
+		key: any,
 	): EntityBase<any> => {
 		if (Array.isArray(value)) {
-			return new ListEntity(oid, value, this.store, this.cacheEvents);
+			return new ListEntity(
+				oid,
+				value,
+				this.store,
+				this.cacheEvents,
+				this.getChildFieldSchema(key),
+			);
 		} else {
-			return new ObjectEntity(oid, value, this.store, this.cacheEvents);
+			return new ObjectEntity(
+				oid,
+				value,
+				this.store,
+				this.cacheEvents,
+				this.getChildFieldSchema(key),
+			);
 		}
 	};
 
@@ -239,14 +276,14 @@ export abstract class EntityBase<T> {
 			for (let i = 0; i < this._override.length; i++) {
 				const value = this._override[i];
 				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
-					const entity = this.createSubObject(value.id, undefined);
+					const entity = this.createSubObject(value.id, undefined, i);
 					this.subObjectCache.set(value.id, entity);
 				}
 			}
 		} else if (isObject(this._override)) {
 			for (const [key, value] of Object.entries(this._override)) {
 				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
-					const entity = this.createSubObject(value.id, undefined);
+					const entity = this.createSubObject(value.id, undefined, key);
 					this.subObjectCache.set(value.id, entity);
 				}
 			}
@@ -257,15 +294,15 @@ export abstract class EntityBase<T> {
 		return this.subObjectCache.get(oid);
 	};
 
-	protected wrapValue = <Key extends AccessibleEntityProperty<T>>(
+	protected wrapValue = <Key extends AccessibleEntityProperty<Snapshot>>(
 		value: any,
 		key: Key,
-	): EntityPropertyValue<T, Key> => {
+	): EntityPropertyValue<Snapshot, Key> => {
 		if (isObjectRef(value)) {
 			const oid = value.id;
 			const subObject = this.getSubObject(oid);
 			if (subObject) {
-				return subObject as EntityPropertyValue<T, Key>;
+				return subObject as EntityPropertyValue<Snapshot, Key>;
 			}
 			throw new Error(
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
@@ -274,9 +311,9 @@ export abstract class EntityBase<T> {
 		return value;
 	};
 
-	get = <Key extends AccessibleEntityProperty<T>>(
+	get = <Key extends AccessibleEntityProperty<Snapshot>>(
 		key: Key,
-	): EntityPropertyValue<T, Key> => {
+	): EntityPropertyValue<Snapshot, Key> => {
 		if (this._deleted) {
 			throw new Error('Cannot access deleted entity');
 		}
@@ -289,7 +326,7 @@ export abstract class EntityBase<T> {
 	 * Returns a copy of the entity and all sub-objects as
 	 * a plain object or array.
 	 */
-	getSnapshot = (): T | null => {
+	getSnapshot = (): Snapshot | null => {
 		if (!this.value) {
 			return null;
 		}
@@ -300,7 +337,7 @@ export abstract class EntityBase<T> {
 						return this.getSubObject(item.id)?.getSnapshot();
 					}
 					return item;
-				}) as T;
+				}) as Snapshot;
 			} else {
 				const snapshot = { ...this.value };
 				for (const [key, value] of Object.entries(snapshot)) {
@@ -308,18 +345,18 @@ export abstract class EntityBase<T> {
 						snapshot[key] = this.getSubObject(value.id)?.getSnapshot();
 					}
 				}
-				this.cachedSnapshot = snapshot as T;
+				this.cachedSnapshot = snapshot as Snapshot;
 			}
 		}
 		return this.cachedSnapshot;
 	};
 }
 
-export class ListEntity<T>
-	extends EntityBase<T[]>
-	implements Iterable<EntityPropertyValue<T[], number>>
+export class ListEntity<ItemInit>
+	extends EntityBase<DataFromInit<ItemInit>[]>
+	implements Iterable<EntityPropertyValue<DataFromInit<ItemInit>[], number>>
 {
-	private getItemOid = (item: T) => {
+	private getItemOid = (item: DataFromInit<ItemInit>) => {
 		const itemOid = maybeGetOid(item);
 		if (!itemOid || !this.subObjectCache.has(itemOid)) {
 			throw new Error(
@@ -335,17 +372,29 @@ export class ListEntity<T>
 		return this.value.length;
 	}
 
-	set = (index: number, value: T) => {
+	set = (index: number, value: ItemInit) => {
+		const fieldSchema = this.getChildFieldSchema(index);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
 		this.addPatches(
 			this.store.meta.patchCreator.createSet(this.oid, index, value),
 		);
 	};
-	push = (value: T) => {
+	push = (value: ItemInit) => {
+		const fieldSchema = this.getChildFieldSchema(this.value.length);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
 		this.addPatches(
 			this.store.meta.patchCreator.createListPush(this.oid, value),
 		);
 	};
-	insert = (index: number, value: T) => {
+	insert = (index: number, value: ItemInit) => {
+		const fieldSchema = this.getChildFieldSchema(index);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
 		this.addPatches(
 			this.store.meta.patchCreator.createListInsert(this.oid, index, value),
 		);
@@ -355,7 +404,7 @@ export class ListEntity<T>
 			this.store.meta.patchCreator.createListMoveByIndex(this.oid, from, to),
 		);
 	};
-	moveItem = (item: T, to: number) => {
+	moveItem = (item: DataFromInit<ItemInit>, to: number) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createListMoveByRef(
 				this.oid,
@@ -369,7 +418,7 @@ export class ListEntity<T>
 			this.store.meta.patchCreator.createListDelete(this.oid, index),
 		);
 	};
-	remove = (item: T) => {
+	remove = (item: DataFromInit<ItemInit>) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createListRemove(
 				this.oid,
@@ -386,7 +435,10 @@ export class ListEntity<T>
 			next: () => {
 				if (index < this.value.length) {
 					return {
-						value: this.get(index++) as EntityPropertyValue<T[], number>,
+						value: this.get(index++) as EntityPropertyValue<
+							DataFromInit<ItemInit>[],
+							number
+						>,
 						done: false,
 					} as const;
 				}
@@ -400,19 +452,25 @@ export class ListEntity<T>
 
 	// additional access methods
 
-	private getAsWrapped = (): EntityPropertyValue<T[], number>[] => {
+	private getAsWrapped = (): EntityPropertyValue<
+		DataFromInit<ItemInit>[],
+		number
+	>[] => {
 		return this.value.map(this.wrapValue);
 	};
 
 	map = <U>(
-		callback: (value: EntityPropertyValue<T[], number>, index: number) => U,
+		callback: (
+			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
+			index: number,
+		) => U,
 	) => {
 		return this.getAsWrapped().map(callback);
 	};
 
 	filter = (
 		callback: (
-			value: EntityPropertyValue<T[], number>,
+			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
 			index: number,
 		) => boolean,
 	) => {
@@ -422,16 +480,24 @@ export class ListEntity<T>
 	};
 }
 
-export class ObjectEntity<T> extends EntityBase<T> {
-	set = (key: string, value: any) => {
+export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
+	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
+		const fieldSchema = this.getChildFieldSchema(key);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
 		this.addPatches(
-			this.store.meta.patchCreator.createSet(this.oid, key, value),
+			this.store.meta.patchCreator.createSet(
+				this.oid,
+				key as string | number,
+				value,
+			),
 		);
 	};
 	remove = (key: string) => {
 		this.addPatches(this.store.meta.patchCreator.createRemove(this.oid, key));
 	};
-	update = (value: Partial<T>) => {
+	update = (value: Partial<DataFromInit<Init>>) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createDiff(
 				this.value,
