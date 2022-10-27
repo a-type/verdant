@@ -67,7 +67,11 @@ export class ServerLibrary {
 		}
 	};
 
-	receive = (message: ClientMessage, clientKey: string, userId: string) => {
+	receive = async (
+		message: ClientMessage,
+		clientKey: string,
+		userId: string,
+	) => {
 		this.validateReplicaAccess(message.replicaId, userId);
 
 		switch (message.type) {
@@ -87,7 +91,7 @@ export class ServerLibrary {
 				this.handleHeartbeat(message, clientKey, userId);
 				break;
 			case 'presence-update':
-				this.handlePresenceUpdate(message, clientKey, userId);
+				await this.handlePresenceUpdate(message, clientKey, userId);
 				break;
 			default:
 				console.log('Unknown message type', (message as any).type);

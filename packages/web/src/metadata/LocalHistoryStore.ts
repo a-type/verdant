@@ -1,5 +1,5 @@
-import { storeRequestPromise } from './idb.js';
-import { IDBService } from './IDBService.js';
+import { storeRequestPromise } from '../idb.js';
+import { IDBService } from '../IDBService.js';
 
 type LocalHistoryItem = {
 	timestamp: string;

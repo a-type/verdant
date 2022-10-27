@@ -1,6 +1,6 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
 import { NoSync, ServerSync, Sync } from './Sync.js';
-import { Metadata, openMetadataDatabase } from './Metadata.js';
+import { Metadata, openMetadataDatabase } from './metadata/Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
@@ -217,6 +217,9 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				init.indexedDb,
 			);
 			const meta = new Metadata(metaDb, init.schema);
+
+			// verify schema integrity
+			await meta.updateSchema(init.schema);
 
 			const documentDb = await openDocumentDatabase({
 				namespace: this._namespace,

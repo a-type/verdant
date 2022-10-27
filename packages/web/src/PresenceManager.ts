@@ -1,6 +1,6 @@
 import { ServerMessage, EventSubscriber } from '@lo-fi/common';
 import type { Presence, UserInfo } from './index.js';
-import { LocalReplicaInfo } from './LocalReplicaStore.js';
+import { LocalReplicaInfo } from './metadata/LocalReplicaStore.js';
 
 export class PresenceManager extends EventSubscriber<{
 	peerChanged: (userId: string, presence: any) => void;

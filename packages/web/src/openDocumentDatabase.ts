@@ -4,9 +4,8 @@ import {
 	cloneDeep,
 	migrationRange,
 	diffToPatches,
-	getOid,
 } from '@lo-fi/common';
-import { Metadata } from './Metadata.js';
+import { Metadata } from './metadata/Metadata.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);

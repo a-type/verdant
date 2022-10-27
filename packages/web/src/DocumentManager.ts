@@ -13,7 +13,7 @@ import {
 } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 import { EntityStore } from './EntityStore.js';
-import { Metadata } from './Metadata.js';
+import { Metadata } from './metadata/Metadata.js';
 
 /**
  * Exposes functionality for creating documents,

@@ -1,5 +1,5 @@
 import cuid from 'cuid';
-import { IDBService } from './IDBService.js';
+import { IDBService } from '../IDBService.js';
 
 export type LocalReplicaInfo = {
 	type: 'localReplicaInfo';

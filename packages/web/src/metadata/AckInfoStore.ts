@@ -1,4 +1,4 @@
-import { IDBService } from './IDBService.js';
+import { IDBService } from '../IDBService.js';
 
 type AckInfo = {
 	type: 'ack';

@@ -141,7 +141,7 @@ export class Server extends EventEmitter implements MessageSender {
 					}));
 
 				for (const message of body.messages) {
-					this.handleMessage(key, info, message);
+					await this.handleMessage(key, info, message);
 				}
 
 				// update our keepalive timers for presence management
@@ -193,7 +193,7 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.clientConnections.addSocket(info.libraryId, key, ws);
 
-		ws.on('message', (message: any) => {
+		ws.on('message', async (message: any) => {
 			const data = JSON.parse(message.toString()) as ClientMessage;
 
 			if (data.replicaId) {
@@ -201,7 +201,7 @@ export class Server extends EventEmitter implements MessageSender {
 				this.keepalives.refresh(info.libraryId, data.replicaId);
 			}
 
-			this.handleMessage(key, info, data);
+			await this.handleMessage(key, info, data);
 		});
 
 		ws.on('close', () => {

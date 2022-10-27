@@ -1,5 +1,5 @@
 import { StorageSchema } from '@lo-fi/common';
-import { storeRequestPromise } from './idb.js';
+import { storeRequestPromise } from '../idb.js';
 
 type StoredSchema = {
 	type: 'schema';
@@ -15,6 +15,10 @@ export class SchemaStore {
 	) {}
 
 	get = async (): Promise<StorageSchema<any> | null> => {
+		if (this.cached) {
+			return this.cached;
+		}
+
 		const db = this.db;
 		const transaction = db.transaction('info', 'readonly');
 		const store = transaction.objectStore('info');
@@ -25,7 +29,8 @@ export class SchemaStore {
 		if (!value) {
 			return null;
 		}
-		return JSON.parse(value.schema);
+		this.cached = JSON.parse(value.schema);
+		return this.cached;
 	};
 
 	set = async (schema: StorageSchema<any>): Promise<void> => {

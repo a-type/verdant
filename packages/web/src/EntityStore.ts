@@ -20,7 +20,7 @@ import {
 	updateEntity,
 } from './Entity.js';
 import { storeRequestPromise } from './idb.js';
-import { Metadata } from './Metadata.js';
+import { Metadata } from './metadata/Metadata.js';
 import { computeCompoundIndices, computeSynthetics } from './indexes.js';
 
 export class EntityStore extends EventSubscriber<{

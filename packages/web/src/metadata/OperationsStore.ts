@@ -7,7 +7,7 @@ import {
 	Operation,
 	assert,
 } from '@lo-fi/common';
-import { IDBService } from './IDBService.js';
+import { IDBService } from '../IDBService.js';
 
 export type ClientOperation = Operation & {
 	isLocal: boolean;

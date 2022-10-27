@@ -7,7 +7,7 @@ import {
 } from '@lo-fi/common';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
 import { EntityStore } from './EntityStore.js';
-import { Metadata } from './Metadata.js';
+import { Metadata } from './metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
 
 type SyncEvents = {

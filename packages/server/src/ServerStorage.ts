@@ -47,7 +47,7 @@ export class ServerStorage {
 		console.debug('Received message', libraryId, clientId, message);
 
 		const library = this.libraries.open(libraryId);
-		library.receive(message, clientKey, clientId);
+		return library.receive(message, clientKey, clientId);
 	};
 
 	/**

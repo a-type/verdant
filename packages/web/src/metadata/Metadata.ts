@@ -12,7 +12,7 @@ import {
 } from '@lo-fi/common';
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
-import { getSizeOfObjectStore } from './idb.js';
+import { getSizeOfObjectStore } from '../idb.js';
 import { LocalHistoryStore } from './LocalHistoryStore.js';
 import { LocalReplicaStore } from './LocalReplicaStore.js';
 import { MessageCreator } from './MessageCreator.js';
@@ -282,6 +282,31 @@ export class Metadata extends EventSubscriber<{
 		await this.baselines.reset();
 		await this.localHistory.reset();
 		await this.localReplica.reset();
+	};
+
+	updateSchema = async (schema: StorageSchema) => {
+		const storedSchema = await this.schema.get();
+		if (storedSchema) {
+			// version changes will be handled by migration routines in
+			// the actual idb database loading code (see: initializeDatabases)
+
+			// but this check determines if the schema has been changed without
+			// a version change. if so, it will error.
+			if (
+				storedSchema.version === schema.version &&
+				JSON.stringify(storedSchema) !== JSON.stringify(schema)
+			) {
+				console.error(
+					`Schema mismatch for version ${schema.version}
+					${JSON.stringify(storedSchema)}
+					${JSON.stringify(schema)}`,
+				);
+				throw new Error(
+					'Schema has changed without a version change! Any changes to your schema must be accompanied by a change in schema version and a migration routine.',
+				);
+			}
+		}
+		await this.schema.set(schema);
 	};
 
 	stats = async () => {
