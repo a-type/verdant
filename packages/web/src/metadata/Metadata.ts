@@ -322,38 +322,3 @@ export class Metadata extends EventSubscriber<{
 		};
 	};
 }
-
-export function openMetadataDatabase(
-	namespace: string,
-	indexedDB: IDBFactory = window.indexedDB,
-) {
-	return new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open([namespace, 'meta'].join('_'), 1);
-		request.onupgradeneeded = (event) => {
-			const db = request.result;
-			// version 1: operations list, baselines, and local info
-			if (!event.oldVersion) {
-				const baselinesStore = db.createObjectStore('baselines', {
-					keyPath: 'oid',
-				});
-				const operationsStore = db.createObjectStore('operations', {
-					keyPath: 'oid_timestamp',
-				});
-				const infoStore = db.createObjectStore('info', { keyPath: 'type' });
-				baselinesStore.createIndex('timestamp', 'timestamp');
-				operationsStore.createIndex('isLocal_timestamp', 'isLocal_timestamp');
-				operationsStore.createIndex(
-					'documentOid_timestamp',
-					'documentOid_timestamp',
-				);
-			}
-		};
-		request.onerror = () => {
-			console.error('Error opening database', request.error);
-			reject(request.error);
-		};
-		request.onsuccess = () => {
-			resolve(request.result);
-		};
-	});
-}

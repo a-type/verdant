@@ -15,8 +15,8 @@ export type ClientOperation = Operation & {
 
 export type StoredClientOperation = ClientOperation & {
 	oid_timestamp: string;
-	isLocal_timestamp: string;
-	documentOid_timestamp: string;
+	l_t: string;
+	d_t: string;
 };
 
 export class OperationsStore extends IDBService {
@@ -41,7 +41,7 @@ export class OperationsStore extends IDBService {
 	): Promise<void> => {
 		const transaction = this.db.transaction('operations', mode);
 		const store = transaction.objectStore('operations');
-		const index = store.index('documentOid_timestamp');
+		const index = store.index('d_t');
 
 		const startTimestamp = from || after;
 		const start = startTimestamp
@@ -140,7 +140,7 @@ export class OperationsStore extends IDBService {
 	): Promise<void> => {
 		const transaction = this.db.transaction('operations', 'readonly');
 		const store = transaction.objectStore('operations');
-		const index = store.index('isLocal_timestamp');
+		const index = store.index('l_t');
 
 		const start = after
 			? createCompoundIndexValue(true, after)
@@ -196,11 +196,8 @@ export class OperationsStore extends IDBService {
 				patch.oid,
 				patch.timestamp,
 			) as string,
-			isLocal_timestamp: createCompoundIndexValue(
-				patch.isLocal,
-				patch.timestamp,
-			) as string,
-			documentOid_timestamp: createCompoundIndexValue(
+			l_t: createCompoundIndexValue(patch.isLocal, patch.timestamp) as string,
+			d_t: createCompoundIndexValue(
 				getOidRoot(patch.oid),
 				patch.timestamp,
 			) as string,

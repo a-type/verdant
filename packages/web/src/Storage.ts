@@ -1,6 +1,6 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
 import { NoSync, ServerSync, Sync } from './Sync.js';
-import { Metadata, openMetadataDatabase } from './metadata/Metadata.js';
+import { Metadata } from './metadata/Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
@@ -8,6 +8,7 @@ import { DocumentManager } from './DocumentManager.js';
 import { EntityStore } from './EntityStore.js';
 import { getSizeOfObjectStore } from './idb.js';
 import type { Presence } from './index.js';
+import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
 
 export class Storage {
 	private entities = new EntityStore(this.documentDb, this.schema, this.meta);
