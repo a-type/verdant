@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 0.2.2
+
+### Patch Changes
+
+- 7f5210c: Restore schema comparison migration check
+
 ## 0.2.1
 
 ### Patch Changes
