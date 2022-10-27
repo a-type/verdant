@@ -511,11 +511,14 @@ class PushPullSync
 	// on a heartbeat, do a sync
 	private onHeartbeat = async () => {
 		const lastSyncTimestamp = await this.meta.lastSyncedTimestamp();
+		// for HTTP sync we send presence first, so that the sync-resp message
+		// will include the client's own presence info and fill in missing profile
+		// data on the first request. otherwise it would have to wait for the second.
 		this.sendRequest([
-			await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
 			await this.meta.messageCreator.createPresenceUpdate(
 				this.presence.self.presence,
 			),
+			await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
 		]);
 	};
 
