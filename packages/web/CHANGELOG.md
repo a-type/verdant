@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 0.2.2
+
+### Patch Changes
+
+- 2c7083f: fix missing presence with http sync
+- 3366b20: Consolidate operation storage size
+- 7f5210c: Restore schema comparison migration check
+
 ## 0.2.1
 
 ### Patch Changes
