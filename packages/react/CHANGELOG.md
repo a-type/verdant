@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 1.0.0
+
+### Minor Changes
+
+- 5c4a92d: Separate auth into its own endpoint
+
+### Patch Changes
+
+- Updated dependencies [5c4a92d]
+  - @lo-fi/web@0.3.0
+  - @lo-fi/common@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes
