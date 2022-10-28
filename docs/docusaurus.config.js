@@ -9,7 +9,7 @@ const config = {
 	title: 'lo-fi',
 	tagline: 'Local-first framework',
 	url: 'https://a-type.github.io/lo-fi',
-	baseUrl: '/lo-fi/',
+	baseUrl: '/',
 	onBrokenLinks: 'throw',
 	onBrokenMarkdownLinks: 'warn',
 	favicon: 'img/favicon.ico',
