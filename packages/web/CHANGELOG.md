@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 0.3.1
+
+### Patch Changes
+
+- 1ca6303: Fix a big initial sync issues when joining library with existing baslines
+
 ## 0.3.0
 
 ### Minor Changes
