@@ -254,6 +254,9 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 					await this.entities.reset();
 				}
 
+				// add any baselines
+				await this.meta.baselines.setAll(message.baselines);
+
 				affectedOids = await this.meta.insertRemoteOperations(
 					message.operations,
 				);

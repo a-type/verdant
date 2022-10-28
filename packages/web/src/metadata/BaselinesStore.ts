@@ -38,6 +38,16 @@ export class BaselinesStore extends IDBService {
 		await this.run('baselines', (store) => store.put(baseline), 'readwrite');
 	};
 
+	setAll = async <T>(baselines: DocumentBaseline<T>[]) => {
+		await this.runAll(
+			'baselines',
+			(store) => {
+				return baselines.map((baseline) => store.put(baseline));
+			},
+			'readwrite',
+		);
+	};
+
 	reset = () => {
 		return this.clear('baselines');
 	};
