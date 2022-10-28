@@ -85,11 +85,10 @@ export class ClientConnectionManager {
 
 		lib.set(key, connection);
 
-		request.on('close', () => {
+		return () => {
+			connection.end();
 			lib.delete(key);
-		});
-
-		return connection.end.bind(connection);
+		};
 	};
 
 	remove = (libraryId: string, key: string) => {

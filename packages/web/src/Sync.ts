@@ -4,9 +4,11 @@ import {
 	EventSubscriber,
 	ObjectIdentifier,
 	getOidRoot,
+	assert,
 } from '@lo-fi/common';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
 import { EntityStore } from './EntityStore.js';
+import type { Presence } from './index.js';
 import { Metadata } from './metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
 
@@ -66,43 +68,137 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 	public readonly presence = new PresenceManager();
 }
 
+export interface ServerSyncEndpointProviderConfig {
+	/**
+	 * The location of the endpoint used to retrieve an
+	 * authorization token for the client.
+	 */
+	authEndpoint?: string;
+	/**
+	 * A custom fetch function to retrieve authorization
+	 * data.
+	 */
+	fetchAuth?: () => Promise<{
+		accessToken: string;
+		syncEndpoint: string;
+	}>;
+}
+
+class ServerSyncEndpointProvider {
+	private cached = null as {
+		http: string;
+		websocket: string;
+	} | null;
+
+	constructor(private config: ServerSyncEndpointProviderConfig) {
+		if (!config.authEndpoint && !config.fetchAuth) {
+			throw new Error(
+				'Either authEndpoint or fetchAuth must be provided to ServerSyncEndpointProvider',
+			);
+		}
+	}
+
+	getEndpoints = async () => {
+		if (this.cached) {
+			return this.cached;
+		}
+
+		let result: { accessToken: string; syncEndpoint: string };
+		if (this.config.fetchAuth) {
+			result = await this.config.fetchAuth();
+		} else {
+			result = await fetch(this.config.authEndpoint!, {
+				credentials: 'include',
+			}).then((res) => {
+				if (!res.ok) {
+					throw new Error(
+						`Auth endpoint returned non-200 response: ${res.status}`,
+					);
+				} else {
+					return res.json();
+				}
+			});
+		}
+		assert(result.accessToken, 'No access token provided from auth endpoint');
+		assert(result.syncEndpoint, 'No sync endpoint provided from auth endpoint');
+		const url = new URL(result.syncEndpoint);
+		url.searchParams.set('token', result.accessToken);
+		url.protocol = url.protocol.replace('ws', 'http');
+		const httpEndpoint = url.toString();
+		url.protocol = url.protocol.replace('http', 'ws');
+		const websocketEndpoint = url.toString();
+		this.cached = { http: httpEndpoint, websocket: websocketEndpoint };
+		return this.cached;
+	};
+}
+
 export type SyncTransportMode = 'realtime' | 'pull';
+
+export interface ServerSyncOptions extends ServerSyncEndpointProviderConfig {
+	/**
+	 * When a client first connects, it will use this presence value.
+	 */
+	initialPresence: Presence;
+
+	/**
+	 * Provide `false` to disable transport selection. Transport selection
+	 * automatically switches between HTTP and WebSocket based sync depending
+	 * on the number of peers connected. If a user is alone, they will use
+	 * HTTP push/pull to sync changes. If another user joins, both users will
+	 * be upgraded to websockets.
+	 *
+	 * Turning off this feature allows you more control over the transport
+	 * which can be useful for low-power devices or to save server traffic.
+	 * To modify transport modes manually, utilize `client.sync.setMode`.
+	 * The built-in behavior is essentially switching modes based on
+	 * the number of peers detected by client.sync.presence.
+	 */
+	automaticTransportSelection?: boolean;
+	initialTransport?: SyncTransportMode;
+}
 
 export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 	private webSocketSync: WebSocketSync;
 	private pushPullSync: PushPullSync;
 	private activeSync: SyncTransport;
+	private endpointProvider;
 
 	private meta: Metadata;
 	private entities: EntityStore;
 
 	readonly presence;
 
-	constructor({
-		host,
-		meta,
-		entities,
-		initialPresence,
-		automaticTransportSelection = true,
-	}: {
-		host: string;
-		meta: Metadata;
-		entities: EntityStore;
-		initialPresence: any;
-		automaticTransportSelection?: boolean;
-	}) {
+	constructor(
+		{
+			authEndpoint,
+			fetchAuth,
+			initialPresence,
+			automaticTransportSelection = true,
+		}: ServerSyncOptions,
+		{
+			meta,
+			entities,
+		}: {
+			meta: Metadata;
+			entities: EntityStore;
+		},
+	) {
 		super();
 		this.meta = meta;
 		this.entities = entities;
 		this.presence = new PresenceManager(initialPresence);
+		this.endpointProvider = new ServerSyncEndpointProvider({
+			authEndpoint,
+			fetchAuth,
+		});
 
 		this.webSocketSync = new WebSocketSync({
-			host,
+			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
 		});
 		this.pushPullSync = new PushPullSync({
-			host,
+			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
 		});
@@ -256,7 +352,7 @@ class WebSocketSync
 	readonly presence: PresenceManager;
 	private socket: WebSocket | null = null;
 	private messageQueue: ClientMessage[] = [];
-	private host: string;
+	private endpointProvider;
 	private _status: 'active' | 'paused' = 'paused';
 
 	readonly mode = 'realtime';
@@ -268,30 +364,22 @@ class WebSocketSync
 	);
 
 	constructor({
-		host,
+		endpointProvider,
 		meta,
 		presence,
 	}: {
-		host: string;
+		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
 	}) {
 		super();
-		this.host = this.fixHost(host);
+		this.endpointProvider = endpointProvider;
 		this.meta = meta;
 		this.presence = presence;
 
 		this.reconnectScheduler.subscribe('trigger', this.initializeSocket);
 		this.heartbeat.subscribe('beat', this.sendHeartbeat);
 	}
-
-	private fixHost = (host: string) => {
-		if (host.startsWith('ws')) return host;
-		if (host.startsWith('http')) {
-			return host.replace(/^http/, 'ws');
-		}
-		return `ws://${host}`;
-	};
 
 	private onOpen = () => {
 		if (!this.socket) {
@@ -347,8 +435,9 @@ class WebSocketSync
 		this.onError(event);
 	};
 
-	private initializeSocket = () => {
-		this.socket = new WebSocket(this.host);
+	private initializeSocket = async () => {
+		const endpoint = await this.endpointProvider.getEndpoints();
+		this.socket = new WebSocket(endpoint.websocket);
 		this.socket.addEventListener('message', this.onMessage);
 		this.socket.addEventListener('open', this.onOpen);
 		this.socket.addEventListener('error', this.onError);
@@ -407,7 +496,7 @@ class PushPullSync
 {
 	readonly meta: Metadata;
 	readonly presence: PresenceManager;
-	private host: string;
+	private endpointProvider;
 	private heartbeat = new Heartbeat();
 
 	readonly mode = 'pull';
@@ -416,34 +505,27 @@ class PushPullSync
 	private _status: 'active' | 'paused' = 'paused';
 
 	constructor({
-		host,
+		endpointProvider,
 		meta,
 		presence,
 	}: {
-		host: string;
+		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
 	}) {
 		super();
 		this.meta = meta;
 		this.presence = presence;
-		this.host = this.fixHost(host);
+		this.endpointProvider = endpointProvider;
 
 		this.heartbeat.subscribe('beat', this.onHeartbeat);
 		this.heartbeat.subscribe('missed', this.onHeartbeatMissed);
 	}
 
-	private fixHost = (host: string) => {
-		if (host.startsWith('http')) return host;
-		if (host.startsWith('ws')) {
-			return host.replace(/^ws/, 'http');
-		}
-		return `http://${host}`;
-	};
-
 	private sendRequest = async (messages: ClientMessage[]) => {
 		try {
-			const response = await fetch(this.host, {
+			const { http: host } = await this.endpointProvider.getEndpoints();
+			const response = await fetch(host, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

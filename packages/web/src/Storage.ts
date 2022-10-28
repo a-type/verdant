@@ -1,5 +1,5 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
-import { NoSync, ServerSync, Sync } from './Sync.js';
+import { NoSync, ServerSync, ServerSyncOptions, Sync } from './Sync.js';
 import { Metadata } from './metadata/Metadata.js';
 import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
@@ -26,13 +26,12 @@ export class Storage {
 		private metaDb: IDBDatabase,
 		private documentDb: IDBDatabase,
 		private namespace: string,
-		syncConfig?: StorageSyncConfig,
+		syncConfig?: ServerSyncOptions,
 	) {
 		this.collectionNames = Object.keys(schema.collections);
 
 		this.sync = syncConfig
-			? new ServerSync({
-					...syncConfig,
+			? new ServerSync(syncConfig, {
 					meta: this.meta,
 					entities: this.entities,
 			  })
@@ -143,39 +142,13 @@ export class Storage {
 	};
 }
 
-export interface StorageSyncConfig {
-	/**
-	 * When a client first connects, it will use this presence value.
-	 */
-	initialPresence: Presence;
-	/**
-	 * Provide a host URL for your sync server. To use TLS be sure
-	 * to specify the full https:// URL.
-	 */
-	host: string;
-	/**
-	 * Provide `false` to disable transport selection. Transport selection
-	 * automatically switches between HTTP and WebSocket based sync depending
-	 * on the number of peers connected. If a user is alone, they will use
-	 * HTTP push/pull to sync changes. If another user joins, both users will
-	 * be upgraded to websockets.
-	 *
-	 * Turning off this feature allows you more control over the transport
-	 * which can be useful for low-power devices or to save server traffic.
-	 * To modify transport modes manually, utilize `client.sync.setMode`.
-	 * The built-in behavior is essentially switching modes based on
-	 * the number of peers detected by client.sync.presence.
-	 */
-	automaticTransportSelection?: boolean;
-}
-
 export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	/** The schema used to create this client */
 	schema: Schema;
 	/** Migrations, in order, to upgrade to each successive version of the schema */
 	migrations: Migration[];
 	/** Provide a sync config to turn on synchronization with a server */
-	sync?: StorageSyncConfig;
+	sync?: ServerSyncOptions;
 	/** Optionally override the IndexedDB implementation */
 	indexedDb?: IDBFactory;
 	/**

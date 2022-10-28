@@ -1,4 +1,9 @@
-import { ClientMessage, generateId, ServerMessage } from '@lo-fi/common';
+import {
+	assert,
+	ClientMessage,
+	generateId,
+	ServerMessage,
+} from '@lo-fi/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -9,6 +14,7 @@ import { MessageSender } from './MessageSender.js';
 import { URL } from 'url';
 import { ClientConnectionManager } from './ClientConnection.js';
 import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
+import { TokenVerifier } from './TokenVerifier.js';
 
 export interface ServerOptions {
 	/**
@@ -18,14 +24,10 @@ export interface ServerOptions {
 	 */
 	httpServer?: HttpServer;
 	/**
-	 * Associate a socket connection or any incoming request with a particular user.
-	 * You must also provide the library ID you want to give access to for this connection.
-	 * The full incoming request is provided to make authentication and authorization decisions,
-	 * like looking up a cookie or inspecting the path.
+	 * The secret value used to generate tokens from your authentication endpoint.
+	 * Used to verify and decode user identity and library access on connection.
 	 */
-	authorize: (
-		req: IncomingMessage,
-	) => Promise<{ userId: string; libraryId: string }>;
+	tokenSecret: string;
 	/**
 	 * The path to your SQLite database.
 	 */
@@ -50,17 +52,23 @@ class DefaultProfiles implements UserProfiles<{ id: string }> {
 }
 
 export class Server extends EventEmitter implements MessageSender {
-	private httpServer: HttpServer;
+	readonly httpServer: HttpServer;
 	private wss: WebSocketServer;
 	private storage: ServerStorage;
 
 	private clientConnections = new ClientConnectionManager();
 	private keepalives = new ReplicaKeepaliveTimers();
 
+	private tokenVerifier;
+
 	private connectionToReplicaIdMap = new WeakMap<WebSocket, string>();
 
-	constructor(private options: ServerOptions) {
+	constructor(options: ServerOptions) {
 		super();
+
+		this.tokenVerifier = new TokenVerifier({
+			secret: options.tokenSecret,
+		});
 
 		this.storage = new ServerStorage({
 			db: create(options.databaseFile),
@@ -80,7 +88,7 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.httpServer.on('upgrade', async (req, socket, head) => {
 			try {
-				const info = await options.authorize(req);
+				const info = this.authorizeRequest(req);
 				this.wss.handleUpgrade(req, socket, head, (ws) => {
 					this.wss.emit('connection', ws, req, info);
 				});
@@ -92,6 +100,18 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.keepalives.subscribe('lost', this.storage.remove);
 	}
+
+	private authorizeRequest = (req: IncomingMessage) => {
+		return this.tokenVerifier.verifyToken(this.getRequestToken(req));
+	};
+
+	private getRequestToken = (req: IncomingMessage) => {
+		assert(req.url, 'Request URL is required');
+		const url = new URL(req.url, 'http://localhost');
+		const token = url.searchParams.get('token');
+		assert(token, 'Token is required');
+		return token;
+	};
 
 	private internalServerHandleRequest = (
 		req: IncomingMessage,
@@ -110,7 +130,7 @@ export class Server extends EventEmitter implements MessageSender {
 	handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
 		try {
 			if (req.method === 'POST') {
-				const info = await this.options.authorize(req);
+				const info = this.authorizeRequest(req);
 
 				const key = generateId();
 
