@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.0.0
+
+### Minor Changes
+
+- 7c87fdd: Undo and redo, more aggressive rebasing
+
 ## 0.3.0
 
 ### Minor Changes
