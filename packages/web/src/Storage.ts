@@ -64,6 +64,8 @@ export class Storage {
 				create: (doc: any) => this.documentManager.create(name, doc),
 				upsert: (doc: any) => this.documentManager.upsert(name, doc),
 				delete: (id: string) => this.documentManager.delete(name, id),
+				deleteAll: (ids: string[]) =>
+					this.documentManager.deleteAll(ids.map((id) => [name, id])),
 				get: (id: string) => this.queryMaker.get(name, id),
 				findOne: (query: any) => this.queryMaker.findOne(name, query),
 				findAll: (query: any) => this.queryMaker.findAll(name, query),
