@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.0.1
+
+### Patch Changes
+
+- 5f89e31: fix delete not affecting sub-object
+- Updated dependencies [5f89e31]
+  - @lo-fi/common@1.0.1
+
 ## 1.0.0
 
 ### Minor Changes
