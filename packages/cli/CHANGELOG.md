@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.0.1
+
+### Patch Changes
+
+- f8080ea: expose and generate types for delete all
+
 ## 1.0.0
 
 ### Minor Changes
