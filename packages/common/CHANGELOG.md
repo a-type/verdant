@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.0.1
+
+### Patch Changes
+
+- 5f89e31: fix delete not affecting sub-object
+
 ## 1.0.0
 
 ### Minor Changes
