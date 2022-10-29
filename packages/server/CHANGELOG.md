@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 0.4.0
+
+### Minor Changes
+
+- 7c87fdd: Undo and redo, more aggressive rebasing
+
+### Patch Changes
+
+- Updated dependencies [7c87fdd]
+  - @lo-fi/common@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
