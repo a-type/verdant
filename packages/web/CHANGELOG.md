@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.0.3
+
+### Patch Changes
+
+- f8080ea: expose and generate types for delete all
+
 ## 1.0.2
 
 ### Patch Changes
