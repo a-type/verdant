@@ -33,14 +33,14 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 			keyof StorageDocument<SchemaCollection<Schema, any>>,
 			symbol
 		>;
-		const primaryKey = init[primaryKeyName] as string;
+		const primaryKey = init[primaryKeyName];
 		assert(
 			primaryKey,
 			`Document must have a primary key: ${primaryKeyName.toString()} (got: ${JSON.stringify(
 				init,
 			)})`,
 		);
-		return createOid(collection as string, primaryKey);
+		return createOid(collection, primaryKey);
 	};
 
 	private addDefaults = (collectionName: string, init: any) => {
@@ -76,7 +76,13 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 	};
 
 	delete = async (collection: string, primaryKey: string) => {
-		const oid = createOid(collection as string, primaryKey);
+		const oid = createOid(collection, primaryKey);
 		return this.entities.delete(oid);
+	};
+
+	deleteAll = async (ids: [string, string][]) => {
+		return this.entities.deleteAll(
+			ids.map(([collection, primaryKey]) => createOid(collection, primaryKey)),
+		);
 	};
 }

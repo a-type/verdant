@@ -276,6 +276,15 @@ export class EntityStore extends EventSubscriber<{
 		await this.submitOperations(patches);
 	};
 
+	deleteAll = async (oids: ObjectIdentifier[]) => {
+		const allOids = await Promise.all(
+			oids.map((oid) => this.meta.getAllDocumentRelatedOids(oid)),
+		);
+		const patches = this.meta.patchCreator.createDeleteAll(allOids.flat());
+		// don't enqueue these, submit as distinct operation
+		await this.submitOperations(patches);
+	};
+
 	private storeView = async (oid: ObjectIdentifier, view: any) => {
 		console.debug('Storing view', oid, view);
 		const isDeleted = !view;
