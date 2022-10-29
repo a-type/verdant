@@ -1,4 +1,5 @@
 import { v4 } from 'uuid';
+import { assignOid, maybeGetOid } from './oids.js';
 
 export function take<T extends object, Keys extends keyof T>(
 	obj: T,
@@ -60,7 +61,23 @@ export function stableStringify(obj: any) {
 }
 
 export function cloneDeep<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
+	if (isObject(obj)) {
+		const oid = maybeGetOid(obj);
+		let clone: any;
+		if (Array.isArray(obj)) {
+			clone = obj.map(cloneDeep) as T;
+		} else {
+			clone = {};
+			for (const [key, value] of Object.entries(obj as any)) {
+				clone[key] = cloneDeep(value);
+			}
+		}
+		if (oid) {
+			assignOid(clone, oid);
+		}
+		return clone;
+	}
+	return obj;
 }
 
 // TODO: better hash

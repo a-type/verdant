@@ -20,6 +20,7 @@ import { EntityStore } from './EntityStore.js';
 
 export const UPDATE = '@@update';
 export const DELETE = '@@delete';
+export const GET_STORED_SNAPSHOT = '@@storedSnapshot';
 
 interface CacheEvents {
 	onSubscribed: () => void;
@@ -63,6 +64,10 @@ export function deleteEntity(entity: EntityBase<any>) {
 	entity[DELETE]();
 }
 
+export function getStoredEntitySnapshot(entity: EntityBase<any>) {
+	return entity[GET_STORED_SNAPSHOT]();
+}
+
 export abstract class EntityBase<Snapshot> {
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
@@ -81,6 +86,10 @@ export abstract class EntityBase<Snapshot> {
 		delete: () => void;
 		restore: () => void;
 	}>();
+
+	get subscriberCount() {
+		return this.events.totalSubscriberCount();
+	}
 
 	protected get value() {
 		return this._override || this._current;
@@ -210,11 +219,7 @@ export abstract class EntityBase<Snapshot> {
 		return () => {
 			unsubscribe();
 			if (this.events.subscriberCount('change') === 0) {
-				queueMicrotask(() => {
-					if (this.events.subscriberCount('change') === 0) {
-						this.cacheEvents.onAllUnsubscribed();
-					}
-				});
+				this.cacheEvents.onAllUnsubscribed();
 			}
 		};
 	};
@@ -349,6 +354,30 @@ export abstract class EntityBase<Snapshot> {
 			}
 		}
 		return this.cachedSnapshot;
+	};
+
+	protected [GET_STORED_SNAPSHOT] = (): Snapshot | null => {
+		if (!this._current) return null;
+
+		let snapshot;
+		if (Array.isArray(this._current)) {
+			snapshot = this._current.map((item) => {
+				if (isObjectRef(item)) {
+					return this.getSubObject(item.id)?.[GET_STORED_SNAPSHOT]();
+				}
+				return item;
+			}) as Snapshot;
+		} else {
+			snapshot = { ...this._current };
+			for (const [key, value] of Object.entries(snapshot)) {
+				if (isObjectRef(value)) {
+					snapshot[key] = this.getSubObject(value.id)?.[GET_STORED_SNAPSHOT]();
+				}
+			}
+		}
+
+		assignOid(snapshot, this.oid);
+		return snapshot;
 	};
 }
 

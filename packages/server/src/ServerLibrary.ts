@@ -108,14 +108,6 @@ export class ServerLibrary {
 		const run = this.db.transaction(() => {
 			// insert patches into history
 			this.operations.insertAll(message.replicaId, message.operations);
-
-			// update client's oldest timestamp
-			if (message.oldestHistoryTimestamp) {
-				this.replicas.updateOldestOperationTimestamp(
-					message.replicaId,
-					message.oldestHistoryTimestamp,
-				);
-			}
 		});
 
 		run();
@@ -278,28 +270,11 @@ export class ServerLibrary {
 		// grab that slice of the operations history, then iterate over it
 		// and check if any rebase conditions are met.
 
-		const replicas = this.replicas.getAllNonTruant();
-		// more convenient access
-		const replicaMap = replicas.reduce((map, replica) => {
-			map[replica.id] = replica;
-			return map;
-		}, {} as Record<string, ReplicaInfo>);
 		// will be useful
 		const globalAck = this.replicas.getGlobalAck();
 
-		const newestOldestTimestamp = replicas
-			.map((r) => r.oldestOperationLogicalTime)
-			.reduce((a, b) => (a && b && a > b ? a : b), '');
-
-		if (!newestOldestTimestamp) {
-			console.debug(
-				'Cannot rebase; some replicas do not have oldest history timestamp',
-			);
-			return;
-		}
-
 		// these are in forward chronological order
-		const ops = this.operations.getBefore(newestOldestTimestamp);
+		const ops = this.operations.getBefore(globalAck);
 
 		const opsToApply: Record<string, OperationHistoryItem[]> = {};
 		// if we encounter a sequential operation in history which does
@@ -308,17 +283,8 @@ export class ServerLibrary {
 		const hardStops: Record<string, boolean> = {};
 
 		for (const op of ops) {
-			const creator = replicaMap[op.replicaId];
-			const isBeforeCreatorsOldestHistory =
-				!creator ||
-				(creator.oldestOperationLogicalTime &&
-					creator.oldestOperationLogicalTime > op.timestamp);
 			const isBeforeGlobalAck = globalAck > op.timestamp;
-			if (
-				!hardStops[op.oid] &&
-				isBeforeCreatorsOldestHistory &&
-				isBeforeGlobalAck
-			) {
+			if (!hardStops[op.oid] && isBeforeGlobalAck) {
 				opsToApply[op.oid] = opsToApply[op.oid] || [];
 				opsToApply[op.oid].push(op);
 			} else {
@@ -340,9 +306,10 @@ export class ServerLibrary {
 			upTo: ops[ops.length - 1].timestamp,
 		}));
 		if (rebases.length) {
+			// hint to clients they can rebase too
 			this.sender.broadcast(this.id, {
-				type: 'rebases',
-				rebases,
+				type: 'global-ack',
+				timestamp: globalAck,
 			});
 		}
 	};

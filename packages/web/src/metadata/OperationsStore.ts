@@ -207,6 +207,7 @@ export class OperationsStore extends IDBService {
 	private insert = async (
 		operations: StoredClientOperation[],
 	): Promise<ObjectIdentifier[]> => {
+		console.debug('Inserting operations', operations);
 		const transaction = this.db.transaction('operations', 'readwrite');
 		const store = transaction.objectStore('operations');
 		const affected = new Set<ObjectIdentifier>();

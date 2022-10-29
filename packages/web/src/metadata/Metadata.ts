@@ -1,8 +1,12 @@
 import {
 	applyPatch,
+	applyPatches,
 	assignOid,
 	ClientMessage,
+	diffToPatches,
 	EventSubscriber,
+	getOidRoot,
+	groupPatchesByIdentifier,
 	HybridLogicalClockTimestampProvider,
 	ObjectIdentifier,
 	Operation,
@@ -13,7 +17,6 @@ import {
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
 import { getSizeOfObjectStore } from '../idb.js';
-import { LocalHistoryStore } from './LocalHistoryStore.js';
 import { LocalReplicaStore } from './LocalReplicaStore.js';
 import { MessageCreator } from './MessageCreator.js';
 import { ClientOperation, OperationsStore } from './OperationsStore.js';
@@ -27,7 +30,6 @@ export class Metadata extends EventSubscriber<{
 	readonly localReplica = new LocalReplicaStore(this.db);
 	readonly ackInfo = new AckInfoStore(this.db);
 	readonly schema = new SchemaStore(this.db, this.schemaDefinition.version);
-	readonly localHistory = new LocalHistoryStore(this.db);
 	readonly messageCreator = new MessageCreator(this);
 	readonly patchCreator = new PatchCreator(() => this.now);
 	readonly time = new HybridLogicalClockTimestampProvider();
@@ -54,48 +56,7 @@ export class Metadata extends EventSubscriber<{
 		oid: ObjectIdentifier,
 		upToTimestamp?: string,
 	): Promise<T | undefined> => {
-		const baselines = await this.baselines.getAllForDocument(oid);
-		const subObjectsMappedByOid = new Map<ObjectIdentifier, any>();
-		for (const baseline of baselines) {
-			subObjectsMappedByOid.set(baseline.oid, baseline.snapshot);
-		}
-
-		let lastPatchWasDelete = false;
-
-		await this.operations.iterateOverAllOperationsForDocument(
-			oid,
-			(patch) => {
-				let current = subObjectsMappedByOid.get(patch.oid);
-				current = applyPatch(current, patch.data);
-				subObjectsMappedByOid.set(patch.oid, current);
-				lastPatchWasDelete = patch.data.op === 'delete';
-				// TODO: user-configurable delete-wins or delete-loses behavior?
-				// one way to do that would be to ignore delete ops until the end,
-				// and only return nothing if the last op was a delete.
-			},
-			{
-				to: upToTimestamp,
-			},
-		);
-
-		// assemble the various sub-objects into the document by
-		// placing them where their ref is
-		const rootBaseline = subObjectsMappedByOid.get(oid);
-		// critical: attach metadata
-		if (rootBaseline) {
-			assignOid(rootBaseline, oid);
-			const usedOids = substituteRefsWithObjects(
-				rootBaseline,
-				subObjectsMappedByOid,
-			);
-		}
-
-		// FIXME: this is a fragile check for deleted
-		if (lastPatchWasDelete || !rootBaseline) {
-			return undefined;
-		}
-
-		return rootBaseline as T;
+		return this.getRecursiveComputedEntity(oid, upToTimestamp);
 	};
 
 	/**
@@ -119,7 +80,59 @@ export class Metadata extends EventSubscriber<{
 				to: upToTimestamp,
 			},
 		);
+		if (current) {
+			assignOid(current, oid);
+		}
 		return current as T | undefined;
+	};
+
+	getRecursiveComputedEntity = async <T = any>(
+		entityOid: ObjectIdentifier,
+		upToTimestamp?: string,
+	): Promise<T | undefined> => {
+		const documentOid = getOidRoot(entityOid);
+		const baselines = await this.baselines.getAllForDocument(documentOid);
+		const subObjectsMappedByOid = new Map<ObjectIdentifier, any>();
+		for (const baseline of baselines) {
+			subObjectsMappedByOid.set(baseline.oid, baseline.snapshot);
+		}
+
+		let lastPatchWasDelete = false;
+
+		await this.operations.iterateOverAllOperationsForDocument(
+			documentOid,
+			(patch) => {
+				let current = subObjectsMappedByOid.get(patch.oid);
+				current = applyPatch(current, patch.data);
+				subObjectsMappedByOid.set(patch.oid, current);
+				lastPatchWasDelete = patch.data.op === 'delete';
+				// TODO: user-configurable delete-wins or delete-loses behavior?
+				// one way to do that would be to ignore delete ops until the end,
+				// and only return nothing if the last op was a delete.
+			},
+			{
+				to: upToTimestamp,
+			},
+		);
+
+		// assemble the various sub-objects into the document by
+		// placing them where their ref is
+		const rootBaseline = subObjectsMappedByOid.get(entityOid);
+		// critical: attach metadata
+		if (rootBaseline) {
+			assignOid(rootBaseline, entityOid);
+			const usedOids = substituteRefsWithObjects(
+				rootBaseline,
+				subObjectsMappedByOid,
+			);
+		}
+
+		// FIXME: this is a fragile check for deleted
+		if (lastPatchWasDelete || !rootBaseline) {
+			return undefined;
+		}
+
+		return rootBaseline as T;
 	};
 
 	/**
@@ -153,20 +166,14 @@ export class Metadata extends EventSubscriber<{
 	insertLocalOperation = async (operations: Operation[]) => {
 		if (operations.length === 0) return;
 
-		await this.operations.addOperations(
-			operations.map((patch) => ({
-				...patch,
-				isLocal: true,
-			})),
-		);
+		// add local flag, in place.
+		for (const operation of operations) {
+			(operation as ClientOperation).isLocal = true;
+		}
+		await this.operations.addOperations(operations as ClientOperation[]);
 
-		const oldestHistoryTimestamp = await this.localHistory.add({
-			timestamp: operations[operations.length - 1].timestamp,
-		});
-
-		this.tryAutonomousRebase(oldestHistoryTimestamp);
-
-		return oldestHistoryTimestamp;
+		// we can now enqueue and check for rebase opportunities
+		this.tryAutonomousRebase();
 	};
 
 	/**
@@ -199,20 +206,12 @@ export class Metadata extends EventSubscriber<{
 		return localReplicaInfo.lastSyncedLogicalTime;
 	};
 
-	/**
-	 * Determines if the local client can do independent rebases.
-	 * This is only the case if the client has never synced
-	 * with a server (entirely offline mode)
-	 *
-	 * TODO:
-	 * This might be able to be expanded in the future, I feel
-	 * like there's some combination of "history is all my changes"
-	 * plus global ack which could allow squashing operations for
-	 * single objects.
-	 */
-	private async canAutonomouslyRebase() {
-		return !(await this.localReplica.get()).lastSyncedLogicalTime;
-	}
+	private tryAutonomousRebase = async () => {
+		const localReplicaInfo = await this.localReplica.get();
+		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
+		// but if we have never synced... we can rebase everything!
+		await this.autonomousRebase(this.now);
+	};
 
 	/**
 	 * Attempt to autonomously rebase local documents without server intervention.
@@ -220,19 +219,15 @@ export class Metadata extends EventSubscriber<{
 	 * The goal is to allow local-only clients to compress their history to exactly
 	 * their undo stack.
 	 */
-	private tryAutonomousRebase = async (oldestHistoryTimestamp: string) => {
-		if (!(await this.canAutonomouslyRebase())) {
-			return;
-		}
-
-		// find all operations before the oldest history timestamp
+	private autonomousRebase = async (globalAckTimestamp: string) => {
+		// find all operations before the global ack
 		const priorOperations = new Array<ClientOperation>();
 		await this.operations.iterateOverAllLocalOperations(
 			(patch) => {
 				priorOperations.push(patch);
 			},
 			{
-				before: oldestHistoryTimestamp,
+				before: globalAckTimestamp,
 			},
 		);
 
@@ -280,7 +275,6 @@ export class Metadata extends EventSubscriber<{
 	reset = async () => {
 		await this.operations.reset();
 		await this.baselines.reset();
-		await this.localHistory.reset();
 		await this.localReplica.reset();
 	};
 
@@ -309,14 +303,17 @@ export class Metadata extends EventSubscriber<{
 		await this.schema.set(schema);
 	};
 
+	setGlobalAck = async (timestamp: string) => {
+		await this.ackInfo.setGlobalAck(timestamp);
+		await this.autonomousRebase(timestamp);
+	};
+
 	stats = async () => {
 		const db = this.db;
-		const history = await this.localHistory.get();
 		const operationsSize = await getSizeOfObjectStore(db, 'operations');
 		const baselinesSize = await getSizeOfObjectStore(db, 'baselines');
 
 		return {
-			localHistoryLength: history?.items.length || 0,
 			operationsSize,
 			baselinesSize,
 		};

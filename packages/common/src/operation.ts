@@ -48,8 +48,10 @@ export type PropertyValue =
 	| null
 	| undefined
 	| ObjectRef;
+
 // all patches refer to a specific sub-object.
 interface BaseOperationPatch {}
+
 export interface OperationPatchInitialize extends BaseOperationPatch {
 	op: 'initialize';
 	value: any;
@@ -148,7 +150,6 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 					timestamp: getNow(),
 					data: {
 						op: 'set',
-
 						name: key,
 						value,
 					},
@@ -272,12 +273,12 @@ export function initialToPatches(
 }
 
 export function groupPatchesByIdentifier(patches: Operation[]) {
-	const grouped: Record<ObjectIdentifier, Operation[]> = {};
+	const grouped: Record<ObjectIdentifier, OperationPatch[]> = {};
 	for (const patch of patches) {
 		if (patch.oid in grouped) {
-			grouped[patch.oid].push(patch);
+			grouped[patch.oid].push(patch.data);
 		} else {
-			grouped[patch.oid] = [patch];
+			grouped[patch.oid] = [patch.data];
 		}
 	}
 	return grouped;

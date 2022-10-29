@@ -115,16 +115,16 @@ export function createHooks<
 	function useSelf() {
 		const storage = useStorage();
 		return useSyncExternalStore(
-			(callback) => storage.presence.subscribe('selfChanged', callback),
-			() => storage.presence.self,
+			(callback) => storage.sync.presence.subscribe('selfChanged', callback),
+			() => storage.sync.presence.self,
 		);
 	}
 
 	function usePeerIds() {
 		const storage = useStorage();
 		return useSyncExternalStore(
-			(callback) => storage.presence.subscribe('peersChanged', callback),
-			() => storage.presence.peerIds,
+			(callback) => storage.sync.presence.subscribe('peersChanged', callback),
+			() => storage.sync.presence.peerIds,
 		);
 	}
 
@@ -132,12 +132,12 @@ export function createHooks<
 		const storage = useStorage();
 		return useSyncExternalStore(
 			(callback) =>
-				storage.presence.subscribe('peerChanged', (id, user) => {
+				storage.sync.presence.subscribe('peerChanged', (id, user) => {
 					if (id === peerId) {
 						callback();
 					}
 				}),
-			() => storage.presence.peers[peerId],
+			() => storage.sync.presence.peers[peerId],
 		);
 	}
 

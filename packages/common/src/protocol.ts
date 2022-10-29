@@ -30,7 +30,6 @@ export type OperationMessage = {
 	replicaId: string;
 	operations: Operation[];
 	timestamp: string;
-	oldestHistoryTimestamp?: string;
 };
 
 export type OperationRebroadcastMessage = {
@@ -97,16 +96,6 @@ export type SyncStep2Message = {
 	timestamp: string;
 };
 
-export type RebasesMessage = {
-	type: 'rebases';
-	/**
-	 * Rebases the client can perform. All operations
-	 * for this document before this timestamp can
-	 * be applied and dropped.
-	 */
-	rebases: { oid: string; upTo: string }[];
-};
-
 export type PresenceUpdateMessage = {
 	type: 'presence-update';
 	/** The client's replica ID */
@@ -129,6 +118,11 @@ export type PresenceOfflineMessage = {
 	replicaId: string;
 };
 
+export type GlobalAckMessage = {
+	type: 'global-ack';
+	timestamp: string;
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
@@ -140,6 +134,6 @@ export type ServerMessage =
 	| HeartbeatResponseMessage
 	| SyncResponseMessage
 	| OperationRebroadcastMessage
-	| RebasesMessage
 	| PresenceChangedMessage
-	| PresenceOfflineMessage;
+	| PresenceOfflineMessage
+	| GlobalAckMessage;

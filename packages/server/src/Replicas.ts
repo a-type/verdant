@@ -30,7 +30,6 @@ export class ReplicaInfos {
 			clientId: row.clientId,
 			lastSeenWallClockTime: row.lastSeenWallClockTime,
 			ackedLogicalTime: row.ackedLogicalTime,
-			oldestOperationLogicalTime: row.oldestOperationLogicalTime,
 		};
 	};
 
@@ -66,7 +65,6 @@ export class ReplicaInfos {
 					id: replicaId,
 					clientId,
 					ackedLogicalTime: null,
-					oldestOperationLogicalTime: null,
 					lastSeenWallClockTime: null,
 					libraryId: this.libraryId,
 				},
@@ -101,18 +99,6 @@ export class ReplicaInfos {
 		`,
 			)
 			.all(this.libraryId, this.truantCutoff);
-	};
-
-	updateOldestOperationTimestamp = (replicaId: string, timestamp: string) => {
-		return this.db
-			.prepare(
-				`
-      UPDATE ReplicaInfo
-      SET oldestOperationLogicalTime = ?
-      WHERE id = ?
-    `,
-			)
-			.run(timestamp, replicaId);
 	};
 
 	updateLastSeen = (replicaId: string) => {
@@ -150,7 +136,7 @@ export class ReplicaInfos {
 			WHERE libraryId = ? AND lastSeenWallClockTime > ?
 		`,
 			)
-			.get(this.libraryId, this.truantCutoff).ackedLogicalTime;
+			.get(this.libraryId, this.truantCutoff).ackedLogicalTime as string;
 	};
 
 	delete = (replicaId: string) => {

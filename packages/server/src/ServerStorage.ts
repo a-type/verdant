@@ -68,8 +68,7 @@ export class ServerStorage {
           libraryId TEXT NOT NULL,
 					clientId TEXT NOT NULL,
           lastSeenWallClockTime INTEGER,
-          ackedLogicalTime TEXT,
-          oldestOperationLogicalTime TEXT
+          ackedLogicalTime TEXT
         );
       `,
 				)

@@ -247,6 +247,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 				affectedOids = await this.meta.insertRemoteOperations(
 					message.operations,
 				);
+				await this.meta.setGlobalAck(message.globalAckTimestamp);
+				break;
+			case 'global-ack':
+				await this.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
 				if (message.overwriteLocalData) {
@@ -261,7 +265,7 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 					message.operations,
 				);
 
-				await this.meta.ackInfo.setGlobalAck(message.globalAckTimestamp);
+				await this.meta.setGlobalAck(message.globalAckTimestamp);
 
 				// respond to the server
 				this.activeSync.send(
@@ -270,14 +274,6 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 					),
 				);
 				await this.meta.updateLastSynced();
-				break;
-			case 'rebases':
-				const affectedSet = new Set<ObjectIdentifier>();
-				for (const rebase of message.rebases) {
-					await this.meta.rebase(rebase.oid, rebase.upTo);
-					affectedSet.add(getOidRoot(rebase.oid));
-				}
-				affectedOids = Array.from(affectedSet);
 				break;
 		}
 

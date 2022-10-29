@@ -23,6 +23,7 @@ export class Client {
 
   presence: Storage['sync']['presence'];
   sync: Storage['sync'];
+  undoHistory: Storage['undoHistory'];
 
   stats: () => Promise<any>;
 }

@@ -9,9 +9,28 @@ import { EntityStore } from './EntityStore.js';
 import { getSizeOfObjectStore } from './idb.js';
 import type { Presence } from './index.js';
 import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
+import { UndoHistory } from './UndoHistory.js';
+
+interface StorageComponents {
+	meta: Metadata;
+	documentDb: IDBDatabase;
+	metaDb: IDBDatabase;
+	undoHistory: UndoHistory;
+}
+
+interface StorageConfig {
+	schema: StorageSchema;
+	namespace: string;
+	syncConfig?: ServerSyncOptions;
+}
 
 export class Storage {
-	private entities = new EntityStore(this.documentDb, this.schema, this.meta);
+	private entities = new EntityStore(
+		this.documentDb,
+		this.schema,
+		this.meta,
+		this.undoHistory,
+	);
 	private queryStore = new QueryStore(this.documentDb, this.entities);
 	queryMaker = new QueryMaker(this.queryStore, this.schema);
 	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
@@ -21,17 +40,13 @@ export class Storage {
 	readonly sync: Sync;
 
 	constructor(
-		private meta: Metadata,
-		private schema: StorageSchema<any>,
-		private metaDb: IDBDatabase,
-		private documentDb: IDBDatabase,
-		private namespace: string,
-		syncConfig?: ServerSyncOptions,
+		private config: StorageConfig,
+		private components: StorageComponents,
 	) {
-		this.collectionNames = Object.keys(schema.collections);
+		this.collectionNames = Object.keys(config.schema.collections);
 
-		this.sync = syncConfig
-			? new ServerSync(syncConfig, {
+		this.sync = config.syncConfig
+			? new ServerSync(config.syncConfig, {
 					meta: this.meta,
 					entities: this.entities,
 			  })
@@ -39,7 +54,9 @@ export class Storage {
 
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
-		for (const [name, _collection] of Object.entries(schema.collections)) {
+		for (const [name, _collection] of Object.entries(
+			config.schema.collections,
+		)) {
 			const collection = _collection as SchemaCollection<any, any>;
 			const collectionName = collection.pluralName ?? collection.name + 's';
 			// @ts-ignore
@@ -52,6 +69,26 @@ export class Storage {
 				findAll: (query: any) => this.queryMaker.findAll(name, query),
 			};
 		}
+	}
+
+	get meta() {
+		return this.components.meta;
+	}
+
+	get documentDb() {
+		return this.components.documentDb;
+	}
+
+	get schema() {
+		return this.config.schema;
+	}
+
+	get namespace() {
+		return this.config.namespace;
+	}
+
+	get undoHistory() {
+		return this.components.undoHistory;
 	}
 
 	/**
@@ -155,6 +192,11 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	 * Namespaces are used to separate data from different clients in IndexedDB.
 	 */
 	namespace: string;
+	/**
+	 * Provide your own UndoHistory to have a unified undo system across multiple
+	 * clients if you so desire.
+	 */
+	undoHistory?: UndoHistory;
 }
 
 /**
@@ -204,12 +246,17 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 			});
 
 			const storage = new Storage(
-				meta,
-				init.schema,
-				metaDb,
-				documentDb,
-				this._namespace,
-				init.sync,
+				{
+					schema: init.schema,
+					namespace: this._namespace,
+					syncConfig: init.sync,
+				},
+				{
+					meta,
+					metaDb,
+					documentDb,
+					undoHistory: init.undoHistory || new UndoHistory(),
+				},
 			);
 			this.resolveReady(storage);
 			this._resolvedValue = storage;

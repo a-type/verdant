@@ -19,7 +19,7 @@ export class MessageCreator {
 	constructor(private meta: Metadata) {}
 
 	createOperation = async (
-		init: Pick<OperationMessage, 'operations' | 'oldestHistoryTimestamp'> & {
+		init: Pick<OperationMessage, 'operations'> & {
 			timestamp?: string;
 		},
 	): Promise<OperationMessage> => {
@@ -30,14 +30,13 @@ export class MessageCreator {
 			timestamp: this.meta.now,
 			replicaId: localInfo.id,
 			operations: init.operations,
-			oldestHistoryTimestamp: init.oldestHistoryTimestamp,
 		};
 	};
 
 	createMigrationOperation = async ({
 		targetVersion,
 		...init
-	}: Pick<OperationMessage, 'operations' | 'oldestHistoryTimestamp'> & {
+	}: Pick<OperationMessage, 'operations'> & {
 		targetVersion: number;
 	}): Promise<OperationMessage> => {
 		const localInfo = await this.meta.localReplica.get();
