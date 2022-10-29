@@ -27,7 +27,7 @@
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",
-		"@lo-fi/web": "^1.0.1"
+		"@lo-fi/web": "^1.0.2"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
