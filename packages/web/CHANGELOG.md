@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.0.2
+
+### Patch Changes
+
+- 5edff26: add delete all method
+
 ## 1.0.1
 
 ### Patch Changes
