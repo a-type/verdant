@@ -1,6 +1,6 @@
 # @lo-fi/web
 
-## 0.4.0
+## 1.0.0
 
 ### Minor Changes
 
@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies [7c87fdd]
-  - @lo-fi/common@0.4.0
+  - @lo-fi/common@1.0.0
 
 ## 0.3.1
 
