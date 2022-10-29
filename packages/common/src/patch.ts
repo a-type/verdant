@@ -218,4 +218,14 @@ export class PatchCreator {
 			},
 		];
 	};
+
+	createDeleteAll = (oids: ObjectIdentifier[]): Operation[] => {
+		return oids.map((oid) => ({
+			oid,
+			timestamp: this.getNow(),
+			data: {
+				op: 'delete',
+			},
+		}));
+	};
 }

@@ -1,6 +1,7 @@
 import {
 	applyPatch,
 	applyPatches,
+	assert,
 	assignOid,
 	ClientMessage,
 	diffToPatches,
@@ -133,6 +134,31 @@ export class Metadata extends EventSubscriber<{
 		}
 
 		return rootBaseline as T;
+	};
+
+	/**
+	 * Gets the OID and every sub-object OID for a given document.
+	 * Includes any sub-objects that are not referenced by the root object
+	 * but still happen to be in storage.
+	 */
+	getAllDocumentRelatedOids = async (oid: ObjectIdentifier) => {
+		const oids = new Set<ObjectIdentifier>();
+		const documentOid = getOidRoot(oid);
+		assert(documentOid === oid, 'Must be root document OID');
+		oids.add(documentOid);
+		const baselines = await this.baselines.getAllForDocument(documentOid);
+		for (const baseline of baselines) {
+			oids.add(baseline.oid);
+		}
+
+		await this.operations.iterateOverAllOperationsForDocument(
+			documentOid,
+			(patch) => {
+				oids.add(patch.oid);
+			},
+		);
+
+		return Array.from(oids);
 	};
 
 	/**

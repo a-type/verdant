@@ -269,7 +269,9 @@ export class EntityStore extends EventSubscriber<{
 			oid === getOidRoot(oid),
 			'Only root documents may be deleted via client methods',
 		);
-		const patches = this.meta.patchCreator.createDelete(oid);
+		// we need to get all sub-object oids to delete alongside the root
+		const allOids = await this.meta.getAllDocumentRelatedOids(oid);
+		const patches = this.meta.patchCreator.createDeleteAll(allOids);
 		// don't enqueue these, submit as distinct operation
 		await this.submitOperations(patches);
 	};
