@@ -163,6 +163,7 @@ export class Storage {
 
 	close = () => {
 		this.sync.stop();
+		this.sync.dispose();
 
 		this.queryStore.destroy();
 		this.entities.destroy();
@@ -301,4 +302,13 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 	}
 
 	open = () => this.initialize(this.init);
+
+	close = async () => {
+		if (this._resolvedValue) {
+			this._resolvedValue.close();
+		}
+		if (this._initializing) {
+			(await this._readyPromise).close();
+		}
+	};
 }

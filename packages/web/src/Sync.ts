@@ -56,7 +56,7 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 
 	public stop(): void {}
 
-	public dispose(): void {}
+	public dispose = () => {};
 
 	public reconnect(): void {}
 
@@ -155,6 +155,7 @@ export interface ServerSyncOptions extends ServerSyncEndpointProviderConfig {
 	 */
 	automaticTransportSelection?: boolean;
 	initialTransport?: SyncTransportMode;
+	autoStart?: boolean;
 }
 
 export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
@@ -174,6 +175,7 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			fetchAuth,
 			initialPresence,
 			automaticTransportSelection = true,
+			autoStart,
 		}: ServerSyncOptions,
 		{
 			meta,
@@ -229,6 +231,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 					}
 				}
 			});
+		}
+
+		if (autoStart) {
+			this.start();
 		}
 	}
 
@@ -586,7 +592,7 @@ class PushPullSync
 		this._status = 'paused';
 	}
 
-	dispose(): void {}
+	dispose = () => {};
 	reconnect(): void {}
 
 	// on a heartbeat, do a sync

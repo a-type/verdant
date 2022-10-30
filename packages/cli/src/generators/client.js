@@ -40,6 +40,7 @@ export class ClientDescriptor {
   readonly readyPromise: Promise<Client>;
   readonly schema: StorageSchema;
   readonly namespace: string;
+  close: () => Promise<void>;
 }
 `;
 }

@@ -115,17 +115,16 @@ function App({ libraryId }: { libraryId: string }) {
 			sync: {
 				authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
 				initialPresence: {},
+				// start sync when ready - useful if you want to sync
+				// in this setup. if you don't want to sync, that's fine too!
+				autoStart: true,
 			},
 		});
+		// set our state
 		setClientDescriptor(descriptor);
-		descriptor.open().then((client) => {
-			client.sync.start();
-		});
+		// when the client changes, shut it down.
 		return () => {
-			if (descriptor.current) {
-				const client = descriptor.current;
-				client.close();
-			}
+			descriptor.close();
 		};
 	}, [libraryId]);
 
