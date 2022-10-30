@@ -42,6 +42,11 @@ export class EventSubscriber<
 			Object.values(this.subscribers[event]).forEach((c) => c(...args));
 		}
 	};
+
+	dispose = () => {
+		this.subscribers = {} as any;
+		this.counts = {} as any;
+	};
 }
 
 export type EventsOf<T extends EventSubscriber<any>> =

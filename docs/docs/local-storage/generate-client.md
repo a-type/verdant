@@ -27,13 +27,11 @@ Now you can import your client from the output directory and construct its descr
 
 ```ts
 import { ClientDescriptor } from './client/index.js';
-import schema from './schema.js';
 // see next section!
 import migrations from './migrations.js';
 
 const clientDesc = new ClientDescriptor({
 	namespace: 'todos',
-	schema,
 	migrations,
 });
 

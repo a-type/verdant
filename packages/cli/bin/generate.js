@@ -13,9 +13,15 @@ import {
 	reactImplementation,
 	typingsPreamble,
 } from '../src/generators/constants.js';
-import { getClientTypings } from '../src/generators/client.js';
+import {
+	getClientImplementation,
+	getClientTypings,
+} from '../src/generators/client.js';
 import { emptyDirectory } from '../src/fs/emptyDirectory.js';
-import { getReactTypings } from '../src/generators/react.js';
+import {
+	getReactImplementation,
+	getReactTypings,
+} from '../src/generators/react.js';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
@@ -58,6 +64,26 @@ async function run(input, output, includeReact) {
 
 	await emptyDirectory(outputDirectory);
 
+	const compiledSchemaPath = path.resolve(output, 'schema.js');
+
+	const compiledSchema = await swc.transformFile(input, {
+		sourceMaps: false,
+		jsc: {
+			parser: {
+				syntax: 'typescript',
+				dynamicImport: true,
+				decorators: true,
+				decoratorsBeforeExport: true,
+			},
+			loose: true,
+			target: 'es2019',
+		},
+	});
+
+	await fs.writeFile(compiledSchemaPath, compiledSchema.code);
+
+	const relativeSchemaPath = './schema.js';
+
 	// load the schema, parse it, and write plain JS to temporary file
 	const tempTranspiledOutput = path.resolve(
 		outputDirectory,
@@ -74,6 +100,8 @@ async function run(input, output, includeReact) {
 	const collections = getAllCollectionDefinitions(result.body);
 
 	let typingsFile = typingsPreamble;
+	typingsFile += `import type schema from '${relativeSchemaPath}';
+	export type Schema = typeof schema;`;
 	for (const [name, definition] of Object.entries(collections)) {
 		typingsFile += getCollectionTypings(name, definition);
 	}
@@ -95,7 +123,7 @@ async function run(input, output, includeReact) {
 	);
 	await fs.writeFile(
 		implementationFilePath,
-		prettier.format(clientImplementation, {
+		prettier.format(getClientImplementation(relativeSchemaPath), {
 			parser: 'babel',
 		}),
 	);
@@ -119,7 +147,7 @@ async function run(input, output, includeReact) {
 	);
 	await fs.writeFile(
 		reactImplementationFilePath,
-		prettier.format(reactImplementation, {
+		prettier.format(getReactImplementation(relativeSchemaPath), {
 			parser: 'babel',
 		}),
 	);

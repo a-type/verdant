@@ -161,6 +161,16 @@ export class Storage {
 		};
 	};
 
+	close = () => {
+		this.sync.stop();
+
+		this.queryStore.destroy();
+		this.entities.destroy();
+
+		this.documentDb.close();
+		this.components.metaDb.close();
+	};
+
 	__dangerous__resetLocal = async () => {
 		this.sync.stop();
 		const req1 = indexedDB.deleteDatabase([this.namespace, 'meta'].join('_'));
@@ -215,6 +225,10 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 	private _resolvedValue: Storage | undefined;
 	private _initializing = false;
 	private _namespace: string;
+
+	get namespace() {
+		return this._namespace;
+	}
 
 	constructor(private readonly init: StorageInitOptions<Schema>) {
 		this._readyPromise = new Promise((resolve, reject) => {

@@ -337,4 +337,11 @@ export class EntityStore extends EventSubscriber<{
 			await storeRequestPromise(store.clear());
 		}
 	};
+
+	destroy = async () => {
+		for (const ent of this.cache.values()) {
+			ent.dispose();
+		}
+		this.cache.clear();
+	};
 }

@@ -1,9 +1,11 @@
 import { pascalCase } from 'change-case';
+import { reactImplementation } from './constants.js';
 import { getObjectProperty } from './tools.js';
 
 export function getReactTypings(collections) {
 	return `
-import type { Client, ClientDescriptor, ${collections
+import { Provider } from 'react';
+import type { Client, ClientDescriptor, Schema, ${collections
 		.map((c) => getObjectProperty(c, 'name').value)
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
@@ -11,6 +13,7 @@ import type { Client, ClientDescriptor, ${collections
 import type { UserInfo, ObjectEntity, ListEntity } from '@lo-fi/web';
 
 export interface GeneratedHooks {
+	Provider: Provider<ClientDescriptor<Schema>>;
   useStorage: () => Client;
   useSelf: () => UserInfo;
   usePeerIds: () => string[];
@@ -37,6 +40,16 @@ useAll${pascalPlural}: (config?: {
 		.join('\n')}
 }
 
-export const createHooks: (client: ClientDescriptor) => GeneratedHooks;
+export const hooks: GeneratedHooks;
 `;
+}
+
+export function getReactImplementation(schemaPath) {
+	let impl = `
+import { createHooks } from '@lo-fi/react';
+import schema from '${schemaPath}';
+
+export const hooks = createHooks(schema);
+`;
+	return impl;
 }

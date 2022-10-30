@@ -148,4 +148,11 @@ export class QueryStore {
 		}
 		console.log('Updated', updated, 'queries');
 	};
+
+	destroy = () => {
+		for (const query of this.cache.values()) {
+			query.dispose();
+		}
+		this.cache.clear();
+	};
 }

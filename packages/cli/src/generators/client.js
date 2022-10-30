@@ -1,5 +1,6 @@
 import { pascalCase } from 'change-case';
 import { getCollectionPluralName } from './collections.js';
+import { clientImplementation } from './constants.js';
 import { getObjectProperty } from './tools.js';
 
 export function getClientTypings(collections) {
@@ -25,16 +26,20 @@ export class Client {
   presence: Storage['sync']['presence'];
   sync: Storage['sync'];
   undoHistory: Storage['undoHistory'];
+  namespace: Storage['namespace'];
+
+  close: Storage['close'];
 
   stats: () => Promise<any>;
 }
 
 export class ClientDescriptor {
-  constructor(init: StorageInitOptions<any>);
+  constructor(init: Omit<StorageInitOptions<Schema>, 'schema'>);
   open: () => Promise<Client>;
   readonly current: Client | null;
   readonly readyPromise: Promise<Client>;
   readonly schema: StorageSchema;
+  readonly namespace: string;
 }
 `;
 }
@@ -44,4 +49,10 @@ function getClientCollectionTypings({ singular, plural }) {
 	return `
   readonly ${plural}: Collection<${pascalName}, ${pascalName}Snapshot, ${pascalName}Init, ${pascalName}Filter>
   `;
+}
+
+export function getClientImplementation(schemaLocation) {
+	let impl = `import schema from '${schemaLocation}';`;
+	impl += clientImplementation;
+	return impl;
 }

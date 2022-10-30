@@ -67,6 +67,12 @@ export class Query<T extends (ObjectEntity<any> | null) | ObjectEntity<any>[]> {
 		this.resolved = this.execute();
 	};
 
+	dispose = () => {
+		this._subscribers.clear();
+		this._internalUnsubscribes.forEach((unsubscribe) => unsubscribe());
+		this._internalUnsubscribes = [];
+	};
+
 	private refilterDeleted = () => {
 		this._resultEntities = this.filterDeleted(this._rawEntities);
 		this._subscribers.forEach((subscriber) => subscriber(this._resultEntities));

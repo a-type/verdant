@@ -50,13 +50,7 @@ describe('generated hooks', () => {
 			},
 		});
 
-		const storage = new StorageDescriptor({
-			schema: testSchema,
-			migrations: [],
-			namespace: 'test',
-		});
-
-		const hooks = createHooks(storage);
+		const hooks = createHooks(testSchema);
 
 		expect(hooks).toHaveProperty('useAuthor');
 		expect(hooks).toHaveProperty('useAllAuthors');

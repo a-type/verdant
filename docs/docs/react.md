@@ -8,23 +8,21 @@ lo-fi has React hooks generation. To enable it, pass `--react` to the [CLI](./lo
 
 ```ts
 import { ClientDescriptor, ServerSync } from './client/index.js';
-import { createHooks } from './client/react.js';
-import schema from './schema.js';
 import migrations from './migrations.js';
 
 const clientDesc = new ClientDescriptor({
 	namespace: 'todos',
-	schema,
 	migrations,
-	sync: new ServerSync({
-		host: 'https://your.server/lofi',
-	}),
-	initialPresence: {
-		emoji: '',
+	sync: {
+		authEndpoint: 'https://your.server/auth/lofi',
+		initialPresence: {
+			emoji: '',
+		},
 	},
 });
 
-const hooks = createHooks(clientDesc);
+// export your generated hooks
+export { hooks } from './client/react.js';
 ```
 
 It will generate named hooks based on each document collection, plus a few utility hooks. For example, if you have the collection `todoItems`, you will get these hooks:
@@ -38,7 +36,11 @@ It will generate named hooks based on each document collection, plus a few utili
 - `usePeer`: pass a peer's user ID to retrieve their presence.
 - `useSyncStatus`: returns a boolean indicating whether sync is active or not.
 
-As you can see from some of that, React hooks are pretty WIP still.
+## Context
+
+In addition to the generated hooks you also get a `Provider`. Pass your `ClientDescriptor` instance to `value` to provide a client for your hooks to use.
+
+By using a Context in this way, you can instantiate different clients for the same schema and change the library your app is interacting with. See the advanced usage below.
 
 ## Suspense
 
@@ -46,7 +48,9 @@ The hooks use Suspense so that you don't have to write loading state conditional
 
 Wrap your app in a `<Suspense>` to handle this. You can create multiple layers of Suspense to handle loading more granularly.
 
-## Usage example
+## Usage examples
+
+### Basic
 
 ```tsx
 function Todos() {
@@ -63,6 +67,76 @@ function Todos() {
 				<li key={item.get('id')}>{item.get('content')}</li>
 			))}
 		</ul>
+	);
+}
+
+function App() {
+	return (
+		<hooks.Provider value={clientDescriptor}>
+			<Todos />
+		</hooks.Provider>
+	);
+}
+```
+
+### Advanced: changing client libraries
+
+```tsx
+function Todos() {
+	const items = hooks.useAllTodoItems({
+		index: {
+			where: 'indexableDone',
+			equals: 'false',
+		},
+	});
+
+	return (
+		<ul>
+			{items.map((item) => (
+				<li key={item.get('id')}>{item.get('content')}</li>
+			))}
+		</ul>
+	);
+}
+
+function App({ libraryId }: { libraryId: string }) {
+	/**
+	 * When the libraryId prop changes, we create a new client
+	 * which authenticates against that library. The auth endpoint
+	 * here would need to read that query parameter and create
+	 * a token for the client to access the library.
+	 */
+	const [clientDescriptor, setClientDescriptor] =
+		useState<ClientDescriptor>(null);
+	useEffect(() => {
+		const descriptor = new ClientDescriptor({
+			namespace: libraryId,
+			migrations,
+			sync: {
+				authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
+				initialPresence: {},
+			},
+		});
+		setClientDescriptor(descriptor);
+		descriptor.open().then((client) => {
+			client.sync.start();
+		});
+		return () => {
+			if (descriptor.current) {
+				const client = descriptor.current;
+				client.close();
+			}
+		};
+	}, [libraryId]);
+
+	if (!clientDescriptor) {
+		return null;
+	}
+
+	return (
+		<hooks.Provider value={clientDescriptor}>
+			<Todos />
+		</hooks.Provider>
 	);
 }
 ```

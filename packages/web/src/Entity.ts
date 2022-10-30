@@ -204,7 +204,7 @@ export abstract class EntityBase<Snapshot> {
 	};
 
 	dispose = () => {
-		// TODO: implement
+		this.events.dispose();
 	};
 
 	subscribe = (

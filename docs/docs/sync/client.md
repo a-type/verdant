@@ -8,12 +8,10 @@ To connect your client to the server, you must pass it sync configuration.
 
 ```ts
 import { ClientDescriptor, ServerSync } from './client/index.js';
-import schema from './schema.js';
 import migrations from './migrations.js';
 
 const clientDesc = new ClientDescriptor({
 	namespace: 'todos',
-	schema,
 	migrations,
 	sync: {
 		initialPresence: {

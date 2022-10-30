@@ -12,7 +12,13 @@ import {
 	StorageDescriptor,
 	UserInfo,
 } from '@lo-fi/web';
-import { useMemo, useSyncExternalStore } from 'react';
+import {
+	createContext,
+	Provider,
+	useContext,
+	useMemo,
+	useSyncExternalStore,
+} from 'react';
 import { suspend } from 'suspend-react';
 
 type QueryHookResult<T> = T;
@@ -94,15 +100,22 @@ type CreatedHooks<
 	usePeer(peerId: string): UserInfo;
 	useSyncStatus(): boolean;
 	useStorage(): Storage;
+	Provider: Provider<StorageDescriptor<any>>;
 };
 
 export function createHooks<
 	Schema extends StorageSchema<{
 		[k: string]: StorageCollectionSchema<any, any, any>;
 	}>,
->(storageDesc: StorageDescriptor<Schema>): CreatedHooks<Schema> {
+>(schema: Schema): CreatedHooks<Schema> {
+	const Context = createContext<StorageDescriptor<Schema> | null>(null);
+
 	function useStorage() {
-		return suspend(() => storageDesc.readyPromise, ['rootStorage']);
+		const ctx = useContext(Context);
+		if (!ctx) {
+			throw new Error('No lo-fi provider was found');
+		}
+		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]);
 	}
 
 	function useWatch(liveObject: Entity) {
@@ -156,13 +169,14 @@ export function createHooks<
 		usePeerIds,
 		usePeer,
 		useSyncStatus,
+		Provider: Context.Provider,
 	};
 
 	const collectionNames = Object.keys(
-		storageDesc.schema.collections,
+		schema.collections,
 	) as SchemaCollectionName<Schema>[];
 	for (const name of collectionNames) {
-		const collection = storageDesc.schema.collections[name];
+		const collection = schema.collections[name];
 		const getOneHookName = `use${capitalize(
 			collection.name,
 		)}` as `use${CapitalizedCollectionName<Schema>}`;
