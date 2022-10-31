@@ -37,11 +37,25 @@ export function getAllCollectionDefinitions(ast) {
 }
 
 function lookupCollection(ast, name) {
-	return ast.find(
-		(node) =>
+	let declaration = ast.find((node) => {
+		if (
 			node.type === 'VariableDeclaration' &&
-			node.declarations[0].id.value === name,
-	).declarations[0].init;
+			node.declarations[0].id.value === name
+		)
+			return true;
+		if (
+			node.type === 'ExportDeclaration' &&
+			node.declaration.declarations[0].id.value === name
+		)
+			return true;
+		return false;
+	});
+	if (declaration) {
+		if (declaration.type === 'ExportDeclaration') {
+			declaration = declaration.declaration;
+		}
+		return declaration.declarations[0].init;
+	}
 }
 
 export function getCollectionTypings(name, definition) {

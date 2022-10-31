@@ -1,6 +1,6 @@
 import { collection, schema } from '@lo-fi/common';
 
-const todo = collection({
+export const todo = collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {
@@ -62,7 +62,7 @@ const todo = collection({
 	},
 });
 
-const person = collection({
+export const person = collection({
 	name: 'person',
 	pluralName: 'people',
 	primaryKey: 'id',
