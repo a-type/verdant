@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 1.1.0
+
+### Minor Changes
+
+- dcd5dd9: Use a provider to supply storage client for react hooks
+
 ## 1.0.2
 
 ### Patch Changes
