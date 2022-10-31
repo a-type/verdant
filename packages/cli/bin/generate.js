@@ -41,9 +41,14 @@ const v = yargs(hideBin(process.argv))
 		type: 'boolean',
 		description: 'Include react hooks',
 	})
+	.option('debug', {
+		alias: 'd',
+		type: 'boolean',
+		description: 'Include debug output for submitting bug reports',
+	})
 	.demandOption(['schema', 'output']).argv;
 
-run(v.schema, v.output, v.react)
+run(v.schema, v.output, v.react, v.debug)
 	.then(() => {
 		console.log('✅ Generated lo-fi code');
 		process.exit(0);
@@ -53,7 +58,7 @@ run(v.schema, v.output, v.react)
 		process.exit(1);
 	});
 
-async function run(input, output, includeReact) {
+async function run(input, output, includeReact, debug) {
 	// get the input file as the first argument and output as second
 	const outputDirectory = path.resolve(process.cwd(), output);
 	try {
@@ -160,5 +165,7 @@ async function run(input, output, includeReact) {
 		}),
 	);
 
-	await fs.unlink(tempTranspiledOutput);
+	if (!debug) {
+		await fs.unlink(tempTranspiledOutput);
+	}
 }

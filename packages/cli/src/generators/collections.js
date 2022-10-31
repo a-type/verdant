@@ -23,12 +23,15 @@ export function getAllCollectionDefinitions(ast) {
 	const collectionKeyValues = collections.value.properties;
 	const collectionDefinitions = {};
 	for (const collection of collectionKeyValues) {
+		// support, in order: shorthand, variable reference, literal
 		const valueExpression =
-			collection.value.type === 'Identifier'
+			collection.type === 'Identifier'
+				? lookupCollection(ast, collection.value)
+				: collection.value.type === 'Identifier'
 				? lookupCollection(ast, collection.value.value)
 				: collection.value;
-		collectionDefinitions[collection.key.value] =
-			valueExpression.arguments[0].expression;
+		const name = collection.key ? collection.key.value : collection.value;
+		collectionDefinitions[name] = valueExpression.arguments[0].expression;
 	}
 	return collectionDefinitions;
 }
