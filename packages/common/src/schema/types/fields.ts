@@ -62,7 +62,8 @@ export type NestedStorageFieldSchema =
 	| StorageBooleanFieldSchema
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
-	| StorageAnyFieldSchema;
+	| StorageAnyFieldSchema
+	| StorageMapFieldSchema<any>;
 
 export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
 
