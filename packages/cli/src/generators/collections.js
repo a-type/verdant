@@ -158,10 +158,7 @@ function getSubObjectFieldTypings(fields, parentName) {
 				value,
 			)}>>;\n\n`;
 			const fieldValue = getObjectProperty(value, 'values');
-			content += getSubObjectFieldTypings(
-				objectExpressionEntries(fieldValue),
-				subName,
-			);
+			content += getSubObjectFieldTypings([['value', fieldValue]], subName);
 		}
 	}
 	return content;
