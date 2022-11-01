@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.2
+
+### Patch Changes
+
+- c9b8238: fix never filter file concatenation
+
 ## 1.1.1
 
 ### Patch Changes
