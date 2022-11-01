@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.0.2
+
+### Patch Changes
+
+- d29193f: include map in nestable field types
+
 ## 1.0.1
 
 ### Patch Changes
