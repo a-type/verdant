@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.3
+
+### Patch Changes
+
+- 18e45b1: add sub-object typings to cli
+
 ## 1.1.2
 
 ### Patch Changes
