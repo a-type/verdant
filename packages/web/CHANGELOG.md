@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 1.0.5
+
+### Patch Changes
+
+- 18e45b1: add sub-object typings to cli
+- 18e45b1: fix typing error in entity data
+
 ## 1.0.4
 
 ### Patch Changes
