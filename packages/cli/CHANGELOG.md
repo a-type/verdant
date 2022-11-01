@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.1
+
+### Patch Changes
+
+- c013141: more lenient schema support in cli
+
 ## 1.1.0
 
 ### Minor Changes
