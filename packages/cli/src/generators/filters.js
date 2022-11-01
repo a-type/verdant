@@ -33,6 +33,9 @@ export function getCollectionFilterTypings(collection) {
 		);
 	}
 	const filterUnion = filterTypings.map(({ name }) => name).join(' | ');
+	if (!filterTypings.length) {
+		return `export type ${pascalCase(collectionName)}Filter = never;`;
+	}
 	return `
 ${filterTypings.map(({ typing }) => typing).join('\n')}
 export type ${pascalCase(collectionName)}Filter = ${filterUnion};
