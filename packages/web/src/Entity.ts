@@ -33,9 +33,13 @@ type AccessibleEntityProperty<T> = T extends Array<any>
 	? keyof T
 	: never;
 
-type DataFromInit<Init> = {
-	[Key in keyof Init]-?: Init[Key];
-};
+type DataFromInit<Init> = Init extends { [key: string]: any }
+	? {
+			[Key in keyof Init]-?: Init[Key];
+	  }
+	: Init extends Array<any>
+	? Init
+	: any;
 
 type EntityPropertyValue<
 	Init,

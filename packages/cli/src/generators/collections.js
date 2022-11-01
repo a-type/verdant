@@ -68,6 +68,7 @@ export function getCollectionTypings(name, definition) {
 	content += getCollectionSnapshotTyping(definition);
 	content += getCollectionInitTyping(definition);
 	content += getCollectionDocumentTyping(definition);
+	content += getCollectionSubObjectTypings(definition);
 	content += getCollectionFilterTypings(definition);
 
 	return content;
@@ -77,7 +78,7 @@ function getCollectionDocumentTyping(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pascalName = changeCase.pascalCase(collectionName);
 
-	return `export type ${pascalName} = ObjectEntity<${pascalName}Init>`;
+	return `export type ${pascalName} = ObjectEntity<${pascalName}Init>;\n\n`;
 }
 
 function getCollectionSnapshotTyping(collection) {
@@ -119,4 +120,49 @@ export function getCollectionPluralName(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pluralName = getObjectProperty(collection, 'pluralName')?.value;
 	return pluralName ?? collectionName + 's';
+}
+
+function getCollectionSubObjectTypings(collection) {
+	const fields = objectExpressionEntries(
+		getObjectProperty(collection, 'fields'),
+	);
+	const baseName = getObjectProperty(collection, 'name').value;
+	return getSubObjectFieldTypings(fields, changeCase.pascalCase(baseName));
+}
+
+function getSubObjectFieldTypings(fields, parentName) {
+	let content = '';
+	for (const [key, value] of fields) {
+		const type = getObjectProperty(value, 'type').value;
+		if (type === 'object') {
+			const subName = parentName + changeCase.pascalCase(key);
+			content += `export type ${subName} = ObjectEntity<${getFieldSnapshotTyping(
+				value,
+			)}>;\n\n`;
+			const fieldValue = getObjectProperty(value, 'properties');
+			content += getSubObjectFieldTypings(
+				objectExpressionEntries(fieldValue),
+				subName,
+			);
+		} else if (type === 'array') {
+			const subName = parentName + changeCase.pascalCase(key);
+			content += `export type ${subName} = ListEntity<${getFieldSnapshotTyping(
+				value,
+				{ flattenArrays: true },
+			)}>;\n\n`;
+			const fieldValue = getObjectProperty(value, 'items');
+			content += getSubObjectFieldTypings([['item', fieldValue]], subName);
+		} else if (type === 'map') {
+			const subName = parentName + changeCase.pascalCase(key) + 'Value';
+			content += `export type ${subName} = ObjectEntity<Record<string, ${getFieldSnapshotTyping(
+				value,
+			)}>>;\n\n`;
+			const fieldValue = getObjectProperty(value, 'values');
+			content += getSubObjectFieldTypings(
+				objectExpressionEntries(fieldValue),
+				subName,
+			);
+		}
+	}
+	return content;
 }

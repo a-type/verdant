@@ -13,6 +13,9 @@ export function objectExpressionEntries(objectExpression) {
  * @param {string} name
  */
 export function getObjectProperty(obj, name) {
+	if (!obj.properties) {
+		throw new Error(`Cannot get properties of AST node ${JSON.stringify(obj)}`);
+	}
 	return (
 		obj.properties.find((prop) => prop.key.value === name)?.value ?? undefined
 	);

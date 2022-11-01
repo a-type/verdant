@@ -20,7 +20,7 @@
 		"src/"
 	],
 	"scripts": {
-		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r",
+		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d",
 		"test": "pnpm run pretest && vitest",
 		"ci:test": "pnpm run pretest && vitest run"
 	},
