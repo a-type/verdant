@@ -42,7 +42,7 @@ export class ReplicaInfos {
 		status: 'new' | 'existing' | 'truant';
 		replicaInfo: ReplicaInfoSpec;
 	} => {
-		const replicaInfo = this.db
+		const replicaInfo: ReplicaInfoSpec = this.db
 			.prepare(
 				`
 			SELECT * FROM ReplicaInfo
@@ -74,13 +74,29 @@ export class ReplicaInfos {
 			};
 		}
 
+		if (replicaInfo.type !== info.type) {
+			// type should be updated if a new token changes it
+			this.db
+				.prepare(
+					`
+					UPDATE ReplicaInfo
+					SET type = ?
+					WHERE id = ?
+					`,
+				)
+				.run(info.type, replicaId);
+		}
+
 		if (replicaInfo.clientId !== info.userId) {
 			throw new Error(
 				`Replica ${replicaId} already exists with a different user ID`,
 			);
 		}
 
-		if (replicaInfo.lastSeenWallClockTime < this.truantCutoff) {
+		if (
+			replicaInfo.lastSeenWallClockTime &&
+			replicaInfo.lastSeenWallClockTime < this.truantCutoff
+		) {
 			return {
 				status: 'truant',
 				replicaInfo,
