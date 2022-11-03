@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.0.4
+
+### Patch Changes
+
+- e7447f0: bugfix for column addition
+
 ## 1.0.3
 
 ### Patch Changes
