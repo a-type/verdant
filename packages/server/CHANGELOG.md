@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 1.0.3
+
+### Patch Changes
+
+- 2560a63: Add passive and read-only replica types
+- Updated dependencies [2560a63]
+  - @lo-fi/common@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes

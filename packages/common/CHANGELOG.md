@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.0.3
+
+### Patch Changes
+
+- 2560a63: Add passive and read-only replica types
+
 ## 1.0.2
 
 ### Patch Changes
