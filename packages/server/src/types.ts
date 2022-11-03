@@ -1,4 +1,9 @@
-import { DocumentBaseline, Operation, ReplicaInfo } from '@lo-fi/common';
+import {
+	DocumentBaseline,
+	Operation,
+	ReplicaInfo,
+	ReplicaType,
+} from '@lo-fi/common';
 
 export interface DocumentBaselineSpec
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {
@@ -12,4 +17,5 @@ export interface ReplicaInfoSpec extends ReplicaInfo {
 	// to write to this replica
 	clientId: string;
 	lastSeenWallClockTime: number | null;
+	type: ReplicaType;
 }

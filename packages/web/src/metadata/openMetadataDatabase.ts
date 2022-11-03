@@ -3,10 +3,19 @@ export function openMetadataDatabase(
 	indexedDB: IDBFactory = window.indexedDB,
 ) {
 	return new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open([namespace, 'meta'].join('_'), 2);
+		const request = indexedDB.open([namespace, 'meta'].join('_'), 3);
 		request.onupgradeneeded = async (event) => {
 			const db = request.result;
-			if (event.oldVersion === 1) {
+			if (event.oldVersion === 2) {
+				/**
+				 * 2 -> 3 changes:
+				 *
+				 * Add timestamp index to operations
+				 */
+				const tx = request.transaction!;
+				const operations = tx.objectStore('operations');
+				operations.createIndex('timestamp', 'timestamp');
+			} else if (event.oldVersion === 1) {
 				/**
 				 * 1 -> 2 changes:
 				 *
@@ -45,12 +54,11 @@ export function openMetadataDatabase(
 				operations.deleteIndex('documentOid_timestamp');
 				// create the new indexes
 				operations.createIndex('l_t', 'l_t', { unique: false });
-				operations.createIndex('o_t', 'o_t', { unique: false });
 				operations.createIndex('d_t', 'd_t', { unique: false });
 			} else {
-			/**
-			 * Migrating from 0: just create the desired object stores
-			 */
+				/**
+				 * Migrating from 0: just create the desired object stores
+				 */
 				db.createObjectStore('info', { keyPath: 'type' });
 
 				const baselinesStore = db.createObjectStore('baselines', {
@@ -63,6 +71,7 @@ export function openMetadataDatabase(
 				});
 				operationsStore.createIndex('l_t', 'l_t');
 				operationsStore.createIndex('d_t', 'd_t');
+				operationsStore.createIndex('timestamp', 'timestamp');
 			}
 		};
 		request.onerror = () => {

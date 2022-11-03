@@ -32,14 +32,16 @@ export class OperationsStore extends IDBService {
 			from,
 			after,
 			mode = 'readonly',
+			transaction: providedTx,
 		}: {
 			to?: string;
 			from?: string;
 			after?: string;
 			mode?: 'readwrite' | 'readonly';
+			transaction?: IDBTransaction;
 		} = {},
 	): Promise<void> => {
-		const transaction = this.db.transaction('operations', mode);
+		const transaction = providedTx || this.db.transaction('operations', mode);
 		const store = transaction.objectStore('operations');
 		const index = store.index('d_t');
 
@@ -86,12 +88,14 @@ export class OperationsStore extends IDBService {
 		{
 			to,
 			mode,
+			transaction: providedTx,
 		}: {
 			to?: string;
 			mode?: 'readwrite' | 'readonly';
+			transaction?: IDBTransaction;
 		},
 	): Promise<void> => {
-		const transaction = this.db.transaction('operations', mode);
+		const transaction = providedTx || this.db.transaction('operations', mode);
 		const store = transaction.objectStore('operations');
 
 		const start = createLowerBoundIndexValue(oid);
@@ -133,12 +137,16 @@ export class OperationsStore extends IDBService {
 		{
 			before,
 			after,
+			mode = 'readonly',
+			transaction: providedTx,
 		}: {
 			before?: string | null;
 			after?: string | null;
+			mode?: 'readwrite' | 'readonly';
+			transaction?: IDBTransaction;
 		},
 	): Promise<void> => {
-		const transaction = this.db.transaction('operations', 'readonly');
+		const transaction = providedTx || this.db.transaction('operations', mode);
 		const store = transaction.objectStore('operations');
 		const index = store.index('l_t');
 
@@ -177,6 +185,33 @@ export class OperationsStore extends IDBService {
 		});
 	};
 
+	iterateOverAllOperations = async (
+		iterator: (patch: ClientOperation, store: IDBObjectStore) => void,
+		{
+			before,
+			transaction,
+			mode,
+		}: {
+			before?: string | null;
+			transaction?: IDBTransaction;
+			mode?: 'readwrite' | 'readonly';
+		},
+	): Promise<void> => {
+		await this.iterate(
+			'operations',
+			(store) => {
+				const end = before ? createUpperBoundIndexValue(before) : undefined;
+
+				const range = end ? IDBKeyRange.upperBound(end, true) : undefined;
+				const index = store.index('timestamp');
+				return index.openCursor(range, 'next');
+			},
+			iterator,
+			mode,
+			transaction,
+		);
+	};
+
 	/**
 	 * Adds a set of patches to the database.
 	 * @returns a list of affected root document OIDs.
@@ -207,7 +242,6 @@ export class OperationsStore extends IDBService {
 	private insert = async (
 		operations: StoredClientOperation[],
 	): Promise<ObjectIdentifier[]> => {
-		console.debug('Inserting operations', operations);
 		const transaction = this.db.transaction('operations', 'readwrite');
 		const store = transaction.objectStore('operations');
 		const affected = new Set<ObjectIdentifier>();

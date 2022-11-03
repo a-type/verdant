@@ -35,8 +35,9 @@ export type OperationMessage = {
 export type OperationRebroadcastMessage = {
 	type: 'op-re';
 	operations: Operation[];
+	baselines: DocumentBaseline[];
 	replicaId: string;
-	globalAckTimestamp: string;
+	globalAckTimestamp: string | undefined;
 };
 
 export type SyncMessage = {
@@ -77,7 +78,7 @@ export type SyncResponseMessage = {
 	/**
 	 * Update client on the global ack
 	 */
-	globalAckTimestamp: string;
+	globalAckTimestamp: string | undefined;
 
 	/**
 	 * A map of connected clients' presences values
@@ -123,6 +124,10 @@ export type GlobalAckMessage = {
 	timestamp: string;
 };
 
+export type ForbiddenMessage = {
+	type: 'forbidden';
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
@@ -136,4 +141,5 @@ export type ServerMessage =
 	| OperationRebroadcastMessage
 	| PresenceChangedMessage
 	| PresenceOfflineMessage
-	| GlobalAckMessage;
+	| GlobalAckMessage
+	| ForbiddenMessage;

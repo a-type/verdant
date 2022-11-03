@@ -2,13 +2,14 @@ import {
 	AckMessage,
 	applyPatch,
 	ClientMessage,
+	DocumentBaseline,
 	HeartbeatMessage,
 	omit,
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
 	ReplicaInfo,
-	SERVER_REPLICA_ID,
+	ReplicaType,
 	SyncMessage,
 	SyncStep2Message,
 } from '@lo-fi/common';
@@ -19,6 +20,8 @@ import { OperationHistory, OperationHistoryItem } from './OperationHistory.js';
 import { Baselines } from './Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
+import { TokenInfo } from './TokenVerifier.js';
+import AsyncLock from 'async-lock';
 
 export class ServerLibrary {
 	private db;
@@ -29,6 +32,8 @@ export class ServerLibrary {
 	private operations;
 	private baselines;
 	private presences = new Presence();
+
+	private _messageLock = new AsyncLock();
 
 	constructor({
 		db,
@@ -58,45 +63,55 @@ export class ServerLibrary {
 	 * exist, a user may create it. But if it does exist, its user (clientId)
 	 * must match the user making the request.
 	 */
-	private validateReplicaAccess = (replicaId: string, userId: string) => {
+	private validateReplicaAccess = (replicaId: string, info: TokenInfo) => {
 		const replica = this.replicas.get(replicaId);
-		if (replica && replica.clientId !== userId) {
+		if (replica && replica.clientId !== info.userId) {
 			throw new Error(
-				`Replica ${replicaId} does not belong to client ${userId}`,
+				`Replica ${replicaId} does not belong to client ${info.userId}`,
 			);
 		}
+	};
+
+	private hasWriteAccess = (info: TokenInfo) => {
+		return (
+			info.type !== ReplicaType.ReadOnlyPull &&
+			info.type !== ReplicaType.ReadOnlyRealtime
+		);
 	};
 
 	receive = async (
 		message: ClientMessage,
 		clientKey: string,
-		userId: string,
+		info: TokenInfo,
 	) => {
-		this.validateReplicaAccess(message.replicaId, userId);
+		// await this._messageLock.acquire('message', async (done) => {
+		this.validateReplicaAccess(message.replicaId, info);
 
 		switch (message.type) {
 			case 'op':
-				this.handleOperation(message, clientKey);
+				this.handleOperation(message, clientKey, info);
 				break;
 			case 'sync':
-				this.handleSync(message, clientKey, userId);
+				this.handleSync(message, clientKey, info);
 				break;
 			case 'sync-step2':
-				this.handleSyncStep2(message, clientKey, userId);
+				this.handleSyncStep2(message, clientKey, info);
 				break;
 			case 'ack':
-				this.handleAck(message, clientKey, userId);
+				this.handleAck(message, clientKey, info);
 				break;
 			case 'heartbeat':
-				this.handleHeartbeat(message, clientKey, userId);
+				this.handleHeartbeat(message, clientKey);
 				break;
 			case 'presence-update':
-				await this.handlePresenceUpdate(message, clientKey, userId);
+				await this.handlePresenceUpdate(message, clientKey, info);
 				break;
 			default:
 				console.log('Unknown message type', (message as any).type);
 				break;
 		}
+		// 	done();
+		// });
 		this.replicas.updateLastSeen(message.replicaId);
 	};
 
@@ -104,7 +119,18 @@ export class ServerLibrary {
 		this.presences.removeReplica(replicaId);
 	};
 
-	private handleOperation = (message: OperationMessage, clientKey: string) => {
+	private handleOperation = (
+		message: OperationMessage,
+		clientKey: string,
+		info: TokenInfo,
+	) => {
+		if (!this.hasWriteAccess(info)) {
+			this.sender.send(this.id, clientKey, {
+				type: 'forbidden',
+			});
+			return;
+		}
+
 		const run = this.db.transaction(() => {
 			// insert patches into history
 			this.operations.insertAll(message.replicaId, message.operations);
@@ -119,6 +145,7 @@ export class ServerLibrary {
 			clientKey,
 			message.replicaId,
 			message.operations,
+			[],
 		);
 	};
 
@@ -132,14 +159,16 @@ export class ServerLibrary {
 		clientKey: string,
 		replicaId: string,
 		ops: Operation[],
+		baselines: DocumentBaseline[],
 	) => {
-		if (ops.length === 0) return;
+		if (ops.length === 0 && baselines.length === 0) return;
 
 		this.sender.broadcast(
 			this.id,
 			{
 				type: 'op-re',
 				operations: ops,
+				baselines,
 				replicaId,
 				globalAckTimestamp: this.replicas.getGlobalAck(),
 			},
@@ -150,7 +179,7 @@ export class ServerLibrary {
 	private handleSync = (
 		message: SyncMessage,
 		clientKey: string,
-		clientId: string,
+		info: TokenInfo,
 	) => {
 		const replicaId = message.replicaId;
 
@@ -160,7 +189,7 @@ export class ServerLibrary {
 		}
 
 		const { status, replicaInfo: clientReplicaInfo } =
-			this.replicas.getOrCreate(replicaId, clientId);
+			this.replicas.getOrCreate(replicaId, info);
 
 		if (status === 'truant') {
 			console.log('A truant replica has reconnected', replicaId);
@@ -198,7 +227,7 @@ export class ServerLibrary {
 				snapshot: baseline.snapshot,
 				timestamp: baseline.timestamp,
 			})),
-			provideChangesSince: clientReplicaInfo.ackedLogicalTime,
+			provideChangesSince: clientReplicaInfo.ackedLogicalTime || null,
 			globalAckTimestamp: this.replicas.getGlobalAck(),
 			peerPresence: this.presences.all(),
 			// only request the client to overwrite local data if a reset is requested
@@ -211,8 +240,15 @@ export class ServerLibrary {
 	private handleSyncStep2 = (
 		message: SyncStep2Message,
 		clientKey: string,
-		clientId: string,
+		info: TokenInfo,
 	) => {
+		if (!this.hasWriteAccess(info)) {
+			this.sender.send(this.id, clientKey, {
+				type: 'forbidden',
+			});
+			return;
+		}
+
 		// store all incoming operations and baselines
 		this.baselines.insertAll(message.baselines);
 
@@ -222,29 +258,43 @@ export class ServerLibrary {
 			clientKey,
 			message.replicaId,
 			message.operations,
+			message.baselines,
 		);
 
 		// update the client's ackedLogicalTime
 		const lastOperation = message.operations[message.operations.length - 1];
 		if (lastOperation) {
-			this.replicas.updateAcknowledged(
-				message.replicaId,
-				lastOperation.timestamp,
-			);
+			this.updateAcknowledged(message.replicaId, lastOperation.timestamp, info);
 		} else {
 			// if no operation is available to take a timestamp from,
 			// use the less accurate message timestamp...
 			// TODO: why not just always do this?
-			this.replicas.updateAcknowledged(message.replicaId, message.timestamp);
+			this.updateAcknowledged(message.replicaId, message.timestamp, info);
+		}
+	};
+
+	private updateAcknowledged = (
+		replicaId: string,
+		timestamp: string,
+		info: TokenInfo,
+	) => {
+		const priorGlobalAck = this.replicas.getGlobalAck();
+		this.replicas.updateAcknowledged(replicaId, timestamp);
+		const newGlobalAck = this.replicas.getGlobalAck();
+		if (newGlobalAck && priorGlobalAck !== newGlobalAck) {
+			this.sender.broadcast(this.id, {
+				type: 'global-ack',
+				timestamp: newGlobalAck,
+			});
 		}
 	};
 
 	private handleAck = (
 		message: AckMessage,
 		clientKey: string,
-		clientId: string,
+		info: TokenInfo,
 	) => {
-		this.replicas.updateAcknowledged(message.replicaId, message.timestamp);
+		this.updateAcknowledged(message.replicaId, message.timestamp, info);
 	};
 
 	private pendingRebaseTimeout: NodeJS.Timeout | null = null;
@@ -270,8 +320,18 @@ export class ServerLibrary {
 		// grab that slice of the operations history, then iterate over it
 		// and check if any rebase conditions are met.
 
-		// will be useful
-		const globalAck = this.replicas.getGlobalAck();
+		// for global ack, to determine consensus, also allow
+		// for all actively connected replicas to ack regardless of their
+		// type.
+		const activeReplicaIds = Object.values(this.presences.all()).map(
+			(p) => p.replicaId,
+		);
+		const globalAck = this.replicas.getGlobalAck(activeReplicaIds);
+
+		if (!globalAck) {
+			console.log('No global ack, skipping rebase');
+			return;
+		}
 
 		// these are in forward chronological order
 		const ops = this.operations.getBefore(globalAck);
@@ -314,11 +374,7 @@ export class ServerLibrary {
 		}
 	};
 
-	private handleHeartbeat = (
-		message: HeartbeatMessage,
-		clientKey: string,
-		clientId: string,
-	) => {
+	private handleHeartbeat = (_: HeartbeatMessage, clientKey: string) => {
 		this.sender.send(this.id, clientKey, {
 			type: 'heartbeat-response',
 		});
@@ -327,13 +383,13 @@ export class ServerLibrary {
 	private handlePresenceUpdate = async (
 		message: PresenceUpdateMessage,
 		clientKey: string,
-		clientId: string,
+		info: TokenInfo,
 	) => {
-		this.presences.set(clientId, {
+		this.presences.set(info.userId, {
 			presence: message.presence,
 			replicaId: message.replicaId,
-			profile: await this.profiles.get(clientId),
-			id: clientId,
+			profile: await this.profiles.get(info.userId),
+			id: info.userId,
 		});
 		this.sender.broadcast(
 			this.id,
@@ -341,9 +397,9 @@ export class ServerLibrary {
 				type: 'presence-changed',
 				replicaId: message.replicaId,
 				userInfo: {
-					id: clientId,
+					id: info.userId,
 					presence: message.presence,
-					profile: await this.profiles.get(clientId),
+					profile: await this.profiles.get(info.userId),
 					replicaId: message.replicaId,
 				},
 			},

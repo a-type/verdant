@@ -27,6 +27,30 @@ export class IDBService {
 		return Promise.all(requests.map(storeRequestPromise));
 	};
 
+	iterate = async <T>(
+		storeName: string,
+		getRequest: (store: IDBObjectStore) => IDBRequest,
+		iterator: (value: T, store: IDBObjectStore) => void,
+		mode: 'readonly' | 'readwrite' = 'readonly',
+		transaction?: IDBTransaction,
+	): Promise<void> => {
+		const tx = transaction || this.db.transaction(storeName, mode);
+		const store = tx.objectStore(storeName);
+		const request = getRequest(store);
+		return new Promise<void>((resolve, reject) => {
+			request.onsuccess = (event) => {
+				const cursor = request.result;
+				if (cursor) {
+					iterator(cursor.value, store);
+					cursor.continue();
+				} else {
+					resolve();
+				}
+			};
+			request.onerror = reject;
+		});
+	};
+
 	clear = (storeName: string) => {
 		return this.run(storeName, (store) => store.clear(), 'readwrite');
 	};

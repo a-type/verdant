@@ -29,7 +29,11 @@ export class MessageCreator {
 			type: 'op',
 			timestamp: this.meta.now,
 			replicaId: localInfo.id,
-			operations: init.operations,
+			operations: init.operations.map((op) => ({
+				data: op.data,
+				oid: op.oid,
+				timestamp: op.timestamp,
+			})),
 		};
 	};
 
@@ -87,10 +91,8 @@ export class MessageCreator {
 				after: provideChangesSince,
 			},
 		);
-		// for now we just send every baseline for every
-		// affected document...
-		const baselines = await this.meta.baselines.getAllForMultipleDocuments(
-			Array.from(affectedDocs),
+		const baselines = await this.meta.baselines.getAllSince(
+			provideChangesSince,
 		);
 
 		return {

@@ -6,18 +6,47 @@ export class BaselinesStore extends IDBService {
 		super(db);
 	}
 
-	getAllForDocument = async (oid: ObjectIdentifier) => {
-		return this.run<DocumentBaseline[]>(
+	getAllForDocument = async (
+		oid: ObjectIdentifier,
+		{
+			mode = 'readonly',
+			transaction,
+		}: { mode?: 'readwrite' | 'readonly'; transaction?: IDBTransaction } = {},
+	) => {
+		const baselines: DocumentBaseline[] = [];
+		await this.iterateOverAllForDocument(
+			oid,
+			(baseline) => {
+				baselines.push(baseline);
+			},
+			{ mode, transaction },
+		);
+		return baselines;
+	};
+	iterateOverAllForDocument = async (
+		oid: ObjectIdentifier,
+		iterator: (baseline: DocumentBaseline, store: IDBObjectStore) => void,
+		{
+			mode = 'readonly',
+			transaction,
+		}: { mode?: 'readwrite' | 'readonly'; transaction?: IDBTransaction } = {},
+	) => {
+		return this.iterate(
 			'baselines',
 			(store) => {
 				const [start, end] = getOidRange(oid);
-				return store.getAll(IDBKeyRange.bound(start, end, false, false));
+				return store.openCursor(IDBKeyRange.bound(start, end, false, false));
 			},
-			'readonly',
+			iterator,
+			mode,
+			transaction,
 		);
 	};
 
-	getAllForMultipleDocuments = async (docOids: string[]) => {
+	getAllForMultipleDocuments = async (
+		docOids: string[],
+		{ mode = 'readonly' }: { mode?: 'readwrite' | 'readonly' } = {},
+	) => {
 		const result = await this.runAll<DocumentBaseline[]>(
 			'baselines',
 			(store) => {
@@ -26,16 +55,48 @@ export class BaselinesStore extends IDBService {
 					return store.getAll(IDBKeyRange.bound(start, end, false, false));
 				});
 			},
+			mode,
 		);
 		return result.flat();
 	};
 
-	get = async (oid: ObjectIdentifier) => {
-		return this.run('baselines', (store) => store.get(oid), 'readonly');
+	getAllSince = async (
+		timestamp: string | null,
+		{ mode = 'readonly' }: { mode?: 'readwrite' | 'readonly' } = {},
+	) => {
+		return this.run<DocumentBaseline[]>(
+			'baselines',
+			(store) => {
+				const range = timestamp
+					? IDBKeyRange.lowerBound(timestamp, true)
+					: undefined;
+				const index = store.index('timestamp');
+				return index.getAll(range);
+			},
+			mode,
+		);
 	};
 
-	set = async <T>(baseline: DocumentBaseline<T>) => {
-		await this.run('baselines', (store) => store.put(baseline), 'readwrite');
+	get = async (
+		oid: ObjectIdentifier,
+		{
+			transaction,
+			mode = 'readonly',
+		}: { transaction?: IDBTransaction; mode?: 'readwrite' | 'readonly' } = {},
+	) => {
+		return this.run('baselines', (store) => store.get(oid), mode, transaction);
+	};
+
+	set = async <T>(
+		baseline: DocumentBaseline<T>,
+		{ transaction }: { transaction?: IDBTransaction } = {},
+	) => {
+		await this.run(
+			'baselines',
+			(store) => store.put(baseline),
+			'readwrite',
+			transaction,
+		);
 	};
 
 	setAll = async <T>(baselines: DocumentBaseline<T>[]) => {

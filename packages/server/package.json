@@ -26,11 +26,13 @@
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
+		"async-lock": "^1.4.0",
 		"better-sqlite3": "^7.6.2",
 		"jsonwebtoken": "^8.5.1",
 		"ws": "^8.9.0"
 	},
 	"devDependencies": {
+		"@types/async-lock": "^1.3.0",
 		"@types/better-sqlite3": "^7.6.0",
 		"@types/jsonwebtoken": "^8.5.9",
 		"@types/ws": "^8.5.3",

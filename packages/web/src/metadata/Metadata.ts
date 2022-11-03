@@ -5,6 +5,7 @@ import {
 	assignOid,
 	ClientMessage,
 	diffToPatches,
+	DocumentBaseline,
 	EventSubscriber,
 	getOidRoot,
 	groupPatchesByIdentifier,
@@ -34,12 +35,15 @@ export class Metadata extends EventSubscriber<{
 	readonly messageCreator = new MessageCreator(this);
 	readonly patchCreator = new PatchCreator(() => this.now);
 	readonly time = new HybridLogicalClockTimestampProvider();
+	private readonly log = (...args: any[]) => {};
 
 	constructor(
 		private readonly db: IDBDatabase,
 		private readonly schemaDefinition: StorageSchema<any>,
+		{ log }: { log?: (...args: any[]) => void } = {},
 	) {
 		super();
+		if (log) this.log = log;
 	}
 
 	get now() {
@@ -60,39 +64,18 @@ export class Metadata extends EventSubscriber<{
 		return this.getRecursiveComputedEntity(oid, upToTimestamp);
 	};
 
-	/**
-	 * Recomputes a normalized view of a single entity object from stored operations
-	 * and baseline.
-	 */
-	getComputedEntity = async <T = any>(
-		oid: ObjectIdentifier,
-		upToTimestamp?: string,
-	): Promise<T | undefined> => {
-		const baseline = await this.baselines.get(oid);
-		let current: any = baseline?.snapshot || undefined;
-		let operationsApplied = 0;
-		await this.operations.iterateOverAllOperationsForEntity(
-			oid,
-			(patch) => {
-				current = applyPatch(current, patch.data);
-				operationsApplied++;
-			},
-			{
-				to: upToTimestamp,
-			},
-		);
-		if (current) {
-			assignOid(current, oid);
-		}
-		return current as T | undefined;
-	};
-
 	getRecursiveComputedEntity = async <T = any>(
 		entityOid: ObjectIdentifier,
 		upToTimestamp?: string,
 	): Promise<T | undefined> => {
 		const documentOid = getOidRoot(entityOid);
-		const baselines = await this.baselines.getAllForDocument(documentOid);
+		const transaction = this.db.transaction(
+			['baselines', 'operations'],
+			'readwrite',
+		);
+		const baselines = await this.baselines.getAllForDocument(documentOid, {
+			transaction,
+		});
 		const subObjectsMappedByOid = new Map<ObjectIdentifier, any>();
 		for (const baseline of baselines) {
 			subObjectsMappedByOid.set(baseline.oid, baseline.snapshot);
@@ -113,6 +96,7 @@ export class Metadata extends EventSubscriber<{
 			},
 			{
 				to: upToTimestamp,
+				transaction,
 			},
 		);
 
@@ -146,17 +130,27 @@ export class Metadata extends EventSubscriber<{
 		const documentOid = getOidRoot(oid);
 		assert(documentOid === oid, 'Must be root document OID');
 		oids.add(documentOid);
-		const baselines = await this.baselines.getAllForDocument(documentOid);
-		for (const baseline of baselines) {
-			oids.add(baseline.oid);
-		}
-
-		await this.operations.iterateOverAllOperationsForDocument(
-			documentOid,
-			(patch) => {
-				oids.add(patch.oid);
-			},
+		// readwrite mode to block on other write transactions
+		const transaction = this.db.transaction(
+			['baselines', 'operations'],
+			'readwrite',
 		);
+		await Promise.all([
+			this.baselines.iterateOverAllForDocument(
+				documentOid,
+				(baseline) => {
+					oids.add(baseline.oid);
+				},
+				{ transaction },
+			),
+			this.operations.iterateOverAllOperationsForDocument(
+				documentOid,
+				(patch) => {
+					oids.add(patch.oid);
+				},
+				{ transaction },
+			),
+		]);
 
 		return Array.from(oids);
 	};
@@ -191,6 +185,8 @@ export class Metadata extends EventSubscriber<{
 	 */
 	insertLocalOperation = async (operations: Operation[]) => {
 		if (operations.length === 0) return;
+		// await this.rebaseLock;
+		this.log(`Inserting ${operations.length} local operations`);
 
 		// add local flag, in place.
 		for (const operation of operations) {
@@ -208,8 +204,10 @@ export class Metadata extends EventSubscriber<{
 	 */
 	insertRemoteOperations = async (operations: Operation[]) => {
 		if (operations.length === 0) return [];
+		// await this.rebaseLock;
+		this.log(`Inserting ${operations.length} remote operations`);
 
-		const affectedOids = await this.operations.addOperations(
+		const affectedDocumentOids = await this.operations.addOperations(
 			operations.map((patch) => ({
 				...patch,
 				isLocal: false,
@@ -218,7 +216,24 @@ export class Metadata extends EventSubscriber<{
 
 		this.ack(operations[operations.length - 1].timestamp);
 
-		return affectedOids;
+		return affectedDocumentOids;
+	};
+
+	insertRemoteBaselines = async (baselines: DocumentBaseline[]) => {
+		if (baselines.length === 0) return [];
+		// await this.rebaseLock;
+		this.log(`Inserting ${baselines.length} remote baselines`);
+
+		await this.baselines.setAll(baselines);
+
+		this.ack(baselines[baselines.length - 1].timestamp);
+
+		const affectedOidSet = new Set<ObjectIdentifier>();
+		baselines.forEach((baseline) => {
+			affectedOidSet.add(getOidRoot(baseline.oid));
+		});
+
+		return Array.from(affectedOidSet);
 	};
 
 	updateLastSynced = async () => {
@@ -247,55 +262,86 @@ export class Metadata extends EventSubscriber<{
 	 */
 	private autonomousRebase = async (globalAckTimestamp: string) => {
 		// find all operations before the global ack
-		const priorOperations = new Array<ClientOperation>();
-		await this.operations.iterateOverAllLocalOperations(
+		let lastTimestamp;
+		const toRebase = new Set<ObjectIdentifier>();
+		const transaction = this.db.transaction(
+			['baselines', 'operations'],
+			'readwrite',
+		);
+		let operationCount = 0;
+		await this.operations.iterateOverAllOperations(
 			(patch) => {
-				priorOperations.push(patch);
+				toRebase.add(patch.oid);
+				lastTimestamp = patch.timestamp;
+				operationCount++;
 			},
 			{
 				before: globalAckTimestamp,
+				transaction,
 			},
 		);
 
-		if (!priorOperations.length) {
+		if (!toRebase.size) {
+			this.log('Cannot rebase, no operations prior to', globalAckTimestamp);
 			return;
 		}
 
-		// gather all oids affected
-		const toRebase = new Set<ObjectIdentifier>();
-		for (const op of priorOperations) {
-			toRebase.add(op.oid);
-		}
-		const lastOperation = priorOperations[priorOperations.length - 1];
-
 		// rebase each affected document
 		for (const oid of toRebase) {
-			await this.rebase(oid, lastOperation.timestamp);
+			await this.rebase(oid, lastTimestamp || globalAckTimestamp, transaction);
 		}
 	};
 
-	rebase = async (oid: ObjectIdentifier, upTo: string) => {
-		console.log('Rebasing', oid, 'up to', upTo);
-		const view = await this.getComputedEntity(oid, upTo);
-		await this.baselines.set({
-			oid,
-			snapshot: view,
-			timestamp: upTo,
-		});
-		// separate iteration to ensure the above has completed before destructive
-		// actions. TODO: use a transaction instead
+	rebase = async (
+		oid: ObjectIdentifier,
+		upTo: string,
+		providedTx?: IDBTransaction,
+	) => {
+		// including replica Id for testing I guess
+		const replicaId = (await this.localReplica.get()).id;
+
+		this.log('[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
+		const transaction =
+			providedTx ||
+			this.db.transaction(['operations', 'baselines'], 'readwrite');
+		const baseline = await this.baselines.get(oid, { transaction });
+		let current: any = baseline?.snapshot || undefined;
+		let operationsApplied = 0;
 		await this.operations.iterateOverAllOperationsForEntity(
 			oid,
-			(op, store) => {
-				store.delete(op.oid_timestamp);
+			(patch, store) => {
+				current = applyPatch(current, patch.data);
+				operationsApplied++;
+				store.delete(patch.oid_timestamp);
 			},
 			{
 				to: upTo,
-				mode: 'readwrite',
+				transaction,
 			},
 		);
+		if (current) {
+			assignOid(current, oid);
+		}
+		await this.baselines.set(
+			{
+				oid,
+				snapshot: current,
+				timestamp: upTo,
+			},
+			{ transaction },
+		);
 
-		console.log('successfully rebased', oid, 'up to', upTo, ':', view);
+		this.log(
+			'successfully rebased',
+			oid,
+			'up to',
+			upTo,
+			':',
+			current,
+			'and deleted',
+			operationsApplied,
+			'operations',
+		);
 	};
 
 	reset = async () => {

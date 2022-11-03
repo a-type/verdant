@@ -22,15 +22,17 @@ interface StorageConfig {
 	schema: StorageSchema;
 	namespace: string;
 	syncConfig?: ServerSyncOptions;
+	log?: (...args: any[]) => void;
 }
 
 export class Storage {
-	private entities = new EntityStore(
-		this.documentDb,
-		this.schema,
-		this.meta,
-		this.undoHistory,
-	);
+	private entities = new EntityStore({
+		db: this.documentDb,
+		schema: this.schema,
+		meta: this.meta,
+		undoHistory: this.undoHistory,
+		log: this.config.log,
+	});
 	private queryStore = new QueryStore(this.documentDb, this.entities);
 	queryMaker = new QueryMaker(this.queryStore, this.schema);
 	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
@@ -49,6 +51,7 @@ export class Storage {
 			? new ServerSync(config.syncConfig, {
 					meta: this.meta,
 					entities: this.entities,
+					log: this.config.log,
 			  })
 			: new NoSync();
 
@@ -135,6 +138,7 @@ export class Storage {
 		}
 		const meta = await this.meta.stats();
 		const storage =
+			typeof navigator.storage !== 'undefined' &&
 			'estimate' in navigator.storage
 				? await navigator.storage.estimate()
 				: undefined;
@@ -210,6 +214,10 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	 * clients if you so desire.
 	 */
 	undoHistory?: UndoHistory;
+	/**
+	 * Provide a log function to log internal debug messages
+	 */
+	log?: (...args: any[]) => void;
 }
 
 /**
@@ -249,7 +257,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				this._namespace,
 				init.indexedDb,
 			);
-			const meta = new Metadata(metaDb, init.schema);
+			const meta = new Metadata(metaDb, init.schema, { log: init.log });
 
 			// verify schema integrity
 			await meta.updateSchema(init.schema);
@@ -267,6 +275,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 					schema: init.schema,
 					namespace: this._namespace,
 					syncConfig: init.sync,
+					log: init.log,
 				},
 				{
 					meta,

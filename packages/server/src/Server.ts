@@ -14,7 +14,7 @@ import { MessageSender } from './MessageSender.js';
 import { URL } from 'url';
 import { ClientConnectionManager } from './ClientConnection.js';
 import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
-import { TokenVerifier } from './TokenVerifier.js';
+import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
 
 export interface ServerOptions {
 	/**
@@ -117,7 +117,6 @@ export class Server extends EventEmitter implements MessageSender {
 		req: IncomingMessage,
 		res: ServerResponse,
 	) => {
-		console.log(req.url);
 		const url = new URL(req.url || '', 'http://localhost');
 		if (url.pathname.startsWith('lofi')) {
 			return this.handleRequest(req, res);
@@ -193,21 +192,16 @@ export class Server extends EventEmitter implements MessageSender {
 
 	private handleMessage = (
 		clientKey: string,
-		info: { libraryId: string; userId: string },
+		info: TokenInfo,
 		message: ClientMessage,
 	) => {
-		return this.storage.receive(
-			info.libraryId,
-			clientKey,
-			message,
-			info.userId,
-		);
+		return this.storage.receive(info.libraryId, clientKey, message, info);
 	};
 
 	private handleConnection = (
 		ws: WebSocket,
 		req: IncomingMessage,
-		info: { userId: string; libraryId: string },
+		info: TokenInfo,
 	) => {
 		const key = generateId();
 
@@ -237,5 +231,31 @@ export class Server extends EventEmitter implements MessageSender {
 
 	listen = (...params: Parameters<HttpServer['listen']>) => {
 		this.httpServer.listen(...params);
+	};
+
+	close = async () => {
+		await Promise.all([
+			new Promise<void>((resolve) => {
+				setTimeout(() => {
+					console.warn('HTTP server close timed out');
+					resolve();
+				}, 10 * 1000);
+				this.httpServer.close(() => {
+					resolve();
+					console.log('HTTP server closed');
+				});
+			}),
+			new Promise<void>((resolve) => {
+				setTimeout(() => {
+					console.warn('Socket server close timed out');
+					resolve();
+				}, 10 * 1000);
+				this.wss.close(() => {
+					resolve();
+					console.log('Socket server closed');
+				});
+			}),
+		]);
+		await this.storage.close();
 	};
 }

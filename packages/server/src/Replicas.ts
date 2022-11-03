@@ -1,4 +1,5 @@
 import { Database } from 'better-sqlite3';
+import { TokenInfo } from './TokenVerifier.js';
 import { ReplicaInfoSpec } from './types.js';
 
 export class ReplicaInfos {
@@ -30,12 +31,13 @@ export class ReplicaInfos {
 			clientId: row.clientId,
 			lastSeenWallClockTime: row.lastSeenWallClockTime,
 			ackedLogicalTime: row.ackedLogicalTime,
+			type: row.type,
 		};
 	};
 
 	getOrCreate = (
 		replicaId: string,
-		clientId: string,
+		info: TokenInfo,
 	): {
 		status: 'new' | 'existing' | 'truant';
 		replicaInfo: ReplicaInfoSpec;
@@ -53,27 +55,28 @@ export class ReplicaInfos {
 			this.db
 				.prepare(
 					`
-			INSERT INTO ReplicaInfo (id, clientId, libraryId)
-			VALUES (?, ?, ?)
+			INSERT INTO ReplicaInfo (id, clientId, libraryId, type)
+			VALUES (?, ?, ?, ?)
 			`,
 				)
-				.run(replicaId, clientId, this.libraryId);
+				.run(replicaId, info.userId, this.libraryId, info.type);
 
 			return {
 				status: 'new',
 				replicaInfo: {
 					id: replicaId,
-					clientId,
+					clientId: info.userId,
 					ackedLogicalTime: null,
 					lastSeenWallClockTime: null,
 					libraryId: this.libraryId,
+					type: info.type,
 				},
 			};
 		}
 
-		if (replicaInfo.clientId !== clientId) {
+		if (replicaInfo.clientId !== info.userId) {
 			throw new Error(
-				`Replica ${replicaId} already exists with a different clientId`,
+				`Replica ${replicaId} already exists with a different user ID`,
 			);
 		}
 
@@ -126,17 +129,21 @@ export class ReplicaInfos {
 			.run(timestamp, replicaId);
 	};
 
-	getGlobalAck = () => {
-		// filters out replicas that haven't been seen in a while
-		return this.db
-			.prepare(
-				`
-			SELECT MIN(ackedLogicalTime) AS ackedLogicalTime
-			FROM ReplicaInfo
-			WHERE libraryId = ? AND lastSeenWallClockTime > ?
-		`,
-			)
-			.get(this.libraryId, this.truantCutoff).ackedLogicalTime as string;
+	getGlobalAck = (onlineReplicaIds?: string[]) => {
+		const nonTruant = this.getAllNonTruant();
+		const globalAckEligible = nonTruant.filter(
+			(replica) => replica.type < 2 || onlineReplicaIds?.includes(replica.id),
+		);
+		// get the earliest acked time
+		return globalAckEligible.reduce((acc, replica) => {
+			if (!replica.ackedLogicalTime) {
+				return acc;
+			}
+			if (acc === undefined) {
+				return replica.ackedLogicalTime;
+			}
+			return acc < replica.ackedLogicalTime ? acc : replica.ackedLogicalTime;
+		}, undefined as string | undefined);
 	};
 
 	delete = (replicaId: string) => {

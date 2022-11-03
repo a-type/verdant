@@ -37,14 +37,35 @@ export class EntityStore extends EventSubscriber<{
 	private cache = new Map<string, EntityBase<any>>();
 	private cleanupTimeouts = new WeakMap<EntityBase<any>, NodeJS.Timeout>();
 
-	constructor(
-		private readonly db: IDBDatabase,
-		private readonly schema: StorageSchema,
-		public readonly meta: Metadata,
-		public readonly undoHistory: UndoHistory,
-		private batchTimeout = 200,
-	) {
+	private readonly db;
+	private readonly schema;
+	public readonly meta;
+	public readonly undoHistory;
+	private batchTimeout = 200;
+	private log;
+
+	constructor({
+		db,
+		schema,
+		meta,
+		undoHistory,
+		batchTimeout = 200,
+		log = () => {},
+	}: {
+		db: IDBDatabase;
+		schema: StorageSchema;
+		meta: Metadata;
+		undoHistory: UndoHistory;
+		batchTimeout?: number;
+		log?: (...args: any[]) => void;
+	}) {
 		super();
+		this.db = db;
+		this.schema = schema;
+		this.meta = meta;
+		this.undoHistory = undoHistory;
+		this.batchTimeout = batchTimeout;
+		this.log = log;
 	}
 
 	onSubscribed = (self: EntityBase<any>) => {
@@ -286,7 +307,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private storeView = async (oid: ObjectIdentifier, view: any) => {
-		console.debug('Storing view', oid, view);
+		this.log('Storing view', oid, view);
 		const isDeleted = !view;
 		if (isDeleted) {
 			// delete from database

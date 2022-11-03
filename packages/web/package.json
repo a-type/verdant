@@ -28,7 +28,8 @@
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
-		"cuid": "^2.1.8"
+		"cuid": "^2.1.8",
+		"jwt-decode": "^3.1.2"
 	},
 	"devDependencies": {
 		"@types/node": "16.11.7",

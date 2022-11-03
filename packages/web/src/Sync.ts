@@ -5,7 +5,9 @@ import {
 	ObjectIdentifier,
 	getOidRoot,
 	assert,
+	ReplicaType,
 } from '@lo-fi/common';
+import jwtDecode from 'jwt-decode';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
 import { EntityStore } from './EntityStore.js';
 import type { Presence } from './index.js';
@@ -80,7 +82,6 @@ export interface ServerSyncEndpointProviderConfig {
 	 */
 	fetchAuth?: () => Promise<{
 		accessToken: string;
-		syncEndpoint: string;
 	}>;
 }
 
@@ -89,6 +90,7 @@ class ServerSyncEndpointProvider {
 		http: string;
 		websocket: string;
 	} | null;
+	type: ReplicaType = ReplicaType.Realtime;
 
 	constructor(private config: ServerSyncEndpointProviderConfig) {
 		if (!config.authEndpoint && !config.fetchAuth) {
@@ -103,7 +105,7 @@ class ServerSyncEndpointProvider {
 			return this.cached;
 		}
 
-		let result: { accessToken: string; syncEndpoint: string };
+		let result: { accessToken: string };
 		if (this.config.fetchAuth) {
 			result = await this.config.fetchAuth();
 		} else {
@@ -120,8 +122,13 @@ class ServerSyncEndpointProvider {
 			});
 		}
 		assert(result.accessToken, 'No access token provided from auth endpoint');
-		assert(result.syncEndpoint, 'No sync endpoint provided from auth endpoint');
-		const url = new URL(result.syncEndpoint);
+		const decoded = jwtDecode.default<{ url: string; type: string }>(
+			result.accessToken,
+		);
+		assert(decoded.url, 'No sync endpoint provided from auth endpoint');
+		assert(decoded.type, 'No replica type provided from auth endpoint');
+		this.type = parseInt(decoded.type);
+		const url = new URL(decoded.url);
 		url.searchParams.set('token', result.accessToken);
 		url.protocol = url.protocol.replace('ws', 'http');
 		const httpEndpoint = url.toString();
@@ -169,6 +176,8 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 
 	readonly presence;
 
+	private log;
+
 	constructor(
 		{
 			authEndpoint,
@@ -176,18 +185,22 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			initialPresence,
 			automaticTransportSelection = true,
 			autoStart,
+			initialTransport,
 		}: ServerSyncOptions,
 		{
 			meta,
 			entities,
+			log,
 		}: {
 			meta: Metadata;
 			entities: EntityStore;
+			log?: (...args: any[]) => void;
 		},
 	) {
 		super();
 		this.meta = meta;
 		this.entities = entities;
+		this.log = log || (() => {});
 		this.presence = new PresenceManager(initialPresence);
 		this.endpointProvider = new ServerSyncEndpointProvider({
 			authEndpoint,
@@ -204,7 +217,11 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			meta,
 			presence: this.presence,
 		});
-		this.activeSync = this.pushPullSync;
+		if (initialTransport === 'realtime') {
+			this.activeSync = this.webSocketSync;
+		} else {
+			this.activeSync = this.pushPullSync;
+		}
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
 
@@ -222,8 +239,11 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			// on whether any peers are present
 			this.presence.subscribe('peersChanged', (peers) => {
 				if (Object.keys(peers).length > 0) {
-					if (this.mode === 'pull') {
-						this.setMode('realtime');
+					// only upgrade if token allows it
+					if (this.canDoRealtime) {
+						if (this.mode === 'pull') {
+							this.setMode('realtime');
+						}
 					}
 				} else {
 					if (this.mode === 'realtime') {
@@ -238,6 +258,14 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 		}
 	}
 
+	get canDoRealtime() {
+		return (
+			this.endpointProvider.type === ReplicaType.Realtime ||
+			this.endpointProvider.type === ReplicaType.PassiveRealtime ||
+			this.endpointProvider.type === ReplicaType.ReadOnlyRealtime
+		);
+	}
+
 	private handleMessage = async (message: ServerMessage) => {
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
@@ -247,13 +275,19 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 		}
 
 		let affectedOids: ObjectIdentifier[] | undefined = undefined;
+		this.log('sync message', message);
 		switch (message.type) {
 			case 'op-re':
 				// rebroadcasted operations
 				affectedOids = await this.meta.insertRemoteOperations(
 					message.operations,
 				);
-				await this.meta.setGlobalAck(message.globalAckTimestamp);
+				affectedOids.push(
+					...(await this.meta.insertRemoteBaselines(message.baselines)),
+				);
+				if (message.globalAckTimestamp) {
+					await this.meta.setGlobalAck(message.globalAckTimestamp);
+				}
 				break;
 			case 'global-ack':
 				await this.meta.setGlobalAck(message.timestamp);
@@ -265,13 +299,15 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 				}
 
 				// add any baselines
-				await this.meta.baselines.setAll(message.baselines);
+				affectedOids = await this.meta.insertRemoteBaselines(message.baselines);
 
-				affectedOids = await this.meta.insertRemoteOperations(
-					message.operations,
+				affectedOids.push(
+					...(await this.meta.insertRemoteOperations(message.operations)),
 				);
 
-				await this.meta.setGlobalAck(message.globalAckTimestamp);
+				if (message.globalAckTimestamp) {
+					await this.meta.setGlobalAck(message.globalAckTimestamp);
+				}
 
 				// respond to the server
 				this.activeSync.send(
@@ -298,6 +334,12 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 	};
 
 	setMode = (transport: SyncTransportMode) => {
+		if (transport === 'realtime' && !this.canDoRealtime) {
+			throw new Error(
+				`Cannot switch to realtime mode, because the current auth token does not allow it`,
+			);
+		}
+
 		let newSync: SyncTransport;
 		if (transport === 'realtime') {
 			newSync = this.webSocketSync;
@@ -316,6 +358,7 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 	};
 
 	public send = (message: ClientMessage) => {
+		this.log('Sending message', message);
 		return this.activeSync.send(message);
 	};
 
@@ -361,6 +404,7 @@ class WebSocketSync
 	private _status: 'active' | 'paused' = 'paused';
 
 	readonly mode = 'realtime';
+	private log = (...args: any[]) => {};
 
 	private heartbeat = new Heartbeat();
 
@@ -372,12 +416,15 @@ class WebSocketSync
 		endpointProvider,
 		meta,
 		presence,
+		log,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
+		log?: (...args: any[]) => any;
 	}) {
 		super();
+		this.log = log || this.log;
 		this.endpointProvider = endpointProvider;
 		this.meta = meta;
 		this.presence = presence;
@@ -396,7 +443,7 @@ class WebSocketSync
 			}
 			this.messageQueue = [];
 		}
-		console.info('Sync connected');
+		this.log('Sync connected');
 		this.onOnlineChange(true);
 		this.reconnectScheduler.reset();
 	};
@@ -431,11 +478,11 @@ class WebSocketSync
 		console.error(event);
 		this.reconnectScheduler.next();
 
-		console.info(`Attempting reconnect to websocket sync`);
+		this.log(`Attempting reconnect to websocket sync`);
 	};
 
 	private onClose = (event: CloseEvent) => {
-		console.info('Sync disconnected');
+		this.log('Sync disconnected');
 		this.onOnlineChange(false);
 		this.onError(event);
 	};
@@ -505,6 +552,7 @@ class PushPullSync
 	private heartbeat = new Heartbeat();
 
 	readonly mode = 'pull';
+	private log;
 
 	private _isConnected = false;
 	private _status: 'active' | 'paused' = 'paused';
@@ -513,12 +561,15 @@ class PushPullSync
 		endpointProvider,
 		meta,
 		presence,
+		log = () => {},
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
+		log?: (...args: any[]) => any;
 	}) {
 		super();
+		this.log = log;
 		this.meta = meta;
 		this.presence = presence;
 		this.endpointProvider = endpointProvider;
@@ -528,6 +579,7 @@ class PushPullSync
 	}
 
 	private sendRequest = async (messages: ClientMessage[]) => {
+		this.log('Sending sync request');
 		try {
 			const { http: host } = await this.endpointProvider.getEndpoints();
 			const response = await fetch(host, {

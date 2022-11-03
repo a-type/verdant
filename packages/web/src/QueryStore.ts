@@ -137,7 +137,6 @@ export class QueryStore {
 	};
 
 	private onCollectionsChanged = (collections: string[]) => {
-		console.log('Collections changed', collections);
 		let updated = 0;
 		// FIXME: This is a naive implementation, improve beyond O(n)
 		for (const [key, query] of this.cache) {
@@ -146,7 +145,6 @@ export class QueryStore {
 				updated++;
 			}
 		}
-		console.log('Updated', updated, 'queries');
 	};
 
 	destroy = () => {

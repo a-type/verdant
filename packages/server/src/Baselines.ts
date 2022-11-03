@@ -70,7 +70,6 @@ export class Baselines {
 
 	getAllAfter = (timestamp: string | null): DocumentBaseline<any>[] => {
 		if (!timestamp) {
-			console.log('query', this.libraryId);
 			return this.db
 				.prepare(
 					`

@@ -3,6 +3,7 @@ import { ClientMessage } from '@lo-fi/common';
 import { ServerLibraryManager } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
+import { TokenInfo } from './TokenVerifier.js';
 
 interface ServerStorageOptions {
 	db: Database;
@@ -42,12 +43,10 @@ export class ServerStorage {
 		libraryId: string,
 		clientKey: string,
 		message: ClientMessage,
-		clientId: string,
+		info: TokenInfo,
 	) => {
-		console.debug('Received message', libraryId, clientId, message);
-
 		const library = this.libraries.open(libraryId);
-		return library.receive(message, clientKey, clientId);
+		return library.receive(message, clientKey, info);
 	};
 
 	/**
@@ -71,6 +70,14 @@ export class ServerStorage {
           ackedLogicalTime TEXT
         );
       `,
+				)
+				.run();
+			this.db
+				.prepare(
+					`
+				ALTER TABLE ReplicaInfo
+				ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
+				`,
 				)
 				.run();
 
@@ -104,5 +111,9 @@ export class ServerStorage {
 		});
 
 		run();
+	};
+
+	close = async () => {
+		this.db.close();
 	};
 }
