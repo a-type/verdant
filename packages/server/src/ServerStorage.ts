@@ -72,14 +72,18 @@ export class ServerStorage {
       `,
 				)
 				.run();
-			this.db
-				.prepare(
-					`
+			try {
+				this.db
+					.prepare(
+						`
 				ALTER TABLE ReplicaInfo
 				ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
 				`,
-				)
-				.run();
+					)
+					.run();
+			} catch (e) {
+				// ignore non-idempotent column add failure
+			}
 
 			this.db
 				.prepare(
