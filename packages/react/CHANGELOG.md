@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 1.1.2
+
+### Patch Changes
+
+- Updated dependencies [2560a63]
+  - @lo-fi/common@1.0.3
+  - @lo-fi/web@1.0.6
+
 ## 1.1.1
 
 ### Patch Changes
