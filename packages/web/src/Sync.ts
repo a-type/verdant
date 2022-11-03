@@ -7,7 +7,7 @@ import {
 	assert,
 	ReplicaType,
 } from '@lo-fi/common';
-import jwtDecode from 'jwt-decode';
+import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
 import { EntityStore } from './EntityStore.js';
 import type { Presence } from './index.js';
@@ -122,12 +122,13 @@ class ServerSyncEndpointProvider {
 			});
 		}
 		assert(result.accessToken, 'No access token provided from auth endpoint');
-		const decoded = jwtDecode.default<{ url: string; type: string }>(
-			result.accessToken,
-		);
+		const decoded = (jwtDecode as any)(result.accessToken);
 		assert(decoded.url, 'No sync endpoint provided from auth endpoint');
-		assert(decoded.type, 'No replica type provided from auth endpoint');
-		this.type = parseInt(decoded.type);
+		assert(
+			decoded.type !== undefined,
+			'No replica type provided from auth endpoint',
+		);
+		this.type = parseInt(decoded.type + '');
 		const url = new URL(decoded.url);
 		url.searchParams.set('token', result.accessToken);
 		url.protocol = url.protocol.replace('ws', 'http');
