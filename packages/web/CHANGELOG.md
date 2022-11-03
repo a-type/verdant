@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.0.7
+
+### Patch Changes
+
+- 1571c72: bugfixes for usage
+
 ## 1.0.6
 
 ### Patch Changes
