@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.4
+
+### Patch Changes
+
+- b0764a2: fix map sub-object typing
+
 ## 1.1.3
 
 ### Patch Changes
