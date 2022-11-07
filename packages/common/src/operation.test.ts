@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assignOid, assignOidsToAllSubObjects, getOid } from './oids.js';
+import {
+	assignOid,
+	assignOidsToAllSubObjects,
+	getOid,
+	OID_KEY,
+} from './oids.js';
 import {
 	applyPatches,
 	diffToPatches,
@@ -19,7 +24,7 @@ describe('creating diff patch operations', () => {
 			assignOid(from, 'test/a');
 			const to = { foo: 'bar', baz: 'pop' };
 			assignOid(to, 'test/a');
-			const ops = diffToPatches(from, to, createClock());
+			const ops = diffToPatches(from, to, createClock(), []);
 			expect(ops).toMatchInlineSnapshot(`
 				[
 				  {
@@ -64,7 +69,7 @@ describe('creating diff patch operations', () => {
 				},
 				'test/a',
 			);
-			const patches = diffToPatches(from, to, createClock());
+			const patches = diffToPatches(from, to, createClock(), []);
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -112,7 +117,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:1');
-			const patches = diffToPatches(from, to, createClock());
+			const patches = diffToPatches(from, to, createClock(), []);
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -160,7 +165,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock());
+			const patches = diffToPatches(from, to, createClock(), []);
 			expect(patches).toEqual([]);
 		});
 		it('patches sub-objects with same identity', () => {
@@ -176,7 +181,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock());
+			const patches = diffToPatches(from, to, createClock(), []);
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -256,7 +261,7 @@ describe('creating diff patch operations', () => {
 		assignOid(to.baz, 'test/a:3');
 		assignOid(to.baz[0], 'test/a:4');
 		assignOid(to.baz[1], 'test/a:5');
-		expect(diffToPatches(from, to, createClock())).toMatchInlineSnapshot(`
+		expect(diffToPatches(from, to, createClock(), [])).toMatchInlineSnapshot(`
 			[
 			  {
 			    "data": {
@@ -406,12 +411,12 @@ describe('substituting refs with objects', () => {
 			]),
 		);
 		expect(root).toEqual({
-			'__@@oid_do_not_use': 'test/1',
+			[OID_KEY]: 'test/1',
 			foo: {
-				'__@@oid_do_not_use': 'test/1:a',
+				[OID_KEY]: 'test/1:a',
 				foo: 'bar',
 				baz: {
-					'__@@oid_do_not_use': 'test/1:b',
+					[OID_KEY]: 'test/1:b',
 					qux: 'corge',
 				},
 			},
@@ -462,15 +467,15 @@ describe('substituting refs with objects', () => {
 			]),
 		);
 		expect(root).toEqual({
-			'__@@oid_do_not_use': 'test/1',
+			[OID_KEY]: 'test/1',
 			foo: assignOid(
 				[
 					{
-						'__@@oid_do_not_use': 'test/1:a',
+						[OID_KEY]: 'test/1:a',
 						foo: 'bar',
 					},
 					{
-						'__@@oid_do_not_use': 'test/1:b',
+						[OID_KEY]: 'test/1:b',
 						qux: 'corge',
 					},
 				],
@@ -525,7 +530,7 @@ describe('creating patches from initial state', () => {
 			        "bar": "baz",
 			      },
 			    },
-			    "oid": "test/a:0",
+			    "oid": "test/a.foo:0",
 			    "timestamp": "0",
 			  },
 			  {
@@ -535,7 +540,7 @@ describe('creating patches from initial state', () => {
 			        "corge": "grault",
 			      },
 			    },
-			    "oid": "test/a:2",
+			    "oid": "test/a.qux.#:2",
 			    "timestamp": "1",
 			  },
 			  {
@@ -545,7 +550,7 @@ describe('creating patches from initial state', () => {
 			        "oof": 1,
 			      },
 			    },
-			    "oid": "test/a:4",
+			    "oid": "test/a.qux.#.bin:4",
 			    "timestamp": "2",
 			  },
 			  {
@@ -554,11 +559,11 @@ describe('creating patches from initial state', () => {
 			      "value": {
 			        "bin": {
 			          "@@type": "ref",
-			          "id": "test/a:4",
+			          "id": "test/a.qux.#.bin:4",
 			        },
 			      },
 			    },
-			    "oid": "test/a:3",
+			    "oid": "test/a.qux.#:3",
 			    "timestamp": "3",
 			  },
 			  {
@@ -567,15 +572,15 @@ describe('creating patches from initial state', () => {
 			      "value": [
 			        {
 			          "@@type": "ref",
-			          "id": "test/a:2",
+			          "id": "test/a.qux.#:2",
 			        },
 			        {
 			          "@@type": "ref",
-			          "id": "test/a:3",
+			          "id": "test/a.qux.#:3",
 			        },
 			      ],
 			    },
-			    "oid": "test/a:1",
+			    "oid": "test/a.qux:1",
 			    "timestamp": "4",
 			  },
 			  {
@@ -584,11 +589,11 @@ describe('creating patches from initial state', () => {
 			      "value": {
 			        "foo": {
 			          "@@type": "ref",
-			          "id": "test/a:0",
+			          "id": "test/a.foo:0",
 			        },
 			        "qux": {
 			          "@@type": "ref",
-			          "id": "test/a:1",
+			          "id": "test/a.qux:1",
 			        },
 			      },
 			    },

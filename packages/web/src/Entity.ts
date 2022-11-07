@@ -3,9 +3,11 @@ import {
 	assignOid,
 	cloneDeep,
 	createRef,
+	decomposeOid,
 	EventSubscriber,
 	isObject,
 	isObjectRef,
+	KeyPath,
 	maybeGetOid,
 	normalizeFirstLevel,
 	ObjectIdentifier,
@@ -85,6 +87,12 @@ export abstract class EntityBase<Snapshot> {
 
 	protected _deleted = false;
 
+	readonly oid: ObjectIdentifier;
+	protected readonly store: EntityStore;
+	protected readonly cacheEvents: CacheEvents;
+	protected readonly fieldSchema;
+	protected readonly keyPath;
+
 	protected events = new EventSubscriber<{
 		change: () => void;
 		delete: () => void;
@@ -103,13 +111,25 @@ export abstract class EntityBase<Snapshot> {
 		return this._deleted;
 	}
 
-	constructor(
-		readonly oid: ObjectIdentifier,
-		initial: Snapshot | undefined,
-		protected readonly store: EntityStore,
-		protected readonly cacheEvents: CacheEvents,
-		protected readonly fieldSchema: StorageFieldSchema | StorageFieldsSchema,
-	) {
+	constructor({
+		oid,
+		initial,
+		store,
+		cacheEvents,
+		fieldSchema,
+	}: {
+		oid: ObjectIdentifier;
+		initial: Snapshot | undefined;
+		store: EntityStore;
+		cacheEvents: CacheEvents;
+		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
+	}) {
+		this.oid = oid;
+		this.store = store;
+		this.cacheEvents = cacheEvents;
+		this.fieldSchema = fieldSchema;
+		this.keyPath = decomposeOid(oid).keyPath;
+
 		this[UPDATE](initial);
 	}
 
@@ -189,21 +209,21 @@ export abstract class EntityBase<Snapshot> {
 		key: any,
 	): EntityBase<any> => {
 		if (Array.isArray(value)) {
-			return new ListEntity(
+			return new ListEntity({
 				oid,
-				value,
-				this.store,
-				this.cacheEvents,
-				this.getChildFieldSchema(key),
-			);
+				initial: value,
+				store: this.store,
+				cacheEvents: this.cacheEvents,
+				fieldSchema: this.getChildFieldSchema(key),
+			});
 		} else {
-			return new ObjectEntity(
+			return new ObjectEntity({
 				oid,
-				value,
-				this.store,
-				this.cacheEvents,
-				this.getChildFieldSchema(key),
-			);
+				initial: value,
+				store: this.store,
+				cacheEvents: this.cacheEvents,
+				fieldSchema: this.getChildFieldSchema(key),
+			});
 		}
 	};
 
@@ -411,7 +431,12 @@ export class ListEntity<ItemInit>
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createSet(this.oid, index, value),
+			this.store.meta.patchCreator.createSet(
+				this.oid,
+				index,
+				value,
+				this.keyPath,
+			),
 		);
 	};
 	push = (value: ItemInit) => {
@@ -524,6 +549,7 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 				this.oid,
 				key as string | number,
 				value,
+				this.keyPath,
 			),
 		);
 	};
@@ -535,6 +561,7 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 			this.store.meta.patchCreator.createDiff(
 				this.value,
 				assignOid(value, this.oid),
+				this.keyPath,
 			),
 		);
 	};

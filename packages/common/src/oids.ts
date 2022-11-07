@@ -2,9 +2,44 @@ import { v4 } from 'uuid';
 import { ObjectRef } from './operation.js';
 import { isObject, assert } from './utils.js';
 
-export type ObjectIdentifier = string;
+/**
+ * OIDs
+ *
+ * OIDs are used to identify objects in the document. They also encode
+ * information about the object useful to identifying an object found
+ * on its own and associating it back to its parent.
+ *
+ * An OID is structured as such:
+ * <collection>/<root id>[/<key paths>]:<random>
+ *
+ * OIDs have a few characteristics:
+ * - They include the collection name of the parent document
+ * - They include the primary key of the parent document
+ * - They include the key path of the object within the document
+ * - They include a random sequence to identify different objects which
+ *   exist at the same key path
+ *
+ * Collection name and document key are used to link any isolated
+ * object back to its parent document.
+ *
+ * The key path is used for authorization - to associate the object
+ * (or an operation related to it by OID) with the field it inhabits
+ * to utilize authorization rules from that field in the schema.
+ *
+ * The random sequence allows the application to encode different
+ * identities for objects at the same position in a document for
+ * conflict resolution purposes
+ */
 
-const OID_KEY = '__@@oid_do_not_use';
+export type ObjectIdentifier = string;
+export type KeyPath = (string | number)[];
+
+const LEGACY_OID_KEY = '__@@oid_do_not_use';
+export const OID_KEY = '@@id';
+
+const KEY_PATH_SEPARATOR = '.';
+const COLLECTION_SEPARATOR = '/';
+const RANDOM_SEPARATOR = ':';
 
 export function getOid(obj: any) {
 	const oid = maybeGetOid(obj);
@@ -19,7 +54,7 @@ export function maybeGetOid(obj: any): ObjectIdentifier | undefined {
 	if (!isObject(obj)) {
 		return undefined;
 	}
-	return obj[OID_KEY];
+	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
 }
 
 export function assignOid(obj: any, oid: ObjectIdentifier) {
@@ -36,6 +71,7 @@ export function hasOid(obj: any) {
 }
 
 export function removeOid(obj: any) {
+	delete obj[LEGACY_OID_KEY];
 	delete obj[OID_KEY];
 	return obj;
 }
@@ -47,10 +83,11 @@ export function removeOid(obj: any) {
 export function ensureOid(
 	obj: any,
 	rootOid: ObjectIdentifier,
+	key: string | number,
 	createSubId?: () => string,
 ) {
 	if (!hasOid(obj)) {
-		const oid = createSubOid(rootOid, createSubId);
+		const oid = createSubOid(rootOid, key, createSubId);
 		assignOid(obj, oid);
 		return oid;
 	} else {
@@ -61,30 +98,37 @@ export function ensureOid(
 export function createOid(
 	collection: string,
 	documentId: string,
+	keyPath: KeyPath,
 	subId?: string,
 ) {
+	let oid = collection + COLLECTION_SEPARATOR + documentId;
 	if (subId) {
-		return `${collection}/${documentId}:${subId}`;
+		const keyPathItems = keyPath.map((k) => (typeof k === 'number' ? '#' : k));
+		oid += KEY_PATH_SEPARATOR + keyPathItems.join(KEY_PATH_SEPARATOR);
+		oid += RANDOM_SEPARATOR + subId;
 	}
-	return `${collection}/${documentId}`;
+	return oid;
 }
 
 export function createSubOid(
 	root: ObjectIdentifier,
+	key: string | number,
 	createSubId: () => string = createOidSubId,
 ) {
-	const { collection, id } = decomposeOid(root);
-	return createOid(collection, id, createSubId());
+	const { collection, id, keyPath } = decomposeOid(root);
+	return createOid(collection, id, [...keyPath, key], createSubId());
 }
 
 export function decomposeOid(oid: ObjectIdentifier): {
 	collection: string;
 	id: string;
 	subId?: string;
+	keyPath: KeyPath;
 } {
-	const [collection, documentId] = oid.split('/');
-	const [id, subId] = documentId.split(':');
-	return { collection, id, subId };
+	const [core, random] = oid.split(RANDOM_SEPARATOR);
+	const [collection, paths] = core.split('/');
+	const [id, ...keyPath] = paths.split(KEY_PATH_SEPARATOR);
+	return { collection, id, subId: random, keyPath };
 }
 
 export function assertAllLevelsHaveOids(obj: any, root?: any) {
@@ -111,16 +155,18 @@ export function assignOidsToAllSubObjects(
 ) {
 	const rootOid = getOid(obj);
 	if (Array.isArray(obj)) {
-		for (const item of obj) {
+		let item;
+		for (let i = 0; i < obj.length; i++) {
+			item = obj[i];
 			if (isObject(item)) {
-				ensureOid(item, rootOid, createSubId);
+				ensureOid(item, rootOid, i, createSubId);
 				assignOidsToAllSubObjects(item, createSubId);
 			}
 		}
 	} else if (isObject(obj)) {
 		for (const key of Object.keys(obj)) {
 			if (isObject(obj[key])) {
-				ensureOid(obj[key], rootOid, createSubId);
+				ensureOid(obj[key], rootOid, key, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
 		}
@@ -216,8 +262,10 @@ export function normalizeFirstLevel(obj: any) {
 }
 
 export function getOidRoot(oid: ObjectIdentifier) {
-	const [root] = oid.split(':');
-	return root;
+	const [collection, idAndPaths] = oid.split(RANDOM_SEPARATOR)[0].split('/');
+	const sepIdx = idAndPaths.indexOf(KEY_PATH_SEPARATOR);
+	const id = sepIdx !== -1 ? idAndPaths.substring(0, sepIdx) : idAndPaths;
+	return `${collection}/${id}`;
 }
 
 /**
@@ -226,7 +274,7 @@ export function getOidRoot(oid: ObjectIdentifier) {
  */
 export function getOidRange(oid: ObjectIdentifier) {
 	const root = getOidRoot(oid);
-	return [root, `${root}:\uffff`];
+	return [root, `${root}${RANDOM_SEPARATOR}\uffff`];
 }
 
 export function getRoots(oids: ObjectIdentifier[]) {

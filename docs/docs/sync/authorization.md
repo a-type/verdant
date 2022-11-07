@@ -1,95 +1,37 @@
 ---
-sidebar_position: 2
+sidebar_position: 7
 ---
 
-# Authorizing Sync
+# Authorization of shared data
 
-To connect to sync, you must create an auth endpoint. This can be done automatically on the same server you use for sync, or you can define a custom endpoint on a different server.
+Now that you're syncing data, you also have the possibility of granting shared access to that data, and even realtime collaboration.
 
-Your endpoint must determine a `userId` and `libraryId` for the connecting client and provide them to a `TokenProvider`, then return the created access token and the sync endpoint URL as JSON.
+As multiple users interact with data, you may have occasion to want to prevent certain users from doing certain things to certain objects. lo-fi allows this by configuring authorization options in the schema, and it enforces these constraints at both the client and server level. The goal of lo-fi authorization is to be as trustworthy and simple as traditional client/server authorization, but due to the 'closed' nature of how lo-fi data flows through sync, it is not as versatile as a system where you have full end-to-end control over the server code. I've tried to make it powerful enough for most cases.
 
-Below is an example of a basic auth endpoint which gets a session for the request (according to custom logic you should provide)
+You should not use authorization until you understand the contents of this page. Failure to do so could result in inconsistent outcomes or extreme performance impact.
 
-```ts
-import { Request, Response } from 'express';
-import { TokenProvider } from '@lo-fi/server';
+## Triggers
 
-const tokenProvider = new TokenProvider({
-	// this must be the exact same secret as the one you supplied to Server
-	secret: process.env.LOFI_SECRET!,
-});
+Authorization in lo-fi is determined per-object, based on the type of change made: create, update, or delete. Read authorization is not supported at object-level (all users with access to the library may read any data in it).
 
-async function getLoginSession(req: Request) {
-	// here you would, say, read a cookie value and retrieve
-	// a session from a database, or decode a JWT.
-}
+An authorization function assigned to one of these actions on a field will receive some context data and must return a boolean value to decide whether the user has permission to make the change.
 
-function lofiHandler(req: Request, res: Response) {
-	const session = await getLoginSession(req);
-	if (!session) {
-		return res.status(401).send('Please log in');
-	}
+The function receives:
 
-	// this is just one way to decide what library the user can
-	// sync to with this token. you might instead store
-	// the user's library in their session, or use their userId
-	// as a personal library ID. Library ID is up to you, but
-	// every user who is given access to the same library will
-	// be interacting with the same data!
-	const libraryId = req.params.libraryId;
+- `userId`: the ID of the user associated with the change
+- `replicaId`: the ID of the replica the user is making the change from
+- `value`: in cases of create or update, this will contain the value being assigned to the field.
+- `previousValue`: in cases of update or delete, this will be the previous value assigned to the field.
+- `root`: a reference to the root document. Traversals of the document can be made to do more advanced conditional authorization logic.
 
-	// TODO: before creating at token, if your library ID was determined
-	// by a user-supplied value (such as our request param above),
-	// you should probably authorize access for the client user.
+## When authorization happens
 
-	const token = tokenProvider.getToken({
-		userId: session.userId,
-		libraryId: session.planId,
-		// change this line to point to the correct host for your sync
-		// server. if you have multiple environments, this must take them
-		// into account.
-		syncEndpoint: `http://localhost:3000/lofi`,
-		// additional token options are available. see below.
-	});
+Coming from traditional systems, one tends to think of authorization as happening once, on the server, when the user submits a change. Perhaps on more robust apps it happens first on the client for quicker feedback, then on the server to guarantee safety.
 
-	res.status(200).json({
-		accessToken: token,
-	});
-}
-```
+However, in lo-fi, authorization happens _every time a change is re-reconciled with the overall data_. That includes when it is initially applied on the client, when it's applied on the server, when it's applied on remote clients, and then every other time that change is re-applied as part of conflict resolution! It could happen at any time. Notably, operations are re-applied if the history of an object must be re-computed because a new operation is inserted.
 
-This endpoint, wherever you choose to host it, will be supplied to the client to connect, authorize, and start syncing with your server.
+For this reason, authorization should be written for _speed_. Only synchronous functions are allowed, and only pure functions are valid. You should use the data provided above alone for your authorization, and make every effort to reduce computation.
 
-Although it may seem cumbersome to have a separate endpoint for auth and sync, this flexibility allows you to host your main app server separately from your lo-fi sync server, or even implement advanced architectures like spinning up a new server for each library.
+## What happens to unauthorized changes?
 
-## Additional token options
-
-More options can be specified to customize your token. These customizations can be very meaningful for client experience, so don't overlook this.
-
-- `role`: Provide your own role identifier for object-level authorization (TODO)
-- `type`: Specify a token type to change the client abilities and behavior in the syncing algorithm. See below.
-- `expiresIn`: Change how long the token is valid before a new one must be fetched. The client will automatically cache and refetch tokens based on expiry.
-
-### Token types
-
-Token type determines how a replica client behaves with respect to sync transport and consensus.
-
-#### Realtime vs. Push/Pull
-
-The `Realtime` token types allow live websocket subscription to changes.
-
-The `Push`/`Pull` token types forbid realtime socket subscription and restrict the client to HTTP requests for syncing.
-
-#### Passive
-
-`Passive` token types are second-class replicas with respect to consensus. The server and peers will not wait for these clients to acknowledge changes before compressing history. This means **offline passive replicas lose changes.** When a passive replica comes back online, any locally stored unapplied operations will be dropped. The flipside of this is that other peers don't need to wait for these replicas to come online and acknowledge operations to compress their history.
-
-To illustrate, imagine a blog app where the owner of the blog can publish posts, and followers can comment on those posts.
-
-All replicas controlled by the owner should have a non-`Passive` token type. That allows the owner to edit their posts offline with assurance that any of their devices will wait for all of their other devices to come online and acknowledge changes before history is compressed, which is key to conflict resolution if they draft things on multiple devices.
-
-However, the number of followers could be very high, and they may not visit the blog very frequently. We wouldn't want to wait for every past visitor to the site to sign off on every change before compacting it down. So we can give visitors a `Passive` token type, indicating we don't care if they get out of sync and have to reset on their next visit. In this example, that might mean that if a visitor tries to make a comment while offline, the comment could be lost, in theory (in practice, since no one else is editing your comment, it should not get 'left behind' and can merge in just fine).
-
-#### ReadOnly
-
-`ReadOnly` tokens are like `Passive` ones, but they also are denied the ability to submit any operations. They can only read the state, either `Realtime` or `Pull`.
+Changes can be re-applied to entirely different states depending on how conflict resolution merges in peer operations. So, instead of discarding a change as soon as it fails authorization criteria, lo-fi keeps it around but ignores it. If the operation is re-applied later, it will have another chance to be included if it passes authorization this time.

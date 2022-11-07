@@ -41,69 +41,71 @@ describe('normalizing an object', () => {
 				{
 					foo: {
 						'@@type': 'ref',
-						id: 'test/a:0',
+						id: 'test/a.foo:0',
 					},
 					qux: {
 						'@@type': 'ref',
-						id: 'test/a:2',
+						id: 'test/a.qux:2',
 					},
 				},
 				'test/a',
 			),
 		);
-		expect(result.get('test/a:0')).toEqual(
+		expect(result.get('test/a.foo:0')).toEqual(
 			assignOid(
 				{
 					bar: 1,
 					baz: {
 						'@@type': 'ref',
-						id: 'test/a:1',
+						id: 'test/a.foo.baz:1',
 					},
 				},
-				'test/a:0',
+				'test/a.foo:0',
 			),
 		);
-		expect(result.get('test/a:1')).toEqual(assignOid([2, 3], 'test/a:1'));
-		expect(result.get('test/a:2')).toEqual(
+		expect(result.get('test/a.foo.baz:1')).toEqual(
+			assignOid([2, 3], 'test/a.foo.baz:1'),
+		);
+		expect(result.get('test/a.qux:2')).toEqual(
 			assignOid(
 				[
 					{
 						'@@type': 'ref',
-						id: 'test/a:3',
+						id: 'test/a.qux.#:3',
 					},
 					{
 						'@@type': 'ref',
-						id: 'test/a:4',
+						id: 'test/a.qux.#:4',
 					},
 				],
-				'test/a:2',
+				'test/a.qux:2',
 			),
 		);
-		expect(result.get('test/a:3')).toEqual(
+		expect(result.get('test/a.qux.#:3')).toEqual(
 			assignOid(
 				{
 					corge: true,
 				},
-				'test/a:3',
+				'test/a.qux.#:3',
 			),
 		);
-		expect(result.get('test/a:4')).toEqual(
+		expect(result.get('test/a.qux.#:4')).toEqual(
 			assignOid(
 				{
 					grault: {
 						'@@type': 'ref',
-						id: 'test/a:5',
+						id: 'test/a.qux.#.grault:5',
 					},
 				},
-				'test/a:4',
+				'test/a.qux.#:4',
 			),
 		);
-		expect(result.get('test/a:5')).toEqual(
+		expect(result.get('test/a.qux.#.grault:5')).toEqual(
 			assignOid(
 				{
 					garply: 4,
 				},
-				'test/a:5',
+				'test/a.qux.#.grault:5',
 			),
 		);
 	});
@@ -139,43 +141,20 @@ describe('normalizing the first level of an object', () => {
 
 		expect(result.get('test/a')).toMatchInlineSnapshot(`
 			{
-			  "__@@oid_do_not_use": "test/a",
+			  "@@id": "test/a",
 			  "foo": {
 			    "@@type": "ref",
-			    "id": "test/a:0",
+			    "id": "test/a.foo:0",
 			  },
 			  "qux": {
 			    "@@type": "ref",
-			    "id": "test/a:2",
+			    "id": "test/a.qux:2",
 			  },
 			}
 		`);
-		expect(result.get('test/a:0')).toMatchInlineSnapshot(`
-			{
-			  "__@@oid_do_not_use": "test/a:0",
-			  "bar": 1,
-			  "baz": [
-			    2,
-			    3,
-			  ],
-			}
-		`);
+		expect(result.get('test/a:0')).toMatchInlineSnapshot('undefined');
 		expect(result.get('test/a:1')).toBeUndefined();
-		expect(result.get('test/a:2')).toMatchInlineSnapshot(`
-			[
-			  {
-			    "__@@oid_do_not_use": "test/a:3",
-			    "corge": true,
-			  },
-			  {
-			    "__@@oid_do_not_use": "test/a:4",
-			    "grault": {
-			      "__@@oid_do_not_use": "test/a:5",
-			      "garply": 4,
-			    },
-			  },
-			]
-		`);
+		expect(result.get('test/a:2')).toMatchInlineSnapshot('undefined');
 		expect(result.get('test/a:3')).toBeUndefined();
 		expect(result.get('test/a:4')).toBeUndefined();
 		expect(result.get('test/a:5')).toBeUndefined();
