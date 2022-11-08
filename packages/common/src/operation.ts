@@ -2,8 +2,10 @@ import {
 	assignOid,
 	assignOidsToAllSubObjects,
 	createRef,
+	decomposeOid,
 	ensureOid,
 	getOid,
+	KeyPath,
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
@@ -135,6 +137,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	from: T,
 	to: T,
 	getNow: () => string,
+	keyPath: KeyPath,
 	createSubId?: () => string,
 	patches: Operation[] = [],
 ): Operation[] {
@@ -156,7 +159,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				});
 			}
 		} else {
-			const valueOid = ensureOid(value, oid, createSubId);
+			const valueOid = ensureOid(value, oid, key, createSubId);
 			const oldValueOid = maybeGetOid(oldValue);
 
 			if (oldValue === undefined || oldValueOid !== valueOid) {
@@ -187,7 +190,14 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 			} else {
 				// third case: OIDs are the same, meaning the identity is the same,
 				// and we must diff the objects
-				diffToPatches(oldValue, value, getNow, createSubId, patches);
+				diffToPatches(
+					oldValue,
+					value,
+					getNow,
+					[...keyPath, key],
+					createSubId,
+					patches,
+				);
 			}
 		}
 	}

@@ -105,22 +105,22 @@ export class EntityStore extends EventSubscriber<{
 			return existing;
 		}
 
-		const { collection } = decomposeOid(oid);
+		const { collection, keyPath } = decomposeOid(oid);
 		this.stripIndexes(collection, initial);
 
-		const entity: ObjectEntity<any> = new ObjectEntity(
+		const entity: ObjectEntity<any> = new ObjectEntity({
 			oid,
 			initial,
-			this,
-			{
+			store: this,
+			cacheEvents: {
 				onSubscribed: () => this.onSubscribed(entity),
 				onAllUnsubscribed: () => this.onAllUnsubscribed(entity),
 			},
-			{
+			fieldSchema: {
 				type: 'object',
 				properties: this.schema.collections[collection].fields as any,
 			},
-		);
+		});
 
 		this.cache.set(oid, entity);
 		// if nothing subscribes, it will be cleaned up.
@@ -228,11 +228,12 @@ export class EntityStore extends EventSubscriber<{
 			} else {
 				const copy = cloneDeep(view);
 				const applied = await applyPatches(copy, patches);
+				const { keyPath } = decomposeOid(oid);
 				let inverse: Operation[] = [];
 				if (!applied) {
 					inverse = initialToPatches(view, oid, () => this.meta.now);
 				} else {
-					inverse = diffToPatches(applied, view, () => this.meta.now);
+					inverse = diffToPatches(applied, view, () => this.meta.now, keyPath);
 				}
 				inverseOps.push(...inverse);
 			}

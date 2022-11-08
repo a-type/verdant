@@ -10,6 +10,9 @@
 			"outputs": [],
 			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
 		},
+		"test": {
+			"cache": false
+		},
 		"dev": {
 			"cache": false
 		},

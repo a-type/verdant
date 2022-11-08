@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Authorizing Sync
+# Authenticating Sync
 
 To connect to sync, you must create an auth endpoint. This can be done automatically on the same server you use for sync, or you can define a custom endpoint on a different server.
 
