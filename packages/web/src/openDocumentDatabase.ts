@@ -93,6 +93,7 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 											original,
 											newValue,
 											getMigrationNow,
+											[],
 										);
 										if (patches.length > 0) {
 											meta.insertLocalOperation(patches);
