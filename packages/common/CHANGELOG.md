@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.1.0
+
+### Minor Changes
+
+- f3bd34f: use more descriptive oids
+
 ## 1.0.3
 
 ### Patch Changes
