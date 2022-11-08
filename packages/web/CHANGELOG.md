@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 1.1.0
+
+### Minor Changes
+
+- f3bd34f: use more descriptive oids
+
+### Patch Changes
+
+- Updated dependencies [f3bd34f]
+  - @lo-fi/common@1.1.0
+
 ## 1.0.7
 
 ### Patch Changes
