@@ -13,15 +13,20 @@ export type RangeCollectionIndexFilter = {
 	order?: 'asc' | 'desc';
 };
 
-export type CollectionIndexFilter =
-	| MatchCollectionIndexFilter
-	| RangeCollectionIndexFilter
-	| CollectionCompoundIndexFilter;
-
 export type CollectionCompoundIndexFilter = {
 	where: string;
 	match: Record<string, any>;
 	order: 'asc' | 'desc';
 };
 
+export type SortIndexFilter = {
+	where: string;
+	order: 'asc' | 'desc';
+};
+
+export type CollectionIndexFilter =
+	| MatchCollectionIndexFilter
+	| RangeCollectionIndexFilter
+	| CollectionCompoundIndexFilter
+	| SortIndexFilter;
 export type CollectionFilter = CollectionIndexFilter;

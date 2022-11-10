@@ -6,8 +6,10 @@ import {
 	createUpperBoundIndexValue,
 	isMatchIndexFilter,
 	isRangeIndexFilter,
+	isSortIndexFilter,
 	MatchCollectionIndexFilter,
 	RangeCollectionIndexFilter,
+	SortIndexFilter,
 	StorageSchema,
 } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
@@ -72,6 +74,10 @@ export class QueryMaker {
 		return IDBKeyRange.only(filter.equals as string | number);
 	};
 
+	private sortIndexToIdbKeyRange = (filter: SortIndexFilter) => {
+		return undefined;
+	};
+
 	private compoundIndexToIdbKeyRange = (
 		collection: string,
 		filter: CollectionCompoundIndexFilter,
@@ -113,6 +119,7 @@ export class QueryMaker {
 		if (!index) return undefined;
 		if (isRangeIndexFilter(index)) return this.rangeIndexToIdbKeyRange(index);
 		if (isMatchIndexFilter(index)) return this.matchIndexToIdbKeyRange(index);
+		if (isSortIndexFilter(index)) return this.sortIndexToIdbKeyRange(index);
 		return this.compoundIndexToIdbKeyRange(collection, index);
 	};
 }

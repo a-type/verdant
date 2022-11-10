@@ -34,7 +34,7 @@ import { isObject, assert } from './utils.js';
 export type ObjectIdentifier = string;
 export type KeyPath = (string | number)[];
 
-const LEGACY_OID_KEY = '__@@oid_do_not_use';
+export const LEGACY_OID_KEY = '__@@oid_do_not_use';
 export const OID_KEY = '@@id';
 
 const KEY_PATH_SEPARATOR = '.';
@@ -74,6 +74,10 @@ export function removeOid(obj: any) {
 	delete obj[LEGACY_OID_KEY];
 	delete obj[OID_KEY];
 	return obj;
+}
+
+export function isOidKey(key: string) {
+	return key === OID_KEY || key === LEGACY_OID_KEY;
 }
 
 /**

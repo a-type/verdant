@@ -5,10 +5,12 @@ import {
 	decomposeOid,
 	ensureOid,
 	getOid,
+	isOidKey,
 	KeyPath,
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
+	OID_KEY,
 	removeOid,
 } from './oids.js';
 import { isObject, assert } from './utils.js';
@@ -232,6 +234,8 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		for (const [key, value] of Object.entries(to)) {
 			oldKeys.delete(key);
 
+			if (isOidKey(key)) continue;
+
 			const oldValue = from[key];
 
 			diffItems(key, value, oldValue);
@@ -239,6 +243,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 
 		// this set now only contains keys which were not in the new object
 		for (const key of oldKeys) {
+			if (isOidKey(key)) continue;
 			// push the delete for the property
 			patches.push({
 				oid,
@@ -319,7 +324,7 @@ export function applyPatch<T extends NormalizedObject>(
 ): T | undefined {
 	// deleted objects are represented by undefined
 	// and remain deleted unless re-initialized
-	if (base === undefined && patch.op !== 'initialize') {
+	if ((base === undefined || base === null) && patch.op !== 'initialize') {
 		return base;
 	}
 	// ditch typing internally.
