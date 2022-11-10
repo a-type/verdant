@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.1.2
+
+### Patch Changes
+
+- 16aeb5b: fix bug crashing hooks if used twice
+
 ## 1.1.1
 
 ### Patch Changes

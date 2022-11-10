@@ -1,5 +1,16 @@
 # @lo-fi/react
 
+## 2.1.0
+
+### Minor Changes
+
+- 16aeb5b: fix bug crashing hooks if used twice
+
+### Patch Changes
+
+- Updated dependencies [16aeb5b]
+  - @lo-fi/web@1.1.2
+
 ## 2.0.1
 
 ### Patch Changes
