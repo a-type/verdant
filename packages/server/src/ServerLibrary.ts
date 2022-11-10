@@ -269,7 +269,8 @@ export class ServerLibrary {
 			// if no operation is available to take a timestamp from,
 			// use the less accurate message timestamp...
 			// TODO: why not just always do this?
-			this.updateAcknowledged(message.replicaId, message.timestamp, info);
+			// this.updateAcknowledged(message.replicaId, message.timestamp, info);
+			// FIXME: this might not work with pull-based sync
 		}
 	};
 
