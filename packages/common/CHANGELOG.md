@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.1.1
+
+### Patch Changes
+
+- 03b40f3: Add sort filter, fix bugs with diff and filters
+
 ## 1.1.0
 
 ### Minor Changes
