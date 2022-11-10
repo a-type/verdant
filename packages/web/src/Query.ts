@@ -1,3 +1,4 @@
+import { generateId } from '@lo-fi/common';
 import { ObjectEntity } from './Entity.js';
 
 export const UPDATE = '@@update';
@@ -10,6 +11,8 @@ export class Query<T extends (ObjectEntity<any> | null) | ObjectEntity<any>[]> {
 
 	private _internalUnsubscribes: (() => void)[] = [];
 
+	readonly id: string;
+
 	constructor(
 		public readonly key: string,
 		public readonly collection: string,
@@ -17,6 +20,7 @@ export class Query<T extends (ObjectEntity<any> | null) | ObjectEntity<any>[]> {
 		private readonly onActivate: (query: Query<T>) => void,
 		private readonly onDispose: (query: Query<T>) => void,
 	) {
+		this.id = key + '_' + generateId();
 		this.resolved = this.execute();
 	}
 

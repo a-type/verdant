@@ -70,12 +70,14 @@ type GeneratedHooks<
 }>;
 
 function useLiveQuery(liveQuery: Query<any>) {
-	suspend(() => liveQuery.resolved, [liveQuery.key]);
+	suspend(() => liveQuery.resolved, [liveQuery]);
 	return useSyncExternalStore(
 		(callback) => {
 			return liveQuery.subscribe(callback);
 		},
-		() => liveQuery.current,
+		() => {
+			return liveQuery.current;
+		},
 	);
 }
 
@@ -217,7 +219,10 @@ export function createHooks<
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
-			const liveQuery = (storage as any).findAll(name, config.index);
+			const liveQuery = useMemo(
+				() => (storage as any).findAll(name, config.index),
+				[config?.index],
+			);
 			const data = useLiveQuery(liveQuery);
 			return data;
 		};

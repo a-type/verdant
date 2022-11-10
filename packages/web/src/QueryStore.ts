@@ -16,7 +16,7 @@ export class QueryStore {
 			.objectStore(collection);
 	};
 
-	private getQueryKey = ({
+	getQueryKey = ({
 		range,
 		...rest
 	}: {
