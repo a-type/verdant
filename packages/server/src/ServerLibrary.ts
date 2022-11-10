@@ -261,17 +261,20 @@ export class ServerLibrary {
 			message.baselines,
 		);
 
+		// FIXME: this feels like it's related to some sync problems with not
+		// informing replicas of operations. since it's acking things but the
+		// client hasn't actually seen anything here, only submitted its own ops
+
 		// update the client's ackedLogicalTime
-		const lastOperation = message.operations[message.operations.length - 1];
-		if (lastOperation) {
-			this.updateAcknowledged(message.replicaId, lastOperation.timestamp, info);
-		} else {
-			// if no operation is available to take a timestamp from,
-			// use the less accurate message timestamp...
-			// TODO: why not just always do this?
-			// this.updateAcknowledged(message.replicaId, message.timestamp, info);
-			// FIXME: this might not work with pull-based sync
-		}
+		// const lastOperation = message.operations[message.operations.length - 1];
+		// if (lastOperation) {
+		// 	this.updateAcknowledged(message.replicaId, lastOperation.timestamp, info);
+		// } else {
+		// 	// if no operation is available to take a timestamp from,
+		// 	// use the less accurate message timestamp...
+		// 	// TODO: why not just always do this?
+		// 	// this.updateAcknowledged(message.replicaId, message.timestamp, info);
+		// }
 	};
 
 	private updateAcknowledged = (
