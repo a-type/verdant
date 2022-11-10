@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.0.7
+
+### Patch Changes
+
+- 139c2fe: bugfix attempt for pull sync
+
 ## 1.0.6
 
 ### Patch Changes
