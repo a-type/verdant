@@ -1,14 +1,12 @@
 export type StorageStringFieldSchema = {
 	type: 'string';
 	indexed?: boolean;
-	unique?: boolean;
 	nullable?: boolean;
 	default?: string | (() => string);
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';
 	indexed?: boolean;
-	unique?: boolean;
 	nullable?: boolean;
 	default?: number | (() => number);
 };

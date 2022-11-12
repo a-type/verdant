@@ -61,7 +61,6 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 					// apply new indexes
 					for (const newIndex of migration.addedIndexes[collection] || []) {
 						store.createIndex(newIndex.name, newIndex.name, {
-							unique: newIndex.unique,
 							multiEntry: newIndex.multiEntry,
 						});
 					}

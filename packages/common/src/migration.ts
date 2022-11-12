@@ -2,6 +2,7 @@ import {
 	stableStringify,
 	StorageCollectionSchema,
 	StorageSchema,
+	addFieldDefaults,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
@@ -116,6 +117,7 @@ export interface MigrationTools<
 > {
 	migrate: MigrationRunner<Old, New>;
 	identity: <T>(val: T) => T;
+	withDefaults: (collectionName: string, value: any) => any;
 	info: {
 		changedCollections: string[];
 		addedCollections: string[];
@@ -182,6 +184,9 @@ export function migrate<
 					migratedCollections.push(collection);
 				},
 				identity: (val: any) => val,
+				withDefaults: (collectionName: string, val: any) => {
+					return addFieldDefaults(newSchema.collections[collectionName], val);
+				},
 				info: {
 					changedCollections,
 					addedCollections,
@@ -223,7 +228,6 @@ export function migrate<
 
 export interface MigrationIndexDescription {
 	name: string;
-	unique: boolean;
 	multiEntry: boolean;
 }
 
@@ -254,7 +258,6 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 		.filter((key) => collection.fields[key].indexed)
 		.map((key) => ({
 			name: key,
-			unique: collection.fields[key].unique,
 			multiEntry: collection.fields[key].type === 'array',
 		}));
 
@@ -262,12 +265,10 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 		...fields,
 		...Object.keys(collection.synthetics || {}).map((key) => ({
 			name: key,
-			unique: collection.synthetics[key].unique,
 			multiEntry: collection.synthetics[key].type === 'array',
 		})),
 		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
-			unique: collection.compounds[key].unique,
 			multiEntry: collection.compounds[key].of.some(
 				(fieldName: string) =>
 					(collection.fields[fieldName] || collection.synthetics[fieldName])
@@ -283,10 +284,10 @@ export function createDefaultMigration(
 	return migrate(
 		{ version: 0, collections: {} } as StorageSchema<any>,
 		newSchema,
-		async ({ migrate, identity, info }) => {
+		async ({ migrate, withDefaults, info }) => {
 			console.debug('Running default migration for', info.changedCollections);
 			for (const collection of info.changedCollections) {
-				await migrate(collection, identity);
+				await migrate(collection, (old) => withDefaults(collection, old));
 			}
 		},
 	);
