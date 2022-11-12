@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.6
+
+### Patch Changes
+
+- d7f2561: hotfix: don't delete indexed fields, only synthetics
+
 ## 1.1.5
 
 ### Patch Changes
