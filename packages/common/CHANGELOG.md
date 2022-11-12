@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.1.2
+
+### Patch Changes
+
+- 617a84c: Add integration tests for migration and fix several bugs
+
 ## 1.1.1
 
 ### Patch Changes
