@@ -86,7 +86,7 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 								const cursor = cursorReq.result;
 								if (cursor) {
 									const original = cloneDeep(cursor.value);
-									// @ts-expect-error - excessive type resolution
+									// @ts-ignore - excessive type resolution
 									const newValue = strategy(cursor.value);
 									if (newValue) {
 										// the migration has altered the shape of our document. we need
