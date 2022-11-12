@@ -1,3 +1,9 @@
+import {
+	StorageCollectionSchema,
+	StorageSyntheticIndexSchema,
+	CollectionCompoundIndex,
+} from './index.js';
+
 // unlikely to be used unicode character
 export const COMPOUND_INDEX_SEPARATOR = '\uFFFFFE';
 // 1 lower than separator
@@ -88,4 +94,37 @@ function expandArrayIndex(fields: IndexableFieldValue[]): string[] {
 			}),
 		),
 	);
+}
+
+export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
+	const result: Record<string, any> = {};
+	for (const [name, property] of Object.entries(schema.synthetics || {})) {
+		result[name] = (property as StorageSyntheticIndexSchema<any>).compute(obj);
+	}
+	return result;
+}
+
+export function computeCompoundIndices(
+	schema: StorageCollectionSchema<any, any, any>,
+	doc: any,
+): any {
+	return Object.entries(schema.compounds || {}).reduce<
+		Record<string, CompoundIndexValue>
+	>((acc, [indexKey, index]) => {
+		acc[indexKey] = createCompoundIndexValue(
+			...(index as CollectionCompoundIndex<any, any>).of.map(
+				(key) => doc[key] as string | number,
+			),
+		);
+		return acc;
+	}, {} as Record<string, CompoundIndexValue>);
+}
+
+export function assignIndexValues(
+	schema: StorageCollectionSchema<any, any, any>,
+	doc: any,
+) {
+	Object.assign(doc, computeSynthetics(schema, doc));
+	Object.assign(doc, computeCompoundIndices(schema, doc));
+	return doc;
 }

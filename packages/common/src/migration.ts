@@ -2,6 +2,7 @@ import {
 	stableStringify,
 	StorageCollectionSchema,
 	StorageSchema,
+	StorageDocument,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
@@ -13,7 +14,7 @@ export interface PreservedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 	New extends StorageCollectionSchema<any, any, any>,
 > {
-	(old: Old): New;
+	(old: StorageDocument<Old>): StorageDocument<New>;
 }
 
 type MigrationStrategy<
@@ -95,10 +96,10 @@ type StrategyFor<
 	Key extends string,
 	Old extends StorageSchema<any>,
 	New extends StorageSchema<any>,
-> = Key extends New['collections']
+> = Key extends keyof New['collections']
 	? PreservedCollectionMigrationStrategy<
 			Old['collections'][Key],
-			New['collections']['key']
+			New['collections'][Key]
 	  >
 	: DroppedCollectionMigrationStrategy<Old['collections'][Key]>;
 
@@ -205,7 +206,7 @@ export function migrate<
 						.flatMap((i) => i)
 						.join(', ')}
           - Removed indexes: ${Object.keys(removedIndexes)
-						.map((col) => addedIndexes[col].map((i) => `${col}.${i.name}`))
+						.map((col) => removedIndexes[col].map((i) => `${col}.${i.name}`))
 						.flatMap((i) => i)
 						.join(', ')}
       `);
@@ -278,14 +279,22 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 }
 
 export function createDefaultMigration(
-	newSchema: StorageSchema<any>,
+	schema: StorageSchema<any>,
+	newSchema?: StorageSchema<any>,
 ): Migration {
+	let oldSchema = newSchema
+		? schema
+		: {
+				version: 0,
+				collections: {},
+		  };
 	return migrate(
-		{ version: 0, collections: {} } as StorageSchema<any>,
-		newSchema,
+		oldSchema,
+		newSchema || schema,
 		async ({ migrate, identity, info }) => {
 			console.debug('Running default migration for', info.changedCollections);
 			for (const collection of info.changedCollections) {
+				// @ts-ignore - indefinite type expansion
 				await migrate(collection, identity);
 			}
 		},

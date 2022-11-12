@@ -93,11 +93,15 @@ it('can sync multiple clients even if they go offline', async () => {
 
 		const matchingCategory = await matchingCategoryQuery.resolved;
 		expect(matchingCategory).toBeTruthy();
-		const b_produceItems = await client.items.findAll({
+		const matchingItemsQuery = client.items.findAll({
 			where: 'categoryId',
 			equals: matchingCategory!.get('id'),
-		}).resolved;
-		expect(b_produceItems.length).toBe(itemCount);
+		});
+		await waitForQueryResult(
+			matchingItemsQuery,
+			(r) => r?.length === itemCount,
+		);
+		expect((await matchingItemsQuery.resolved).length).toBe(itemCount);
 	}
 
 	console.info('🔺--- Checking produce on B ---');

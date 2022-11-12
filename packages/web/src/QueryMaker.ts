@@ -2,6 +2,7 @@ import {
 	assert,
 	CollectionCompoundIndexFilter,
 	CollectionFilter,
+	createCompoundIndexValue,
 	createLowerBoundIndexValue,
 	createUpperBoundIndexValue,
 	isMatchIndexFilter,
@@ -106,12 +107,15 @@ export class QueryMaker {
 				filter.match[key as keyof typeof filter.match] as string | number,
 		);
 
+		// special case: all match fields are specified - we don't need a range
+		// query, just a single key query
+		if (matchedKeys.length === indexDefinition.of.length) {
+			return IDBKeyRange.only(createCompoundIndexValue(...matchedValues));
+		}
+
 		// create our bounds for the matched values
 		const lower = createLowerBoundIndexValue(...matchedValues);
 		const upper = createUpperBoundIndexValue(...matchedValues);
-		if (lower === upper) {
-			return IDBKeyRange.only(lower);
-		}
 		return IDBKeyRange.bound(lower, upper);
 	};
 
