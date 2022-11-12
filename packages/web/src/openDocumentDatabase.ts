@@ -108,7 +108,9 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 									for (const removedIndex of migration.removedIndexes[
 										collection
 									] || []) {
-										delete (newValue as any)[removedIndex.name];
+										if (removedIndex.compound || removedIndex.synthetic) {
+											delete (newValue as any)[removedIndex.name];
+										}
 									}
 									cursor.update(newValue);
 									cursor.continue();

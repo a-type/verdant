@@ -23,7 +23,8 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
-		"test": "vitest"
+		"test": "vitest",
+		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",

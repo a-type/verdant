@@ -22,6 +22,9 @@
 		},
 		"preview": {
 			"cache": false
+		},
+		"link": {
+			"cache": false
 		}
 	}
 }

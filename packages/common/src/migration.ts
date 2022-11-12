@@ -226,6 +226,8 @@ export interface MigrationIndexDescription {
 	name: string;
 	unique: boolean;
 	multiEntry: boolean;
+	synthetic: boolean;
+	compound: boolean;
 }
 
 export interface Migration {
@@ -249,7 +251,7 @@ export function migrationRange(from: number, to: number) {
 
 function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 	collection: Coll | undefined,
-) {
+): MigrationIndexDescription[] {
 	if (!collection) return [];
 	const fields = Object.keys(collection.fields)
 		.filter((key) => collection.fields[key].indexed)
@@ -257,6 +259,8 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 			name: key,
 			unique: collection.fields[key].unique,
 			multiEntry: collection.fields[key].type === 'array',
+			synthetic: false,
+			compound: false,
 		}));
 
 	return [
@@ -265,6 +269,8 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 			name: key,
 			unique: collection.synthetics[key].unique,
 			multiEntry: collection.synthetics[key].type === 'array',
+			synthetic: true,
+			compound: false,
 		})),
 		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
@@ -274,6 +280,8 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 					(collection.fields[fieldName] || collection.synthetics[fieldName])
 						.type === 'array',
 			),
+			synthetic: false,
+			compound: true,
 		})),
 	];
 }

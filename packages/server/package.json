@@ -22,7 +22,8 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-		"prepublish": "pnpm run build"
+		"prepublish": "pnpm run build",
+		"link": "pnpm link --global"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
