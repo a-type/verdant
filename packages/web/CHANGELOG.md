@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.1.3
+
+### Patch Changes
+
+- 617a84c: Add integration tests for migration and fix several bugs
+- Updated dependencies [617a84c]
+  - @lo-fi/common@1.1.2
+
 ## 1.1.2
 
 ### Patch Changes

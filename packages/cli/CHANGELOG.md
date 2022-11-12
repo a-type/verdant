@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.1.5
+
+### Patch Changes
+
+- 617a84c: Add integration tests for migration and fix several bugs
+
 ## 1.1.4
 
 ### Patch Changes
