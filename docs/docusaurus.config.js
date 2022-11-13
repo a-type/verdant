@@ -69,7 +69,7 @@ const config = {
 						type: 'doc',
 						docId: 'intro',
 						position: 'left',
-						label: 'Get Started',
+						label: 'Docs',
 					},
 					{
 						href: 'https://github.com/a-type/lo-fi',
@@ -85,7 +85,7 @@ const config = {
 						title: 'Docs',
 						items: [
 							{
-								label: 'Get Started',
+								label: 'Docs',
 								to: '/docs/intro',
 							},
 						],

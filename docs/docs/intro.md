@@ -10,11 +10,12 @@ An IndexedDB-powered database and data sync solution for lightweight, local-firs
 - One small, generic syncing server is all you need
 - Schema-based data migrations that can handle offline clients
 - Bring your existing authentication
-- Realtime multiplayer with (basic) conflict resolution and presence
+- Realtime multiplayer with conflict resolution and presence
+- Multi-transport syncing with seamless upgrade to and from websockets
 - Typescript validation based on your schema
 - Advanced index and querying tools built in (advanced for IndexedDB, anyway - we're not talking SQL)
 - Reactive data queries
-- Automatic history compaction
+- Automatic history compaction for efficient client storage usage
 
 ## Early software
 
