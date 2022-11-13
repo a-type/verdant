@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.1.5
+
+### Patch Changes
+
+- 0e7299e: Remove unique field option. Add default values during default migrations.
+- Updated dependencies [0e7299e]
+  - @lo-fi/common@1.1.4
+
 ## 1.1.4
 
 ### Patch Changes
