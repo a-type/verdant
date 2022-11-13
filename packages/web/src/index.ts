@@ -11,7 +11,12 @@ export {
 	createDefaultMigration,
 	migrate,
 } from '@lo-fi/common';
-export type { StorageDocument } from '@lo-fi/common';
+export type {
+	StorageDocument,
+	StorageSchema,
+	StorageCollectionSchema,
+	Migration,
+} from '@lo-fi/common';
 
 export interface Presence {}
 

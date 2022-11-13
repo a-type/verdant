@@ -1,5 +1,17 @@
 # @lo-fi/common
 
+## 1.1.3
+
+### Patch Changes
+
+- d7f2561: hotfix: don't delete indexed fields, only synthetics
+
+## 1.1.2
+
+### Patch Changes
+
+- 617a84c: Add integration tests for migration and fix several bugs
+
 ## 1.1.1
 
 ### Patch Changes

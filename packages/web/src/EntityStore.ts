@@ -17,6 +17,7 @@ import {
 	diffToPatches,
 	cloneDeep,
 	initialToPatches,
+	assignIndexValues,
 } from '@lo-fi/common';
 import {
 	deleteEntity,
@@ -322,14 +323,7 @@ export class EntityStore extends EventSubscriber<{
 			const { collection, id } = decomposeOid(oid);
 			const stored = { ...view };
 			// apply synthetic and compound index values before storing
-			Object.assign(
-				stored,
-				computeSynthetics(this.schema.collections[collection], stored),
-			);
-			Object.assign(
-				stored,
-				computeCompoundIndices(this.schema.collections[collection], stored),
-			);
+			assignIndexValues(this.schema.collections[collection], stored);
 
 			const tx = this.db.transaction(collection, 'readwrite');
 			const store = tx.objectStore(collection);

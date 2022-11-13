@@ -1,5 +1,20 @@
 # @lo-fi/server
 
+## 1.0.9
+
+### Patch Changes
+
+- d7f2561: hotfix: don't delete indexed fields, only synthetics
+- Updated dependencies [d7f2561]
+  - @lo-fi/common@1.1.3
+
+## 1.0.8
+
+### Patch Changes
+
+- Updated dependencies [617a84c]
+  - @lo-fi/common@1.1.2
+
 ## 1.0.7
 
 ### Patch Changes

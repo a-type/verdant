@@ -1,5 +1,22 @@
 # @lo-fi/react
 
+## 2.1.2
+
+### Patch Changes
+
+- d7f2561: hotfix: don't delete indexed fields, only synthetics
+- Updated dependencies [d7f2561]
+  - @lo-fi/common@1.1.3
+  - @lo-fi/web@1.1.4
+
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [617a84c]
+  - @lo-fi/common@1.1.2
+  - @lo-fi/web@1.1.3
+
 ## 2.1.0
 
 ### Minor Changes

@@ -4,6 +4,7 @@ import {
 	cloneDeep,
 	migrationRange,
 	diffToPatches,
+	assignIndexValues,
 } from '@lo-fi/common';
 import { Metadata } from './metadata/Metadata.js';
 
@@ -37,7 +38,6 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 
 			// migrations
 			const toRunVersions = migrationRange(event.oldVersion, version);
-			console.log(event.oldVersion, version, toRunVersions);
 			const toRun = toRunVersions.map((ver) =>
 				migrations.find((m) => m.version === ver),
 			);
@@ -74,6 +74,8 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 				await migration.migrate({
 					migrate: (collection, strategy) => {
 						return new Promise((resolve, reject) => {
+							const collectionSchema =
+								migration.newSchema.collections[collection];
 							const store = transaction.objectStore(collection);
 							const cursorReq = store.openCursor();
 							function getMigrationNow() {
@@ -83,6 +85,7 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 								const cursor = cursorReq.result;
 								if (cursor) {
 									const original = cloneDeep(cursor.value);
+									// @ts-ignore - excessive type resolution
 									const newValue = strategy(cursor.value);
 									if (newValue) {
 										// the migration has altered the shape of our document. we need
@@ -98,6 +101,17 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 											meta.insertLocalOperation(patches);
 										}
 									}
+									// apply indexes after changes
+									assignIndexValues(collectionSchema, newValue);
+									// remove any removed indexes
+									for (const removedIndex of migration.removedIndexes[
+										collection
+									] || []) {
+										if (removedIndex.compound || removedIndex.synthetic) {
+											delete (newValue as any)[removedIndex.name];
+										}
+									}
+									cursor.update(newValue);
 									cursor.continue();
 								} else {
 									resolve();

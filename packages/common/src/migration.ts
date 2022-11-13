@@ -3,6 +3,7 @@ import {
 	StorageCollectionSchema,
 	StorageSchema,
 	addFieldDefaults,
+	StorageDocument,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
@@ -14,7 +15,7 @@ export interface PreservedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 	New extends StorageCollectionSchema<any, any, any>,
 > {
-	(old: Old): New;
+	(old: StorageDocument<Old>): StorageDocument<New>;
 }
 
 type MigrationStrategy<
@@ -96,10 +97,10 @@ type StrategyFor<
 	Key extends string,
 	Old extends StorageSchema<any>,
 	New extends StorageSchema<any>,
-> = Key extends New['collections']
+> = Key extends keyof New['collections']
 	? PreservedCollectionMigrationStrategy<
 			Old['collections'][Key],
-			New['collections']['key']
+			New['collections'][Key]
 	  >
 	: DroppedCollectionMigrationStrategy<Old['collections'][Key]>;
 
@@ -210,7 +211,7 @@ export function migrate<
 						.flatMap((i) => i)
 						.join(', ')}
           - Removed indexes: ${Object.keys(removedIndexes)
-						.map((col) => addedIndexes[col].map((i) => `${col}.${i.name}`))
+						.map((col) => removedIndexes[col].map((i) => `${col}.${i.name}`))
 						.flatMap((i) => i)
 						.join(', ')}
       `);
@@ -229,6 +230,8 @@ export function migrate<
 export interface MigrationIndexDescription {
 	name: string;
 	multiEntry: boolean;
+	synthetic: boolean;
+	compound: boolean;
 }
 
 export interface Migration {
@@ -252,13 +255,15 @@ export function migrationRange(from: number, to: number) {
 
 function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 	collection: Coll | undefined,
-) {
+): MigrationIndexDescription[] {
 	if (!collection) return [];
 	const fields = Object.keys(collection.fields)
 		.filter((key) => collection.fields[key].indexed)
 		.map((key) => ({
 			name: key,
 			multiEntry: collection.fields[key].type === 'array',
+			synthetic: false,
+			compound: false,
 		}));
 
 	return [
@@ -266,6 +271,8 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 		...Object.keys(collection.synthetics || {}).map((key) => ({
 			name: key,
 			multiEntry: collection.synthetics[key].type === 'array',
+			synthetic: true,
+			compound: false,
 		})),
 		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
@@ -274,19 +281,29 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 					(collection.fields[fieldName] || collection.synthetics[fieldName])
 						.type === 'array',
 			),
+			synthetic: false,
+			compound: true,
 		})),
 	];
 }
 
 export function createDefaultMigration(
-	newSchema: StorageSchema<any>,
+	schema: StorageSchema<any>,
+	newSchema?: StorageSchema<any>,
 ): Migration {
+	let oldSchema = newSchema
+		? schema
+		: {
+				version: 0,
+				collections: {},
+		  };
 	return migrate(
-		{ version: 0, collections: {} } as StorageSchema<any>,
-		newSchema,
+		oldSchema,
+		newSchema || schema,
 		async ({ migrate, withDefaults, info }) => {
 			console.debug('Running default migration for', info.changedCollections);
 			for (const collection of info.changedCollections) {
+				// @ts-ignore indefinite type resolution
 				await migrate(collection, (old) => withDefaults(collection, old));
 			}
 		},

@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/web",
-	"version": "1.1.2",
+	"version": "1.1.4",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -24,7 +24,8 @@
 		"test": "vitest",
 		"ci:test": "vitest run",
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-		"prepublish": "pnpm run build"
+		"prepublish": "pnpm run build",
+		"link": "pnpm link --global"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
