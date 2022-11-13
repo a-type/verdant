@@ -7,13 +7,11 @@ export const todo = collection({
 		id: {
 			type: 'string',
 			indexed: true,
-			unique: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		content: {
 			type: 'string',
 			indexed: false,
-			unique: false,
 		},
 		done: {
 			type: 'boolean',
@@ -49,7 +47,6 @@ export const todo = collection({
 		example: {
 			type: 'string',
 			compute: (doc) => doc.content,
-			unique: false,
 		},
 	},
 	compounds: {
@@ -70,7 +67,6 @@ export const person = collection({
 		id: {
 			type: 'string',
 			indexed: true,
-			unique: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		name: {

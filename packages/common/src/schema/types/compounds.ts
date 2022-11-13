@@ -16,7 +16,6 @@ export type CollectionCompoundIndex<
 > = {
 	// object fields cannot be compound index inputs
 	of: StoragePropertyName<OmitObjectFields<Fields>, Synthetics>[];
-	unique?: boolean;
 };
 type CompoundFieldNameTuple<Name extends string> =
 	| [Name, Name]

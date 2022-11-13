@@ -15,7 +15,6 @@ describe('generated hooks', () => {
 			fields: {
 				id: {
 					type: 'string',
-					unique: true,
 					indexed: true,
 				},
 				name: {
@@ -32,7 +31,6 @@ describe('generated hooks', () => {
 			fields: {
 				id: {
 					type: 'string',
-					unique: true,
 					indexed: true,
 				},
 				count: {

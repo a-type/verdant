@@ -10,13 +10,11 @@ export const todoCollection = collection({
 		id: {
 			type: 'string',
 			indexed: true,
-			unique: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		content: {
 			type: 'string',
 			indexed: false,
-			unique: false,
 		},
 		done: {
 			type: 'boolean',
@@ -51,7 +49,6 @@ export const todoCollection = collection({
 		example: {
 			type: 'string',
 			compute: (doc) => doc.content,
-			unique: false,
 		},
 	},
 	compounds: {
@@ -71,7 +68,6 @@ export const weirdCollection = collection({
 		id: {
 			type: 'string',
 			indexed: true,
-			unique: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		weird: {

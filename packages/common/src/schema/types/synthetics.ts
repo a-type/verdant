@@ -3,12 +3,10 @@ import { ShapeFromFields } from './shapes.js';
 
 export type StorageStringSyntheticSchema<Fields extends StorageFieldsSchema> = {
 	type: 'string';
-	unique?: boolean;
 	compute: (value: ShapeFromFields<Fields>) => string;
 };
 export type StorageNumberSyntheticSchema<Fields extends StorageFieldsSchema> = {
 	type: 'number';
-	unique?: boolean;
 	compute: (value: ShapeFromFields<Fields>) => number;
 };
 
