@@ -54,6 +54,10 @@ export class Metadata extends EventSubscriber<{
 	 * Methods for accessing data
 	 */
 
+	createTransaction = (stores: ('operations' | 'baselines')[]) => {
+		return this.db.transaction(stores, 'readwrite');
+	};
+
 	/**
 	 * Recomputes an entire document from stored operations and baselines.
 	 */

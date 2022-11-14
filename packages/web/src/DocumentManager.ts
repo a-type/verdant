@@ -11,8 +11,8 @@ import {
 	StorageFieldsSchema,
 	StorageSchema,
 } from '@lo-fi/common';
-import { ObjectEntity } from './Entity.js';
-import { EntityStore } from './EntityStore.js';
+import { ObjectEntity } from './reactives/Entity.js';
+import { EntityStore } from './reactives/EntityStore.js';
 import { Metadata } from './metadata/Metadata.js';
 
 /**
@@ -55,25 +55,6 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
 		return this.entities.create(defaulted, oid) as unknown as ObjectEntity<any>;
-	};
-
-	upsert = async (collection: string, init: any) => {
-		const defaulted = this.addDefaults(collection, init);
-		const oid = this.getOid(collection, defaulted);
-		const existing = await this.entities.getFromOid(oid);
-		if (existing) {
-			const patches = diffToPatches(
-				assignOid(existing.getSnapshot(), oid),
-				assignOid(init, oid),
-				() => this.meta.now,
-				[],
-			);
-			this.entities.enqueueOperations(patches);
-			return existing;
-		} else {
-			// documents are always objects at the root
-			return this.entities.create(defaulted, oid) as Promise<ObjectEntity<any>>;
-		}
 	};
 
 	delete = async (collection: string, primaryKey: string) => {

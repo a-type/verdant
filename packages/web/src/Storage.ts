@@ -5,9 +5,8 @@ import { QueryMaker } from './QueryMaker.js';
 import { QueryStore } from './QueryStore.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
 import { DocumentManager } from './DocumentManager.js';
-import { EntityStore } from './EntityStore.js';
+import { EntityStore } from './reactives/EntityStore.js';
 import { getSizeOfObjectStore } from './idb.js';
-import type { Presence } from './index.js';
 import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
 import { UndoHistory } from './UndoHistory.js';
 
@@ -33,7 +32,9 @@ export class Storage {
 		undoHistory: this.undoHistory,
 		log: this.config.log,
 	});
-	private queryStore = new QueryStore(this.documentDb, this.entities);
+	private queryStore = new QueryStore(this.documentDb, this.entities, {
+		log: this.config.log,
+	});
 	queryMaker = new QueryMaker(this.queryStore, this.schema);
 	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
 
@@ -64,8 +65,9 @@ export class Storage {
 			const collectionName = collection.pluralName ?? collection.name + 's';
 			// @ts-ignore
 			this[collectionName] = {
+				/** @deprecated - use put */
 				create: (doc: any) => this.documentManager.create(name, doc),
-				upsert: (doc: any) => this.documentManager.upsert(name, doc),
+				put: (doc: any) => this.documentManager.create(name, doc),
 				delete: (id: string) => this.documentManager.delete(name, id),
 				deleteAll: (ids: string[]) =>
 					this.documentManager.deleteAll(ids.map((id) => [name, id])),
@@ -103,12 +105,15 @@ export class Storage {
 		return this.sync.presence;
 	}
 
+	/**
+	 * @deprecated - use put
+	 */
 	create: this['documentManager']['create'] = async (...args) => {
 		return this.documentManager.create(...args);
 	};
 
-	upsert: this['documentManager']['upsert'] = async (...args) => {
-		return this.documentManager.upsert(...args);
+	put: this['documentManager']['create'] = async (...args) => {
+		return this.documentManager.create(...args);
 	};
 
 	delete: this['documentManager']['delete'] = async (...args) => {
@@ -253,10 +258,10 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		}
 		this._initializing = true;
 		try {
-			const metaDb = await openMetadataDatabase(
-				this._namespace,
-				init.indexedDb,
-			);
+			const metaDb = await openMetadataDatabase(this._namespace, {
+				indexedDB: init.indexedDb,
+				log: init.log,
+			});
 			const meta = new Metadata(metaDb, init.schema, { log: init.log });
 
 			// verify schema integrity
@@ -268,6 +273,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 				meta,
 				migrations: init.migrations,
 				indexedDB: init.indexedDb,
+				log: init.log,
 			});
 
 			const storage = new Storage(

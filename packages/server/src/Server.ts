@@ -43,6 +43,10 @@ export interface ServerOptions {
 	 * removed from the library. Defaults to 30 days.
 	 */
 	replicaTruancyMinutes?: number;
+	/**
+	 * Supply a logging function to log debug messages.
+	 */
+	log?: (...args: any[]) => void;
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
@@ -63,8 +67,12 @@ export class Server extends EventEmitter implements MessageSender {
 
 	private connectionToReplicaIdMap = new WeakMap<WebSocket, string>();
 
+	private log: (...args: any[]) => void = () => {};
+
 	constructor(options: ServerOptions) {
 		super();
+
+		this.log = options.log || this.log;
 
 		this.tokenVerifier = new TokenVerifier({
 			secret: options.tokenSecret,
@@ -75,6 +83,7 @@ export class Server extends EventEmitter implements MessageSender {
 			sender: this,
 			profiles: options.profiles || new DefaultProfiles(),
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
+			log: this.log,
 		});
 
 		this.wss = new WebSocketServer({
@@ -195,6 +204,13 @@ export class Server extends EventEmitter implements MessageSender {
 		info: TokenInfo,
 		message: ClientMessage,
 	) => {
+		this.log(
+			'Got message from user',
+			info.userId,
+			', library',
+			info.libraryId,
+			JSON.stringify(message),
+		);
 		return this.storage.receive(info.libraryId, clientKey, message, info);
 	};
 
@@ -242,7 +258,7 @@ export class Server extends EventEmitter implements MessageSender {
 				}, 10 * 1000);
 				this.httpServer.close(() => {
 					resolve();
-					console.log('HTTP server closed');
+					this.log('HTTP server closed');
 				});
 			}),
 			new Promise<void>((resolve) => {
@@ -252,7 +268,7 @@ export class Server extends EventEmitter implements MessageSender {
 				}, 10 * 1000);
 				this.wss.close(() => {
 					resolve();
-					console.log('Socket server closed');
+					this.log('Socket server closed');
 				});
 			}),
 		]);

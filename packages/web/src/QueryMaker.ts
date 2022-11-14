@@ -13,7 +13,7 @@ import {
 	SortIndexFilter,
 	StorageSchema,
 } from '@lo-fi/common';
-import { ObjectEntity } from './Entity.js';
+import { ObjectEntity } from './reactives/Entity.js';
 import { Query } from './Query.js';
 import { QueryStore } from './QueryStore.js';
 

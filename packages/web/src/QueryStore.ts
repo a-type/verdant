@@ -1,13 +1,21 @@
-import { hashObject } from '@lo-fi/common';
+import { getOid, hashObject, ObjectIdentifier } from '@lo-fi/common';
 import { storeRequestPromise } from './idb.js';
-import { EntityStore } from './EntityStore.js';
+import { EntityStore } from './reactives/EntityStore.js';
 import { Query, UPDATE } from './Query.js';
 
 export class QueryStore {
 	private cache = new Map<string, Query<any>>();
+	private log: (...args: any[]) => void = () => {};
 
-	constructor(private db: IDBDatabase, private entities: EntityStore) {
+	constructor(
+		private db: IDBDatabase,
+		private entities: EntityStore,
+		config: {
+			log?: (...args: any[]) => void;
+		},
+	) {
 		this.entities.subscribe('collectionsChanged', this.onCollectionsChanged);
+		this.log = config.log || this.log;
 	}
 
 	private getStore = (collection: string, write?: boolean) => {
@@ -67,30 +75,33 @@ export class QueryStore {
 				const source = index ? store.index(index) : store;
 				const request = source.get(range);
 				const view = await storeRequestPromise(request);
-				return view ? this.entities.get(view) : null;
+				return view ? await this.entities.get(getOid(view)) : null;
 			};
 		} else {
-			run = () => {
+			run = async () => {
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
 				const request = source.openCursor(range, direction);
-				return new Promise((resolve, reject) => {
-					const result: any[] = [];
-					request.onsuccess = () => {
-						const cursor = request.result;
-						if (cursor) {
-							result.push(this.entities.get(cursor.value));
-							if (limit && result.length >= limit) {
-								resolve(result);
+				const oids = await new Promise<ObjectIdentifier[]>(
+					(resolve, reject) => {
+						const result: any[] = [];
+						request.onsuccess = async () => {
+							const cursor = request.result;
+							if (cursor) {
+								result.push(getOid(cursor.value));
+								if (limit && result.length >= limit) {
+									resolve(result);
+								} else {
+									cursor.continue();
+								}
 							} else {
-								cursor.continue();
+								resolve(result);
 							}
-						} else {
-							resolve(result);
-						}
-					};
-					request.onerror = () => reject(request.error);
-				});
+						};
+						request.onerror = () => reject(request.error);
+					},
+				);
+				return Promise.all(oids.map((oid) => this.entities.get(oid)));
 			};
 		}
 		const query = new Query(
@@ -143,6 +154,7 @@ export class QueryStore {
 			if (collections.includes(query.collection)) {
 				query[UPDATE]();
 				updated++;
+				this.log('🔄 updated query', key);
 			}
 		}
 	};

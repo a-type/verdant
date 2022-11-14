@@ -9,6 +9,8 @@ import {
 	isObjectRef,
 	KeyPath,
 	maybeGetOid,
+	Normalized,
+	NormalizedObject,
 	normalizeFirstLevel,
 	ObjectIdentifier,
 	Operation,
@@ -18,15 +20,17 @@ import {
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
+import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
 import { EntityStore } from './EntityStore.js';
 
-export const UPDATE = '@@update';
+export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
 export const GET_STORED_SNAPSHOT = '@@storedSnapshot';
+export const REBASE = '@@rebase';
 
 interface CacheEvents {
-	onSubscribed: () => void;
-	onAllUnsubscribed: () => void;
+	onSubscribed: (entity: EntityBase<any>) => void;
+	onAllUnsubscribed: (entity: EntityBase<any>) => void;
 }
 
 type AccessibleEntityProperty<T> = T extends Array<any>
@@ -62,14 +66,6 @@ type EntityPropertyValue<
 		: never
 	: never;
 
-export function updateEntity(entity: EntityBase<any>, newValue: any) {
-	entity[UPDATE](newValue);
-}
-
-export function deleteEntity(entity: EntityBase<any>) {
-	entity[DELETE]();
-}
-
 export function getStoredEntitySnapshot(entity: EntityBase<any>) {
 	return entity[GET_STORED_SNAPSHOT]();
 }
@@ -77,21 +73,13 @@ export function getStoredEntitySnapshot(entity: EntityBase<any>) {
 export abstract class EntityBase<Snapshot> {
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
-	// while changes are propagating, realtime alterations are set on this
-	// object, which overshadows _current.
-	protected _override: any | null = null;
-
-	protected subObjectCache: Map<ObjectIdentifier, EntityBase<any>> = new Map();
-
-	private cachedSnapshot: any | null = null;
-
-	protected _deleted = false;
 
 	readonly oid: ObjectIdentifier;
 	protected readonly store: EntityStore;
 	protected readonly cacheEvents: CacheEvents;
 	protected readonly fieldSchema;
 	protected readonly keyPath;
+	protected readonly cache: DocumentFamilyCache;
 
 	protected events = new EventSubscriber<{
 		change: () => void;
@@ -103,35 +91,41 @@ export abstract class EntityBase<Snapshot> {
 		return this.events.totalSubscriberCount();
 	}
 
-	protected get value() {
-		return this._override || this._current;
+	get deleted() {
+		return this._current === null || this._current === undefined;
 	}
 
-	get deleted() {
-		return this._deleted;
+	protected get value() {
+		return this._current;
 	}
 
 	constructor({
 		oid,
-		initial,
 		store,
 		cacheEvents,
 		fieldSchema,
+		cache,
 	}: {
 		oid: ObjectIdentifier;
-		initial: Snapshot | undefined;
 		store: EntityStore;
 		cacheEvents: CacheEvents;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
+		cache: DocumentFamilyCache;
 	}) {
 		this.oid = oid;
 		this.store = store;
 		this.cacheEvents = cacheEvents;
 		this.fieldSchema = fieldSchema;
 		this.keyPath = decomposeOid(oid).keyPath;
-
-		this[UPDATE](initial);
+		this.cache = cache;
+		this._current = this.cache.computeView(oid);
+		cache.subscribe(`change:${oid}`, this.onCacheChange);
 	}
+
+	private onCacheChange = () => {
+		this._current = this.cache.computeView(this.oid);
+		this.events.emit('change');
+	};
 
 	protected getChildFieldSchema = (key: any) => {
 		if (this.fieldSchema.type === 'object') {
@@ -146,87 +140,6 @@ export abstract class EntityBase<Snapshot> {
 		throw new Error('Invalid field schema');
 	};
 
-	protected [DELETE] = () => {
-		// entity was deleted
-		this._current = null;
-		this._override = null;
-		this.cachedSnapshot = null;
-		this.subObjectCache.clear();
-		this._deleted = true;
-		this.events.emit('delete');
-	};
-
-	protected [UPDATE] = (initial: Snapshot | undefined) => {
-		const { refs, oidKeyPairs } = normalizeFirstLevel(initial);
-		const self = refs.get(this.oid);
-		this._current = self ? removeOid(self) : undefined;
-		// update any existing sub-object values
-		const droppedOids = new Set<ObjectIdentifier>();
-		const newOids = new Set<ObjectIdentifier>(refs.keys());
-		newOids.delete(this.oid); // remove own oid
-
-		for (const [oid, entity] of this.subObjectCache) {
-			const incomingValue = refs.get(oid);
-			entity[UPDATE](incomingValue);
-
-			// update our bookkeeping
-			if (incomingValue === undefined) {
-				droppedOids.add(oid);
-			}
-			newOids.delete(oid);
-		}
-
-		// any new keys are new sub-objects that must
-		// be created
-		for (const oid of newOids) {
-			const value = refs.get(oid);
-			const entity = this.createSubObject(oid, value, oidKeyPairs.get(oid)!);
-			this.subObjectCache.set(oid, entity);
-		}
-
-		// any dropped keys are sub-objects that must be
-		// removed
-		for (const oid of droppedOids) {
-			this.subObjectCache.delete(oid);
-		}
-
-		// clear overrides
-		this._override = null;
-		// reset snapshot dirty state
-		this.cachedSnapshot = null;
-
-		if (this._deleted && this._current) {
-			this._deleted = false;
-			this.events.emit('restore');
-		}
-
-		this.events.emit('change');
-	};
-
-	protected createSubObject = (
-		oid: ObjectIdentifier,
-		value: any,
-		key: any,
-	): EntityBase<any> => {
-		if (Array.isArray(value)) {
-			return new ListEntity({
-				oid,
-				initial: value,
-				store: this.store,
-				cacheEvents: this.cacheEvents,
-				fieldSchema: this.getChildFieldSchema(key),
-			});
-		} else {
-			return new ObjectEntity({
-				oid,
-				initial: value,
-				store: this.store,
-				cacheEvents: this.cacheEvents,
-				fieldSchema: this.getChildFieldSchema(key),
-			});
-		}
-	};
-
 	dispose = () => {
 		this.events.dispose();
 	};
@@ -237,21 +150,19 @@ export abstract class EntityBase<Snapshot> {
 	) => {
 		const unsubscribe = this.events.subscribe(event, callback);
 		if (this.events.subscriberCount('change') === 1) {
-			this.cacheEvents.onSubscribed();
+			this.cacheEvents.onSubscribed(this);
 		}
 
 		return () => {
 			unsubscribe();
 			if (this.events.subscriberCount('change') === 0) {
-				this.cacheEvents.onAllUnsubscribed();
+				this.cacheEvents.onAllUnsubscribed(this);
 			}
 		};
 	};
 
 	protected addPatches = (patches: Operation[]) => {
-		this.store.enqueueOperations(patches);
-		// immediately apply patches to _override
-		this.propagateImmediateOperations(patches);
+		this.store.addLocalOperations(patches);
 	};
 
 	protected cloneCurrent = () => {
@@ -261,66 +172,9 @@ export abstract class EntityBase<Snapshot> {
 		return cloneDeep(this._current);
 	};
 
-	/**
-	 * When an entity creates patches, it applies them in-memory for
-	 * immediate feedback. But not all patches will relate to its immediate
-	 * root object. So entities propagate patches downwards to their
-	 * sub-objects for in-memory application.
-	 */
-	protected propagateImmediateOperations = (operations: Operation[]) => {
-		for (const patch of operations) {
-			if (patch.oid === this.oid) {
-				// apply it to _override
-				this._override = applyPatch(
-					this._override || this.cloneCurrent(),
-					patch.data,
-				);
-			}
-		}
-		this.addMissingSubObjectsForMemoryChanges();
-
-		for (const entity of this.subObjectCache.values()) {
-			entity.propagateImmediateOperations(operations);
-		}
-
-		// invalidate snapshot
-		this.cachedSnapshot = null;
-		// inform subscribers of change
-		this.events.emit('change');
-	};
-
-	/**
-	 * Creates empty sub-objects for any missing object refs in
-	 * children of this object according to its in-memory immediate
-	 * value. This is used to prep sub-objects when applying immediate
-	 * propagated changes before those sub-objects have been created
-	 * and exist in storage.
-	 */
-	protected addMissingSubObjectsForMemoryChanges = () => {
-		if (!this._override) {
-			return;
-		}
-
-		if (Array.isArray(this._override)) {
-			for (let i = 0; i < this._override.length; i++) {
-				const value = this._override[i];
-				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
-					const entity = this.createSubObject(value.id, undefined, i);
-					this.subObjectCache.set(value.id, entity);
-				}
-			}
-		} else if (isObject(this._override)) {
-			for (const [key, value] of Object.entries(this._override)) {
-				if (isObjectRef(value) && !this.subObjectCache.has(value.id)) {
-					const entity = this.createSubObject(value.id, undefined, key);
-					this.subObjectCache.set(value.id, entity);
-				}
-			}
-		}
-	};
-
-	protected getSubObject = (oid: ObjectIdentifier) => {
-		return this.subObjectCache.get(oid);
+	protected getSubObject = (oid: ObjectIdentifier, key: any) => {
+		const fieldSchema = this.getChildFieldSchema(key);
+		return this.cache.getEntity(oid, fieldSchema);
 	};
 
 	protected wrapValue = <Key extends AccessibleEntityProperty<Snapshot>>(
@@ -329,7 +183,7 @@ export abstract class EntityBase<Snapshot> {
 	): EntityPropertyValue<Snapshot, Key> => {
 		if (isObjectRef(value)) {
 			const oid = value.id;
-			const subObject = this.getSubObject(oid);
+			const subObject = this.getSubObject(oid, key);
 			if (subObject) {
 				return subObject as EntityPropertyValue<Snapshot, Key>;
 			}
@@ -343,7 +197,7 @@ export abstract class EntityBase<Snapshot> {
 	get = <Key extends AccessibleEntityProperty<Snapshot>>(
 		key: Key,
 	): EntityPropertyValue<Snapshot, Key> => {
-		if (this._deleted) {
+		if (this.value === undefined || this.value === null) {
 			throw new Error('Cannot access deleted entity');
 		}
 
@@ -359,25 +213,22 @@ export abstract class EntityBase<Snapshot> {
 		if (!this.value) {
 			return null;
 		}
-		if (!this.cachedSnapshot) {
-			if (Array.isArray(this.value)) {
-				this.cachedSnapshot = this.value.map((item) => {
-					if (isObjectRef(item)) {
-						return this.getSubObject(item.id)?.getSnapshot();
-					}
-					return item;
-				}) as Snapshot;
-			} else {
-				const snapshot = { ...this.value };
-				for (const [key, value] of Object.entries(snapshot)) {
-					if (isObjectRef(value)) {
-						snapshot[key] = this.getSubObject(value.id)?.getSnapshot();
-					}
+		if (Array.isArray(this.value)) {
+			return this.value.map((item, idx) => {
+				if (isObjectRef(item)) {
+					return this.getSubObject(item.id, idx)?.getSnapshot();
 				}
-				this.cachedSnapshot = snapshot as Snapshot;
+				return item;
+			}) as Snapshot;
+		} else {
+			const snapshot = { ...this.value };
+			for (const [key, value] of Object.entries(snapshot)) {
+				if (isObjectRef(value)) {
+					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
+				}
 			}
+			return snapshot;
 		}
-		return this.cachedSnapshot;
 	};
 
 	protected [GET_STORED_SNAPSHOT] = (): Snapshot | null => {
@@ -385,9 +236,11 @@ export abstract class EntityBase<Snapshot> {
 
 		let snapshot;
 		if (Array.isArray(this._current)) {
-			snapshot = this._current.map((item) => {
+			snapshot = this._current.map((item, idx) => {
 				if (isObjectRef(item)) {
-					return this.getSubObject(item.id)?.[GET_STORED_SNAPSHOT]();
+					return (this.getSubObject(item.id, idx) as any)?.[
+						GET_STORED_SNAPSHOT
+					]();
 				}
 				return item;
 			}) as Snapshot;
@@ -395,7 +248,9 @@ export abstract class EntityBase<Snapshot> {
 			snapshot = { ...this._current };
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
-					snapshot[key] = this.getSubObject(value.id)?.[GET_STORED_SNAPSHOT]();
+					snapshot[key] = (this.getSubObject(value.id, key) as any)?.[
+						GET_STORED_SNAPSHOT
+					]();
 				}
 			}
 		}
@@ -411,7 +266,7 @@ export class ListEntity<ItemInit>
 {
 	private getItemOid = (item: DataFromInit<ItemInit>) => {
 		const itemOid = maybeGetOid(item);
-		if (!itemOid || !this.subObjectCache.has(itemOid)) {
+		if (!itemOid || !this.cache.hasOid(itemOid)) {
 			throw new Error(
 				`Cannot move object ${JSON.stringify(
 					item,

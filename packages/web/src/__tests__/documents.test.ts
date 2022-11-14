@@ -131,7 +131,7 @@ describe('storage documents', () => {
 		});
 
 		const callback = vi.fn();
-		item1.subscribe('change', callback);
+		item1.get('tags').subscribe('change', callback);
 
 		item1.get('tags').push('tag 1');
 		item1.get('tags').push('tag 2');
@@ -145,7 +145,7 @@ describe('storage documents', () => {
 
 		await waitForStoragePropagation(callback);
 
-		expect(callback).toBeCalledTimes(1);
+		expect(callback).toBeCalledTimes(4);
 		expect(item1.getSnapshot()).toEqual({
 			id: item1.get('id'),
 			content: 'item 1',

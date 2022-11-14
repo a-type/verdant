@@ -26,16 +26,19 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User B',
+		// logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User C',
+		// logId: 'C',
 	});
 	cleanupClients.push(clientA, clientB, clientC);
 
@@ -89,7 +92,9 @@ it('can sync multiple clients even if they go offline', async () => {
 			equals: category,
 		});
 
-		await waitForQueryResult(matchingCategoryQuery);
+		await waitForQueryResult(matchingCategoryQuery, (val) => {
+			return !!val;
+		});
 
 		const matchingCategory = await matchingCategoryQuery.resolved;
 		expect(matchingCategory).toBeTruthy();
@@ -169,4 +174,4 @@ it('can sync multiple clients even if they go offline', async () => {
 		(item) => item?.get('comments').length === 2,
 	);
 	await expectCommentsToExist(clientC, a_unknownItem.get('id'), 2);
-});
+}, 10000);

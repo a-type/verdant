@@ -1,8 +1,8 @@
 export { StorageDescriptor, Storage } from './Storage.js';
 export type { StorageInitOptions } from './Storage.js';
 export { Query } from './Query.js';
-export { ObjectEntity, ListEntity } from './Entity.js';
-export type { Entity, EntityShape } from './Entity.js';
+export { ObjectEntity, ListEntity } from './reactives/Entity.js';
+export type { Entity, EntityShape } from './reactives/Entity.js';
 export { ServerSync as WebsocketSync } from './Sync.js';
 
 export {

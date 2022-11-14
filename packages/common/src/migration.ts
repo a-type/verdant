@@ -201,20 +201,6 @@ export function migrate<
 			if (unmigrated.length > 0) {
 				console.error('Unmigrated changed collections:', unmigrated);
 			}
-			console.info(`
-        ⬆️ v${newSchema.version} Migration complete. Here's the rundown:
-          - Added collections: ${addedCollections.join(', ')}
-          - Removed collections: ${removedCollections.join(', ')}
-          - Changed collections: ${changedCollections.join(', ')}
-          - New indexes: ${Object.keys(addedIndexes)
-						.map((col) => addedIndexes[col].map((i) => `${col}.${i.name}`))
-						.flatMap((i) => i)
-						.join(', ')}
-          - Removed indexes: ${Object.keys(removedIndexes)
-						.map((col) => removedIndexes[col].map((i) => `${col}.${i.name}`))
-						.flatMap((i) => i)
-						.join(', ')}
-      `);
 		},
 		removedCollections,
 		addedIndexes,
@@ -301,7 +287,6 @@ export function createDefaultMigration(
 		oldSchema,
 		newSchema || schema,
 		async ({ migrate, withDefaults, info }) => {
-			console.debug('Running default migration for', info.changedCollections);
 			for (const collection of info.changedCollections) {
 				// @ts-ignore indefinite type resolution
 				await migrate(collection, (old) => withDefaults(collection, old));

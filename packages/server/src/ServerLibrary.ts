@@ -33,22 +33,24 @@ export class ServerLibrary {
 	private baselines;
 	private presences = new Presence();
 
-	private _messageLock = new AsyncLock();
-
+	private log: (...args: any[]) => void;
 	constructor({
 		db,
 		sender,
 		profiles,
 		id,
 		replicaTruancyMinutes,
+		log = () => {},
 	}: {
 		db: Database;
 		sender: MessageSender;
 		profiles: UserProfileLoader<any>;
 		id: string;
 		replicaTruancyMinutes: number;
+		log?: (...args: any[]) => void;
 	}) {
 		this.db = db;
+		this.log = log;
 		this.sender = sender;
 		this.profiles = profiles;
 		this.id = id;
@@ -84,7 +86,6 @@ export class ServerLibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		// await this._messageLock.acquire('message', async (done) => {
 		this.validateReplicaAccess(message.replicaId, info);
 
 		switch (message.type) {
@@ -107,11 +108,9 @@ export class ServerLibrary {
 				await this.handlePresenceUpdate(message, clientKey, info);
 				break;
 			default:
-				console.log('Unknown message type', (message as any).type);
+				this.log('Unknown message type', (message as any).type);
 				break;
 		}
-		// 	done();
-		// });
 		this.replicas.updateLastSeen(message.replicaId);
 	};
 
@@ -192,7 +191,7 @@ export class ServerLibrary {
 			this.replicas.getOrCreate(replicaId, info);
 
 		if (status === 'truant') {
-			console.log('A truant replica has reconnected', replicaId);
+			this.log('A truant replica has reconnected', replicaId);
 		}
 
 		// respond to client
@@ -252,7 +251,7 @@ export class ServerLibrary {
 		// store all incoming operations and baselines
 		this.baselines.insertAll(message.baselines);
 
-		console.debug('Storing', message.operations.length, 'operations');
+		this.log('Storing', message.operations.length, 'operations');
 		this.operations.insertAll(message.replicaId, message.operations);
 		this.rebroadcastOperations(
 			clientKey,
@@ -309,7 +308,7 @@ export class ServerLibrary {
 	};
 
 	private rebase = () => {
-		console.log('Performing rebase check');
+		this.log('Performing rebase check');
 
 		// fundamentally a rebase occurs when some conditions are met:
 		// 1. the replica which created an operation has dropped that operation
@@ -333,7 +332,7 @@ export class ServerLibrary {
 		const globalAck = this.replicas.getGlobalAck(activeReplicaIds);
 
 		if (!globalAck) {
-			console.log('No global ack, skipping rebase');
+			this.log('No global ack, skipping rebase');
 			return;
 		}
 
@@ -357,7 +356,7 @@ export class ServerLibrary {
 		}
 
 		for (const [documentId, ops] of Object.entries(opsToApply)) {
-			console.log('Rebasing', documentId);
+			this.log('Rebasing', documentId);
 			this.baselines.applyOperations(documentId, ops);
 			this.operations.dropAll(ops);
 		}
@@ -413,7 +412,7 @@ export class ServerLibrary {
 	};
 
 	private onPresenceLost = (replicaId: string, userId: string) => {
-		console.log('User disconnected from all replicas:', userId);
+		this.log('User disconnected from all replicas:', userId);
 		this.sender.broadcast(this.id, {
 			type: 'presence-offline',
 			replicaId,
@@ -428,19 +427,23 @@ export class ServerLibraryManager {
 	private profileLoader;
 	private replicaTruancyMinutes;
 	private cache = new Map<string, ServerLibrary>();
+	private log: (...args: any[]) => void;
 
 	constructor({
 		db,
 		sender,
 		profileLoader,
 		replicaTruancyMinutes,
+		log,
 	}: {
 		db: Database;
 		sender: MessageSender;
 		profileLoader: UserProfileLoader<any>;
 		replicaTruancyMinutes: number;
+		log: (...args: any[]) => void;
 	}) {
 		this.db = db;
+		this.log = log;
 		this.sender = sender;
 		this.profileLoader = profileLoader;
 		this.replicaTruancyMinutes = replicaTruancyMinutes;
@@ -456,6 +459,7 @@ export class ServerLibraryManager {
 					profiles: this.profileLoader,
 					id,
 					replicaTruancyMinutes: this.replicaTruancyMinutes,
+					log: this.log,
 				}),
 			);
 		}

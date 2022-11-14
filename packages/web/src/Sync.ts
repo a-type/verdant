@@ -3,13 +3,12 @@ import {
 	ServerMessage,
 	EventSubscriber,
 	ObjectIdentifier,
-	getOidRoot,
 	assert,
 	ReplicaType,
 } from '@lo-fi/common';
 import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
-import { EntityStore } from './EntityStore.js';
+import { EntityStore } from './reactives/EntityStore.js';
 import type { Presence } from './index.js';
 import { Metadata } from './metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
@@ -275,17 +274,12 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			}
 		}
 
-		let affectedOids: ObjectIdentifier[] | undefined = undefined;
 		this.log('sync message', message);
 		switch (message.type) {
 			case 'op-re':
 				// rebroadcasted operations
-				affectedOids = await this.meta.insertRemoteOperations(
-					message.operations,
-				);
-				affectedOids.push(
-					...(await this.meta.insertRemoteBaselines(message.baselines)),
-				);
+				await this.entities.addRemoteBaselines(message.baselines);
+				await this.entities.addRemoteOperations(message.operations);
 				if (message.globalAckTimestamp) {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);
 				}
@@ -300,11 +294,8 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 				}
 
 				// add any baselines
-				affectedOids = await this.meta.insertRemoteBaselines(message.baselines);
-
-				affectedOids.push(
-					...(await this.meta.insertRemoteOperations(message.operations)),
-				);
+				await this.entities.addRemoteBaselines(message.baselines);
+				await this.entities.addRemoteOperations(message.operations);
 
 				if (message.globalAckTimestamp) {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);
@@ -322,10 +313,6 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 
 		// update presence if necessary
 		this.presence.__handleMessage(await this.meta.localReplica.get(), message);
-
-		if (affectedOids?.length) {
-			this.entities.refreshAll(affectedOids);
-		}
 	};
 	private echoOnlineChange = (online: boolean) => {
 		this.emit('onlineChange', online);

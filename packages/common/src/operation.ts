@@ -5,6 +5,7 @@ import {
 	decomposeOid,
 	ensureOid,
 	getOid,
+	getOidRoot,
 	isOidKey,
 	KeyPath,
 	maybeGetOid,
@@ -13,7 +14,7 @@ import {
 	OID_KEY,
 	removeOid,
 } from './oids.js';
-import { isObject, assert } from './utils.js';
+import { isObject, assert, cloneDeep } from './utils.js';
 
 // export type ObjectIdentifier<
 // 	CollectionName extends string = string,
@@ -299,6 +300,19 @@ export function groupPatchesByIdentifier(patches: Operation[]) {
 	return grouped;
 }
 
+export function groupPatchesByRootOid(patches: Operation[]) {
+	const grouped: Record<ObjectIdentifier, Operation[]> = {};
+	for (const patch of patches) {
+		const root = getOidRoot(patch.oid);
+		if (root in grouped) {
+			grouped[root].push(patch);
+		} else {
+			grouped[root] = [patch];
+		}
+	}
+	return grouped;
+}
+
 export type NormalizedObject =
 	| {
 			[key: PropertyName]: PropertyValue;
@@ -374,7 +388,7 @@ export function applyPatch<T extends NormalizedObject>(
 		case 'delete':
 			return undefined;
 		case 'initialize':
-			return patch.value;
+			return cloneDeep(patch.value);
 		default:
 			throw new Error(`Unsupported patch operation: ${(patch as any).op}`);
 	}
