@@ -16,7 +16,6 @@ const do10kChangesToOneObject = async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
-		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
