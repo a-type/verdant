@@ -23,6 +23,7 @@ import {
 	shallowInitialToPatches,
 	shallowDiffToPatches,
 	groupBaselinesByRootOid,
+	getUndoOperations,
 } from '@lo-fi/common';
 import { EntityBase, getStoredEntitySnapshot, ObjectEntity } from './Entity.js';
 import { storeRequestPromise } from '../idb.js';
@@ -315,38 +316,12 @@ export class EntityStore extends EventSubscriber<{
 	private getInverseOperations = async (ops: Operation[]) => {
 		const grouped = groupPatchesByIdentifier(ops);
 		const inverseOps: Operation[] = [];
+		const getNow = () => this.meta.now;
 		for (const [oid, patches] of Object.entries(grouped)) {
 			const familyCache = await this.openFamilyCache(oid);
 			let { view, deleted } = familyCache.computeConfirmedView(oid);
-			if (view) {
-				view = cloneDeep(view);
-				assignOid(view, oid);
-			}
-			// if the entity doesn't exist, the inverse
-			// is a delete.
-			if (deleted) {
-				// double-check sanity - a creation should start with initialize.
-				// if not, maybe the cache is broken?
-				if (patches[0].op === 'initialize') {
-					inverseOps.push({
-						oid,
-						timestamp: this.meta.now,
-						data: {
-							op: 'delete',
-						},
-					});
-				}
-			} else {
-				const copy = cloneDeep(view);
-				const applied = applyPatches(copy, patches);
-				let inverse: Operation[] = [];
-				if (!applied) {
-					inverse = shallowInitialToPatches(view, oid, () => this.meta.now);
-				} else {
-					inverse = shallowDiffToPatches(applied, view, () => this.meta.now);
-				}
-				inverseOps.push(...inverse);
-			}
+			const inverse = getUndoOperations(oid, view, patches, getNow);
+			inverseOps.push(...inverse);
 		}
 		return inverseOps;
 	};

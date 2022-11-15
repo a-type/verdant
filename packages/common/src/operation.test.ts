@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
+	createRef,
 	getOid,
 	OID_KEY,
 } from './oids.js';
 import {
+	applyPatch,
 	applyPatches,
 	diffToPatches,
 	initialToPatches,
@@ -602,5 +604,52 @@ describe('creating patches from initial state', () => {
 			  },
 			]
 		`);
+	});
+});
+
+describe('applying individual operations', () => {
+	it('applies a list-remove of only the last instance', () => {
+		expect(
+			applyPatch(['a', 'b', 'c', 'a', 'b'], {
+				op: 'list-remove',
+				value: 'a',
+				only: 'last',
+			}),
+		).toEqual(['a', 'b', 'c', 'b']);
+	});
+	it('applies a list-remove of only the first instance', () => {
+		expect(
+			applyPatch(['a', 'b', 'c', 'a', 'b'], {
+				op: 'list-remove',
+				value: 'a',
+				only: 'first',
+			}),
+		).toEqual(['b', 'c', 'a', 'b']);
+	});
+	it('applies a list-remove of all instances', () => {
+		expect(
+			applyPatch(['a', 'b', 'c', 'a', 'b'], {
+				op: 'list-remove',
+				value: 'a',
+			}),
+		).toEqual(['b', 'c', 'b']);
+	});
+	it('applies a list-remove of an object ref', () => {
+		expect(
+			applyPatch(
+				[
+					createRef('a'),
+					createRef('b'),
+					createRef('c'),
+					createRef('a'),
+					createRef('b'),
+				],
+				{
+					op: 'list-remove',
+					value: createRef('a'),
+					only: 'last',
+				},
+			),
+		).toEqual([createRef('a'), createRef('b'), createRef('c'), createRef('b')]);
 	});
 });

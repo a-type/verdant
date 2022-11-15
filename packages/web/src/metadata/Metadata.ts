@@ -8,7 +8,6 @@ import {
 	DocumentBaseline,
 	EventSubscriber,
 	getOidRoot,
-	groupPatchesByIdentifier,
 	HybridLogicalClockTimestampProvider,
 	ObjectIdentifier,
 	Operation,

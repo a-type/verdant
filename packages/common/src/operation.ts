@@ -15,7 +15,7 @@ import {
 	OID_KEY,
 	removeOid,
 } from './oids.js';
-import { isObject, assert, cloneDeep } from './utils.js';
+import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';
 
 // export type ObjectIdentifier<
 // 	CollectionName extends string = string,
@@ -78,7 +78,8 @@ export interface OperationPatchListPush extends BaseOperationPatch {
 export interface OperationPatchListInsert extends BaseOperationPatch {
 	op: 'list-insert';
 	index: number;
-	value: PropertyValue;
+	value?: PropertyValue;
+	values?: PropertyValue[];
 }
 export interface OperationPatchListDelete extends BaseOperationPatch {
 	op: 'list-delete';
@@ -113,6 +114,7 @@ export interface OperationPatchListMoveByIndex extends BaseOperationPatch {
 export interface OperationPatchListRemove extends BaseOperationPatch {
 	op: 'list-remove';
 	value: PropertyValue;
+	only?: 'first' | 'last';
 }
 
 export interface OperationPatchDelete extends BaseOperationPatch {
@@ -392,12 +394,12 @@ export function shallowInitialToPatches(
 }
 
 export function groupPatchesByIdentifier(patches: Operation[]) {
-	const grouped: Record<ObjectIdentifier, OperationPatch[]> = {};
+	const grouped: Record<ObjectIdentifier, Operation[]> = {};
 	for (const patch of patches) {
 		if (patch.oid in grouped) {
-			grouped[patch.oid].push(patch.data);
+			grouped[patch.oid].push(patch);
 		} else {
-			grouped[patch.oid] = [patch.data];
+			grouped[patch.oid] = [patch];
 		}
 	}
 	return grouped;
@@ -485,11 +487,27 @@ export function applyPatch<T extends NormalizedObject>(
 		case 'list-remove':
 			listCheck(base);
 			do {
-				index = base.indexOf(patch.value);
+				const valueToRemove = patch.value;
+				if (patch.only === 'last') {
+					if (isObjectRef(valueToRemove)) {
+						index = findLastIndex(
+							base,
+							(item: any) => item.id === valueToRemove.id,
+						);
+					} else {
+						index = base.lastIndexOf(valueToRemove);
+					}
+				} else {
+					if (isObjectRef(valueToRemove)) {
+						index = base.findIndex((item: any) => item.id === valueToRemove.id);
+					} else {
+						index = base.indexOf(valueToRemove);
+					}
+				}
 				if (index !== -1) {
 					base.splice(index, 1);
 				}
-			} while (index !== -1);
+			} while (!patch.only && index !== -1);
 			break;
 		case 'list-move-by-ref':
 			listCheck(base);
@@ -499,7 +517,18 @@ export function applyPatch<T extends NormalizedObject>(
 			break;
 		case 'list-insert':
 			listCheck(base);
-			base.splice(patch.index, 0, patch.value);
+			if (!patch.value && !patch.values) {
+				throw new Error(
+					`Cannot apply list insert patch; expected value or values, received ${JSON.stringify(
+						patch,
+					)}`,
+				);
+			}
+			if (patch.value) {
+				base.splice(patch.index, 0, patch.value);
+			} else {
+				base.splice(patch.index, 0, ...patch.values!);
+			}
 			break;
 		case 'delete':
 			return undefined;
