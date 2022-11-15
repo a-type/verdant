@@ -143,6 +143,7 @@ export class Storage {
 		}
 		const meta = await this.meta.stats();
 		const storage =
+			typeof navigator !== 'undefined' &&
 			typeof navigator.storage !== 'undefined' &&
 			'estimate' in navigator.storage
 				? await navigator.storage.estimate()

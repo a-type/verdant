@@ -16,6 +16,7 @@ const do10kChangesToOneObject = async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
+		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
@@ -47,7 +48,7 @@ const do10kChangesToOneObject = async () => {
 		});
 	});
 
-	const start = Date.now();
+	let start = Date.now();
 
 	for (let i = 0; i < 10001; i++) {
 		itemB.set('content', `${i}`);
@@ -55,10 +56,19 @@ const do10kChangesToOneObject = async () => {
 
 	await changeWaitPromise;
 
-	const end = Date.now();
+	let end = Date.now();
 
 	console.info(`✅ --- 10000 changes to one object in ${end - start}ms ---`);
 	// best on my desktop so far is around 13s
+
+	// now let's try rebasing
+	start = Date.now();
+	itemA.set('content', '0');
+
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+	end = Date.now();
+	console.info('Client storage stats', await clientA.stats());
+	console.info(`✅ --- 10000 changes rebased in ${end - start}ms ---`);
 
 	cleanupClients.forEach((c) => c.sync.stop());
 	await server.cleanup();
