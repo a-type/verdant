@@ -97,32 +97,49 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 	};
 
-	computeView = (oid: ObjectIdentifier) => {
-		let view = this.computeConfirmedView(oid);
-		const unconfirmedOperations = this.unconfirmedOperationsMap.get(oid) || [];
-		for (const operation of unconfirmedOperations) {
-			view = applyPatch(view, operation.data);
+	private applyOperations = (
+		view: any,
+		deleted: boolean,
+		operations: Operation[],
+	) => {
+		for (const operation of operations) {
+			if (operation.data.op === 'delete') {
+				deleted = true;
+			} else {
+				view = applyPatch(view, operation.data);
+				if (operation.data.op === 'initialize') {
+					deleted = false;
+				}
+			}
 		}
-		return view;
+		return { view, deleted };
+	};
+
+	computeView = (oid: ObjectIdentifier) => {
+		const confirmed = this.computeConfirmedView(oid);
+		const unconfirmedOperations = this.unconfirmedOperationsMap.get(oid) || [];
+		let { view, deleted } = this.applyOperations(
+			confirmed.view,
+			confirmed.deleted,
+			unconfirmedOperations,
+		);
+		if (view) {
+			removeOid(view);
+		}
+		return { view, deleted };
 	};
 
 	computeConfirmedView = (oid: ObjectIdentifier) => {
 		const baseline = this.baselinesMap.get(oid);
 		const operations = this.operationsMap.get(oid) || [];
 		let view = cloneDeep(baseline?.snapshot || undefined);
-		for (const operation of operations) {
-			view = applyPatch(view, operation.data);
-		}
-		if (view) {
-			removeOid(view);
-		}
-		return view;
+		return this.applyOperations(view, true, operations);
 	};
 
 	getEntity = (oid: ObjectIdentifier, schema: StorageFieldSchema): Entity => {
 		let entity = this.entities.get(oid);
 		if (!entity) {
-			const view = this.computeView(oid);
+			const { view } = this.computeView(oid);
 			// FIXME: I dont' like this
 			const isList = Array.isArray(view) || (!view && schema.type === 'array');
 			if (isList) {

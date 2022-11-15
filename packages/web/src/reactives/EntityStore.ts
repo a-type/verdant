@@ -243,14 +243,14 @@ export class EntityStore extends EventSubscriber<{
 		const inverseOps: Operation[] = [];
 		for (const [oid, patches] of Object.entries(grouped)) {
 			const familyCache = await this.openFamilyCache(oid);
-			let view = familyCache.computeConfirmedView(oid);
+			let { view, deleted } = familyCache.computeConfirmedView(oid);
 			if (view) {
 				view = cloneDeep(view);
 				assignOid(view, oid);
 			}
 			// if the entity doesn't exist, the inverse
 			// is a delete.
-			if (!view) {
+			if (deleted) {
 				// double-check sanity - a creation should start with initialize.
 				// if not, maybe the cache is broken?
 				if (patches[0].op === 'initialize') {

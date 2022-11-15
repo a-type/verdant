@@ -80,6 +80,9 @@ export abstract class EntityBase<Snapshot> {
 	protected readonly fieldSchema;
 	protected readonly keyPath;
 	protected readonly cache: DocumentFamilyCache;
+	protected _deleted = false;
+
+	private cachedSnapshot: Snapshot | null = null;
 
 	protected events = new EventSubscriber<{
 		change: () => void;
@@ -92,7 +95,7 @@ export abstract class EntityBase<Snapshot> {
 	}
 
 	get deleted() {
-		return this._current === null || this._current === undefined;
+		return this._deleted;
 	}
 
 	protected get value() {
@@ -118,13 +121,27 @@ export abstract class EntityBase<Snapshot> {
 		this.fieldSchema = fieldSchema;
 		this.keyPath = decomposeOid(oid).keyPath;
 		this.cache = cache;
-		this._current = this.cache.computeView(oid);
+		const { view, deleted } = this.cache.computeView(oid);
+		this._current = view;
+		this._deleted = deleted;
 		cache.subscribe(`change:${oid}`, this.onCacheChange);
 	}
 
 	private onCacheChange = () => {
-		this._current = this.cache.computeView(this.oid);
-		this.events.emit('change');
+		const { view, deleted } = this.cache.computeView(this.oid);
+		this._current = view;
+		const restored = this._deleted && !deleted;
+		this._deleted = deleted;
+		this.cachedSnapshot = null;
+
+		if (this._deleted) {
+			this.events.emit('delete');
+		} else {
+			this.events.emit('change');
+		}
+		if (restored) {
+			this.events.emit('restore');
+		}
 	};
 
 	protected getChildFieldSchema = (key: any) => {
@@ -213,22 +230,27 @@ export abstract class EntityBase<Snapshot> {
 		if (!this.value) {
 			return null;
 		}
+		if (this.cachedSnapshot) {
+			return this.cachedSnapshot;
+		}
+		let snapshot;
 		if (Array.isArray(this.value)) {
-			return this.value.map((item, idx) => {
+			snapshot = this.value.map((item, idx) => {
 				if (isObjectRef(item)) {
 					return this.getSubObject(item.id, idx)?.getSnapshot();
 				}
 				return item;
 			}) as Snapshot;
 		} else {
-			const snapshot = { ...this.value };
+			snapshot = { ...this.value };
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
 					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
 				}
 			}
-			return snapshot;
 		}
+		this.cachedSnapshot = snapshot;
+		return snapshot;
 	};
 
 	protected [GET_STORED_SNAPSHOT] = (): Snapshot | null => {
