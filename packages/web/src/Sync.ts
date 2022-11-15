@@ -211,11 +211,13 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
+			log: this.log,
 		});
 		this.pushPullSync = new PushPullSync({
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
+			log: this.log,
 		});
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
@@ -225,7 +227,6 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
 
-		this.entities.subscribe('message', this.send);
 		this.meta.subscribe('message', this.send);
 
 		this.webSocketSync.subscribe('message', this.handleMessage);
@@ -274,12 +275,13 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			}
 		}
 
-		this.log('sync message', message);
+		this.log('sync message', JSON.stringify(message, null, 2));
 		switch (message.type) {
 			case 'op-re':
-				// rebroadcasted operations
-				await this.entities.addRemoteBaselines(message.baselines);
-				await this.entities.addRemoteOperations(message.operations);
+				await this.entities.addData({
+					operations: message.operations,
+					baselines: message.baselines,
+				});
 				if (message.globalAckTimestamp) {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);
 				}
@@ -288,25 +290,16 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 				await this.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
-				if (message.overwriteLocalData) {
-					await this.meta.reset();
-					await this.entities.reset();
-				}
-
-				// add any baselines
-				await this.entities.addRemoteBaselines(message.baselines);
-				await this.entities.addRemoteOperations(message.operations);
+				await this.entities.addData({
+					operations: message.operations,
+					baselines: message.baselines,
+					reset: message.overwriteLocalData,
+				});
 
 				if (message.globalAckTimestamp) {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);
 				}
 
-				// respond to the server
-				this.activeSync.send(
-					await this.meta.messageCreator.createSyncStep2(
-						message.provideChangesSince,
-					),
-				);
 				await this.meta.updateLastSynced();
 				break;
 		}
@@ -346,7 +339,6 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 	};
 
 	public send = (message: ClientMessage) => {
-		this.log('Sending message', message);
 		return this.activeSync.send(message);
 	};
 
@@ -390,6 +382,7 @@ class WebSocketSync
 	private messageQueue: ClientMessage[] = [];
 	private endpointProvider;
 	private _status: 'active' | 'paused' = 'paused';
+	private synced = false;
 
 	readonly mode = 'realtime';
 	private log = (...args: any[]) => {};
@@ -425,8 +418,10 @@ class WebSocketSync
 		if (!this.socket) {
 			throw new Error('Invalid sync state: online but socket is null');
 		}
+		this.synced = false;
 		if (this.messageQueue.length) {
 			for (const msg of this.messageQueue) {
+				this.log('Sending queued message', JSON.stringify(msg, null, 2));
 				this.socket.send(JSON.stringify(msg));
 			}
 			this.messageQueue = [];
@@ -437,13 +432,11 @@ class WebSocketSync
 	};
 
 	private onOnlineChange = async (online: boolean) => {
+		this.log('Socket online change', online);
 		if (!online) {
 			this.heartbeat.stop();
 		} else {
-			const lastSyncTimestamp = await this.meta.lastSyncedTimestamp();
-			this.send(
-				await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
-			);
+			this.send(await this.meta.messageCreator.createSyncStep1());
 			this.send(
 				await this.meta.messageCreator.createPresenceUpdate(
 					this.presence.self.presence,
@@ -460,10 +453,13 @@ class WebSocketSync
 		if (message.type === 'heartbeat-response') {
 			this.heartbeat.keepAlive();
 		}
+		if (message.type === 'sync-resp') {
+			this.synced = true;
+		}
 	};
 
 	private onError = (event: Event) => {
-		console.error(event);
+		this.log(event);
 		this.reconnectScheduler.next();
 
 		this.log(`Attempting reconnect to websocket sync`);
@@ -495,9 +491,19 @@ class WebSocketSync
 	};
 
 	send = (message: ClientMessage) => {
+		// ignore new messages until synced
+		if (
+			!this.synced &&
+			message.type !== 'sync' &&
+			message.type !== 'presence-update'
+		) {
+			return;
+		}
+
 		if (this.socket?.readyState === WebSocket.OPEN) {
+			this.log('Sending message', JSON.stringify(message, null, 2));
 			this.socket.send(JSON.stringify(message));
-		} else {
+		} else if (this._status === 'active') {
 			this.messageQueue.push(message);
 		}
 	};
@@ -617,7 +623,6 @@ class PushPullSync
 		switch (message.type) {
 			case 'presence-update':
 			case 'sync':
-			case 'sync-step2':
 				this.sendRequest([message]);
 				break;
 		}
@@ -637,7 +642,6 @@ class PushPullSync
 
 	// on a heartbeat, do a sync
 	private onHeartbeat = async () => {
-		const lastSyncTimestamp = await this.meta.lastSyncedTimestamp();
 		// for HTTP sync we send presence first, so that the sync-resp message
 		// will include the client's own presence info and fill in missing profile
 		// data on the first request. otherwise it would have to wait for the second.
@@ -645,7 +649,7 @@ class PushPullSync
 			await this.meta.messageCreator.createPresenceUpdate(
 				this.presence.self.presence,
 			),
-			await this.meta.messageCreator.createSyncStep1(!lastSyncTimestamp),
+			await this.meta.messageCreator.createSyncStep1(),
 		]);
 	};
 

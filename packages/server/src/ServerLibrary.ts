@@ -11,7 +11,6 @@ import {
 	ReplicaInfo,
 	ReplicaType,
 	SyncMessage,
-	SyncStep2Message,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -95,9 +94,6 @@ export class ServerLibrary {
 			case 'sync':
 				this.handleSync(message, clientKey, info);
 				break;
-			case 'sync-step2':
-				this.handleSyncStep2(message, clientKey, info);
-				break;
 			case 'ack':
 				this.handleAck(message, clientKey, info);
 				break;
@@ -123,6 +119,8 @@ export class ServerLibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
+		if (!message.operations.length) return;
+
 		if (!this.hasWriteAccess(info)) {
 			this.sender.send(this.id, clientKey, {
 				type: 'forbidden',
@@ -145,6 +143,13 @@ export class ServerLibrary {
 			message.replicaId,
 			message.operations,
 			[],
+		);
+
+		// TODO: evaluate if this is correct!!!
+		this.updateAcknowledged(
+			message.replicaId,
+			message.operations[message.operations.length - 1].timestamp,
+			info,
 		);
 	};
 
@@ -181,6 +186,25 @@ export class ServerLibrary {
 		info: TokenInfo,
 	) => {
 		const replicaId = message.replicaId;
+
+		if (!this.hasWriteAccess(info)) {
+			this.sender.send(this.id, clientKey, {
+				type: 'forbidden',
+			});
+			return;
+		}
+
+		// store all incoming operations and baselines
+		this.baselines.insertAll(message.baselines);
+
+		this.log('Storing', message.operations.length, 'operations');
+		this.operations.insertAll(replicaId, message.operations);
+		this.rebroadcastOperations(
+			clientKey,
+			message.replicaId,
+			message.operations,
+			message.baselines,
+		);
 
 		if (message.resyncAll) {
 			// forget our local understanding of the replica and reset it
@@ -226,7 +250,6 @@ export class ServerLibrary {
 				snapshot: baseline.snapshot,
 				timestamp: baseline.timestamp,
 			})),
-			provideChangesSince: clientReplicaInfo.ackedLogicalTime || null,
 			globalAckTimestamp: this.replicas.getGlobalAck(),
 			peerPresence: this.presences.all(),
 			// only request the client to overwrite local data if a reset is requested
@@ -234,46 +257,6 @@ export class ServerLibrary {
 			// send its own history to us.
 			overwriteLocalData: replicaShouldReset && !isEmptyLibrary,
 		});
-	};
-
-	private handleSyncStep2 = (
-		message: SyncStep2Message,
-		clientKey: string,
-		info: TokenInfo,
-	) => {
-		if (!this.hasWriteAccess(info)) {
-			this.sender.send(this.id, clientKey, {
-				type: 'forbidden',
-			});
-			return;
-		}
-
-		// store all incoming operations and baselines
-		this.baselines.insertAll(message.baselines);
-
-		this.log('Storing', message.operations.length, 'operations');
-		this.operations.insertAll(message.replicaId, message.operations);
-		this.rebroadcastOperations(
-			clientKey,
-			message.replicaId,
-			message.operations,
-			message.baselines,
-		);
-
-		// FIXME: this feels like it's related to some sync problems with not
-		// informing replicas of operations. since it's acking things but the
-		// client hasn't actually seen anything here, only submitted its own ops
-
-		// update the client's ackedLogicalTime
-		// const lastOperation = message.operations[message.operations.length - 1];
-		// if (lastOperation) {
-		// 	this.updateAcknowledged(message.replicaId, lastOperation.timestamp, info);
-		// } else {
-		// 	// if no operation is available to take a timestamp from,
-		// 	// use the less accurate message timestamp...
-		// 	// TODO: why not just always do this?
-		// 	// this.updateAcknowledged(message.replicaId, message.timestamp, info);
-		// }
 	};
 
 	private updateAcknowledged = (

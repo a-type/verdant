@@ -25,26 +25,13 @@ export class DocumentFamilyCache extends EventSubscriber<
 
 	private store: EntityStore;
 
-	constructor({
-		oid,
-		baselines,
-		operations,
-		store,
-	}: {
-		oid: ObjectIdentifier;
-		baselines: DocumentBaseline[];
-		operations: Operation[];
-		store: EntityStore;
-	}) {
+	constructor({ oid, store }: { oid: ObjectIdentifier; store: EntityStore }) {
 		super();
 		this.oid = oid;
 		this.operationsMap = new Map();
 		this.unconfirmedOperationsMap = new Map();
-		this.baselinesMap = new Map(
-			baselines.map((baseline) => [baseline.oid, baseline]),
-		);
+		this.baselinesMap = new Map();
 		this.store = store;
-		this.insertOperations(operations);
 	}
 
 	insertUnconfirmedOperations = (operations: Operation[]) => {
@@ -57,6 +44,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			this.unconfirmedOperationsMap.set(oid, existingOperations);
 		}
 		for (const oid of oidSet) {
+			// FIXME: update the entities directly from local map instead of using events?
 			this.emit(`change:${oid}`);
 			this.emit('change:*', oid);
 		}
@@ -68,7 +56,20 @@ export class DocumentFamilyCache extends EventSubscriber<
 			const { oid } = operation;
 			oidSet.add(oid);
 			const existingOperations = this.operationsMap.get(oid) || [];
-			this.operationsMap.set(oid, [...existingOperations, operation]);
+			// insert in order of timestamp
+			const index = existingOperations.findIndex(
+				(op) => op.timestamp >= operation.timestamp,
+			);
+			// ensure the operation doesn't already exist in this position
+			if (index !== -1) {
+				if (existingOperations[index].timestamp === operation.timestamp) {
+					continue;
+				}
+				existingOperations.splice(index, 0, operation);
+			} else {
+				existingOperations.push(operation);
+			}
+			this.operationsMap.set(oid, existingOperations);
 
 			// FIXME: seems inefficient
 			const unconfirmedOperations = this.unconfirmedOperationsMap.get(oid);
@@ -87,22 +88,45 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 	};
 
-	insertBaseline = (baseline: DocumentBaseline) => {
-		const { oid } = baseline;
-		this.baselinesMap.set(oid, baseline);
-		// drop operations before the baseline
-		const ops = this.operationsMap.get(oid) || [];
-		while (ops[0]?.timestamp < baseline.timestamp) {
-			ops.shift();
+	insertBaselines = (baselines: DocumentBaseline[]) => {
+		for (const baseline of baselines) {
+			const { oid } = baseline;
+			this.baselinesMap.set(oid, baseline);
+			// drop operations before the baseline
+			const ops = this.operationsMap.get(oid) || [];
+			while (ops[0]?.timestamp < baseline.timestamp) {
+				ops.shift();
+			}
 		}
+	};
+
+	addConfirmedData = ({
+		operations,
+		baselines,
+		reset,
+	}: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => {
+		if (reset) {
+			this.operationsMap.clear();
+			this.baselinesMap.clear();
+		}
+		this.insertBaselines(baselines);
+		this.insertOperations(operations);
 	};
 
 	private applyOperations = (
 		view: any,
 		deleted: boolean,
 		operations: Operation[],
+		after?: string,
 	) => {
 		for (const operation of operations) {
+			if (after && operation.timestamp <= after) {
+				continue;
+			}
 			if (operation.data.op === 'delete') {
 				deleted = true;
 			} else {
@@ -133,7 +157,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 		const baseline = this.baselinesMap.get(oid);
 		const operations = this.operationsMap.get(oid) || [];
 		let view = cloneDeep(baseline?.snapshot || undefined);
-		return this.applyOperations(view, true, operations);
+		return this.applyOperations(view, !view, operations, baseline?.timestamp);
 	};
 
 	getEntity = (oid: ObjectIdentifier, schema: StorageFieldSchema): Entity => {
@@ -193,5 +217,17 @@ export class DocumentFamilyCache extends EventSubscriber<
 	dispose = () => {
 		this.entities.forEach((entity) => entity.dispose());
 		this.entities.clear();
+	};
+
+	reset = (operations: Operation[], baselines: DocumentBaseline[]) => {
+		this.baselinesMap = new Map(
+			baselines.map((baseline) => [baseline.oid, baseline]),
+		);
+		this.operationsMap = new Map();
+		this.insertOperations(operations);
+		for (const oid of this.entities.keys()) {
+			this.emit(`change:${oid}`);
+			this.emit('change:*', oid);
+		}
 	};
 }

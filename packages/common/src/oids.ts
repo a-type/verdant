@@ -1,5 +1,5 @@
 import { v4 } from 'uuid';
-import { ObjectRef } from './operation.js';
+import { isObjectRef, ObjectRef } from './operation.js';
 import { isObject, assert } from './utils.js';
 
 /**
@@ -198,6 +198,11 @@ export function normalize(
 		for (let i = 0; i < obj.length; i++) {
 			const value = obj[i];
 			if (isObject(value)) {
+				if (isObjectRef(value)) {
+					throw new Error(
+						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
+					);
+				}
 				const itemOid = getOid(value);
 				copy[i] = createRef(itemOid);
 				normalize(value, refs);
@@ -212,6 +217,11 @@ export function normalize(
 		for (const key of Object.keys(obj)) {
 			const value = obj[key];
 			if (isObject(value)) {
+				if (isObjectRef(value)) {
+					throw new Error(
+						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
+					);
+				}
 				const itemOid = getOid(value);
 				copy[key] = createRef(itemOid);
 				normalize(value, refs);

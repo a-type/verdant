@@ -27,6 +27,8 @@ export class Client {
   sync: Storage['sync'];
   undoHistory: Storage['undoHistory'];
   namespace: Storage['namespace'];
+  entities: Storage['entities'];
+  queryStore: Storage['queryStore'];
 
   close: Storage['close'];
 

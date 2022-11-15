@@ -25,18 +25,22 @@ interface StorageConfig {
 }
 
 export class Storage {
-	private entities = new EntityStore({
+	readonly entities = new EntityStore({
 		db: this.documentDb,
 		schema: this.schema,
 		meta: this.meta,
 		undoHistory: this.undoHistory,
 		log: this.config.log,
 	});
-	private queryStore = new QueryStore(this.documentDb, this.entities, {
+	readonly queryStore = new QueryStore(this.documentDb, this.entities, {
 		log: this.config.log,
 	});
-	queryMaker = new QueryMaker(this.queryStore, this.schema);
-	documentManager = new DocumentManager(this.meta, this.schema, this.entities);
+	readonly queryMaker = new QueryMaker(this.queryStore, this.schema);
+	readonly documentManager = new DocumentManager(
+		this.meta,
+		this.schema,
+		this.entities,
+	);
 
 	readonly collectionNames: string[];
 

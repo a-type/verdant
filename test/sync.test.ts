@@ -26,13 +26,13 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
-		// logId: 'A',
+		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,

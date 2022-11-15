@@ -1,3 +1,4 @@
+import { DocumentBaseline } from './baseline.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -260,6 +261,91 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	return patches;
 }
 
+export function shallowDiffToPatches(
+	from: any,
+	to: any,
+	getNow: () => string,
+	patches: Operation[] = [],
+) {
+	const oid = getOid(from);
+
+	function diffItems(key: string | number, value: any, oldValue: any) {
+		if (!isObject(value) || isObjectRef(value)) {
+			// for primitive fields, we can use plain sets and
+			// do not need to recurse, of course
+			if (value !== oldValue) {
+				patches.push({
+					oid,
+					timestamp: getNow(),
+					data: {
+						op: 'set',
+						name: key,
+						value,
+					},
+				});
+			}
+		} else {
+			throw new Error(
+				'Shallow diff was given a nested object. This is an error in lo-fi!',
+			);
+		}
+	}
+
+	if (Array.isArray(from) && Array.isArray(to)) {
+		// diffing is more naive than native array operations.
+		// we can only look at each element and decide if it should
+		// be replaced or removed - no moves or pushes, etc.
+		for (let i = 0; i < to.length; i++) {
+			const value = to[i];
+			const oldValue = from[i];
+			diffItems(i, value, oldValue);
+		}
+		// remove any remaining items at the end of the array
+		const deletedItemsAtEnd = from.length - to.length;
+		if (deletedItemsAtEnd > 0) {
+			// push the list-delete for the deleted items
+			patches.push({
+				oid,
+				timestamp: getNow(),
+				data: {
+					op: 'list-delete',
+					index: to.length,
+					count: deletedItemsAtEnd,
+				},
+			});
+		}
+	} else if (Array.isArray(from) || Array.isArray(to)) {
+		throw new Error('Cannot diff an array with an object');
+	} else if (isObject(from) && isObject(to)) {
+		const oldKeys = new Set(Object.keys(from));
+		for (const [key, value] of Object.entries(to)) {
+			oldKeys.delete(key);
+
+			if (isOidKey(key)) continue;
+
+			const oldValue = from[key];
+
+			diffItems(key, value, oldValue);
+		}
+
+		// this set now only contains keys which were not in the new object
+		for (const key of oldKeys) {
+			if (isOidKey(key)) continue;
+			// push the delete for the property
+			patches.push({
+				oid,
+				timestamp: getNow(),
+				data: {
+					op: 'remove',
+					name: key,
+				},
+			});
+		}
+	}
+
+	return patches;
+}
+
 /**
  * Takes a basic object and constructs a patch list to create it and
  * all of its nested objects.
@@ -288,6 +374,23 @@ export function initialToPatches(
 	return patches;
 }
 
+export function shallowInitialToPatches(
+	initial: any,
+	rootOid: ObjectIdentifier,
+	getNow: () => string,
+	patches: Operation[] = [],
+) {
+	patches.push({
+		oid: rootOid,
+		timestamp: getNow(),
+		data: {
+			op: 'initialize',
+			value: initial,
+		},
+	});
+	return patches;
+}
+
 export function groupPatchesByIdentifier(patches: Operation[]) {
 	const grouped: Record<ObjectIdentifier, OperationPatch[]> = {};
 	for (const patch of patches) {
@@ -303,6 +406,19 @@ export function groupPatchesByIdentifier(patches: Operation[]) {
 export function groupPatchesByRootOid(patches: Operation[]) {
 	const grouped: Record<ObjectIdentifier, Operation[]> = {};
 	for (const patch of patches) {
+		const root = getOidRoot(patch.oid);
+		if (root in grouped) {
+			grouped[root].push(patch);
+		} else {
+			grouped[root] = [patch];
+		}
+	}
+	return grouped;
+}
+
+export function groupBaselinesByRootOid(baselines: DocumentBaseline[]) {
+	const grouped: Record<ObjectIdentifier, DocumentBaseline[]> = {};
+	for (const patch of baselines) {
 		const root = getOidRoot(patch.oid);
 		if (root in grouped) {
 			grouped[root].push(patch);

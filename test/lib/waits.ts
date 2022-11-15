@@ -11,7 +11,7 @@ export async function waitForMockCall(mock: Mock, calls = 1) {
 	});
 }
 
-export function waitForPeerCount(client: Client, count: number) {
+export function waitForPeerCount(client: Client, count: number, gte = false) {
 	return new Promise<void>((resolve, reject) => {
 		if (client.sync.presence.peerIds.length === count) {
 			resolve();
@@ -23,7 +23,10 @@ export function waitForPeerCount(client: Client, count: number) {
 		const unsubscribe = client.sync.presence.subscribe(
 			'peersChanged',
 			(peers) => {
-				if (Object.keys(peers).length === count) {
+				if (
+					client.sync.presence.peerIds.length === count ||
+					(gte && client.sync.presence.peerIds.length >= count)
+				) {
 					unsubscribe();
 					clearTimeout(timeout);
 					resolve();

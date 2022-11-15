@@ -11,7 +11,9 @@ import {
 	Storage,
 	StorageDescriptor,
 	UserInfo,
+	AccessibleEntityProperty,
 } from '@lo-fi/web';
+import { EntityBase } from '@lo-fi/web/src/reactives/Entity.js';
 import {
 	createContext,
 	Provider,
@@ -120,10 +122,28 @@ export function createHooks<
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]);
 	}
 
-	function useWatch(liveObject: Entity) {
+	function useWatch<T>(
+		liveObject: EntityBase<T> | null,
+		prop?: AccessibleEntityProperty<T>,
+	) {
 		return useSyncExternalStore(
-			(handler) => liveObject.subscribe('change', handler),
-			() => liveObject.getSnapshot(),
+			(handler) => {
+				if (liveObject) {
+					return liveObject.subscribe('change', handler);
+				}
+				return () => {};
+			},
+			() => {
+				if (liveObject) {
+					if (prop) {
+						return liveObject.get(prop);
+					}
+
+					return liveObject.getAll();
+				}
+
+				return undefined;
+			},
 		);
 	}
 

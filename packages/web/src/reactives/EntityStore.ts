@@ -20,6 +20,9 @@ import {
 	assignIndexValues,
 	DocumentBaseline,
 	groupPatchesByRootOid,
+	shallowInitialToPatches,
+	shallowDiffToPatches,
+	groupBaselinesByRootOid,
 } from '@lo-fi/common';
 import { EntityBase, getStoredEntitySnapshot, ObjectEntity } from './Entity.js';
 import { storeRequestPromise } from '../idb.js';
@@ -29,7 +32,6 @@ import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
-	message: (message: ClientMessage) => void;
 }> {
 	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
 
@@ -39,6 +41,8 @@ export class EntityStore extends EventSubscriber<{
 	public readonly undoHistory;
 	private batchTimeout = 200;
 	private log;
+
+	private unsubscribes: (() => void)[] = [];
 
 	constructor({
 		db,
@@ -62,6 +66,7 @@ export class EntityStore extends EventSubscriber<{
 		this.undoHistory = undoHistory;
 		this.batchTimeout = batchTimeout;
 		this.log = log;
+		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
 	}
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
@@ -72,43 +77,49 @@ export class EntityStore extends EventSubscriber<{
 		} as const;
 	};
 
+	private resetFamilyCache = async (familyCache: DocumentFamilyCache) => {
+		// metadata must be loaded from database to initialize family cache
+		const transaction = this.meta.createTransaction([
+			'baselines',
+			'operations',
+		]);
+
+		const baselines: DocumentBaseline[] = [];
+		const operations: Operation[] = [];
+
+		await Promise.all([
+			this.meta.baselines.iterateOverAllForDocument(
+				familyCache.oid,
+				(baseline) => {
+					baselines.push(baseline);
+				},
+				{
+					transaction,
+				},
+			),
+			this.meta.operations.iterateOverAllOperationsForDocument(
+				familyCache.oid,
+				(op) => operations.push(op),
+				{ transaction },
+			),
+		]);
+		familyCache.reset(operations, baselines);
+	};
+
 	private openFamilyCache = async (oid: ObjectIdentifier) => {
 		const documentOid = getOidRoot(oid);
 		let familyCache = this.documentFamilyCaches.get(documentOid);
 		if (!familyCache) {
 			// metadata must be loaded from database to initialize family cache
-			const transaction = this.meta.createTransaction([
-				'baselines',
-				'operations',
-			]);
-
-			const baselines: DocumentBaseline[] = [];
-			const operations: Operation[] = [];
-
-			await Promise.all([
-				this.meta.baselines.iterateOverAllForDocument(
-					documentOid,
-					(baseline) => {
-						baselines.push(baseline);
-					},
-					{
-						transaction,
-					},
-				),
-				this.meta.operations.iterateOverAllOperationsForDocument(
-					documentOid,
-					(op) => operations.push(op),
-					{ transaction },
-				),
-			]);
-
 			familyCache = new DocumentFamilyCache({
 				oid: documentOid,
-				baselines,
-				operations,
 				store: this,
 			});
-			familyCache.subscribe('change:*', this.onEntityChange);
+			await this.resetFamilyCache(familyCache);
+
+			this.unsubscribes.push(
+				familyCache.subscribe('change:*', this.onEntityChange),
+			);
 			this.documentFamilyCaches.set(documentOid, familyCache);
 		}
 
@@ -157,7 +168,7 @@ export class EntityStore extends EventSubscriber<{
 		return familyCache.getEntity(oid, this.getDocumentSchema(oid));
 	};
 
-	private addOperationsToOpenCaches = (
+	private addOperationsToOpenCaches = async (
 		operations: Operation[],
 		confirmed = true,
 	) => {
@@ -175,25 +186,83 @@ export class EntityStore extends EventSubscriber<{
 		});
 	};
 
-	addLocalOperations = async (operations: Operation[]) => {
-		this.addOperationsToOpenCaches(operations, false);
-		this.enqueueOperations(operations);
+	private addBaselinesToCaches = async (baselines: DocumentBaseline[]) => {
+		const baselinesByOid = groupBaselinesByRootOid(baselines);
+		const oids = Object.keys(baselinesByOid);
+		const caches = await Promise.all(
+			oids.map((oid) => this.openFamilyCache(oid)),
+		);
+		oids.forEach((oid, i) => {
+			const familyCache = caches[i];
+			if (familyCache) {
+				familyCache.insertBaselines(baselinesByOid[oid]);
+			}
+		});
 	};
 
-	addRemoteOperations = async (operations: Operation[]) => {
-		this.addOperationsToOpenCaches(operations);
-		const affectedDocOids = await this.meta.insertRemoteOperations(operations);
-		for (const oid of affectedDocOids) {
+	private addDataToOpenCaches = ({
+		baselines,
+		operations,
+		reset,
+	}: {
+		baselines: DocumentBaseline[];
+		operations: Operation[];
+		reset?: boolean;
+	}) => {
+		const baselinesByDocumentOid = groupBaselinesByRootOid(baselines);
+		const operationsByDocumentOid = groupPatchesByRootOid(operations);
+		const allDocumentOids = Object.keys(baselinesByDocumentOid).concat(
+			Object.keys(operationsByDocumentOid),
+		);
+		for (const oid of allDocumentOids) {
+			const familyCache = this.documentFamilyCaches.get(oid);
+			if (familyCache) {
+				familyCache.addConfirmedData({
+					operations: operationsByDocumentOid[oid] || [],
+					baselines: baselinesByDocumentOid[oid] || [],
+					reset,
+				});
+			}
+		}
+
+		return allDocumentOids;
+	};
+
+	addData = async ({
+		operations,
+		baselines,
+		reset,
+	}: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => {
+		// first, synchronously add data to any open caches for immediate change propagation
+		const allDocumentOids = this.addDataToOpenCaches({
+			operations,
+			baselines,
+			reset,
+		});
+
+		// then, asynchronously add data to storage
+		await this.meta.insertRemoteBaselines(baselines);
+		await this.meta.insertRemoteOperations(operations);
+
+		// recompute all affected documents for querying
+		for (const oid of allDocumentOids) {
 			await this.writeDocumentToStorage(oid);
 		}
-		const affectedCollections = new Set(
-			affectedDocOids.map((oid) => decomposeOid(oid).collection),
+
+		// notify active queries
+		const affectedCollections = new Set<string>(
+			allDocumentOids.map((oid) => decomposeOid(oid).collection),
 		);
 		this.emit('collectionsChanged', Array.from(affectedCollections));
 	};
 
-	addRemoteBaselines = async (baselines: DocumentBaseline[]) => {
-		await this.meta.insertRemoteBaselines(baselines);
+	addLocalOperations = async (operations: Operation[]) => {
+		this.addOperationsToOpenCaches(operations, false);
+		this.enqueueOperations(operations);
 	};
 
 	private pendingOperations: Operation[] = [];
@@ -205,7 +274,7 @@ export class EntityStore extends EventSubscriber<{
 		}
 	};
 
-	private flushPatches = async () => {
+	flushPatches = async () => {
 		if (!this.pendingOperations.length) {
 			return;
 		}
@@ -223,10 +292,15 @@ export class EntityStore extends EventSubscriber<{
 			this.undoHistory.addUndo(await this.createUndo(operations));
 		}
 		await this.meta.insertLocalOperation(operations);
-		const operation = await this.meta.messageCreator.createOperation({
-			operations,
-		});
-		this.emit('message', operation);
+
+		// recompute all affected documents for querying
+		const allDocumentOids = Array.from(
+			new Set(operations.map((op) => getOidRoot(op.oid))),
+		);
+		for (const oid of allDocumentOids) {
+			await this.writeDocumentToStorage(oid);
+		}
+
 		// TODO: find a more efficient and straightforward way to update affected
 		// queries. Move to Metadata?
 		const affectedCollections = new Set(
@@ -235,7 +309,7 @@ export class EntityStore extends EventSubscriber<{
 		this.emit('collectionsChanged', Array.from(affectedCollections));
 
 		// confirm the operations
-		this.addOperationsToOpenCaches(operations);
+		this.addDataToOpenCaches({ operations, baselines: [] });
 	};
 
 	private getInverseOperations = async (ops: Operation[]) => {
@@ -265,12 +339,11 @@ export class EntityStore extends EventSubscriber<{
 			} else {
 				const copy = cloneDeep(view);
 				const applied = applyPatches(copy, patches);
-				const { keyPath } = decomposeOid(oid);
 				let inverse: Operation[] = [];
 				if (!applied) {
-					inverse = initialToPatches(view, oid, () => this.meta.now);
+					inverse = shallowInitialToPatches(view, oid, () => this.meta.now);
 				} else {
-					inverse = diffToPatches(applied, view, () => this.meta.now, keyPath);
+					inverse = shallowDiffToPatches(applied, view, () => this.meta.now);
 				}
 				inverseOps.push(...inverse);
 			}
@@ -314,18 +387,6 @@ export class EntityStore extends EventSubscriber<{
 		await this.submitOperations(patches);
 	};
 
-	private stripIndexes = (collection: string, view: any) => {
-		const { synthetics = {}, compounds = {} } = this.schema.collections[
-			collection
-		] as StorageCollectionSchema<any, any, any>;
-		for (const synthetic of Object.keys(synthetics)) {
-			delete view[synthetic];
-		}
-		for (const compoundIndex of Object.keys(compounds)) {
-			delete view[compoundIndex];
-		}
-	};
-
 	reset = async () => {
 		const tx = this.db.transaction(
 			Object.keys(this.schema.collections),
@@ -335,12 +396,23 @@ export class EntityStore extends EventSubscriber<{
 			const store = tx.objectStore(collection);
 			await storeRequestPromise(store.clear());
 		}
+		for (const [_, cache] of this.documentFamilyCaches) {
+			await this.resetFamilyCache(cache);
+		}
 	};
 
 	destroy = async () => {
+		for (const unsubscribe of this.unsubscribes) {
+			unsubscribe();
+		}
 		for (const cache of this.documentFamilyCaches.values()) {
 			cache.dispose();
 		}
 		this.documentFamilyCaches.clear();
+	};
+
+	private handleRebase = (baselines: DocumentBaseline[]) => {
+		this.log('Reacting to rebases', baselines.length);
+		this.addBaselinesToCaches(baselines);
 	};
 }

@@ -33,7 +33,7 @@ interface CacheEvents {
 	onAllUnsubscribed: (entity: EntityBase<any>) => void;
 }
 
-type AccessibleEntityProperty<T> = T extends Array<any>
+export type AccessibleEntityProperty<T> = T extends Array<any>
 	? number
 	: T extends object
 	? keyof T
@@ -47,7 +47,7 @@ type DataFromInit<Init> = Init extends { [key: string]: any }
 	? Init
 	: any;
 
-type EntityPropertyValue<
+export type EntityPropertyValue<
 	Init,
 	K extends keyof Init | number,
 > = Init extends Array<any>
@@ -64,6 +64,18 @@ type EntityPropertyValue<
 			? ObjectEntity<Init[K]>
 			: Init[K]
 		: never
+	: never;
+
+export type DestructuredEntity<Init> = Init extends Array<any>
+	? EntityPropertyValue<Init, number>[]
+	: Init extends object
+	? { [K in keyof Init]: EntityPropertyValue<Init, K> }
+	: never;
+
+export type EntityShape<E extends EntityBase<any>> = E extends EntityBase<
+	infer Init
+>
+	? Init
 	: never;
 
 export function getStoredEntitySnapshot(entity: EntityBase<any>) {
@@ -83,6 +95,7 @@ export abstract class EntityBase<Snapshot> {
 	protected _deleted = false;
 
 	private cachedSnapshot: Snapshot | null = null;
+	private cachedDestructure: DestructuredEntity<Snapshot> | null = null;
 
 	protected events = new EventSubscriber<{
 		change: () => void;
@@ -133,6 +146,7 @@ export abstract class EntityBase<Snapshot> {
 		const restored = this._deleted && !deleted;
 		this._deleted = deleted;
 		this.cachedSnapshot = null;
+		this.cachedDestructure = null;
 
 		if (this._deleted) {
 			this.events.emit('delete');
@@ -220,6 +234,28 @@ export abstract class EntityBase<Snapshot> {
 
 		const value = this.value[key];
 		return this.wrapValue(value, key);
+	};
+
+	getAll = (): DestructuredEntity<Snapshot> => {
+		if (this.value === undefined || this.value === null) {
+			throw new Error('Cannot access deleted entity');
+		}
+
+		if (this.cachedDestructure) return this.cachedDestructure;
+
+		let result: any;
+		if (Array.isArray(this.value)) {
+			result = this.value.map((value, index) =>
+				this.wrapValue(value, index as any),
+			) as any;
+		} else {
+			result = {} as any;
+			for (const key in this.value) {
+				result[key as any] = this.get(key as any);
+			}
+		}
+		this.cachedDestructure = result;
+		return result;
 	};
 
 	/**
@@ -445,11 +481,3 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 }
 
 export type Entity = ListEntity<any> | ObjectEntity<any>;
-
-export type EntityShape<E extends EntityBase<any>> = E extends ListEntity<
-	infer T
->
-	? T[]
-	: E extends ObjectEntity<infer T>
-	? T
-	: never;
