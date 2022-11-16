@@ -1,6 +1,12 @@
 export function openMetadataDatabase(
 	namespace: string,
-	indexedDB: IDBFactory = window.indexedDB,
+	{
+		indexedDB = window.indexedDB,
+		log,
+	}: {
+		indexedDB?: IDBFactory;
+		log?: (...args: any[]) => void;
+	},
 ) {
 	return new Promise<IDBDatabase>((resolve, reject) => {
 		const request = indexedDB.open([namespace, 'meta'].join('_'), 3);

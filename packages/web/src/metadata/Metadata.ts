@@ -8,7 +8,6 @@ import {
 	DocumentBaseline,
 	EventSubscriber,
 	getOidRoot,
-	groupPatchesByIdentifier,
 	HybridLogicalClockTimestampProvider,
 	ObjectIdentifier,
 	Operation,
@@ -26,6 +25,7 @@ import { SchemaStore } from './SchemaStore.js';
 
 export class Metadata extends EventSubscriber<{
 	message: (message: ClientMessage) => void;
+	rebase: (baselines: DocumentBaseline[]) => void;
 }> {
 	readonly operations = new OperationsStore(this.db);
 	readonly baselines = new BaselinesStore(this.db);
@@ -53,6 +53,10 @@ export class Metadata extends EventSubscriber<{
 	/**
 	 * Methods for accessing data
 	 */
+
+	createTransaction = (stores: ('operations' | 'baselines')[]) => {
+		return this.db.transaction(stores, 'readwrite');
+	};
 
 	/**
 	 * Recomputes an entire document from stored operations and baselines.
@@ -194,6 +198,9 @@ export class Metadata extends EventSubscriber<{
 		}
 		await this.operations.addOperations(operations as ClientOperation[]);
 
+		const message = await this.messageCreator.createOperation({ operations });
+		this.emit('message', message);
+
 		// we can now enqueue and check for rebase opportunities
 		this.tryAutonomousRebase();
 	};
@@ -221,7 +228,6 @@ export class Metadata extends EventSubscriber<{
 
 	insertRemoteBaselines = async (baselines: DocumentBaseline[]) => {
 		if (baselines.length === 0) return [];
-		// await this.rebaseLock;
 		this.log(`Inserting ${baselines.length} remote baselines`);
 
 		await this.baselines.setAll(baselines);
@@ -251,7 +257,7 @@ export class Metadata extends EventSubscriber<{
 		const localReplicaInfo = await this.localReplica.get();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
 		// but if we have never synced... we can rebase everything!
-		await this.autonomousRebase(this.now);
+		await this.runRebase(this.now);
 	};
 
 	/**
@@ -260,7 +266,7 @@ export class Metadata extends EventSubscriber<{
 	 * The goal is to allow local-only clients to compress their history to exactly
 	 * their undo stack.
 	 */
-	private autonomousRebase = async (globalAckTimestamp: string) => {
+	private runRebase = async (globalAckTimestamp: string) => {
 		// find all operations before the global ack
 		let lastTimestamp;
 		const toRebase = new Set<ObjectIdentifier>();
@@ -287,9 +293,17 @@ export class Metadata extends EventSubscriber<{
 		}
 
 		// rebase each affected document
+		let newBaselines = [];
 		for (const oid of toRebase) {
-			await this.rebase(oid, lastTimestamp || globalAckTimestamp, transaction);
+			newBaselines.push(
+				await this.rebase(
+					oid,
+					lastTimestamp || globalAckTimestamp,
+					transaction,
+				),
+			);
 		}
+		this.emit('rebase', newBaselines);
 	};
 
 	rebase = async (
@@ -310,7 +324,12 @@ export class Metadata extends EventSubscriber<{
 		await this.operations.iterateOverAllOperationsForEntity(
 			oid,
 			(patch, store) => {
-				current = applyPatch(current, patch.data);
+				// FIXME: this seems like the wrong place to do this
+				// but it's here as a safety measure...
+				if (!baseline || patch.timestamp > baseline.timestamp) {
+					current = applyPatch(current, patch.data);
+				}
+				// delete all prior operations to the baseline
 				operationsApplied++;
 				store.delete(patch.oid_timestamp);
 			},
@@ -322,14 +341,12 @@ export class Metadata extends EventSubscriber<{
 		if (current) {
 			assignOid(current, oid);
 		}
-		await this.baselines.set(
-			{
-				oid,
-				snapshot: current,
-				timestamp: upTo,
-			},
-			{ transaction },
-		);
+		const newBaseline = {
+			oid,
+			snapshot: current,
+			timestamp: upTo,
+		};
+		await this.baselines.set(newBaseline, { transaction });
 
 		this.log(
 			'successfully rebased',
@@ -342,6 +359,8 @@ export class Metadata extends EventSubscriber<{
 			operationsApplied,
 			'operations',
 		);
+
+		return newBaseline;
 	};
 
 	reset = async () => {
@@ -377,7 +396,7 @@ export class Metadata extends EventSubscriber<{
 
 	setGlobalAck = async (timestamp: string) => {
 		await this.ackInfo.setGlobalAck(timestamp);
-		await this.autonomousRebase(timestamp);
+		await this.runRebase(timestamp);
 	};
 
 	stats = async () => {

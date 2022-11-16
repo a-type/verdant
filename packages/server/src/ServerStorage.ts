@@ -10,6 +10,7 @@ interface ServerStorageOptions {
 	sender: MessageSender;
 	profiles: UserProfiles<any>;
 	replicaTruancyMinutes: number;
+	log?: (...args: any[]) => void;
 }
 
 export class ServerStorage {
@@ -23,6 +24,7 @@ export class ServerStorage {
 		sender,
 		profiles,
 		replicaTruancyMinutes,
+		log = () => {},
 	}: ServerStorageOptions) {
 		this.db = db;
 		this.sender = sender;
@@ -33,6 +35,7 @@ export class ServerStorage {
 			sender: this.sender,
 			profileLoader: this.profileLoader,
 			replicaTruancyMinutes,
+			log,
 		});
 	}
 

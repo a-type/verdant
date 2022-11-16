@@ -84,7 +84,12 @@ export class BaselinesStore extends IDBService {
 			mode = 'readonly',
 		}: { transaction?: IDBTransaction; mode?: 'readwrite' | 'readonly' } = {},
 	) => {
-		return this.run('baselines', (store) => store.get(oid), mode, transaction);
+		return this.run<DocumentBaseline>(
+			'baselines',
+			(store) => store.get(oid),
+			mode,
+			transaction,
+		);
 	};
 
 	set = async <T>(

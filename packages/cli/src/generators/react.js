@@ -10,7 +10,15 @@ import type { Client, ClientDescriptor, Schema, ${collections
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
 		.join(', ')} } from './index.js';
-import type { UserInfo, ObjectEntity, ListEntity } from '@lo-fi/web';
+		import type {
+			UserInfo,
+			ObjectEntity,
+			ListEntity,
+			EntityBase,
+			AccessibleEntityProperty,
+			DestructuredEntity,
+			EntityShape,
+		} from '@lo-fi/web';
 
 export interface GeneratedHooks {
 	Provider: Provider<ClientDescriptor<Schema>>;
@@ -19,7 +27,16 @@ export interface GeneratedHooks {
   usePeerIds: () => string[];
   usePeer: (peerId: string) => UserInfo;
   useSyncStatus: () => boolean;
-	useWatch: (entity: ObjectEntity<any> | ListEntity<any>) => void;
+	useWatch<T extends EntityBase<any> | null>(
+		entity: T,
+	): T extends EntityBase<any> ? DestructuredEntity<EntityShape<T>> : T;
+	useWatch<
+		T extends EntityBase<any> | null,
+		P extends AccessibleEntityProperty<EntityShape<T>>,
+	>(
+		entity: T,
+		props: P,
+	): EntityShape<T>[P];
   ${collections
 		.map((col) => {
 			const name = getObjectProperty(col, 'name').value;

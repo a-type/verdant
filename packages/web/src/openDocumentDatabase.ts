@@ -17,17 +17,19 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 	migrations,
 	meta,
 	namespace,
+	log = () => {},
 }: {
 	schema: Schema;
 	migrations: Migration[];
 	indexedDB?: IDBFactory;
 	meta: Metadata;
 	namespace: string;
+	log?: (...args: any[]) => void;
 }) {
 	const { collections, version } = schema;
 	// initialize collections as indexddb databases
 	const keys = Object.keys(collections);
-	console.log('Initializing database for:', keys);
+	log('Initializing database for:', keys);
 	const database = new Promise<IDBDatabase>((resolve, reject) => {
 		const request = indexedDB.open(
 			[namespace, 'collections'].join('_'),
@@ -88,6 +90,14 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 									// @ts-ignore - excessive type resolution
 									const newValue = strategy(cursor.value);
 									if (newValue) {
+										// remove any removed indexes
+										for (const removedIndex of migration.removedIndexes[
+											collection
+										] || []) {
+											if (removedIndex.compound || removedIndex.synthetic) {
+												delete (newValue as any)[removedIndex.name];
+											}
+										}
 										// the migration has altered the shape of our document. we need
 										// to create the operation from the diff and write it to meta
 										// then recompute the document.
@@ -103,14 +113,6 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 									}
 									// apply indexes after changes
 									assignIndexValues(collectionSchema, newValue);
-									// remove any removed indexes
-									for (const removedIndex of migration.removedIndexes[
-										collection
-									] || []) {
-										if (removedIndex.compound || removedIndex.synthetic) {
-											delete (newValue as any)[removedIndex.name];
-										}
-									}
 									cursor.update(newValue);
 									cursor.continue();
 								} else {
@@ -127,6 +129,27 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 				for (const removedCollection of migration.removedCollections) {
 					db.deleteObjectStore(removedCollection);
 				}
+
+				log(`
+        ⬆️ v${
+					migration.newSchema.version
+				} Migration complete. Here's the rundown:
+          - Added collections: ${migration.addedCollections.join(', ')}
+          - Removed collections: ${migration.removedCollections.join(', ')}
+          - Changed collections: ${migration.changedCollections.join(', ')}
+          - New indexes: ${Object.keys(migration.addedIndexes)
+						.map((col) =>
+							migration.addedIndexes[col].map((i) => `${col}.${i.name}`),
+						)
+						.flatMap((i) => i)
+						.join(', ')}
+          - Removed indexes: ${Object.keys(migration.removedIndexes)
+						.map((col) =>
+							migration.removedIndexes[col].map((i) => `${col}.${i.name}`),
+						)
+						.flatMap((i) => i)
+						.join(', ')}
+      `);
 			}
 		};
 		request.onsuccess = (event) => {

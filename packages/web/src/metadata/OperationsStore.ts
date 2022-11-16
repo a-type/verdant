@@ -86,10 +86,12 @@ export class OperationsStore extends IDBService {
 		oid: ObjectIdentifier,
 		iterator: (patch: StoredClientOperation, store: IDBObjectStore) => void,
 		{
+			after,
 			to,
 			mode,
 			transaction: providedTx,
 		}: {
+			after?: string;
 			to?: string;
 			mode?: 'readwrite' | 'readonly';
 			transaction?: IDBTransaction;
@@ -98,12 +100,14 @@ export class OperationsStore extends IDBService {
 		const transaction = providedTx || this.db.transaction('operations', mode);
 		const store = transaction.objectStore('operations');
 
-		const start = createLowerBoundIndexValue(oid);
+		const start = after
+			? createCompoundIndexValue(oid, after)
+			: createLowerBoundIndexValue(oid);
 		const end = to
 			? createCompoundIndexValue(oid, to)
 			: createUpperBoundIndexValue(oid);
 
-		const range = IDBKeyRange.bound(start, end, false, false);
+		const range = IDBKeyRange.bound(start, end, !!after, false);
 
 		const request = store.openCursor(range, 'next');
 		return new Promise<void>((resolve, reject) => {

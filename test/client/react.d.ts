@@ -8,7 +8,15 @@ import type {
   Category,
   CategoryFilter,
 } from "./index.js";
-import type { UserInfo, ObjectEntity, ListEntity } from "@lo-fi/web";
+import type {
+  UserInfo,
+  ObjectEntity,
+  ListEntity,
+  EntityBase,
+  AccessibleEntityProperty,
+  DestructuredEntity,
+  EntityShape,
+} from "@lo-fi/web";
 
 export interface GeneratedHooks {
   Provider: Provider<ClientDescriptor<Schema>>;
@@ -17,7 +25,16 @@ export interface GeneratedHooks {
   usePeerIds: () => string[];
   usePeer: (peerId: string) => UserInfo;
   useSyncStatus: () => boolean;
-  useWatch: (entity: ObjectEntity<any> | ListEntity<any>) => void;
+  useWatch<T extends EntityBase<any> | null>(
+    entity: T
+  ): T extends EntityBase<any> ? DestructuredEntity<EntityShape<T>> : T;
+  useWatch<
+    T extends EntityBase<any> | null,
+    P extends AccessibleEntityProperty<EntityShape<T>>
+  >(
+    entity: T,
+    props: P
+  ): EntityShape<T>[P];
 
   useItem: (id: string) => Item;
   useOneItem: (config: { index: ItemFilter }) => Item;

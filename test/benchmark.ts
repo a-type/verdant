@@ -8,7 +8,7 @@ import { WebSocket } from 'ws';
 // @ts-ignore
 global.WebSocket = WebSocket;
 
-const do10kChangesToOneObject = async () => {
+async function setup2PeerTest() {
 	const server = await startTestServer();
 	const cleanupClients: Client[] = [];
 
@@ -39,6 +39,21 @@ const do10kChangesToOneObject = async () => {
 	await waitForQueryResult(itemBQuery);
 	const itemB = await itemBQuery.resolved;
 
+	return {
+		clientA,
+		clientB,
+		itemA,
+		itemB,
+		cleanup: async () => {
+			cleanupClients.forEach((c) => c.sync.stop());
+			await server.cleanup();
+		},
+	};
+}
+
+async function do10kChangesToOneObject() {
+	const { itemA, itemB, clientA, cleanup } = await setup2PeerTest();
+
 	const changeWaitPromise = new Promise<void>((resolve) => {
 		itemA.subscribe('change', () => {
 			if (itemA.get('content') === '10000') {
@@ -47,7 +62,7 @@ const do10kChangesToOneObject = async () => {
 		});
 	});
 
-	const start = Date.now();
+	let start = Date.now();
 
 	for (let i = 0; i < 10001; i++) {
 		itemB.set('content', `${i}`);
@@ -55,15 +70,61 @@ const do10kChangesToOneObject = async () => {
 
 	await changeWaitPromise;
 
-	const end = Date.now();
+	let end = Date.now();
 
 	console.info(`✅ --- 10000 changes to one object in ${end - start}ms ---`);
+	// best on my desktop so far is around 4s
+
+	// now let's try rebasing
+	start = Date.now();
+	itemA.set('content', '0');
+
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+	end = Date.now();
+	const stats = await clientA.stats();
+	console.info('Client storage stats', stats);
+	if (stats.meta.operationsSize.count > 100) {
+		console.error('🔺 Rebase was not performed!');
+	}
+
+	await cleanup();
+}
+
+async function do1kChangesToOneObjectUnbatched() {
+	const { itemA, itemB, clientA, clientB, cleanup } = await setup2PeerTest();
+
+	const changeWaitPromise = new Promise<void>((resolve) => {
+		itemA.subscribe('change', () => {
+			if (itemA.get('content') === '1000') {
+				resolve();
+			}
+		});
+	});
+
+	let start = Date.now();
+
+	for (let i = 0; i < 1001; i++) {
+		itemB.set('content', `${i}`);
+		clientB.entities.flushPatches();
+	}
+
+	await changeWaitPromise;
+
+	let end = Date.now();
+
+	console.info(
+		`✅ --- 1000 UNBATCHED changes to one object in ${end - start}ms ---`,
+	);
 	// best on my desktop so far is around 13s
 
-	cleanupClients.forEach((c) => c.sync.stop());
-	await server.cleanup();
-};
+	await cleanup();
+}
 
-do10kChangesToOneObject().then(() => {
+async function main() {
+	await do10kChangesToOneObject();
+	await do1kChangesToOneObjectUnbatched();
+
 	process.exit(0);
-});
+}
+
+main();

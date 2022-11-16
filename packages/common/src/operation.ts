@@ -1,3 +1,4 @@
+import { DocumentBaseline } from './baseline.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -5,6 +6,7 @@ import {
 	decomposeOid,
 	ensureOid,
 	getOid,
+	getOidRoot,
 	isOidKey,
 	KeyPath,
 	maybeGetOid,
@@ -13,7 +15,7 @@ import {
 	OID_KEY,
 	removeOid,
 } from './oids.js';
-import { isObject, assert } from './utils.js';
+import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';
 
 // export type ObjectIdentifier<
 // 	CollectionName extends string = string,
@@ -76,7 +78,8 @@ export interface OperationPatchListPush extends BaseOperationPatch {
 export interface OperationPatchListInsert extends BaseOperationPatch {
 	op: 'list-insert';
 	index: number;
-	value: PropertyValue;
+	value?: PropertyValue;
+	values?: PropertyValue[];
 }
 export interface OperationPatchListDelete extends BaseOperationPatch {
 	op: 'list-delete';
@@ -111,6 +114,7 @@ export interface OperationPatchListMoveByIndex extends BaseOperationPatch {
 export interface OperationPatchListRemove extends BaseOperationPatch {
 	op: 'list-remove';
 	value: PropertyValue;
+	only?: 'first' | 'last';
 }
 
 export interface OperationPatchDelete extends BaseOperationPatch {
@@ -259,6 +263,91 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	return patches;
 }
 
+export function shallowDiffToPatches(
+	from: any,
+	to: any,
+	getNow: () => string,
+	patches: Operation[] = [],
+) {
+	const oid = getOid(from);
+
+	function diffItems(key: string | number, value: any, oldValue: any) {
+		if (!isObject(value) || isObjectRef(value)) {
+			// for primitive fields, we can use plain sets and
+			// do not need to recurse, of course
+			if (value !== oldValue) {
+				patches.push({
+					oid,
+					timestamp: getNow(),
+					data: {
+						op: 'set',
+						name: key,
+						value,
+					},
+				});
+			}
+		} else {
+			throw new Error(
+				'Shallow diff was given a nested object. This is an error in lo-fi!',
+			);
+		}
+	}
+
+	if (Array.isArray(from) && Array.isArray(to)) {
+		// diffing is more naive than native array operations.
+		// we can only look at each element and decide if it should
+		// be replaced or removed - no moves or pushes, etc.
+		for (let i = 0; i < to.length; i++) {
+			const value = to[i];
+			const oldValue = from[i];
+			diffItems(i, value, oldValue);
+		}
+		// remove any remaining items at the end of the array
+		const deletedItemsAtEnd = from.length - to.length;
+		if (deletedItemsAtEnd > 0) {
+			// push the list-delete for the deleted items
+			patches.push({
+				oid,
+				timestamp: getNow(),
+				data: {
+					op: 'list-delete',
+					index: to.length,
+					count: deletedItemsAtEnd,
+				},
+			});
+		}
+	} else if (Array.isArray(from) || Array.isArray(to)) {
+		throw new Error('Cannot diff an array with an object');
+	} else if (isObject(from) && isObject(to)) {
+		const oldKeys = new Set(Object.keys(from));
+		for (const [key, value] of Object.entries(to)) {
+			oldKeys.delete(key);
+
+			if (isOidKey(key)) continue;
+
+			const oldValue = from[key];
+
+			diffItems(key, value, oldValue);
+		}
+
+		// this set now only contains keys which were not in the new object
+		for (const key of oldKeys) {
+			if (isOidKey(key)) continue;
+			// push the delete for the property
+			patches.push({
+				oid,
+				timestamp: getNow(),
+				data: {
+					op: 'remove',
+					name: key,
+				},
+			});
+		}
+	}
+
+	return patches;
+}
+
 /**
  * Takes a basic object and constructs a patch list to create it and
  * all of its nested objects.
@@ -287,13 +376,56 @@ export function initialToPatches(
 	return patches;
 }
 
+export function shallowInitialToPatches(
+	initial: any,
+	rootOid: ObjectIdentifier,
+	getNow: () => string,
+	patches: Operation[] = [],
+) {
+	patches.push({
+		oid: rootOid,
+		timestamp: getNow(),
+		data: {
+			op: 'initialize',
+			value: initial,
+		},
+	});
+	return patches;
+}
+
 export function groupPatchesByIdentifier(patches: Operation[]) {
-	const grouped: Record<ObjectIdentifier, OperationPatch[]> = {};
+	const grouped: Record<ObjectIdentifier, Operation[]> = {};
 	for (const patch of patches) {
 		if (patch.oid in grouped) {
-			grouped[patch.oid].push(patch.data);
+			grouped[patch.oid].push(patch);
 		} else {
-			grouped[patch.oid] = [patch.data];
+			grouped[patch.oid] = [patch];
+		}
+	}
+	return grouped;
+}
+
+export function groupPatchesByRootOid(patches: Operation[]) {
+	const grouped: Record<ObjectIdentifier, Operation[]> = {};
+	for (const patch of patches) {
+		const root = getOidRoot(patch.oid);
+		if (root in grouped) {
+			grouped[root].push(patch);
+		} else {
+			grouped[root] = [patch];
+		}
+	}
+	return grouped;
+}
+
+export function groupBaselinesByRootOid(baselines: DocumentBaseline[]) {
+	const grouped: Record<ObjectIdentifier, DocumentBaseline[]> = {};
+	for (const patch of baselines) {
+		const root = getOidRoot(patch.oid);
+		if (root in grouped) {
+			grouped[root].push(patch);
+		} else {
+			grouped[root] = [patch];
 		}
 	}
 	return grouped;
@@ -355,11 +487,27 @@ export function applyPatch<T extends NormalizedObject>(
 		case 'list-remove':
 			listCheck(base);
 			do {
-				index = base.indexOf(patch.value);
+				const valueToRemove = patch.value;
+				if (patch.only === 'last') {
+					if (isObjectRef(valueToRemove)) {
+						index = findLastIndex(
+							base,
+							(item: any) => item.id === valueToRemove.id,
+						);
+					} else {
+						index = base.lastIndexOf(valueToRemove);
+					}
+				} else {
+					if (isObjectRef(valueToRemove)) {
+						index = base.findIndex((item: any) => item.id === valueToRemove.id);
+					} else {
+						index = base.indexOf(valueToRemove);
+					}
+				}
 				if (index !== -1) {
 					base.splice(index, 1);
 				}
-			} while (index !== -1);
+			} while (!patch.only && index !== -1);
 			break;
 		case 'list-move-by-ref':
 			listCheck(base);
@@ -369,12 +517,23 @@ export function applyPatch<T extends NormalizedObject>(
 			break;
 		case 'list-insert':
 			listCheck(base);
-			base.splice(patch.index, 0, patch.value);
+			if (!patch.value && !patch.values) {
+				throw new Error(
+					`Cannot apply list insert patch; expected value or values, received ${JSON.stringify(
+						patch,
+					)}`,
+				);
+			}
+			if (patch.value) {
+				base.splice(patch.index, 0, patch.value);
+			} else {
+				base.splice(patch.index, 0, ...patch.values!);
+			}
 			break;
 		case 'delete':
 			return undefined;
 		case 'initialize':
-			return patch.value;
+			return cloneDeep(patch.value);
 		default:
 			throw new Error(`Unsupported patch operation: ${(patch as any).op}`);
 	}

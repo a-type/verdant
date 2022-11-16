@@ -1,5 +1,5 @@
 import { generateId } from '@lo-fi/common';
-import { ObjectEntity } from './Entity.js';
+import { ObjectEntity } from './reactives/Entity.js';
 
 export const UPDATE = '@@update';
 

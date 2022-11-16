@@ -46,6 +46,10 @@ export type SyncMessage = {
 	replicaId: string;
 	/** the logical time this message was sent */
 	timestamp: string;
+	/** Any new operations created since the requested time */
+	operations: Operation[];
+	/** Any new baselines created since the requested time */
+	baselines: DocumentBaseline[];
 	/** the schema version known by this client */
 	schemaVersion: number;
 	/**
@@ -63,11 +67,6 @@ export type SyncResponseMessage = {
 	// baselines this client should apply
 	baselines: DocumentBaseline[];
 	/**
-	 * The server requests any changes since this time from the client.
-	 * Null means all changes.
-	 */
-	provideChangesSince: string | null;
-	/**
 	 * If this flag is set, the client should discard local data
 	 * and reset to incoming data only. Used when a client requested
 	 * resyncAll in its sync message, or for clients which have been
@@ -84,17 +83,6 @@ export type SyncResponseMessage = {
 	 * A map of connected clients' presences values
 	 */
 	peerPresence: Record<string, UserInfo<any, any>>;
-};
-
-export type SyncStep2Message = {
-	type: 'sync-step2';
-	replicaId: string;
-	/** Any new operations created since the requested time */
-	operations: Operation[];
-	/** Any new baselines created since the requested time */
-	baselines: DocumentBaseline[];
-	/** The time this message was sent. Can be used for ack. */
-	timestamp: string;
 };
 
 export type PresenceUpdateMessage = {
@@ -128,10 +116,14 @@ export type ForbiddenMessage = {
 	type: 'forbidden';
 };
 
+export type ServerAckMessage = {
+	type: 'server-ack';
+	timestamp: string;
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
-	| SyncStep2Message
 	| OperationMessage
 	| AckMessage
 	| PresenceUpdateMessage;
@@ -142,4 +134,5 @@ export type ServerMessage =
 	| PresenceChangedMessage
 	| PresenceOfflineMessage
 	| GlobalAckMessage
-	| ForbiddenMessage;
+	| ForbiddenMessage
+	| ServerAckMessage;
