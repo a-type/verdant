@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 3.0.0
+
+### Minor Changes
+
+- 0e11d9b: Big internal refactoring to improve performance and consistency. Major bugfixes to undo, sync exchanges.
+
+### Patch Changes
+
+- Updated dependencies [0e11d9b]
+  - @lo-fi/common@1.2.0
+  - @lo-fi/web@1.2.0
+
 ## 2.1.3
 
 ### Patch Changes

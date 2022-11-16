@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.2.0
+
+### Minor Changes
+
+- 0e11d9b: Big internal refactoring to improve performance and consistency. Major bugfixes to undo, sync exchanges.
+
 ## 1.1.6
 
 ### Patch Changes

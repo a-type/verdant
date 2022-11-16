@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 1.2.0
+
+### Minor Changes
+
+- 0e11d9b: Big internal refactoring to improve performance and consistency. Major bugfixes to undo, sync exchanges.
+
+### Patch Changes
+
+- Updated dependencies [0e11d9b]
+  - @lo-fi/common@1.2.0
+
 ## 1.1.5
 
 ### Patch Changes
