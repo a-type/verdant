@@ -27,22 +27,29 @@ export class Metadata extends EventSubscriber<{
 	message: (message: ClientMessage) => void;
 	rebase: (baselines: DocumentBaseline[]) => void;
 }> {
-	readonly operations = new OperationsStore(this.db);
-	readonly baselines = new BaselinesStore(this.db);
-	readonly localReplica = new LocalReplicaStore(this.db);
-	readonly ackInfo = new AckInfoStore(this.db);
-	readonly schema = new SchemaStore(this.db, this.schemaDefinition.version);
-	readonly messageCreator = new MessageCreator(this);
-	readonly patchCreator = new PatchCreator(() => this.now);
+	readonly operations;
+	readonly baselines;
+	readonly localReplica;
+	readonly ackInfo;
+	readonly schema;
+	readonly messageCreator;
+	readonly patchCreator;
 	readonly time = new HybridLogicalClockTimestampProvider();
 	private readonly log = (...args: any[]) => {};
 
 	constructor(
 		private readonly db: IDBDatabase,
-		private readonly schemaDefinition: StorageSchema<any>,
+		schemaDefinition: StorageSchema<any>,
 		{ log }: { log?: (...args: any[]) => void } = {},
 	) {
 		super();
+		this.schema = new SchemaStore(db, schemaDefinition.version);
+		this.operations = new OperationsStore(this.db);
+		this.baselines = new BaselinesStore(this.db);
+		this.localReplica = new LocalReplicaStore(this.db);
+		this.ackInfo = new AckInfoStore(this.db);
+		this.messageCreator = new MessageCreator(this);
+		this.patchCreator = new PatchCreator(() => this.now);
 		if (log) this.log = log;
 	}
 

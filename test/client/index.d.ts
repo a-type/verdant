@@ -102,8 +102,11 @@ interface Collection<
   Init,
   Filter
 > {
+  /**
+   * @deprecated use put
+   */
   create: (init: Init) => Promise<Document>;
-  upsert: (init: Init) => Promise<Document>;
+  put: (init: Init) => Promise<Document>;
   delete: (id: string) => Promise<void>;
   deleteAll: (ids: string[]) => Promise<void>;
   get: (id: string) => Query<Document>;
@@ -133,8 +136,14 @@ export class Client {
   stats: () => Promise<any>;
 }
 
+// schema is provided internally. loadInitialData must be revised to pass the typed Client
+interface ClientInitOptions
+  extends Omit<StorageInitOptions, "schema" | "loadInitialData"> {
+  loadInitialData?: (client: Client) => Promise<void>;
+}
+
 export class ClientDescriptor {
-  constructor(init: Omit<StorageInitOptions<Schema>, "schema">);
+  constructor(init: ClientInitOptions);
   open: () => Promise<Client>;
   readonly current: Client | null;
   readonly readyPromise: Promise<Client>;

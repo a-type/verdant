@@ -2,14 +2,16 @@ export function openMetadataDatabase(
 	namespace: string,
 	{
 		indexedDB = window.indexedDB,
+		databaseName,
 		log,
 	}: {
 		indexedDB?: IDBFactory;
+		databaseName: string;
 		log?: (...args: any[]) => void;
 	},
 ) {
 	return new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open([namespace, 'meta'].join('_'), 3);
+		const request = indexedDB.open(databaseName, 3);
 		request.onupgradeneeded = async (event) => {
 			const db = request.result;
 			if (event.oldVersion === 2) {
