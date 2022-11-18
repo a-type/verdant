@@ -145,6 +145,12 @@ export class ServerLibrary {
 			[],
 		);
 
+		// tell sender we got and processed their operation
+		this.sender.send(this.id, clientKey, {
+			type: 'server-ack',
+			timestamp: message.timestamp,
+		});
+
 		// TODO: evaluate if this is correct!!!
 		this.updateAcknowledged(
 			message.replicaId,
@@ -256,6 +262,7 @@ export class ServerLibrary {
 			// and there is data to overwrite it. otherwise the client may still
 			// send its own history to us.
 			overwriteLocalData: replicaShouldReset && !isEmptyLibrary,
+			ackedTimestamp: message.timestamp,
 		});
 	};
 

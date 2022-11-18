@@ -1,5 +1,6 @@
 import {
 	applyPatch,
+	assignOid,
 	cloneDeep,
 	DocumentBaseline,
 	EventSubscriber,
@@ -148,7 +149,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			unconfirmedOperations,
 		);
 		if (view) {
-			removeOid(view);
+			assignOid(view, oid);
 		}
 		return { view, deleted };
 	};
@@ -157,7 +158,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		const baseline = this.baselinesMap.get(oid);
 		const operations = this.operationsMap.get(oid) || [];
 		let view = cloneDeep(baseline?.snapshot || undefined);
-		return this.applyOperations(view, !view, operations, baseline?.timestamp);
+		view = this.applyOperations(view, !view, operations, baseline?.timestamp);
+		if (view) {
+			assignOid(view, oid);
+		}
+		return view;
 	};
 
 	getEntity = (oid: ObjectIdentifier, schema: StorageFieldSchema): Entity => {

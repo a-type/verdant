@@ -90,7 +90,12 @@ export function useMultiplayerState() {
 				if (!shape) {
 					shapes.remove(id);
 				} else {
-					shapes.set(shape.id, shape);
+					const syncShape = shapes.get(shape.id);
+					if (!syncShape) {
+						shapes.set(shape.id, shape);
+					} else {
+						syncShape.update(shape);
+					}
 				}
 			});
 
@@ -98,7 +103,12 @@ export function useMultiplayerState() {
 				if (!binding) {
 					bindings.remove(id);
 				} else {
-					bindings.set(binding.id, binding);
+					const syncBinding = bindings.get(binding.id);
+					if (!syncBinding) {
+						bindings.set(binding.id, binding);
+					} else {
+						syncBinding.update(binding);
+					}
 				}
 			});
 
@@ -106,7 +116,12 @@ export function useMultiplayerState() {
 				if (!asset) {
 					assets.remove(id);
 				} else {
-					assets.set(asset.id, asset);
+					const syncAsset = assets.get(asset.id);
+					if (!syncAsset) {
+						assets.set(asset.id, asset);
+					} else {
+						syncAsset.update(asset);
+					}
 				}
 			});
 		},
@@ -150,10 +165,12 @@ export function useMultiplayerState() {
 
 			// Subscribe to changes
 			const handleChanges = () => {
+				console.log(shapes.getSnapshot());
+				console.log(bindings.getSnapshot());
 				app?.replacePageContent(
-					shapes.getAll(),
-					bindings.getAll(),
-					assets.getAll(),
+					shapes.getSnapshot() || {},
+					bindings.getSnapshot() || {},
+					assets.getSnapshot() || {},
 				);
 			};
 

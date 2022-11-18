@@ -66,72 +66,6 @@ export class Metadata extends EventSubscriber<{
 	};
 
 	/**
-	 * Recomputes an entire document from stored operations and baselines.
-	 */
-	getComputedDocument = async <T = any>(
-		oid: ObjectIdentifier,
-		upToTimestamp?: string,
-	): Promise<T | undefined> => {
-		return this.getRecursiveComputedEntity(oid, upToTimestamp);
-	};
-
-	getRecursiveComputedEntity = async <T = any>(
-		entityOid: ObjectIdentifier,
-		upToTimestamp?: string,
-	): Promise<T | undefined> => {
-		const documentOid = getOidRoot(entityOid);
-		const transaction = this.db.transaction(
-			['baselines', 'operations'],
-			'readwrite',
-		);
-		const baselines = await this.baselines.getAllForDocument(documentOid, {
-			transaction,
-		});
-		const subObjectsMappedByOid = new Map<ObjectIdentifier, any>();
-		for (const baseline of baselines) {
-			subObjectsMappedByOid.set(baseline.oid, baseline.snapshot);
-		}
-
-		let lastPatchWasDelete = false;
-
-		await this.operations.iterateOverAllOperationsForDocument(
-			documentOid,
-			(patch) => {
-				let current = subObjectsMappedByOid.get(patch.oid);
-				current = applyPatch(current, patch.data);
-				subObjectsMappedByOid.set(patch.oid, current);
-				lastPatchWasDelete = patch.data.op === 'delete';
-				// TODO: user-configurable delete-wins or delete-loses behavior?
-				// one way to do that would be to ignore delete ops until the end,
-				// and only return nothing if the last op was a delete.
-			},
-			{
-				to: upToTimestamp,
-				transaction,
-			},
-		);
-
-		// assemble the various sub-objects into the document by
-		// placing them where their ref is
-		const rootBaseline = subObjectsMappedByOid.get(entityOid);
-		// critical: attach metadata
-		if (rootBaseline) {
-			assignOid(rootBaseline, entityOid);
-			const usedOids = substituteRefsWithObjects(
-				rootBaseline,
-				subObjectsMappedByOid,
-			);
-		}
-
-		// FIXME: this is a fragile check for deleted
-		if (lastPatchWasDelete || !rootBaseline) {
-			return undefined;
-		}
-
-		return rootBaseline as T;
-	};
-
-	/**
 	 * Gets the OID and every sub-object OID for a given document.
 	 * Includes any sub-objects that are not referenced by the root object
 	 * but still happen to be in storage.
@@ -249,9 +183,9 @@ export class Metadata extends EventSubscriber<{
 		return Array.from(affectedOidSet);
 	};
 
-	updateLastSynced = async () => {
+	updateLastSynced = async (timestamp: string) => {
 		return this.localReplica.update({
-			lastSyncedLogicalTime: this.now,
+			lastSyncedLogicalTime: timestamp,
 		});
 	};
 

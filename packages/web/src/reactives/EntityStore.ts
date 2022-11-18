@@ -1,35 +1,28 @@
 import {
+	assert,
+	assignIndexValues,
 	assignOid,
+	assignOidPropertiesToAllSubObjects,
+	assignOidProperty,
+	Batcher,
+	cloneDeep,
 	decomposeOid,
+	DocumentBaseline,
 	EventSubscriber,
-	getOid,
 	getOidRoot,
-	getRoots,
+	getUndoOperations,
+	groupBaselinesByRootOid,
+	groupPatchesByIdentifier,
+	groupPatchesByRootOid,
 	ObjectIdentifier,
 	Operation,
-	OperationPatch,
-	StorageCollectionSchema,
 	StorageSchema,
-	assert,
-	ClientMessage,
-	groupPatchesByIdentifier,
-	applyPatches,
-	diffToPatches,
-	cloneDeep,
-	initialToPatches,
-	assignIndexValues,
-	DocumentBaseline,
-	groupPatchesByRootOid,
-	shallowInitialToPatches,
-	shallowDiffToPatches,
-	groupBaselinesByRootOid,
-	getUndoOperations,
 } from '@lo-fi/common';
-import { EntityBase, getStoredEntitySnapshot, ObjectEntity } from './Entity.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
+import { getStoredEntitySnapshot } from './Entity.js';
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
@@ -40,8 +33,8 @@ export class EntityStore extends EventSubscriber<{
 	private readonly schema;
 	public readonly meta;
 	public readonly undoHistory;
-	private batchTimeout = 200;
 	private log;
+	private operationBatcher;
 
 	private unsubscribes: (() => void)[] = [];
 
@@ -65,8 +58,11 @@ export class EntityStore extends EventSubscriber<{
 		this.schema = schema;
 		this.meta = meta;
 		this.undoHistory = undoHistory;
-		this.batchTimeout = batchTimeout;
 		this.log = log;
+		this.operationBatcher = new Batcher(this.flushOperations, {
+			max: 100,
+			timeout: batchTimeout,
+		});
 		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
 	}
 
@@ -139,6 +135,8 @@ export class EntityStore extends EventSubscriber<{
 		if (snapshot) {
 			const stored = cloneDeep(snapshot);
 			assignIndexValues(this.schema.collections[collection], stored);
+			// IMPORTANT! this property must be assigned
+			assignOidPropertiesToAllSubObjects(stored);
 			const tx = this.db.transaction(collection, 'readwrite');
 			const store = tx.objectStore(collection);
 			await storeRequestPromise(store.put(stored));
@@ -261,27 +259,23 @@ export class EntityStore extends EventSubscriber<{
 		this.emit('collectionsChanged', Array.from(affectedCollections));
 	};
 
-	addLocalOperations = async (operations: Operation[]) => {
+	addLocalOperations = async (operations: Operation[], notUndoable = false) => {
 		this.addOperationsToOpenCaches(operations, false);
-		this.enqueueOperations(operations);
-	};
-
-	private pendingOperations: Operation[] = [];
-	private enqueueOperations = (operations: Operation[]) => {
-		const isFirstSet = this.pendingOperations.length === 0;
-		this.pendingOperations.push(...operations);
-		if (isFirstSet) {
-			setTimeout(this.flushPatches, this.batchTimeout);
-		}
+		this.operationBatcher.add(
+			notUndoable ? 'notUndoable' : 'default',
+			...operations,
+		);
 	};
 
 	flushPatches = async () => {
-		if (!this.pendingOperations.length) {
-			return;
-		}
+		this.operationBatcher.flush('default');
+	};
 
-		await this.submitOperations(this.pendingOperations);
-		this.pendingOperations = [];
+	private flushOperations = async (
+		operations: Operation[],
+		batchKey: string,
+	) => {
+		await this.submitOperations(operations, batchKey === 'notUndoable');
 	};
 
 	private submitOperations = async (

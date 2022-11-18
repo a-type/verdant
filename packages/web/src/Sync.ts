@@ -300,8 +300,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);
 				}
 
-				await this.meta.updateLastSynced();
+				await this.meta.updateLastSynced(message.ackedTimestamp);
 				break;
+			case 'server-ack':
+				await this.meta.updateLastSynced(message.timestamp);
 		}
 
 		// update presence if necessary
@@ -623,6 +625,7 @@ class PushPullSync
 		switch (message.type) {
 			case 'presence-update':
 			case 'sync':
+			case 'op':
 				this.sendRequest([message]);
 				break;
 		}

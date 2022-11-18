@@ -8,6 +8,12 @@ declare module '@lo-fi/web' {
 	}
 }
 
+let userId = localStorage.getItem('userId');
+if (!userId) {
+	userId = Math.random().toString(36).slice(2, 9);
+	localStorage.setItem('userId', userId);
+}
+
 export const clientDescriptor = new ClientDescriptor({
 	migrations: [createDefaultMigration(schema)],
 	namespace: 'tldraw',
@@ -22,7 +28,7 @@ export const clientDescriptor = new ClientDescriptor({
 				status: TDUserStatus.Connecting,
 			} as TDUser,
 		},
-		authEndpoint: 'http://localhost:5050/auth',
+		authEndpoint: `http://localhost:5050/auth?user=${userId}`,
 		autoStart: true,
 	},
 	loadInitialData: async (client) => {
@@ -32,6 +38,8 @@ export const clientDescriptor = new ClientDescriptor({
 		});
 	},
 });
-clientDescriptor.open();
+clientDescriptor.open().then((client) => {
+	(window as any).client = client;
+});
 
 export { hooks } from './client/react.js';

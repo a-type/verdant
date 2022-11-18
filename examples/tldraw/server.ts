@@ -43,7 +43,7 @@ const server = new Server({
 			}
 			return {
 				id: userId,
-				name: users[userId].name,
+				name: nonce({ adjectives: 1, separator: ' ' }),
 			};
 		},
 	},
@@ -56,7 +56,11 @@ const tokenProvider = new TokenProvider({
 
 app.get('/auth', async (req, res) => {
 	const library = 'default';
-	const user = (req.query.user as string) || 'anonymous';
+	// 👋 Normally this user id would be stored in a session and detected using
+	// authentication in your server. For this example app we naively let the
+	// client tell us who they are. You shouldn't do that if you care about user
+	// impersonation!
+	const user = req.query.user as string;
 	const token = tokenProvider.getToken({
 		libraryId: library,
 		userId: user,

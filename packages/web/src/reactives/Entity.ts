@@ -285,6 +285,7 @@ export abstract class EntityBase<Snapshot> {
 				}
 			}
 		}
+		removeOid(snapshot);
 		this.cachedSnapshot = snapshot;
 		return snapshot;
 	};

@@ -1,4 +1,4 @@
-import { ServerMessage, EventSubscriber } from '@lo-fi/common';
+import { ServerMessage, EventSubscriber, Batcher } from '@lo-fi/common';
 import type { Presence, UserInfo } from './index.js';
 import { LocalReplicaInfo } from './metadata/LocalReplicaStore.js';
 
@@ -11,6 +11,7 @@ export class PresenceManager extends EventSubscriber<{
 	private _peers = {} as Record<string, UserInfo>;
 	private _self = { profile: {} } as UserInfo;
 	private _peerIds = new Array<string>();
+	private _updateBatcher;
 
 	get self() {
 		return this._self;
@@ -35,6 +36,11 @@ export class PresenceManager extends EventSubscriber<{
 		if (initialPresence) {
 			this.self.presence = initialPresence;
 		}
+
+		this._updateBatcher = new Batcher(this.flushPresenceUpdates, {
+			max: 100,
+			timeout: 200,
+		});
 	}
 
 	__handleMessage = async (
@@ -77,9 +83,13 @@ export class PresenceManager extends EventSubscriber<{
 	};
 
 	update = async (presence: Partial<Presence>) => {
-		this.emit('update', {
-			...this.self.presence,
-			...presence,
-		});
+		this._updateBatcher.add('default', presence);
+	};
+
+	flushPresenceUpdates = (presenceUpdates: Partial<Presence>[]) => {
+		const presence = presenceUpdates.reduce((acc, update) => {
+			return { ...acc, ...update };
+		}, this.self.presence);
+		this.emit('update', presence);
 	};
 }

@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	assignOid,
-	assignOidsToAllSubObjects,
-	createRef,
-	getOid,
-	OID_KEY,
-} from './oids.js';
+import { assignOid, createRef, getOid, OID_KEY } from './oids.js';
 import {
 	applyPatch,
 	applyPatches,
@@ -412,17 +406,25 @@ describe('substituting refs with objects', () => {
 				],
 			]),
 		);
-		expect(root).toEqual({
-			[OID_KEY]: 'test/1',
-			foo: {
-				[OID_KEY]: 'test/1:a',
-				foo: 'bar',
-				baz: {
-					[OID_KEY]: 'test/1:b',
-					qux: 'corge',
+		expect(root).toEqual(
+			assignOid(
+				{
+					foo: assignOid(
+						{
+							foo: 'bar',
+							baz: assignOid(
+								{
+									qux: 'corge',
+								},
+								'test/1:b',
+							),
+						},
+						'test/1:a',
+					),
 				},
-			},
-		});
+				'test/1',
+			),
+		);
 		expect(substituted).toEqual(['test/1:a', 'test/1:b']);
 		expect(getOid(root)).toEqual('test/1');
 		expect(getOid(root.foo)).toEqual('test/1:a');
@@ -469,17 +471,20 @@ describe('substituting refs with objects', () => {
 			]),
 		);
 		expect(root).toEqual({
-			[OID_KEY]: 'test/1',
 			foo: assignOid(
 				[
-					{
-						[OID_KEY]: 'test/1:a',
-						foo: 'bar',
-					},
-					{
-						[OID_KEY]: 'test/1:b',
-						qux: 'corge',
-					},
+					assignOid(
+						{
+							foo: 'bar',
+						},
+						'test/1:a',
+					),
+					assignOid(
+						{
+							qux: 'corge',
+						},
+						'test/1:b',
+					),
 				],
 				'test/1:c',
 			),
