@@ -30,6 +30,8 @@ export const clientDescriptor = new ClientDescriptor({
 		},
 		authEndpoint: `http://localhost:5050/auth?user=${userId}`,
 		autoStart: true,
+		presenceUpdateBatchTimeout: 100,
+		pullInterval: 5000,
 	},
 	loadInitialData: async (client) => {
 		await client.pages.put({

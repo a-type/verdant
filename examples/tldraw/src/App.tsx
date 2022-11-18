@@ -155,6 +155,11 @@ export function useMultiplayerState() {
 				);
 			}),
 		);
+		unsubs.push(
+			room.presence.subscribe('peerLeft', (id, info) =>
+				app.removeUser(info.presence.user.id),
+			),
+		);
 
 		let stillAlive = true;
 

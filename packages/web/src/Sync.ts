@@ -66,7 +66,7 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 	public readonly isConnected = false;
 	public readonly status = 'paused';
 
-	public readonly presence = new PresenceManager();
+	public readonly presence = new PresenceManager({});
 }
 
 export interface ServerSyncEndpointProviderConfig {
@@ -163,6 +163,16 @@ export interface ServerSyncOptions extends ServerSyncEndpointProviderConfig {
 	automaticTransportSelection?: boolean;
 	initialTransport?: SyncTransportMode;
 	autoStart?: boolean;
+	/**
+	 * Optionally specify an interval, in milliseconds, to poll the server
+	 * when in pull mode.
+	 */
+	pullInterval?: number;
+	/**
+	 * Presence updates are batched to reduce number of requests / messages
+	 * sent to the server. You can specify the batching time slice, in milliseconds,
+	 */
+	presenceUpdateBatchTimeout?: number;
 }
 
 export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
@@ -186,6 +196,8 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			automaticTransportSelection = true,
 			autoStart,
 			initialTransport,
+			pullInterval,
+			presenceUpdateBatchTimeout,
 		}: ServerSyncOptions,
 		{
 			meta,
@@ -201,7 +213,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 		this.meta = meta;
 		this.entities = entities;
 		this.log = log || (() => {});
-		this.presence = new PresenceManager(initialPresence);
+		this.presence = new PresenceManager({
+			initialPresence,
+			updateBatchTimeout: presenceUpdateBatchTimeout,
+		});
 		this.endpointProvider = new ServerSyncEndpointProvider({
 			authEndpoint,
 			fetchAuth,
@@ -218,6 +233,7 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			meta,
 			presence: this.presence,
 			log: this.log,
+			interval: pullInterval,
 		});
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
@@ -545,7 +561,7 @@ class PushPullSync
 	readonly meta: Metadata;
 	readonly presence: PresenceManager;
 	private endpointProvider;
-	private heartbeat = new Heartbeat();
+	private heartbeat;
 
 	readonly mode = 'pull';
 	private log;
@@ -558,11 +574,13 @@ class PushPullSync
 		endpointProvider,
 		meta,
 		presence,
+		interval = 15 * 1000,
 		log = () => {},
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
+		interval?: number;
 		log?: (...args: any[]) => any;
 	}) {
 		super();
@@ -571,6 +589,9 @@ class PushPullSync
 		this.presence = presence;
 		this.endpointProvider = endpointProvider;
 
+		this.heartbeat = new Heartbeat({
+			interval,
+		});
 		this.heartbeat.subscribe('beat', this.onHeartbeat);
 		this.heartbeat.subscribe('missed', this.onHeartbeatMissed);
 	}
