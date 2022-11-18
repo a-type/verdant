@@ -1,5 +1,4 @@
 import { DocumentBaseline } from './baseline.js';
-import { isStaticField } from './fields.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -151,7 +150,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	const oid = getOid(from);
 
 	function diffItems(key: string | number, value: any, oldValue: any) {
-		if (!isObject(value) || isStaticField(value)) {
+		if (!isObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
 			if (value !== oldValue) {
