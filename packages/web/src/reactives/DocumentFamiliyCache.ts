@@ -9,7 +9,13 @@ import {
 	removeOid,
 	StorageFieldSchema,
 } from '@lo-fi/common';
-import { Entity, EntityBase, ListEntity, ObjectEntity } from './Entity.js';
+import {
+	Entity,
+	EntityBase,
+	ListEntity,
+	ObjectEntity,
+	refreshEntity,
+} from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
 
 export class DocumentFamilyCache extends EventSubscriber<
@@ -45,9 +51,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 			this.unconfirmedOperationsMap.set(oid, existingOperations);
 		}
 		for (const oid of oidSet) {
-			// FIXME: update the entities directly from local map instead of using events?
-			this.emit(`change:${oid}`);
-			this.emit('change:*', oid);
+			const entity = this.entities.get(oid);
+			if (entity) {
+				refreshEntity(entity);
+				this.emit(`change:${oid}`);
+				this.emit('change:*', oid);
+			}
 		}
 	};
 
@@ -84,8 +93,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 			}
 		}
 		for (const oid of oidSet) {
-			this.emit(`change:${oid}`);
-			this.emit('change:*', oid);
+			const entity = this.entities.get(oid);
+			if (entity) {
+				refreshEntity(entity);
+				this.emit(`change:${oid}`);
+				this.emit('change:*', oid);
+			}
 		}
 	};
 
@@ -165,7 +178,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return view;
 	};
 
-	getEntity = (oid: ObjectIdentifier, schema: StorageFieldSchema): Entity => {
+	getEntity = (
+		oid: ObjectIdentifier,
+		schema: StorageFieldSchema,
+		parent?: EntityBase<any>,
+	): Entity => {
 		let entity = this.entities.get(oid);
 		if (!entity) {
 			const { view } = this.computeView(oid);
@@ -178,6 +195,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 					cacheEvents: this.cacheEvents,
 					fieldSchema: schema,
 					store: this.store,
+					parent,
 				});
 			} else {
 				entity = new ObjectEntity({
@@ -186,6 +204,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 					cacheEvents: this.cacheEvents,
 					fieldSchema: schema,
 					store: this.store,
+					parent,
 				});
 			}
 			// immediately add to cache and queue a removal if nobody subscribed
@@ -213,7 +232,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 
 	private enqueueCacheRemoval = (oid: ObjectIdentifier) => {
 		setTimeout(() => {
-			if (!this.entities.get(oid)?.subscriberCount) {
+			if (!this.entities.get(oid)?.hasSubscribers) {
 				this.entities.delete(oid);
 			}
 		}, 1000);
@@ -231,8 +250,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 		this.operationsMap = new Map();
 		this.insertOperations(operations);
 		for (const oid of this.entities.keys()) {
-			this.emit(`change:${oid}`);
-			this.emit('change:*', oid);
+			const entity = this.entities.get(oid);
+			if (entity) {
+				refreshEntity(entity);
+				this.emit(`change:${oid}`);
+				this.emit('change:*', oid);
+			}
 		}
 	};
 }

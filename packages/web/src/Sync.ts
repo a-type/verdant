@@ -552,6 +552,7 @@ class PushPullSync
 
 	private _isConnected = false;
 	private _status: 'active' | 'paused' = 'paused';
+	private _hasSynced = false;
 
 	constructor({
 		endpointProvider,
@@ -617,6 +618,9 @@ class PushPullSync
 	};
 
 	private handleServerMessage = (message: ServerMessage) => {
+		if (message.type === 'sync-resp') {
+			this._hasSynced = true;
+		}
 		this.emit('message', message);
 	};
 
@@ -625,8 +629,12 @@ class PushPullSync
 		switch (message.type) {
 			case 'presence-update':
 			case 'sync':
-			case 'op':
 				this.sendRequest([message]);
+				break;
+			case 'op':
+				if (this._hasSynced) {
+					this.sendRequest([message]);
+				}
 				break;
 		}
 	};

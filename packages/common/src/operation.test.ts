@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { assignOid, createRef, getOid, OID_KEY } from './oids.js';
+import {
+	assignOid,
+	assignOidsToAllSubObjects,
+	createRef,
+	getOid,
+	OID_KEY,
+} from './oids.js';
 import {
 	applyPatch,
 	applyPatches,
@@ -8,8 +14,8 @@ import {
 	substituteRefsWithObjects,
 } from './operation.js';
 
-function createClock() {
-	let i = 0;
+function createClock(init = 0) {
+	let i = init;
 	return () => (i++).toString();
 }
 
@@ -319,6 +325,106 @@ describe('creating diff patch operations', () => {
 			      },
 			    },
 			    "oid": "test/a:3",
+			    "timestamp": "5",
+			  },
+			]
+		`);
+	});
+
+	it('should try to merge unknown objects if specified to do so', () => {
+		const from = {
+			foo: {
+				bar: [1, 2, 3],
+			},
+			baz: [
+				{
+					corge: true,
+				},
+			],
+		};
+		assignOid(from, 'test/a');
+		assignOidsToAllSubObjects(from, createClock());
+
+		const to = {
+			foo: {
+				bar: [1, 2],
+				bop: [0],
+			},
+			baz: [
+				{
+					corge: false,
+				},
+				{
+					corge: false,
+				},
+			],
+		};
+		expect(
+			diffToPatches(from, to, createClock(), [], createClock(5), [], {
+				mergeUnknownObjects: true,
+			}),
+		).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "count": 1,
+			      "index": 2,
+			      "op": "list-delete",
+			    },
+			    "oid": "test/a.foo.bar:1",
+			    "timestamp": "0",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": [
+			        0,
+			      ],
+			    },
+			    "oid": "test/a.foo.bop:5",
+			    "timestamp": "1",
+			  },
+			  {
+			    "data": {
+			      "name": "bop",
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a.foo.bop:5",
+			      },
+			    },
+			    "oid": "test/a.foo:0",
+			    "timestamp": "2",
+			  },
+			  {
+			    "data": {
+			      "name": "corge",
+			      "op": "set",
+			      "value": false,
+			    },
+			    "oid": "test/a.baz.#:3",
+			    "timestamp": "3",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "corge": false,
+			      },
+			    },
+			    "oid": "test/a.baz.#:6",
+			    "timestamp": "4",
+			  },
+			  {
+			    "data": {
+			      "name": 1,
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a.baz.#:6",
+			      },
+			    },
+			    "oid": "test/a.baz:2",
 			    "timestamp": "5",
 			  },
 			]

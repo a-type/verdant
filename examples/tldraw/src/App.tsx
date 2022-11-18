@@ -165,8 +165,6 @@ export function useMultiplayerState() {
 
 			// Subscribe to changes
 			const handleChanges = () => {
-				console.log(shapes.getSnapshot());
-				console.log(bindings.getSnapshot());
 				app?.replacePageContent(
 					shapes.getSnapshot() || {},
 					bindings.getSnapshot() || {},
@@ -175,7 +173,9 @@ export function useMultiplayerState() {
 			};
 
 			if (stillAlive) {
-				unsubs.push(shapes.subscribe('change', handleChanges));
+				unsubs.push(shapes.subscribe('changeDeep', handleChanges));
+				unsubs.push(bindings.subscribe('changeDeep', handleChanges));
+				unsubs.push(assets.subscribe('changeDeep', handleChanges));
 
 				// Update the document with initial content
 				handleChanges();

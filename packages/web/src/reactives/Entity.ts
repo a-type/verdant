@@ -25,8 +25,9 @@ import { EntityStore } from './EntityStore.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
-export const GET_STORED_SNAPSHOT = '@@storedSnapshot';
 export const REBASE = '@@rebase';
+const REFRESH = '@@refresh';
+const DEEP_CHANGE = '@@deepChange';
 
 interface CacheEvents {
 	onSubscribed: (entity: EntityBase<any>) => void;
@@ -78,8 +79,12 @@ export type EntityShape<E extends EntityBase<any>> = E extends EntityBase<
 	? Init
 	: never;
 
-export function getStoredEntitySnapshot(entity: EntityBase<any>) {
-	return entity[GET_STORED_SNAPSHOT]();
+export function refreshEntity(entity: EntityBase<any>) {
+	return entity[REFRESH]();
+}
+
+export function deepChangeEntity(entity: EntityBase<any>) {
+	return entity[DEEP_CHANGE]();
 }
 
 export abstract class EntityBase<Snapshot> {
@@ -93,18 +98,38 @@ export abstract class EntityBase<Snapshot> {
 	protected readonly keyPath;
 	protected readonly cache: DocumentFamilyCache;
 	protected _deleted = false;
+	protected parent: EntityBase<any> | undefined;
 
 	private cachedSnapshot: Snapshot | null = null;
 	private cachedDestructure: DestructuredEntity<Snapshot> | null = null;
 
 	protected events = new EventSubscriber<{
 		change: () => void;
+		changeDeep: () => void;
 		delete: () => void;
 		restore: () => void;
 	}>();
 
-	get subscriberCount() {
-		return this.events.totalSubscriberCount();
+	protected hasSubscribersToDeepChanges() {
+		return this.events.subscriberCount('changeDeep') > 0;
+	}
+
+	get hasSubscribers() {
+		if (this.events.totalSubscriberCount() > 0) {
+			return true;
+		}
+
+		// even if nobody subscribes directly to this entity, if a parent
+		// has a deep subscription that counts.
+		let parent = this.parent;
+		while (parent) {
+			if (parent.hasSubscribersToDeepChanges()) {
+				return true;
+			}
+			parent = parent.parent;
+		}
+
+		return false;
 	}
 
 	get deleted() {
@@ -121,14 +146,17 @@ export abstract class EntityBase<Snapshot> {
 		cacheEvents,
 		fieldSchema,
 		cache,
+		parent,
 	}: {
 		oid: ObjectIdentifier;
 		store: EntityStore;
 		cacheEvents: CacheEvents;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
 		cache: DocumentFamilyCache;
+		parent?: EntityBase<any>;
 	}) {
 		this.oid = oid;
+		this.parent = parent;
 		this.store = store;
 		this.cacheEvents = cacheEvents;
 		this.fieldSchema = fieldSchema;
@@ -137,24 +165,36 @@ export abstract class EntityBase<Snapshot> {
 		const { view, deleted } = this.cache.computeView(oid);
 		this._current = view;
 		this._deleted = deleted;
-		cache.subscribe(`change:${oid}`, this.onCacheChange);
+
+		if (this.oid.includes('.') && !this.parent) {
+			throw new Error('Parent must be provided for sub entities');
+		}
 	}
 
-	private onCacheChange = () => {
+	private [REFRESH] = () => {
 		const { view, deleted } = this.cache.computeView(this.oid);
 		this._current = view;
 		const restored = this._deleted && !deleted;
 		this._deleted = deleted;
-		this.cachedSnapshot = null;
 		this.cachedDestructure = null;
 
 		if (this._deleted) {
 			this.events.emit('delete');
 		} else {
 			this.events.emit('change');
+			this[DEEP_CHANGE]();
 		}
 		if (restored) {
+			this.cachedSnapshot = null;
 			this.events.emit('restore');
+		}
+	};
+
+	private [DEEP_CHANGE] = () => {
+		this.cachedSnapshot = null;
+		this.events.emit('changeDeep');
+		if (this.parent) {
+			this.parent[DEEP_CHANGE]();
 		}
 	};
 
@@ -176,7 +216,7 @@ export abstract class EntityBase<Snapshot> {
 	};
 
 	subscribe = (
-		event: 'change' | 'delete' | 'restore',
+		event: 'change' | 'delete' | 'restore' | 'changeDeep',
 		callback: () => void,
 	) => {
 		const unsubscribe = this.events.subscribe(event, callback);
@@ -203,9 +243,9 @@ export abstract class EntityBase<Snapshot> {
 		return cloneDeep(this._current);
 	};
 
-	protected getSubObject = (oid: ObjectIdentifier, key: any) => {
+	protected getSubObject = (oid: ObjectIdentifier, key: any): Entity => {
 		const fieldSchema = this.getChildFieldSchema(key);
-		return this.cache.getEntity(oid, fieldSchema);
+		return this.cache.getEntity(oid, fieldSchema, this);
 	};
 
 	protected wrapValue = <Key extends AccessibleEntityProperty<Snapshot>>(
@@ -285,36 +325,9 @@ export abstract class EntityBase<Snapshot> {
 				}
 			}
 		}
-		removeOid(snapshot);
-		this.cachedSnapshot = snapshot;
-		return snapshot;
-	};
-
-	protected [GET_STORED_SNAPSHOT] = (): Snapshot | null => {
-		if (!this._current) return null;
-
-		let snapshot;
-		if (Array.isArray(this._current)) {
-			snapshot = this._current.map((item, idx) => {
-				if (isObjectRef(item)) {
-					return (this.getSubObject(item.id, idx) as any)?.[
-						GET_STORED_SNAPSHOT
-					]();
-				}
-				return item;
-			}) as Snapshot;
-		} else {
-			snapshot = { ...this._current };
-			for (const [key, value] of Object.entries(snapshot)) {
-				if (isObjectRef(value)) {
-					snapshot[key] = (this.getSubObject(value.id, key) as any)?.[
-						GET_STORED_SNAPSHOT
-					]();
-				}
-			}
-		}
 
 		assignOid(snapshot, this.oid);
+		this.cachedSnapshot = snapshot;
 		return snapshot;
 	};
 }
@@ -470,12 +483,24 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 	remove = (key: string) => {
 		this.addPatches(this.store.meta.patchCreator.createRemove(this.oid, key));
 	};
-	update = (value: Partial<DataFromInit<Init>>) => {
+	update = (
+		value: Partial<DataFromInit<Init>>,
+		{ replaceSubObjects } = {
+			/**
+			 * If true, merged sub-objects will be replaced entirely if there's
+			 * ambiguity about their identity.
+			 */
+			replaceSubObjects: false,
+		},
+	) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createDiff(
-				this.value,
+				this.getSnapshot(),
 				assignOid(value, this.oid),
 				this.keyPath,
+				{
+					mergeUnknownObjects: !replaceSubObjects,
+				},
 			),
 		);
 	};

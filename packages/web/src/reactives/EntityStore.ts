@@ -3,7 +3,6 @@ import {
 	assignIndexValues,
 	assignOid,
 	assignOidPropertiesToAllSubObjects,
-	assignOidProperty,
 	Batcher,
 	cloneDeep,
 	decomposeOid,
@@ -22,7 +21,6 @@ import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
-import { getStoredEntitySnapshot } from './Entity.js';
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
@@ -124,14 +122,14 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private onEntityChange = async (oid: ObjectIdentifier) => {
-		this.writeDocumentToStorage(oid);
+		// queueMicrotask(() => this.writeDocumentToStorage(oid));
 	};
 
 	private writeDocumentToStorage = async (oid: ObjectIdentifier) => {
 		const rootOid = getOidRoot(oid);
 		const { id, collection } = decomposeOid(rootOid);
 		const entity = await this.get(rootOid);
-		const snapshot = getStoredEntitySnapshot(entity);
+		const snapshot = entity.getSnapshot();
 		if (snapshot) {
 			const stored = cloneDeep(snapshot);
 			assignIndexValues(this.schema.collections[collection], stored);

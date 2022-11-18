@@ -28,21 +28,13 @@ it(
 			server,
 			library: 'sync-1',
 			user: 'User A',
-			logId: 'A',
 		});
 		const clientB = await createTestClient({
 			server,
 			library: 'sync-1',
 			user: 'User B',
-			logId: 'B',
 		});
-		const clientC = await createTestClient({
-			server,
-			library: 'sync-1',
-			user: 'User C',
-			// logId: 'C',
-		});
-		cleanupClients.push(clientA, clientB, clientC);
+		cleanupClients.push(clientA, clientB);
 
 		clientA.sync.start();
 		clientB.sync.start();
