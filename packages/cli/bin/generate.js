@@ -31,6 +31,7 @@ import {
 } from '../src/generators/migrations.js';
 import { fileExists } from '../src/fs/exists.js';
 import { getObjectProperty } from '../src/generators/tools.js';
+import { createDirectory } from '../src/fs/createDirectory.js';
 
 const v = yargs(hideBin(process.argv))
 	.option('schema', {
@@ -89,11 +90,7 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 
 	// get the input file as the first argument and output as second
 	const outputDirectory = path.resolve(process.cwd(), output);
-	try {
-		await fs.mkdir(outputDirectory, { recursive: true });
-	} catch (e) {
-		console.error(e);
-	}
+	await createDirectory(outputDirectory);
 
 	const result = await swc.parseFile(schemaInputFilePath, {});
 
@@ -125,11 +122,7 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 		`./v${version}.ts`,
 	);
 
-	try {
-		await fs.mkdir(historicalSchemasDirectory, { recursive: true });
-	} catch (e) {
-		console.error(e);
-	}
+	await createDirectory(historicalSchemasDirectory);
 
 	const collections = getAllCollectionDefinitions(result.body);
 	const collectionNames = Object.keys(collections);
@@ -137,6 +130,8 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 	const migrationsDirectory = migrations
 		? path.resolve(process.cwd(), migrations)
 		: path.resolve(outputDirectory, '../migrations');
+
+	await createDirectory(migrationsDirectory);
 
 	const historicalSchemaExists = await fileExists(historicalSchemaPath);
 	const conflictWithHistorical =
