@@ -3,13 +3,14 @@
 	"compilerOptions": {
 		"composite": true,
 		"outDir": "./dist/esm",
-		"rootDir": "./src"
+		"rootDir": "."
 	},
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.tsx",
 		"src/**/*.mts",
 		"./typings",
-		"./test/**/*.ts"
+		"./test/**/*.ts",
+		"./test/**/*.js"
 	]
 }

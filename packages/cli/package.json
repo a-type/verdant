@@ -17,7 +17,8 @@
 	},
 	"files": [
 		"bin/",
-		"src/"
+		"src/",
+		"test/"
 	],
 	"scripts": {
 		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d",

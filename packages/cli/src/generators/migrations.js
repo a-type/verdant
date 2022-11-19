@@ -44,8 +44,7 @@ export function createMigration(
 }
 
 export function createMigrationIndex(migrationsDirectory, migrationNames) {
-	return `import { Migration } from '@lo-fi/web';
-
+	return `
   ${migrationNames
 		.map((name) => `import ${name} from './${name}.js';`)
 		.join('\n')}
