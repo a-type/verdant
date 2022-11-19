@@ -24,6 +24,13 @@ import {
 } from '../src/generators/react.js';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
+import { getSchemaVersion, schemasDiffer } from '../src/readers/schemaInfo.js';
+import {
+	createMigration,
+	createMigrationIndex,
+} from '../src/generators/migrations.js';
+import { fileExists } from '../src/fs/exists.js';
+import { getObjectProperty } from '../src/generators/tools.js';
 
 const v = yargs(hideBin(process.argv))
 	.option('schema', {
@@ -36,6 +43,12 @@ const v = yargs(hideBin(process.argv))
 		type: 'string',
 		description: 'Path to output directory',
 	})
+	.option('migrations', {
+		alias: 'm',
+		type: 'string',
+		description:
+			'Path to migrations directory. Default is adjacent to output directory.',
+	})
 	.option('react', {
 		alias: 'r',
 		type: 'boolean',
@@ -46,9 +59,22 @@ const v = yargs(hideBin(process.argv))
 		type: 'boolean',
 		description: 'Include debug output for submitting bug reports',
 	})
+	.option('force', {
+		alias: 'f',
+		type: 'boolean',
+		description:
+			'Ignore a mismatch between the input schema and a saved historical schema of the same version.',
+	})
 	.demandOption(['schema', 'output']).argv;
 
-run(v.schema, v.output, v.react, v.debug)
+run({
+	input: v.schema,
+	output: v.output,
+	react: v.react,
+	debug: v.debug,
+	migrations: v.migrations,
+	force: v.force,
+})
 	.then(() => {
 		console.log('✅ Generated lo-fi code');
 		process.exit(0);
@@ -58,7 +84,9 @@ run(v.schema, v.output, v.react, v.debug)
 		process.exit(1);
 	});
 
-async function run(input, output, includeReact, debug) {
+async function run({ input, output, includeReact, debug, migrations, force }) {
+	const schemaInputFilePath = path.resolve(process.cwd(), input);
+
 	// get the input file as the first argument and output as second
 	const outputDirectory = path.resolve(process.cwd(), output);
 	try {
@@ -67,42 +95,92 @@ async function run(input, output, includeReact, debug) {
 		console.error(e);
 	}
 
-	await emptyDirectory(outputDirectory);
+	const result = await swc.parseFile(schemaInputFilePath, {});
 
-	const compiledSchemaPath = path.resolve(output, 'schema.js');
+	// dropping this in a temp file is useful for debugging
+	if (debug) {
+		const tempTranspiledOutput = path.resolve(
+			outputDirectory,
+			'schema-temp.json',
+		);
+		await fs.writeFile(
+			tempTranspiledOutput,
+			prettier.format(JSON.stringify(result.body), {
+				parser: 'json',
+			}),
+		);
+	}
 
-	const compiledSchema = await swc.transformFile(input, {
-		sourceMaps: false,
-		jsc: {
-			parser: {
-				syntax: 'typescript',
-				dynamicImport: true,
-				decorators: true,
-				decoratorsBeforeExport: true,
-			},
-			loose: true,
-			target: 'es2019',
-		},
-	});
-
-	await fs.writeFile(compiledSchemaPath, compiledSchema.code);
-
-	const relativeSchemaPath = './schema.js';
-
-	// load the schema, parse it, and write plain JS to temporary file
-	const tempTranspiledOutput = path.resolve(
+	// get the schema version. if a historical schema already exists with this version,
+	// compare their files and throw an error if they are different - a migration is
+	// required.
+	// otherwise, write this historical schema to the output directory
+	const version = getSchemaVersion(result.body);
+	const historicalSchemasDirectory = path.resolve(
 		outputDirectory,
-		'schema-temp.json',
+		'./schemaVersions',
 	);
-	const result = await swc.parseFile(path.resolve(process.cwd(), input), {});
-	await fs.writeFile(
-		tempTranspiledOutput,
-		prettier.format(JSON.stringify(result.body), {
-			parser: 'json',
-		}),
+	const historicalSchemaPath = path.resolve(
+		historicalSchemasDirectory,
+		`./v${version}.ts`,
 	);
+
+	try {
+		await fs.mkdir(historicalSchemasDirectory, { recursive: true });
+	} catch (e) {
+		console.error(e);
+	}
 
 	const collections = getAllCollectionDefinitions(result.body);
+	const collectionNames = Object.keys(collections);
+
+	const migrationsDirectory = migrations
+		? path.resolve(process.cwd(), migrations)
+		: path.resolve(outputDirectory, '../migrations');
+
+	const historicalSchemaExists = await fileExists(historicalSchemaPath);
+	const conflictWithHistorical =
+		historicalSchemaExists &&
+		(await schemasDiffer(historicalSchemaPath, schemaInputFilePath));
+	if (conflictWithHistorical && !force) {
+		throw new Error(
+			`Schema version ${version} already exists, but the schema files are different. Please upgrade your schema version.`,
+		);
+	} else {
+		await fs.copyFile(schemaInputFilePath, historicalSchemaPath);
+		const migration = createMigration(
+			version,
+			historicalSchemasDirectory,
+			migrationsDirectory,
+			collectionNames,
+		);
+		await fs.writeFile(
+			path.resolve(migrationsDirectory, `./v${version}.ts`),
+			prettier.format(migration, {
+				parser: 'typescript',
+			}),
+		);
+		const allMigrationFiles = await fs.readdir(migrationsDirectory);
+		const migrationFiles = allMigrationFiles.filter(
+			(f) => f.startsWith('v') && f.endsWith('.ts'),
+		);
+		const migrationFileNames = migrationFiles.map((f) => f.replace('.ts', ''));
+		const migrationIndex = createMigrationIndex(
+			migrationsDirectory,
+			migrationFileNames,
+		);
+		await fs.writeFile(
+			path.resolve(migrationsDirectory, `./index.ts`),
+			prettier.format(migrationIndex, {
+				parser: 'typescript',
+			}),
+		);
+	}
+
+	const { compiledSchemaPath, relativeSchemaPath } = await writeCanonicalSchema(
+		outputDirectory,
+		input,
+	);
 
 	let typingsFile = typingsPreamble;
 	typingsFile += `import type schema from '${relativeSchemaPath}';
@@ -164,8 +242,29 @@ async function run(input, output, includeReact, debug) {
 			parser: 'json',
 		}),
 	);
+}
 
-	if (!debug) {
-		await fs.unlink(tempTranspiledOutput);
-	}
+async function writeCanonicalSchema(output, input) {
+	const compiledSchemaPath = path.resolve(output, 'schema.js');
+
+	const compiledSchema = await swc.transformFile(input, {
+		sourceMaps: false,
+		jsc: {
+			parser: {
+				syntax: 'typescript',
+				dynamicImport: true,
+				decorators: true,
+				decoratorsBeforeExport: true,
+			},
+			loose: true,
+			target: 'es2019',
+		},
+	});
+
+	// load the schema, parse it, and write plain JS to temporary file
+	await fs.writeFile(compiledSchemaPath, compiledSchema.code);
+
+	const relativeSchemaPath = './schema.js';
+
+	return { compiledSchemaPath, relativeSchemaPath };
 }
