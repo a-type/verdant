@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.3.0
+
+### Minor Changes
+
+- 8369c49: Add deep change subscription. Lots of consistency fixes. More performant diffing of nested updates. Overhaul OID internal storage mechanism. Presence update batching.
+
 ## 1.2.0
 
 ### Minor Changes

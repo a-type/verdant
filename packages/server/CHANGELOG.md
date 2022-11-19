@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 1.2.0
+
+### Minor Changes
+
+- 8369c49: Add deep change subscription. Lots of consistency fixes. More performant diffing of nested updates. Overhaul OID internal storage mechanism. Presence update batching.
+
+### Patch Changes
+
+- Updated dependencies [8369c49]
+  - @lo-fi/common@1.3.0
+
 ## 1.1.0
 
 ### Minor Changes
