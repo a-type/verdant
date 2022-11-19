@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.4.0
+
+### Minor Changes
+
+- f0fad90: Include migrations and schema history in CLI
+
 ## 1.3.0
 
 ### Minor Changes
