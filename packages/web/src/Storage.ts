@@ -274,17 +274,12 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		this._initializing = true;
 		try {
 			const metaDbName = [init.namespace, 'meta'].join('_');
-			const isFirstTimeInitialization = await (init.indexedDb || indexedDB)
-				.databases()
-				.then((databases) => {
-					return !databases.find((db) => db.name === metaDbName);
+			const { db: metaDb, wasInitialized: isFirstTimeInitialization } =
+				await openMetadataDatabase(this._namespace, {
+					indexedDB: init.indexedDb,
+					log: init.log,
+					databaseName: metaDbName,
 				});
-
-			const metaDb = await openMetadataDatabase(this._namespace, {
-				indexedDB: init.indexedDb,
-				log: init.log,
-				databaseName: metaDbName,
-			});
 			const meta = new Metadata(metaDb, init.schema, { log: init.log });
 
 			// verify schema integrity
