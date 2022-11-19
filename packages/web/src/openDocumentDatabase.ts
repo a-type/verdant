@@ -5,6 +5,10 @@ import {
 	migrationRange,
 	diffToPatches,
 	assignIndexValues,
+	assignOid,
+	removeOidPropertiesFromAllSubObjects,
+	assignOidsToAllSubObjects,
+	assignOidPropertiesToAllSubObjects,
 } from '@lo-fi/common';
 import { Metadata } from './metadata/Metadata.js';
 
@@ -101,6 +105,9 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 										// the migration has altered the shape of our document. we need
 										// to create the operation from the diff and write it to meta
 										// then recompute the document.
+										removeOidPropertiesFromAllSubObjects(original);
+										removeOidPropertiesFromAllSubObjects(newValue);
+										assignOidsToAllSubObjects(newValue);
 										const patches = diffToPatches(
 											original,
 											newValue,
@@ -111,6 +118,7 @@ export function openDocumentDatabase<Schema extends StorageSchema<any>>({
 											meta.insertLocalOperation(patches);
 										}
 									}
+									assignOidPropertiesToAllSubObjects(newValue);
 									// apply indexes after changes
 									assignIndexValues(collectionSchema, newValue);
 									cursor.update(newValue);

@@ -4,5 +4,5 @@
 		"composite": true,
 		"rootDir": "."
 	},
-	"include": ["**/*.ts"]
+	"include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
 }

@@ -27,22 +27,29 @@ export class Metadata extends EventSubscriber<{
 	message: (message: ClientMessage) => void;
 	rebase: (baselines: DocumentBaseline[]) => void;
 }> {
-	readonly operations = new OperationsStore(this.db);
-	readonly baselines = new BaselinesStore(this.db);
-	readonly localReplica = new LocalReplicaStore(this.db);
-	readonly ackInfo = new AckInfoStore(this.db);
-	readonly schema = new SchemaStore(this.db, this.schemaDefinition.version);
-	readonly messageCreator = new MessageCreator(this);
-	readonly patchCreator = new PatchCreator(() => this.now);
+	readonly operations;
+	readonly baselines;
+	readonly localReplica;
+	readonly ackInfo;
+	readonly schema;
+	readonly messageCreator;
+	readonly patchCreator;
 	readonly time = new HybridLogicalClockTimestampProvider();
 	private readonly log = (...args: any[]) => {};
 
 	constructor(
 		private readonly db: IDBDatabase,
-		private readonly schemaDefinition: StorageSchema<any>,
+		schemaDefinition: StorageSchema<any>,
 		{ log }: { log?: (...args: any[]) => void } = {},
 	) {
 		super();
+		this.schema = new SchemaStore(db, schemaDefinition.version);
+		this.operations = new OperationsStore(this.db);
+		this.baselines = new BaselinesStore(this.db);
+		this.localReplica = new LocalReplicaStore(this.db);
+		this.ackInfo = new AckInfoStore(this.db);
+		this.messageCreator = new MessageCreator(this);
+		this.patchCreator = new PatchCreator(() => this.now);
 		if (log) this.log = log;
 	}
 
@@ -56,72 +63,6 @@ export class Metadata extends EventSubscriber<{
 
 	createTransaction = (stores: ('operations' | 'baselines')[]) => {
 		return this.db.transaction(stores, 'readwrite');
-	};
-
-	/**
-	 * Recomputes an entire document from stored operations and baselines.
-	 */
-	getComputedDocument = async <T = any>(
-		oid: ObjectIdentifier,
-		upToTimestamp?: string,
-	): Promise<T | undefined> => {
-		return this.getRecursiveComputedEntity(oid, upToTimestamp);
-	};
-
-	getRecursiveComputedEntity = async <T = any>(
-		entityOid: ObjectIdentifier,
-		upToTimestamp?: string,
-	): Promise<T | undefined> => {
-		const documentOid = getOidRoot(entityOid);
-		const transaction = this.db.transaction(
-			['baselines', 'operations'],
-			'readwrite',
-		);
-		const baselines = await this.baselines.getAllForDocument(documentOid, {
-			transaction,
-		});
-		const subObjectsMappedByOid = new Map<ObjectIdentifier, any>();
-		for (const baseline of baselines) {
-			subObjectsMappedByOid.set(baseline.oid, baseline.snapshot);
-		}
-
-		let lastPatchWasDelete = false;
-
-		await this.operations.iterateOverAllOperationsForDocument(
-			documentOid,
-			(patch) => {
-				let current = subObjectsMappedByOid.get(patch.oid);
-				current = applyPatch(current, patch.data);
-				subObjectsMappedByOid.set(patch.oid, current);
-				lastPatchWasDelete = patch.data.op === 'delete';
-				// TODO: user-configurable delete-wins or delete-loses behavior?
-				// one way to do that would be to ignore delete ops until the end,
-				// and only return nothing if the last op was a delete.
-			},
-			{
-				to: upToTimestamp,
-				transaction,
-			},
-		);
-
-		// assemble the various sub-objects into the document by
-		// placing them where their ref is
-		const rootBaseline = subObjectsMappedByOid.get(entityOid);
-		// critical: attach metadata
-		if (rootBaseline) {
-			assignOid(rootBaseline, entityOid);
-			const usedOids = substituteRefsWithObjects(
-				rootBaseline,
-				subObjectsMappedByOid,
-			);
-		}
-
-		// FIXME: this is a fragile check for deleted
-		if (lastPatchWasDelete || !rootBaseline) {
-			return undefined;
-		}
-
-		return rootBaseline as T;
 	};
 
 	/**
@@ -242,9 +183,9 @@ export class Metadata extends EventSubscriber<{
 		return Array.from(affectedOidSet);
 	};
 
-	updateLastSynced = async () => {
+	updateLastSynced = async (timestamp: string) => {
 		return this.localReplica.update({
-			lastSyncedLogicalTime: this.now,
+			lastSyncedLogicalTime: timestamp,
 		});
 	};
 

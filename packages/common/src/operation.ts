@@ -146,6 +146,9 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	keyPath: KeyPath,
 	createSubId?: () => string,
 	patches: Operation[] = [],
+	options: {
+		mergeUnknownObjects?: boolean;
+	} = {},
 ): Operation[] {
 	const oid = getOid(from);
 
@@ -165,10 +168,23 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				});
 			}
 		} else {
-			const valueOid = ensureOid(value, oid, key, createSubId);
 			const oldValueOid = maybeGetOid(oldValue);
+			let valueOid;
+			if (!options.mergeUnknownObjects) {
+				valueOid = ensureOid(value, oid, key, createSubId);
+			} else {
+				// if merge unknown objects is requested, we copy the previous value's oid
+				// to any mirrored new value if it doesn't have one assigned already.
+				valueOid = maybeGetOid(value);
+				if (!valueOid && oldValueOid) {
+					assignOid(value, oldValueOid);
+					valueOid = oldValueOid;
+				} else {
+					valueOid = ensureOid(value, oid, key, createSubId);
+				}
+			}
 
-			if (oldValue === undefined || oldValueOid !== valueOid) {
+			if (oldValue === undefined || valueOid !== oldValueOid) {
 				// first case: previous value exists but the OIDs are different,
 				// meaning the object identity has changed
 				// we add the whole new object and also update the reference on this
@@ -203,6 +219,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 					[...keyPath, key],
 					createSubId,
 					patches,
+					options,
 				);
 			}
 		}

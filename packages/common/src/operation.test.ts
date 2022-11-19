@@ -14,8 +14,8 @@ import {
 	substituteRefsWithObjects,
 } from './operation.js';
 
-function createClock() {
-	let i = 0;
+function createClock(init = 0) {
+	let i = init;
 	return () => (i++).toString();
 }
 
@@ -330,6 +330,106 @@ describe('creating diff patch operations', () => {
 			]
 		`);
 	});
+
+	it('should try to merge unknown objects if specified to do so', () => {
+		const from = {
+			foo: {
+				bar: [1, 2, 3],
+			},
+			baz: [
+				{
+					corge: true,
+				},
+			],
+		};
+		assignOid(from, 'test/a');
+		assignOidsToAllSubObjects(from, createClock());
+
+		const to = {
+			foo: {
+				bar: [1, 2],
+				bop: [0],
+			},
+			baz: [
+				{
+					corge: false,
+				},
+				{
+					corge: false,
+				},
+			],
+		};
+		expect(
+			diffToPatches(from, to, createClock(), [], createClock(5), [], {
+				mergeUnknownObjects: true,
+			}),
+		).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "count": 1,
+			      "index": 2,
+			      "op": "list-delete",
+			    },
+			    "oid": "test/a.foo.bar:1",
+			    "timestamp": "0",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": [
+			        0,
+			      ],
+			    },
+			    "oid": "test/a.foo.bop:5",
+			    "timestamp": "1",
+			  },
+			  {
+			    "data": {
+			      "name": "bop",
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a.foo.bop:5",
+			      },
+			    },
+			    "oid": "test/a.foo:0",
+			    "timestamp": "2",
+			  },
+			  {
+			    "data": {
+			      "name": "corge",
+			      "op": "set",
+			      "value": false,
+			    },
+			    "oid": "test/a.baz.#:3",
+			    "timestamp": "3",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "corge": false,
+			      },
+			    },
+			    "oid": "test/a.baz.#:6",
+			    "timestamp": "4",
+			  },
+			  {
+			    "data": {
+			      "name": 1,
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a.baz.#:6",
+			      },
+			    },
+			    "oid": "test/a.baz:2",
+			    "timestamp": "5",
+			  },
+			]
+		`);
+	});
 });
 
 describe('substituting refs with objects', () => {
@@ -412,17 +512,25 @@ describe('substituting refs with objects', () => {
 				],
 			]),
 		);
-		expect(root).toEqual({
-			[OID_KEY]: 'test/1',
-			foo: {
-				[OID_KEY]: 'test/1:a',
-				foo: 'bar',
-				baz: {
-					[OID_KEY]: 'test/1:b',
-					qux: 'corge',
+		expect(root).toEqual(
+			assignOid(
+				{
+					foo: assignOid(
+						{
+							foo: 'bar',
+							baz: assignOid(
+								{
+									qux: 'corge',
+								},
+								'test/1:b',
+							),
+						},
+						'test/1:a',
+					),
 				},
-			},
-		});
+				'test/1',
+			),
+		);
 		expect(substituted).toEqual(['test/1:a', 'test/1:b']);
 		expect(getOid(root)).toEqual('test/1');
 		expect(getOid(root.foo)).toEqual('test/1:a');
@@ -469,17 +577,20 @@ describe('substituting refs with objects', () => {
 			]),
 		);
 		expect(root).toEqual({
-			[OID_KEY]: 'test/1',
 			foo: assignOid(
 				[
-					{
-						[OID_KEY]: 'test/1:a',
-						foo: 'bar',
-					},
-					{
-						[OID_KEY]: 'test/1:b',
-						qux: 'corge',
-					},
+					assignOid(
+						{
+							foo: 'bar',
+						},
+						'test/1:a',
+					),
+					assignOid(
+						{
+							qux: 'corge',
+						},
+						'test/1:b',
+					),
 				],
 				'test/1:c',
 			),

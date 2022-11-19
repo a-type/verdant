@@ -18,8 +18,21 @@ export class PatchCreator {
 		private createSubId?: () => string,
 	) {}
 
-	createDiff = (from: any, to: any, keyPath: KeyPath) => {
-		return diffToPatches(from, to, this.getNow, keyPath, this.createSubId);
+	createDiff = (
+		from: any,
+		to: any,
+		keyPath: KeyPath,
+		options: { mergeUnknownObjects?: boolean } = {},
+	) => {
+		return diffToPatches(
+			from,
+			to,
+			this.getNow,
+			keyPath,
+			this.createSubId,
+			[],
+			options,
+		);
 	};
 
 	createInitialize = (obj: any, oid: ObjectIdentifier) => {

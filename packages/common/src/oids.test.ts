@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
 	assignOid,
+	assignOidPropertiesToAllSubObjects,
+	assignOidProperty,
 	assignOidsToAllSubObjects,
+	getOid,
 	getOidRange,
+	maybeGetOidProperty,
 	normalize,
 	normalizeFirstLevel,
 	ObjectIdentifier,
+	removeOidPropertiesFromAllSubObjects,
 } from './oids.js';
 
 describe('normalizing an object', () => {
@@ -141,7 +146,6 @@ describe('normalizing the first level of an object', () => {
 
 		expect(result.get('test/a')).toMatchInlineSnapshot(`
 			{
-			  "@@id": "test/a",
 			  "foo": {
 			    "@@type": "ref",
 			    "id": "test/a.foo:0",
@@ -182,5 +186,108 @@ describe('computing a range of oids for a whole object set', () => {
 		expect(isWithin('test1/a', start, end)).toBe(false);
 		expect(isWithin('test/b', start, end)).toBe(false);
 		expect(isWithin('test/ ', start, end)).toBe(false);
+	});
+});
+
+describe('assigning OIDs as properties', () => {
+	it('should assign to all sub-objects', () => {
+		let i = 0;
+		function createSubId() {
+			return (i++).toString();
+		}
+
+		const initial = {
+			foo: {
+				bar: 1,
+				baz: [2, 3],
+			},
+			qux: [
+				{
+					corge: true,
+				},
+				{
+					grault: {
+						garply: 4,
+					},
+				},
+			],
+		};
+		assignOid(initial, 'test/a');
+		assignOidsToAllSubObjects(initial, createSubId);
+		assignOidPropertiesToAllSubObjects(initial);
+
+		expect(initial).toMatchInlineSnapshot(`
+			{
+			  "@@id": "test/a",
+			  "foo": {
+			    "@@id": "test/a.foo:0",
+			    "bar": 1,
+			    "baz": [
+			      2,
+			      3,
+			    ],
+			  },
+			  "qux": [
+			    {
+			      "@@id": "test/a.qux.#:3",
+			      "corge": true,
+			    },
+			    {
+			      "@@id": "test/a.qux.#:4",
+			      "grault": {
+			        "@@id": "test/a.qux.#.grault:5",
+			        "garply": 4,
+			      },
+			    },
+			  ],
+			}
+		`);
+		// extra check needed for array since it doesn't serialize in the snapshot
+		expect(maybeGetOidProperty(initial.qux)).toBe('test/a.qux:2');
+	});
+
+	it('should transfer assigned OID properties to the memory system', () => {
+		const initial = assignOidProperty(
+			{
+				foo: assignOidProperty(
+					{
+						bar: 1,
+					},
+					'test/a.foo:1',
+				),
+				qux: assignOidProperty(
+					[
+						assignOidProperty(
+							{
+								corge: true,
+							},
+							'test/a.qux.#:2',
+						),
+						assignOidProperty(
+							{
+								grault: assignOidProperty(
+									{
+										garply: 4,
+									},
+									'test/a.qux.#.grault:3',
+								),
+							},
+							'test/a.qux.#:4',
+						),
+					],
+					'test/a.qux:2',
+				),
+			},
+			'test/a',
+		);
+
+		removeOidPropertiesFromAllSubObjects(initial);
+
+		expect(getOid(initial)).toEqual('test/a');
+		expect(getOid(initial.foo)).toEqual('test/a.foo:1');
+		expect(getOid(initial.qux)).toEqual('test/a.qux:2');
+		expect(getOid(initial.qux[0])).toEqual('test/a.qux.#:2');
+		expect(getOid(initial.qux[1])).toEqual('test/a.qux.#:4');
+		expect(getOid(initial.qux[1].grault)).toEqual('test/a.qux.#.grault:3');
 	});
 });

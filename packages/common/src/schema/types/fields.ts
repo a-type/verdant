@@ -33,6 +33,7 @@ export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 	type: 'map';
 	values: V;
 };
+
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
 	| StorageNumberFieldSchema

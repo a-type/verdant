@@ -1,4 +1,4 @@
-import { getOid, hashObject, ObjectIdentifier } from '@lo-fi/common';
+import { createOid, getOid, hashObject, ObjectIdentifier } from '@lo-fi/common';
 import { storeRequestPromise } from './idb.js';
 import { EntityStore } from './reactives/EntityStore.js';
 import { Query, UPDATE } from './Query.js';
@@ -73,9 +73,11 @@ export class QueryStore {
 			run = async () => {
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
-				const request = source.get(range);
-				const view = await storeRequestPromise(request);
-				return view ? await this.entities.get(getOid(view)) : null;
+				const request = source.getKey(range);
+				const key = await storeRequestPromise(request);
+				return key
+					? await this.entities.get(createOid(collection, key.toString(), []))
+					: null;
 			};
 		} else {
 			run = async () => {
@@ -87,8 +89,10 @@ export class QueryStore {
 						const result: any[] = [];
 						request.onsuccess = async () => {
 							const cursor = request.result;
-							if (cursor) {
-								result.push(getOid(cursor.value));
+							if (cursor?.primaryKey) {
+								result.push(
+									createOid(collection, cursor.primaryKey.toString(), []),
+								);
 								if (limit && result.length >= limit) {
 									resolve(result);
 								} else {

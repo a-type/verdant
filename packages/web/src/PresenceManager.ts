@@ -1,16 +1,18 @@
-import { ServerMessage, EventSubscriber } from '@lo-fi/common';
+import { ServerMessage, EventSubscriber, Batcher } from '@lo-fi/common';
 import type { Presence, UserInfo } from './index.js';
 import { LocalReplicaInfo } from './metadata/LocalReplicaStore.js';
 
 export class PresenceManager extends EventSubscriber<{
-	peerChanged: (userId: string, presence: any) => void;
-	selfChanged: (presence: any) => void;
+	peerChanged: (userId: string, presence: UserInfo) => void;
+	selfChanged: (presence: UserInfo) => void;
 	peersChanged: (peers: Record<string, any>) => void;
-	update: (presence: any) => void;
+	peerLeft: (userId: string, lastPresence: UserInfo) => void;
+	update: (presence: Partial<Presence>) => void;
 }> {
 	private _peers = {} as Record<string, UserInfo>;
 	private _self = { profile: {} } as UserInfo;
 	private _peerIds = new Array<string>();
+	private _updateBatcher;
 
 	get self() {
 		return this._self;
@@ -30,11 +32,22 @@ export class PresenceManager extends EventSubscriber<{
 		return everyone;
 	}
 
-	constructor(initialPresence?: Presence) {
+	constructor({
+		initialPresence,
+		updateBatchTimeout = 200,
+	}: {
+		initialPresence?: Presence;
+		updateBatchTimeout?: number;
+	}) {
 		super();
 		if (initialPresence) {
 			this.self.presence = initialPresence;
 		}
+
+		this._updateBatcher = new Batcher(this.flushPresenceUpdates, {
+			max: 25,
+			timeout: updateBatchTimeout,
+		});
 	}
 
 	__handleMessage = async (
@@ -67,8 +80,10 @@ export class PresenceManager extends EventSubscriber<{
 			}
 		} else if (message.type === 'presence-offline') {
 			peerIdsSet.delete(message.userId);
+			const lastPresence = this._peers[message.userId];
 			delete this._peers[message.userId];
 			peersChanged = true;
+			this.emit('peerLeft', message.userId, lastPresence);
 		}
 		if (peersChanged) {
 			this._peerIds = Array.from(peerIdsSet);
@@ -77,9 +92,13 @@ export class PresenceManager extends EventSubscriber<{
 	};
 
 	update = async (presence: Partial<Presence>) => {
-		this.emit('update', {
-			...this.self.presence,
-			...presence,
-		});
+		this._updateBatcher.add('default', presence);
+	};
+
+	flushPresenceUpdates = (presenceUpdates: Partial<Presence>[]) => {
+		const presence = presenceUpdates.reduce((acc, update) => {
+			return { ...acc, ...update };
+		}, this.self.presence);
+		this.emit('update', presence);
 	};
 }

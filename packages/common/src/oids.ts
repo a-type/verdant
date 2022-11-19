@@ -41,6 +41,12 @@ const KEY_PATH_SEPARATOR = '.';
 const COLLECTION_SEPARATOR = '/';
 const RANDOM_SEPARATOR = ':';
 
+/**
+ * This is the global, in-memory storage for all OIDs. It is used to
+ * associate JS objects with OIDs without modifying the objects themselves.
+ */
+const oidMap = new WeakMap<any, ObjectIdentifier>();
+
 export function getOid(obj: any) {
 	const oid = maybeGetOid(obj);
 	assert(
@@ -54,7 +60,7 @@ export function maybeGetOid(obj: any): ObjectIdentifier | undefined {
 	if (!isObject(obj)) {
 		return undefined;
 	}
-	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
+	return oidMap.get(obj) ?? obj[OID_KEY] ?? obj[LEGACY_OID_KEY];
 }
 
 export function assignOid(obj: any, oid: ObjectIdentifier) {
@@ -62,7 +68,7 @@ export function assignOid(obj: any, oid: ObjectIdentifier) {
 		isObject(obj),
 		`Only objects can be assigned OIDs, received ${JSON.stringify(obj)}`,
 	);
-	obj[OID_KEY] = oid;
+	oidMap.set(obj, oid);
 	return obj;
 }
 
@@ -173,6 +179,88 @@ export function assignOidsToAllSubObjects(
 				ensureOid(obj[key], rootOid, key, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
+		}
+	}
+}
+
+export function assignOidProperty(obj: any, oid: ObjectIdentifier) {
+	assert(
+		isObject(obj),
+		`Only objects can be assigned OIDs, received ${JSON.stringify(obj)}`,
+	);
+	obj[OID_KEY] = oid;
+	return obj;
+}
+
+export function maybeGetOidProperty(obj: any) {
+	if (!isObject(obj)) {
+		return undefined;
+	}
+	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
+}
+
+function hasOidProperty(obj: any) {
+	return !!maybeGetOidProperty(obj);
+}
+
+function removeOidProperty(obj: any) {
+	if (!isObject(obj)) {
+		return obj;
+	}
+	delete obj[LEGACY_OID_KEY];
+	delete obj[OID_KEY];
+	return obj;
+}
+
+function transferOidFromSystemToProperty(obj: any) {
+	const oid = maybeGetOid(obj);
+	if (oid) {
+		assignOidProperty(obj, oid);
+	}
+}
+
+/**
+ * Assigns a special property to all objects in the given object
+ * which have an OID
+ */
+export function assignOidPropertiesToAllSubObjects(obj: any) {
+	transferOidFromSystemToProperty(obj);
+
+	if (Array.isArray(obj)) {
+		for (let i = 0; i < obj.length; i++) {
+			assignOidPropertiesToAllSubObjects(obj[i]);
+		}
+	} else if (isObject(obj)) {
+		for (const key of Object.keys(obj)) {
+			assignOidPropertiesToAllSubObjects(obj[key]);
+		}
+	}
+}
+
+function copyOidFromPropertyToSystem(obj: any) {
+	const oid = maybeGetOidProperty(obj);
+	if (oid) {
+		assignOid(obj, oid);
+	}
+}
+
+/**
+ *
+ * Removes the special property from all objects in the given object
+ * which have an OID, transferring the OID from the property to the OID
+ * system in-memory.
+ */
+export function removeOidPropertiesFromAllSubObjects(obj: any) {
+	copyOidFromPropertyToSystem(obj);
+	removeOidProperty(obj);
+
+	if (Array.isArray(obj)) {
+		for (let i = 0; i < obj.length; i++) {
+			removeOidPropertiesFromAllSubObjects(obj[i]);
+		}
+	} else if (isObject(obj)) {
+		for (const key of Object.keys(obj)) {
+			removeOidPropertiesFromAllSubObjects(obj[key]);
 		}
 	}
 }

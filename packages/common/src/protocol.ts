@@ -83,6 +83,14 @@ export type SyncResponseMessage = {
 	 * A map of connected clients' presences values
 	 */
 	peerPresence: Record<string, UserInfo<any, any>>;
+
+	/**
+	 * The timestamp sent in the original sync message -
+	 * this confirms the server has received the client's
+	 * state up to this point. Subsequent syncs should not
+	 * include operations or baselines older than this timestamp.
+	 */
+	ackedTimestamp: string;
 };
 
 export type PresenceUpdateMessage = {

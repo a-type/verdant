@@ -25,22 +25,10 @@ interface StorageConfig {
 }
 
 export class Storage {
-	readonly entities = new EntityStore({
-		db: this.documentDb,
-		schema: this.schema,
-		meta: this.meta,
-		undoHistory: this.undoHistory,
-		log: this.config.log,
-	});
-	readonly queryStore = new QueryStore(this.documentDb, this.entities, {
-		log: this.config.log,
-	});
-	readonly queryMaker = new QueryMaker(this.queryStore, this.schema);
-	readonly documentManager = new DocumentManager(
-		this.meta,
-		this.schema,
-		this.entities,
-	);
+	readonly entities;
+	readonly queryStore;
+	readonly queryMaker;
+	readonly documentManager;
 
 	readonly collectionNames: string[];
 
@@ -50,6 +38,22 @@ export class Storage {
 		private config: StorageConfig,
 		private components: StorageComponents,
 	) {
+		this.entities = new EntityStore({
+			db: this.documentDb,
+			schema: this.schema,
+			meta: this.meta,
+			undoHistory: this.undoHistory,
+			log: this.config.log,
+		});
+		this.queryStore = new QueryStore(this.documentDb, this.entities, {
+			log: this.config.log,
+		});
+		this.queryMaker = new QueryMaker(this.queryStore, this.schema);
+		this.documentManager = new DocumentManager(
+			this.meta,
+			this.schema,
+			this.entities,
+		);
 		this.collectionNames = Object.keys(config.schema.collections);
 
 		this.sync = config.syncConfig
@@ -228,6 +232,12 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
 	 * Provide a log function to log internal debug messages
 	 */
 	log?: (...args: any[]) => void;
+	/**
+	 * If existing storage does not exist, you can provide this function to initialize it.
+	 * Initialization will complete before the open() request resolves. The function
+	 * is called with the client instance.
+	 */
+	loadInitialData?: (client: Storage) => Promise<void>;
 }
 
 /**
@@ -263,9 +273,17 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		}
 		this._initializing = true;
 		try {
+			const metaDbName = [init.namespace, 'meta'].join('_');
+			const isFirstTimeInitialization = await (init.indexedDb || indexedDB)
+				.databases()
+				.then((databases) => {
+					return !databases.find((db) => db.name === metaDbName);
+				});
+
 			const metaDb = await openMetadataDatabase(this._namespace, {
 				indexedDB: init.indexedDb,
 				log: init.log,
+				databaseName: metaDbName,
 			});
 			const meta = new Metadata(metaDb, init.schema, { log: init.log });
 
@@ -295,6 +313,11 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 					undoHistory: init.undoHistory || new UndoHistory(),
 				},
 			);
+
+			if (isFirstTimeInitialization && init.loadInitialData) {
+				await init.loadInitialData(storage);
+			}
+
 			this.resolveReady(storage);
 			this._resolvedValue = storage;
 			return storage;
