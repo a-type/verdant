@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.3.1
+
+### Patch Changes
+
+- 895fda4: Add startsWith filter for string fields
+
 ## 1.3.0
 
 ### Minor Changes

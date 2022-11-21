@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.3.2
+
+### Patch Changes
+
+- 895fda4: Add startsWith filter for string fields
+- Updated dependencies [895fda4]
+  - @lo-fi/common@1.3.1
+
 ## 1.3.1
 
 ### Patch Changes
