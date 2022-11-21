@@ -10,6 +10,7 @@ import {
 	PresenceUpdateMessage,
 	ReplicaInfo,
 	ReplicaType,
+	SendMessageMessage,
 	SyncMessage,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
@@ -63,13 +64,27 @@ export class ServerLibrary {
 	 * Validates a user's access to a replica. If the replica does not
 	 * exist, a user may create it. But if it does exist, its user (clientId)
 	 * must match the user making the request.
+	 *
+	 * This is a hot path so results are cached. They never change for each
+	 * replica + user combination.
 	 */
+	private writeAccessCache = new Map<string, boolean>();
 	private validateReplicaAccess = (replicaId: string, info: TokenInfo) => {
-		const replica = this.replicas.get(replicaId);
-		if (replica && replica.clientId !== info.userId) {
+		const cached = this.writeAccessCache.get(replicaId + ':' + info.userId);
+		if (cached === false) {
 			throw new Error(
 				`Replica ${replicaId} does not belong to client ${info.userId}`,
 			);
+		}
+
+		const replica = this.replicas.get(replicaId);
+		if (replica && replica.clientId !== info.userId) {
+			this.writeAccessCache.set(replicaId + ':' + info.userId, false);
+			throw new Error(
+				`Replica ${replicaId} does not belong to client ${info.userId}`,
+			);
+		} else {
+			this.writeAccessCache.set(replicaId + ':' + info.userId, true);
 		}
 	};
 
@@ -103,6 +118,8 @@ export class ServerLibrary {
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
 				break;
+			case 'send-message':
+				await this.handleSendMessage(message, clientKey, info);
 			default:
 				this.log('Unknown message type', (message as any).type);
 				break;
@@ -263,6 +280,20 @@ export class ServerLibrary {
 			// send its own history to us.
 			overwriteLocalData: replicaShouldReset && !isEmptyLibrary,
 			ackedTimestamp: message.timestamp,
+		});
+	};
+
+	private handleSendMessage = (
+		message: SendMessageMessage,
+		clientKey: string,
+		info: TokenInfo,
+	) => {
+		this.sender.broadcast(this.id, {
+			type: 'message-received',
+			message: message.message,
+			fromReplicaId: message.replicaId,
+			fromUserId: info.userId,
+			timestamp: message.timestamp,
 		});
 	};
 

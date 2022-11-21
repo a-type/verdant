@@ -124,4 +124,13 @@ export class ClientConnectionManager {
 			}
 		}
 	};
+
+	sendToUser = (libraryId: string, userId: string, message: ServerMessage) => {
+		const lib = this.getLibraryConnections(libraryId);
+		for (const [key, connection] of lib) {
+			if (key.startsWith(userId)) {
+				connection.respond(message);
+			}
+		}
+	};
 }

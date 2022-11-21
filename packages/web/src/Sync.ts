@@ -5,6 +5,7 @@ import {
 	ObjectIdentifier,
 	assert,
 	ReplicaType,
+	MessageReceivedMessage,
 } from '@lo-fi/common';
 import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
@@ -15,10 +16,12 @@ import { PresenceManager } from './PresenceManager.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
+	message: (message: Omit<MessageReceivedMessage, 'type'>) => void;
 };
 
-type SyncTransportEvents = SyncEvents & {
-	message: (message: ServerMessage) => void;
+type SyncTransportEvents = {
+	onlineChange: (isOnline: boolean) => void;
+	incomingMessage: (message: ServerMessage) => void;
 };
 
 export interface SyncTransport {
@@ -245,10 +248,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 
 		this.meta.subscribe('message', this.send);
 
-		this.webSocketSync.subscribe('message', this.handleMessage);
+		this.webSocketSync.subscribe('incomingMessage', this.handleMessage);
 		this.webSocketSync.subscribe('onlineChange', this.echoOnlineChange);
 
-		this.pushPullSync.subscribe('message', this.handleMessage);
+		this.pushPullSync.subscribe('incomingMessage', this.handleMessage);
 		this.pushPullSync.subscribe('onlineChange', this.echoOnlineChange);
 
 		if (automaticTransportSelection) {
@@ -320,6 +323,10 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 				break;
 			case 'server-ack':
 				await this.meta.updateLastSynced(message.timestamp);
+				break;
+			case 'message-received':
+				this.emit('message', message);
+				break;
 		}
 
 		// update presence if necessary
@@ -469,7 +476,7 @@ class WebSocketSync
 
 	private onMessage = (event: MessageEvent) => {
 		const message = JSON.parse(event.data) as ServerMessage;
-		this.emit('message', message);
+		this.emit('incomingMessage', message);
 		if (message.type === 'heartbeat-response') {
 			this.heartbeat.keepAlive();
 		}
@@ -644,7 +651,7 @@ class PushPullSync
 		if (message.type === 'sync-resp') {
 			this._hasSynced = true;
 		}
-		this.emit('message', message);
+		this.emit('incomingMessage', message);
 	};
 
 	send = (message: ClientMessage) => {

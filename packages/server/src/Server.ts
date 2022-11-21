@@ -199,6 +199,12 @@ export class Server extends EventEmitter implements MessageSender {
 		this.clientConnections.respond(libraryId, key, message);
 	};
 
+	sendToUser = (
+		libraryId: string,
+		userId: string,
+		message: ServerMessage,
+	) => {};
+
 	private handleMessage = (
 		clientKey: string,
 		info: TokenInfo,

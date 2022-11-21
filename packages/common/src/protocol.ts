@@ -129,12 +129,28 @@ export type ServerAckMessage = {
 	timestamp: string;
 };
 
+export type SendMessageMessage = {
+	type: 'send-message';
+	message: any;
+	replicaId: string;
+	timestamp: string;
+};
+
+export type MessageReceivedMessage = {
+	type: 'message-received';
+	message: any;
+	fromReplicaId: string;
+	fromUserId: string;
+	timestamp: string;
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
 	| OperationMessage
 	| AckMessage
-	| PresenceUpdateMessage;
+	| PresenceUpdateMessage
+	| SendMessageMessage;
 export type ServerMessage =
 	| HeartbeatResponseMessage
 	| SyncResponseMessage
@@ -143,4 +159,5 @@ export type ServerMessage =
 	| PresenceOfflineMessage
 	| GlobalAckMessage
 	| ForbiddenMessage
-	| ServerAckMessage;
+	| ServerAckMessage
+	| MessageReceivedMessage;
