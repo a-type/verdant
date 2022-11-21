@@ -15,6 +15,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          token: ${{ secrets.CI_PERSONAL_TOKEN }}
       - name: setup node.js
         uses: actions/setup-node@v2
         with:
