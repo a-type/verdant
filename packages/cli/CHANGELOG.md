@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.4.1
+
+### Patch Changes
+
+- 895fda4: Add startsWith filter for string fields
+
 ## 1.4.0
 
 ### Minor Changes
