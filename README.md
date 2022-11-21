@@ -19,6 +19,7 @@ lo-fi is an end-to-end storage and sync framework for web apps. Out of the box, 
 - ⚡ React to changes instantly and automatically refresh queries
 - 🛟 Full type safety based on your schema
 - 🧳 Migrate your data model as your app grows and changes
+- ⏳ Undo and redo changes
 
 And then, on top of that, it includes an optional server which unlocks the power of sync and realtime:
 
@@ -28,4 +29,13 @@ And then, on top of that, it includes an optional server which unlocks the power
 - 👋 Presence for real-time multiplayer
 - 🔃 HTTP push/pull or WebSocket syncing, or upgrade on-the-fly
 
+It does it all without any of this\*:
+
+- 📈 Infinitely growing storage usage
+- 🤔 Having to deeply understand CRDTs
+- 🤝 Peer to peer networking
+- 🚄 WASM-compiled databases in your browser
+
 ## [Read the documentation](https://a-type.github.com/lo-fi)
+
+<sub>\* I'm aware most of these are good! But they also add complexity or fundamental changes in model, and the goal of lo-fi is to be simple and recognizable.</sub>
