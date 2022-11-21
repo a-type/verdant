@@ -357,7 +357,9 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 	};
 
 	public send = (message: ClientMessage) => {
-		return this.activeSync.send(message);
+		if (this.activeSync.status === 'active') {
+			return this.activeSync.send(message);
+		}
 	};
 
 	public start = () => {

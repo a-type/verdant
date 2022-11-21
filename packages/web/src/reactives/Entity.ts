@@ -306,6 +306,9 @@ export abstract class EntityBase<Snapshot> {
 		if (!this.value) {
 			return null;
 		}
+		if (this.deleted) {
+			return null;
+		}
 		if (this.cachedSnapshot) {
 			return this.cachedSnapshot;
 		}

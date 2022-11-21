@@ -290,6 +290,10 @@ export class EntityStore extends EventSubscriber<{
 		const allDocumentOids = Array.from(
 			new Set(operations.map((op) => getOidRoot(op.oid))),
 		);
+
+		// confirm the operations
+		this.addDataToOpenCaches({ operations, baselines: [] });
+
 		for (const oid of allDocumentOids) {
 			await this.writeDocumentToStorage(oid);
 		}
@@ -300,9 +304,6 @@ export class EntityStore extends EventSubscriber<{
 			operations.map(({ oid }) => decomposeOid(oid).collection),
 		);
 		this.emit('collectionsChanged', Array.from(affectedCollections));
-
-		// confirm the operations
-		this.addDataToOpenCaches({ operations, baselines: [] });
 	};
 
 	private getInverseOperations = async (ops: Operation[]) => {
