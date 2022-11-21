@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.3.3
+
+### Patch Changes
+
+- 5c7a6b0: bugfix: fix deleting entities and querying. fix sending messages while sync is paused.
+
 ## 1.3.2
 
 ### Patch Changes
