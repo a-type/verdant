@@ -30,7 +30,7 @@ describe('storage queries', () => {
 			},
 			{
 				id: '4',
-				content: 'item 4',
+				content: 'something else',
 				done: true,
 				tags: [],
 				category: 'specific',
@@ -44,7 +44,7 @@ describe('storage queries', () => {
 			},
 			{
 				id: '6',
-				content: 'item 6',
+				content: 'not an item!',
 				done: true,
 				tags: ['a'],
 				category: 'specific',
@@ -95,6 +95,26 @@ describe('storage queries', () => {
 			items[4].get('id'),
 			items[1].get('id'),
 			items[5].get('id'),
+		]);
+	});
+
+	it('can query starts-with on a string', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const query = storage.queryMaker.findAll('todo', {
+			where: 'content',
+			startsWith: 'item',
+		});
+
+		const results = await query.resolved;
+
+		expect(results.map((i) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[1].get('id'),
+			items[2].get('id'),
+			items[4].get('id'),
 		]);
 	});
 });

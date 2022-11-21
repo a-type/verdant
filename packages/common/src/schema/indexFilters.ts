@@ -4,6 +4,7 @@ import {
 	MatchCollectionIndexFilter,
 	RangeCollectionIndexFilter,
 	SortIndexFilter,
+	StartsWithIndexFilter,
 } from './types.js';
 
 export function isMatchIndexFilter(
@@ -29,6 +30,12 @@ export function isCompoundIndexFilter(
 	return !!(filter as any).match;
 }
 
+export function isStartsWithIndexFilter(
+	filter: CollectionFilter,
+): filter is StartsWithIndexFilter {
+	return (filter as any).startsWith !== undefined;
+}
+
 export function isSortIndexFilter(
 	filter: CollectionFilter,
 ): filter is SortIndexFilter {
@@ -36,6 +43,7 @@ export function isSortIndexFilter(
 		!isRangeIndexFilter(filter) &&
 		!isMatchIndexFilter(filter) &&
 		!isCompoundIndexFilter(filter) &&
+		!isStartsWithIndexFilter(filter) &&
 		(filter as any).order
 	);
 }

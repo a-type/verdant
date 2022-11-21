@@ -14,7 +14,7 @@ export const todoCollection = collection({
 		},
 		content: {
 			type: 'string',
-			indexed: false,
+			indexed: true,
 		},
 		done: {
 			type: 'boolean',

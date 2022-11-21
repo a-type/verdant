@@ -24,9 +24,16 @@ export type SortIndexFilter = {
 	order: 'asc' | 'desc';
 };
 
+export type StartsWithIndexFilter = {
+	where: string;
+	startsWith: string;
+	order?: 'asc' | 'desc';
+};
+
 export type CollectionIndexFilter =
 	| MatchCollectionIndexFilter
 	| RangeCollectionIndexFilter
 	| CollectionCompoundIndexFilter
+	| StartsWithIndexFilter
 	| SortIndexFilter;
 export type CollectionFilter = CollectionIndexFilter;

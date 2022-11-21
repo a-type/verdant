@@ -8,9 +8,11 @@ import {
 	isMatchIndexFilter,
 	isRangeIndexFilter,
 	isSortIndexFilter,
+	isStartsWithIndexFilter,
 	MatchCollectionIndexFilter,
 	RangeCollectionIndexFilter,
 	SortIndexFilter,
+	StartsWithIndexFilter,
 	StorageSchema,
 } from '@lo-fi/common';
 import { ObjectEntity } from './reactives/Entity.js';
@@ -119,11 +121,19 @@ export class QueryMaker {
 		return IDBKeyRange.bound(lower, upper);
 	};
 
+	private startsWithIndexToIdbKeyRange = (filter: StartsWithIndexFilter) => {
+		const lower = filter.startsWith;
+		const upper = filter.startsWith + '\uffff';
+		return IDBKeyRange.bound(lower, upper);
+	};
+
 	private getRange = (collection: string, index?: CollectionFilter) => {
 		if (!index) return undefined;
 		if (isRangeIndexFilter(index)) return this.rangeIndexToIdbKeyRange(index);
 		if (isMatchIndexFilter(index)) return this.matchIndexToIdbKeyRange(index);
 		if (isSortIndexFilter(index)) return this.sortIndexToIdbKeyRange(index);
+		if (isStartsWithIndexFilter(index))
+			return this.startsWithIndexToIdbKeyRange(index);
 		return this.compoundIndexToIdbKeyRange(collection, index);
 	};
 }

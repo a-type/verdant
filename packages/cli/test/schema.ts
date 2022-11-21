@@ -6,16 +6,14 @@ export const todo = collection({
 	fields: {
 		id: {
 			type: 'string',
-			indexed: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		content: {
 			type: 'string',
-			indexed: false,
+			indexed: true,
 		},
 		done: {
 			type: 'boolean',
-			default: false,
 		},
 		tags: {
 			type: 'array',
@@ -66,7 +64,6 @@ export const person = collection({
 	fields: {
 		id: {
 			type: 'string',
-			indexed: true,
 			default: () => Math.random().toString(36).slice(2, 9),
 		},
 		name: {

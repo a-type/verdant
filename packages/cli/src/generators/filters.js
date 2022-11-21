@@ -50,6 +50,7 @@ function getCollectionFieldFilterTypings(collection, isSynthetic, name) {
 		isSynthetic ? 'synthetics' : 'fields',
 	);
 	const field = getObjectProperty(fields, name);
+	const fieldType = getObjectProperty(field, 'type').value;
 	const fieldTyping = getFieldSnapshotTyping(field);
 	const matchName = `${pascalCase(collectionName)}${pascalCase(
 		name,
@@ -57,7 +58,7 @@ function getCollectionFieldFilterTypings(collection, isSynthetic, name) {
 	const rangeName = `${pascalCase(collectionName)}${pascalCase(
 		name,
 	)}RangeFilter`;
-	return [
+	const filters = [
 		{
 			name: matchName,
 			typing: `
@@ -82,6 +83,20 @@ export interface ${rangeName} {
 `,
 		},
 	];
+	if (fieldType === 'string') {
+		filters.push({
+			name: `${pascalCase(collectionName)}${pascalCase(name)}StartsWithFilter`,
+			typing: `
+export interface ${pascalCase(collectionName)}${pascalCase(
+				name,
+			)}StartsWithFilter {
+					where: '${name}';
+					startsWith: string;
+					order?: 'asc' | 'desc';
+			}`,
+		});
+	}
+	return filters;
 }
 
 function getCollectionCompoundFilterTypings(collection, name) {
