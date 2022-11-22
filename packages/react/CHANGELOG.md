@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 4.0.2
+
+### Patch Changes
+
+- 9321cb0: Expose undo hooks
+- Updated dependencies [9321cb0]
+- Updated dependencies [ef12284]
+  - @lo-fi/web@1.3.4
+
 ## 4.0.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.4.2
+
+### Patch Changes
+
+- 9321cb0: Expose undo hooks
+
 ## 1.4.1
 
 ### Patch Changes
