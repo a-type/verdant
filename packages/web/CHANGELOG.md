@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 1.3.4
+
+### Patch Changes
+
+- 9321cb0: Expose undo hooks
+- ef12284: Fix pull sync giving up after a failure
+
 ## 1.3.3
 
 ### Patch Changes
