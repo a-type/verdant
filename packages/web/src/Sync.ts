@@ -625,11 +625,21 @@ class PushPullSync
 					this.emit('onlineChange', true);
 				}
 			} else {
-				throw new Error(
-					`Sync server responded with ${
-						response.status
-					}\n${await response.text()}`,
+				console.error(
+					'Sync request failed',
+					response.status,
+					await response.text(),
 				);
+
+				if (this._isConnected) {
+					this._isConnected = false;
+					this.emit('onlineChange', false);
+				}
+
+				// only keep trying if the error was not 4xx
+				if (response.status >= 500) {
+					this.heartbeat.keepAlive();
+				}
 			}
 		} catch (error) {
 			if (this._isConnected) {
@@ -637,6 +647,8 @@ class PushPullSync
 				this.emit('onlineChange', false);
 			}
 			console.error(error);
+
+			this.heartbeat.keepAlive();
 		}
 	};
 
