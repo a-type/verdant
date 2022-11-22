@@ -19,6 +19,7 @@ import {
 	Provider,
 	useContext,
 	useMemo,
+	useState,
 	useSyncExternalStore,
 } from 'react';
 import { suspend } from 'suspend-react';
@@ -103,7 +104,11 @@ type CreatedHooks<
 	usePeerIds(): string[];
 	usePeer(peerId: string): UserInfo;
 	useSyncStatus(): boolean;
+	/** @deprecated use useClient */
 	useStorage(): Storage;
+	useClient(): Storage;
+	useCanUndo(): boolean;
+	useCanRedo(): boolean;
 	Provider: Provider<StorageDescriptor<any>>;
 };
 
@@ -184,13 +189,33 @@ export function createHooks<
 		);
 	}
 
+	function useCanUndo() {
+		const storage = useStorage();
+
+		return useSyncExternalStore(
+			(callback) => storage.undoHistory.subscribe('change', callback),
+			() => storage.undoHistory.canUndo,
+		);
+	}
+
+	function useCanRedo() {
+		const storage = useStorage();
+		return useSyncExternalStore(
+			(callback) => storage.undoHistory.subscribe('change', callback),
+			() => storage.undoHistory.canRedo,
+		);
+	}
+
 	const hooks: Record<string, any> = {
 		useStorage,
+		useClient: useStorage,
 		useWatch,
 		useSelf,
 		usePeerIds,
 		usePeer,
 		useSyncStatus,
+		useCanUndo,
+		useCanRedo,
 		Provider: Context.Provider,
 	};
 

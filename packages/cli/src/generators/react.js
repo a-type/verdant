@@ -22,7 +22,9 @@ import type { Client, ClientDescriptor, Schema, ${collections
 
 export interface GeneratedHooks {
 	Provider: Provider<ClientDescriptor<Schema>>;
+	/** @deprecated use useClient instead */
   useStorage: () => Client;
+	useClient: () => Client;
   useSelf: () => UserInfo;
   usePeerIds: () => string[];
   usePeer: (peerId: string) => UserInfo;
@@ -37,6 +39,8 @@ export interface GeneratedHooks {
 		entity: T,
 		props: P,
 	): EntityShape<T>[P];
+	useCanUndo(): boolean;
+	useCanRedo(): boolean;
   ${collections
 		.map((col) => {
 			const name = getObjectProperty(col, 'name').value;
