@@ -9,7 +9,9 @@ export function addFieldDefaults(
 		if (defaultValue !== undefined && value[key] === undefined) {
 			value[key] = defaultValue;
 		}
-		traverseCollectionFieldsAndApplyDefaults(value[key], field);
+		if (value[key]) {
+			traverseCollectionFieldsAndApplyDefaults(value[key], field);
+		}
 	}
 	return value;
 }
@@ -18,6 +20,7 @@ export function traverseCollectionFieldsAndApplyDefaults(
 	value: any,
 	field: StorageFieldSchema,
 ) {
+	if (value === undefined || value === null) return value;
 	if (field.type === 'object') {
 		for (const [key, subField] of Object.entries(field.properties)) {
 			if (value[key] === undefined) {
@@ -48,14 +51,18 @@ export function getFieldDefault(field: StorageFieldSchema) {
 	) {
 		if (field.default && typeof field.default === 'function') {
 			return field.default();
+		} else if (field.default !== undefined) {
+			return field.default;
 		}
-		return field.default;
 	}
 	if (field.type === 'array') {
 		return [];
 	}
 	if (field.type === 'map') {
 		return {};
+	}
+	if (field.type !== 'any' && field.nullable) {
+		return null;
 	}
 	return undefined;
 }
