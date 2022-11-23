@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.4.1
+
+### Patch Changes
+
+- 70b9a88: Fix useWatch, allow null ID in usePeer
+- Updated dependencies [b2fe1f9]
+  - @lo-fi/common@1.3.2
+
 ## 1.4.0
 
 ### Minor Changes
