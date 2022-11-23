@@ -67,10 +67,20 @@ export type EntityPropertyValue<
 		: never
 	: never;
 
+type Test = Exclude<{ foo: 'bar' } | null, null> extends object ? 1 : never;
+
+type DestructuredEntityProperty<Value> = Exclude<Value, null> extends Array<any>
+	? ListEntity<Exclude<Value, null>[number] | null>
+	: Exclude<Value, null> extends object
+	? ObjectEntity<Exclude<Value, null>> | null
+	: Value;
+
 export type DestructuredEntity<Init> = Init extends Array<any>
-	? EntityPropertyValue<Init, number>[]
+	? DestructuredEntityProperty<Init[number]>[]
 	: Init extends object
-	? { [K in keyof Init]: EntityPropertyValue<Init, K> }
+	? {
+			[K in keyof Init]: DestructuredEntityProperty<Init[K]>;
+	  }
 	: never;
 
 export type EntityShape<E extends EntityBase<any>> = E extends EntityBase<

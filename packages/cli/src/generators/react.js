@@ -27,7 +27,7 @@ export interface GeneratedHooks<Presence, Profile> {
 	useClient: () => Client<Presence, Profile>;
   useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
-  usePeer: (peerId: string) => UserInfo<Profile, Presence>;
+  usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
 	useWatch<T extends EntityBase<any> | null>(
 		entity: T,

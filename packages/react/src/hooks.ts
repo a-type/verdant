@@ -165,16 +165,31 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
-	function usePeer(peerId: string) {
+	function usePeer(peerId: string | null) {
 		const storage = useStorage();
 		return useSyncExternalStore(
-			(callback) =>
-				storage.sync.presence.subscribe('peerChanged', (id, user) => {
-					if (id === peerId) {
-						callback();
-					}
-				}),
-			() => storage.sync.presence.peers[peerId],
+			(callback) => {
+				const unsubs: (() => void)[] = [];
+				unsubs.push(
+					storage.sync.presence.subscribe('peerChanged', (id, user) => {
+						if (id === peerId) {
+							callback();
+						}
+					}),
+				);
+				unsubs.push(
+					storage.sync.presence.subscribe('peerLeft', (id) => {
+						if (id === peerId) {
+							callback();
+						}
+					}),
+				);
+
+				return () => {
+					unsubs.forEach((unsub) => unsub());
+				};
+			},
+			() => (peerId ? storage.sync.presence.peers[peerId] ?? null : null),
 		);
 	}
 
