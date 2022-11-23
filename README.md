@@ -36,6 +36,6 @@ It does it all without any of this\*:
 - 🤝 Peer to peer networking
 - 🚄 WASM-compiled databases in your browser
 
-## [Read the documentation](https://a-type.github.com/lo-fi)
+## [Read the documentation](https://lo-fi.gfor.rest)
 
 <sub>\* I'm aware most of these are good! But they also add complexity or fundamental changes in model, and the goal of lo-fi is to be simple and recognizable.</sub>
