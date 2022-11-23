@@ -1,5 +1,12 @@
 # @lo-fi/server
 
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [b2fe1f9]
+  - @lo-fi/common@1.3.2
+
 ## 1.2.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @lo-fi/react
 
+## 5.0.1
+
+### Patch Changes
+
+- 70b9a88: Fix useWatch, allow null ID in usePeer
+- Updated dependencies [b2fe1f9]
+- Updated dependencies [70b9a88]
+  - @lo-fi/common@1.3.2
+  - @lo-fi/web@1.4.1
+
 ## 5.0.0
 
 ### Minor Changes

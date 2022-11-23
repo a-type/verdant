@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.5.1
+
+### Patch Changes
+
+- 70b9a88: Fix useWatch, allow null ID in usePeer
+
 ## 1.5.0
 
 ### Minor Changes

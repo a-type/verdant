@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.3.2
+
+### Patch Changes
+
+- b2fe1f9: fix defaulting behavior
+
 ## 1.3.1
 
 ### Patch Changes
