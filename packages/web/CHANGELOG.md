@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.4.0
+
+### Minor Changes
+
+- 54ec520: Variable typing of Presence and Profile. Continuing to reduce typing complexity internally in the library.
+
 ## 1.3.4
 
 ### Patch Changes

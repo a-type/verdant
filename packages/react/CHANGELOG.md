@@ -1,5 +1,16 @@
 # @lo-fi/react
 
+## 5.0.0
+
+### Minor Changes
+
+- 54ec520: Variable typing of Presence and Profile. Continuing to reduce typing complexity internally in the library.
+
+### Patch Changes
+
+- Updated dependencies [54ec520]
+  - @lo-fi/web@1.4.0
+
 ## 4.0.2
 
 ### Patch Changes
