@@ -4,7 +4,7 @@ import {
 } from './.generated/index.js';
 import schema from './schema.js';
 import { describe, it, expect } from 'vitest';
-import { hooks } from './.generated/react.js';
+import { createHooks } from './.generated/react.js';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
@@ -23,6 +23,7 @@ describe('generated client', () => {
 			attachments: [],
 			category: null,
 			content: 'test',
+			done: false,
 		});
 
 		expect(item.get('content')).toBe('test');
@@ -48,6 +49,7 @@ describe('generated client', () => {
 
 describe('generated react hooks', () => {
 	it('should create all the hooks for each collection', async () => {
+		const hooks = createHooks();
 		expect(hooks.useTodo).toBeDefined();
 		expect(hooks.useAllTodos).toBeDefined();
 		expect(hooks.useOneTodo).toBeDefined();
