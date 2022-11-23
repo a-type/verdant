@@ -9,7 +9,6 @@ import {
 import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from './BackoffScheduler.js';
 import { EntityStore } from './reactives/EntityStore.js';
-import type { Presence } from './index.js';
 import { Metadata } from './metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
 
@@ -66,7 +65,10 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 	public readonly isConnected = false;
 	public readonly status = 'paused';
 
-	public readonly presence = new PresenceManager({});
+	public readonly presence = new PresenceManager({
+		initialPresence: {},
+		defaultProfile: {},
+	});
 }
 
 export interface ServerSyncEndpointProviderConfig {
@@ -141,11 +143,19 @@ class ServerSyncEndpointProvider {
 
 export type SyncTransportMode = 'realtime' | 'pull';
 
-export interface ServerSyncOptions extends ServerSyncEndpointProviderConfig {
+export interface ServerSyncOptions<Profile = any, Presence = any>
+	extends ServerSyncEndpointProviderConfig {
 	/**
 	 * When a client first connects, it will use this presence value.
 	 */
 	initialPresence: Presence;
+	/**
+	 * Before connecting to the server, the local client will have
+	 * this value for their profile data. You can either cache and store
+	 * profile data from a previous connection or provide defaults like
+	 * empty strings.
+	 */
+	defaultProfile: Profile;
 
 	/**
 	 * Provide `false` to disable transport selection. Transport selection
@@ -175,7 +185,10 @@ export interface ServerSyncOptions extends ServerSyncEndpointProviderConfig {
 	presenceUpdateBatchTimeout?: number;
 }
 
-export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
+export class ServerSync<Profile = any, Presence = any>
+	extends EventSubscriber<SyncEvents>
+	implements Sync
+{
 	private webSocketSync: WebSocketSync;
 	private pushPullSync: PushPullSync;
 	private activeSync: SyncTransport;
@@ -198,7 +211,8 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 			initialTransport,
 			pullInterval,
 			presenceUpdateBatchTimeout,
-		}: ServerSyncOptions,
+			defaultProfile,
+		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
 			entities,
@@ -213,8 +227,9 @@ export class ServerSync extends EventSubscriber<SyncEvents> implements Sync {
 		this.meta = meta;
 		this.entities = entities;
 		this.log = log || (() => {});
-		this.presence = new PresenceManager({
+		this.presence = new PresenceManager<Profile, Presence>({
 			initialPresence,
+			defaultProfile,
 			updateBatchTimeout: presenceUpdateBatchTimeout,
 		});
 		this.endpointProvider = new ServerSyncEndpointProvider({

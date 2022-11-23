@@ -1,16 +1,19 @@
 import { ServerMessage, EventSubscriber, Batcher } from '@lo-fi/common';
-import type { Presence, UserInfo } from './index.js';
+import type { UserInfo } from './index.js';
 import { LocalReplicaInfo } from './metadata/LocalReplicaStore.js';
 
-export class PresenceManager extends EventSubscriber<{
-	peerChanged: (userId: string, presence: UserInfo) => void;
-	selfChanged: (presence: UserInfo) => void;
+export class PresenceManager<
+	Profile = any,
+	Presence = any,
+> extends EventSubscriber<{
+	peerChanged: (userId: string, presence: UserInfo<Profile, Presence>) => void;
+	selfChanged: (presence: UserInfo<Profile, Presence>) => void;
 	peersChanged: (peers: Record<string, any>) => void;
-	peerLeft: (userId: string, lastPresence: UserInfo) => void;
+	peerLeft: (userId: string, lastPresence: UserInfo<Profile, Presence>) => void;
 	update: (presence: Partial<Presence>) => void;
 }> {
-	private _peers = {} as Record<string, UserInfo>;
-	private _self = { profile: {} } as UserInfo;
+	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
+	private _self = { profile: {} } as UserInfo<Profile, Presence>;
 	private _peerIds = new Array<string>();
 	private _updateBatcher;
 
@@ -35,14 +38,15 @@ export class PresenceManager extends EventSubscriber<{
 	constructor({
 		initialPresence,
 		updateBatchTimeout = 200,
+		defaultProfile,
 	}: {
-		initialPresence?: Presence;
+		initialPresence: Presence;
+		defaultProfile: Profile;
 		updateBatchTimeout?: number;
 	}) {
 		super();
-		if (initialPresence) {
-			this.self.presence = initialPresence;
-		}
+		this.self.presence = initialPresence;
+		this.self.profile = defaultProfile;
 
 		this._updateBatcher = new Batcher(this.flushPresenceUpdates, {
 			max: 25,

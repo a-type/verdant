@@ -60,7 +60,7 @@ export function useMultiplayerState() {
 	const [error, setError] = useState<Error>();
 	const [loading, setLoading] = useState(true);
 
-	const room = hooks.useStorage();
+	const room = hooks.useClient();
 
 	const page = hooks.usePage('default');
 
@@ -131,7 +131,7 @@ export function useMultiplayerState() {
 	// Handle presence updates when the user's pointer / selection changes
 	const onChangePresence = useCallback(
 		(app: TldrawApp, user: TDUser) => {
-			room.presence.update({ user });
+			room.sync.presence.update({ user });
 		},
 		[room],
 	);
@@ -146,7 +146,7 @@ export function useMultiplayerState() {
 
 		// Handle changes to other users' presence
 		unsubs.push(
-			room.presence.subscribe('peersChanged', (others) => {
+			room.sync.presence.subscribe('peersChanged', (others) => {
 				app.updateUsers(
 					Object.values(others)
 						.filter((other) => other.presence)
@@ -156,7 +156,7 @@ export function useMultiplayerState() {
 			}),
 		);
 		unsubs.push(
-			room.presence.subscribe('peerLeft', (id, info) =>
+			room.sync.presence.subscribe('peerLeft', (id, info) =>
 				app.removeUser(info.presence.user.id),
 			),
 		);

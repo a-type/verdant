@@ -1,9 +1,4 @@
-import {
-	collection,
-	schema,
-	StorageDescriptor,
-	WebsocketSync,
-} from '@lo-fi/web';
+import { collection, schema } from '@lo-fi/web';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './hooks.js';
 

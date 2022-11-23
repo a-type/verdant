@@ -23,11 +23,10 @@ export function getClientTypings(collections) {
     findAll: (filter?: Filter) => Query<Document[]>;
   }
 
-export class Client {
+export class Client<Presence = any, Profile = any> {
   ${pluralNames.map(getClientCollectionTypings).join(';\n')}
 
-  presence: Storage['sync']['presence'];
-  sync: Storage['sync'];
+  sync: ServerSync<Profile, Presence>;
   undoHistory: Storage['undoHistory'];
   namespace: Storage['namespace'];
   entities: Storage['entities'];
@@ -39,15 +38,15 @@ export class Client {
 }
 
 // schema is provided internally. loadInitialData must be revised to pass the typed Client
-interface ClientInitOptions extends Omit<StorageInitOptions, 'schema' | 'loadInitialData'> {
+interface ClientInitOptions<Presence = any, Profile = any> extends Omit<StorageInitOptions<Presence, Profile>, 'schema' | 'loadInitialData'> {
   loadInitialData?: (client: Client) => Promise<void>;
 }
 
-export class ClientDescriptor {
-  constructor(init: ClientInitOptions);
-  open: () => Promise<Client>;
-  readonly current: Client | null;
-  readonly readyPromise: Promise<Client>;
+export class ClientDescriptor<Presence = any, Profile = any> {
+  constructor(init: ClientInitOptions<Presence, Profile>);
+  open: () => Promise<Client<Presence, Profile>>;
+  readonly current: Client<Presence, Profile> | null;
+  readonly readyPromise: Promise<Client<Presence, Profile>>;
   readonly schema: StorageSchema;
   readonly namespace: string;
   close: () => Promise<void>;

@@ -4,10 +4,11 @@ sidebar_position: 4
 
 # React
 
-lo-fi has React hooks generation. To enable it, pass `--react` to the [CLI](./local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Pass your ClientDescriptor instance into that.
+lo-fi has React hooks generation. To enable it, pass `--react` to the [CLI](./local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Call it to construct hooks for your lo-fi storage.
 
 ```ts
 import { ClientDescriptor, ServerSync } from './client/index.js';
+import { createHooks } from './client/react.js';
 import migrations from './migrations.js';
 
 const clientDesc = new ClientDescriptor({
@@ -22,7 +23,7 @@ const clientDesc = new ClientDescriptor({
 });
 
 // export your generated hooks
-export { hooks } from './client/react.js';
+export const hooks = createHooks();
 ```
 
 It will generate named hooks based on each document collection, plus a few utility hooks. For example, if you have the collection `todoItems`, you will get these hooks:
@@ -47,6 +48,27 @@ By using a Context in this way, you can instantiate different clients for the sa
 The hooks use Suspense so that you don't have to write loading state conditional code in your components. All hooks return data directly. If the data is not ready, they suspend.
 
 Wrap your app in a `<Suspense>` to handle this. You can create multiple layers of Suspense to handle loading more granularly.
+
+## Typing of presence
+
+By default, create hooks have `any` types for all presence values. To synchronize presence typings with your main client, provide the same Presence and Profile typings for both:
+
+```ts
+export interface Presence {
+	emoji: string;
+}
+
+export interface Profile {
+	// any data you may have put in profiles on the server
+}
+
+const clientDesc = new ClientDescriptor<Presence, Profile>({
+	// ...
+});
+
+// for React support, also pass the typing arguments to createHooks
+export const hooks = createHooks<Presence, Profile>();
+```
 
 ## Usage examples
 

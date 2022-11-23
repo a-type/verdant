@@ -20,14 +20,14 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			EntityShape,
 		} from '@lo-fi/web';
 
-export interface GeneratedHooks {
+export interface GeneratedHooks<Presence, Profile> {
 	Provider: Provider<ClientDescriptor<Schema>>;
 	/** @deprecated use useClient instead */
-  useStorage: () => Client;
-	useClient: () => Client;
-  useSelf: () => UserInfo;
+  useStorage: () => Client<Presence, Profile>;
+	useClient: () => Client<Presence, Profile>;
+  useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
-  usePeer: (peerId: string) => UserInfo;
+  usePeer: (peerId: string) => UserInfo<Profile, Presence>;
   useSyncStatus: () => boolean;
 	useWatch<T extends EntityBase<any> | null>(
 		entity: T,
@@ -61,16 +61,18 @@ useAll${pascalPlural}: (config?: {
 		.join('\n')}
 }
 
-export const hooks: GeneratedHooks;
+export function createHooks<Presence = any, Profile = any>(): GeneratedHooks<Presence, Profile>;
 `;
 }
 
 export function getReactImplementation(schemaPath) {
 	let impl = `
-import { createHooks } from '@lo-fi/react';
+import { createHooks as baseCreateHooks } from '@lo-fi/react';
 import schema from '${schemaPath}';
 
-export const hooks = createHooks(schema);
+export function createHooks() {
+	return baseCreateHooks(schema);
+}
 `;
 	return impl;
 }

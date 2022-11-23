@@ -8,7 +8,7 @@ export type {
 	AccessibleEntityProperty,
 	DestructuredEntity,
 } from './reactives/Entity.js';
-export { ServerSync as WebsocketSync } from './Sync.js';
+export { ServerSync } from './Sync.js';
 
 export {
 	collection,
@@ -23,10 +23,4 @@ export type {
 	Migration,
 } from '@lo-fi/common';
 
-export interface Presence {}
-
-export interface Profile {}
-
-import type { UserInfo as BaseUserInfo } from '@lo-fi/common';
-
-export type UserInfo = BaseUserInfo<Profile, Presence>;
+export type { UserInfo } from '@lo-fi/common';

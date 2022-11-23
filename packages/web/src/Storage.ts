@@ -17,10 +17,10 @@ interface StorageComponents {
 	undoHistory: UndoHistory;
 }
 
-interface StorageConfig {
+interface StorageConfig<Presence = any> {
 	schema: StorageSchema;
 	namespace: string;
-	syncConfig?: ServerSyncOptions;
+	syncConfig?: ServerSyncOptions<Presence>;
 	log?: (...args: any[]) => void;
 }
 
@@ -210,13 +210,13 @@ export class Storage {
 	};
 }
 
-export interface StorageInitOptions<Schema extends StorageSchema<any>> {
+export interface StorageInitOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
-	schema: Schema;
+	schema: StorageSchema<any>;
 	/** Migrations, in order, to upgrade to each successive version of the schema */
 	migrations: Migration[];
 	/** Provide a sync config to turn on synchronization with a server */
-	sync?: ServerSyncOptions;
+	sync?: ServerSyncOptions<Profile, Presence>;
 	/** Optionally override the IndexedDB implementation */
 	indexedDb?: IDBFactory;
 	/**
@@ -245,7 +245,7 @@ export interface StorageInitOptions<Schema extends StorageSchema<any>> {
  * Storage creation promise and exposes some metadata which can
  * be useful immediately.
  */
-export class StorageDescriptor<Schema extends StorageSchema<any>> {
+export class StorageDescriptor<Presence = any, Profile = any> {
 	private readonly _readyPromise: Promise<Storage>;
 	// assertions because these are defined by plucking them from
 	// Promise initializer
@@ -259,7 +259,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		return this._namespace;
 	}
 
-	constructor(private readonly init: StorageInitOptions<Schema>) {
+	constructor(private readonly init: StorageInitOptions<Presence, Profile>) {
 		this._readyPromise = new Promise((resolve, reject) => {
 			this.resolveReady = resolve;
 			this.rejectReady = reject;
@@ -267,7 +267,7 @@ export class StorageDescriptor<Schema extends StorageSchema<any>> {
 		this._namespace = init.namespace;
 	}
 
-	private initialize = async (init: StorageInitOptions<Schema>) => {
+	private initialize = async (init: StorageInitOptions) => {
 		if (this._initializing) {
 			return this._readyPromise;
 		}

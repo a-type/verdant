@@ -94,15 +94,11 @@ type CapitalizedCollectionName<
 	}>,
 > = Capitalize<Extract<keyof Schema['collections'], string>>;
 
-type CreatedHooks<
-	Schema extends StorageSchema<{
-		[k: string]: StorageCollectionSchema<any, any, any>;
-	}>,
-> = GeneratedHooks<Schema> & {
+type CreatedHooks<Presence = any, Profile = any> = {
 	useWatch<T>(liveObject: T): T;
-	useSelf(): UserInfo;
+	useSelf(): UserInfo<Profile, Presence>;
 	usePeerIds(): string[];
-	usePeer(peerId: string): UserInfo;
+	usePeer(peerId: string): UserInfo<Profile, Presence>;
 	useSyncStatus(): boolean;
 	/** @deprecated use useClient */
 	useStorage(): Storage;
@@ -110,14 +106,15 @@ type CreatedHooks<
 	useCanUndo(): boolean;
 	useCanRedo(): boolean;
 	Provider: Provider<StorageDescriptor<any>>;
+	[other: string]: any;
 };
 
-export function createHooks<
-	Schema extends StorageSchema<{
-		[k: string]: StorageCollectionSchema<any, any, any>;
-	}>,
->(schema: Schema): CreatedHooks<Schema> {
-	const Context = createContext<StorageDescriptor<Schema> | null>(null);
+export function createHooks<Presence = any, Profile = any>(
+	schema: StorageSchema<any>,
+): CreatedHooks<Presence, Profile> {
+	const Context = createContext<StorageDescriptor<Presence, Profile> | null>(
+		null,
+	);
 
 	function useStorage() {
 		const ctx = useContext(Context);
@@ -219,14 +216,10 @@ export function createHooks<
 		Provider: Context.Provider,
 	};
 
-	const collectionNames = Object.keys(
-		schema.collections,
-	) as SchemaCollectionName<Schema>[];
+	const collectionNames = Object.keys(schema.collections);
 	for (const name of collectionNames) {
 		const collection = schema.collections[name];
-		const getOneHookName = `use${capitalize(
-			collection.name,
-		)}` as `use${CapitalizedCollectionName<Schema>}`;
+		const getOneHookName = `use${capitalize(collection.name)}`;
 		hooks[getOneHookName] = function useOne(id: string) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
@@ -237,9 +230,7 @@ export function createHooks<
 			return data;
 		};
 
-		const findOneHookName = `useOne${capitalize(
-			collection.name,
-		)}` as `useOne${CapitalizedCollectionName<Schema>}`;
+		const findOneHookName = `useOne${capitalize(collection.name)}`;
 		hooks[findOneHookName] = function useOne(
 			config: {
 				index?: CollectionIndexFilter;
@@ -255,7 +246,7 @@ export function createHooks<
 
 		const getAllHookName = `useAll${capitalize(
 			collection.pluralName || collection.name + 's',
-		)}` as `useAll${CapitalizedCollectionName<Schema>}`;
+		)}`;
 		hooks[getAllHookName] = function useAll(
 			config: {
 				index?: CollectionIndexFilter;

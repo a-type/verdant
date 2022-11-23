@@ -1,11 +1,10 @@
 import { TDUser, TDUserStatus } from '@tldraw/tldraw';
 import { ClientDescriptor, createDefaultMigration } from './client/index.js';
+import { createHooks } from './client/react.js';
 import schema from './schema.js';
 
-declare module '@lo-fi/web' {
-	export interface Presence {
-		user: TDUser;
-	}
+export interface Presence {
+	user: TDUser;
 }
 
 let userId = localStorage.getItem('userId');
@@ -14,7 +13,7 @@ if (!userId) {
 	localStorage.setItem('userId', userId);
 }
 
-export const clientDescriptor = new ClientDescriptor({
+export const clientDescriptor = new ClientDescriptor<Presence>({
 	migrations: [createDefaultMigration(schema)],
 	namespace: 'tldraw',
 	sync: {
@@ -28,6 +27,7 @@ export const clientDescriptor = new ClientDescriptor({
 				status: TDUserStatus.Connecting,
 			} as TDUser,
 		},
+		defaultProfile: {},
 		authEndpoint: `http://localhost:5050/auth?user=${userId}`,
 		autoStart: true,
 		presenceUpdateBatchTimeout: 100,
@@ -44,4 +44,4 @@ clientDescriptor.open().then((client) => {
 	(window as any).client = client;
 });
 
-export { hooks } from './client/react.js';
+export const hooks = createHooks<Presence>();

@@ -17,6 +17,7 @@ const clientDesc = new ClientDescriptor({
 		initialPresence: {
 			emoji: '',
 		},
+		defaultProfile: { name: '' },
 		authEndpoint: 'http://localhost:3000/auth/lofi',
 	},
 });
@@ -26,20 +27,20 @@ clientDesc.open().then((todos) => {
 });
 ```
 
-You may also define type overrides to provide typing for presence data:
+You may also define typing for presence data:
 
 ```ts
-// extend built-in types to specify presence information
-// so it's typed throughout your app
-declare module '@lo-fi/web' {
-	export interface Presence {
-		emoji: string;
-	}
-
-	export interface Profile {
-		// any data you may have put in profiles on the server
-	}
+export interface Presence {
+	emoji: string;
 }
+
+export interface Profile {
+	// any data you may have put in profiles on the server
+}
+
+const clientDesc = new ClientDescriptor<Presence, Profile>({
+	// ...
+});
 ```
 
 To start syncing, call `client.sync.start` (where `client` is your instance of Client, i.e. `todos` above) This will connect to your websocket server. It's up to you to add any authentication and authorization to reject unregistered or unsubscribed clients if you want to limit access to sync. lo-fi itself will sync whoever you let connect.

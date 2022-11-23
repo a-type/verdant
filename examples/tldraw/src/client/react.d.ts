@@ -16,12 +16,14 @@ import type {
   EntityShape,
 } from "@lo-fi/web";
 
-export interface GeneratedHooks {
+export interface GeneratedHooks<Presence, Profile> {
   Provider: Provider<ClientDescriptor<Schema>>;
-  useStorage: () => Client;
-  useSelf: () => UserInfo;
+  /** @deprecated use useClient instead */
+  useStorage: () => Client<Presence, Profile>;
+  useClient: () => Client<Presence, Profile>;
+  useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
-  usePeer: (peerId: string) => UserInfo;
+  usePeer: (peerId: string) => UserInfo<Profile, Presence>;
   useSyncStatus: () => boolean;
   useWatch<T extends EntityBase<any> | null>(
     entity: T
@@ -33,10 +35,15 @@ export interface GeneratedHooks {
     entity: T,
     props: P
   ): EntityShape<T>[P];
+  useCanUndo(): boolean;
+  useCanRedo(): boolean;
 
   usePage: (id: string) => Page;
   useOnePage: (config: { index: PageFilter }) => Page;
   useAllPages: (config?: { index: PageFilter }) => Page[];
 }
 
-export const hooks: GeneratedHooks;
+export function createHooks<Presence = any, Profile = any>(): GeneratedHooks<
+  Presence,
+  Profile
+>;
