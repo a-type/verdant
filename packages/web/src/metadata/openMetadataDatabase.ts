@@ -65,6 +65,7 @@ export function openMetadataDatabase(
 					// create the new indexes
 					operations.createIndex('l_t', 'l_t', { unique: false });
 					operations.createIndex('d_t', 'd_t', { unique: false });
+					operations.createIndex('timestamp', 'timestamp');
 				} else {
 					/**
 					 * Migrating from 0: just create the desired object stores
