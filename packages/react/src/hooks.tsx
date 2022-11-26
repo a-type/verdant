@@ -228,7 +228,13 @@ export function createHooks<Presence = any, Profile = any>(
 		useSyncStatus,
 		useCanUndo,
 		useCanRedo,
-		Provider: Context.Provider,
+		Provider: ({ value, ...rest }: { value: StorageDescriptor }) => {
+			// auto-open storage when used in provider
+			useMemo(() => {
+				value.open();
+			}, [value]);
+			return <Context.Provider value={value} {...rest} />;
+		},
 	};
 
 	const collectionNames = Object.keys(schema.collections);
