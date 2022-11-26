@@ -117,4 +117,16 @@ export class BaselinesStore extends IDBService {
 	reset = () => {
 		return this.clear('baselines');
 	};
+
+	delete = async (
+		oid: ObjectIdentifier,
+		{ transaction }: { transaction?: IDBTransaction },
+	) => {
+		await this.run(
+			'baselines',
+			(store) => store.delete(oid),
+			'readwrite',
+			transaction,
+		);
+	};
 }

@@ -287,7 +287,11 @@ export class Metadata extends EventSubscriber<{
 			snapshot: current,
 			timestamp: upTo,
 		};
-		await this.baselines.set(newBaseline, { transaction });
+		if (newBaseline.snapshot) {
+			await this.baselines.set(newBaseline, { transaction });
+		} else {
+			await this.baselines.delete(oid, { transaction });
+		}
 
 		this.log(
 			'successfully rebased',
