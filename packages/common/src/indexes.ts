@@ -99,7 +99,9 @@ function expandArrayIndex(fields: IndexableFieldValue[]): string[] {
 export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
 	const result: Record<string, any> = {};
 	for (const [name, property] of Object.entries(schema.synthetics || {})) {
-		result[name] = (property as StorageSyntheticIndexSchema<any>).compute(obj);
+		result[name] = sanitizeIndexValue(
+			(property as StorageSyntheticIndexSchema<any>).compute(obj),
+		);
 	}
 	return result;
 }
@@ -127,4 +129,19 @@ export function assignIndexValues(
 	Object.assign(doc, computeSynthetics(schema, doc));
 	Object.assign(doc, computeCompoundIndices(schema, doc));
 	return doc;
+}
+
+export function sanitizeIndexValue(
+	value: unknown,
+): string | number | (string | number)[] {
+	if (typeof value === 'string' || typeof value === 'number') {
+		return value;
+	}
+	if (typeof value === 'boolean' || value === null) {
+		return `${value}`;
+	}
+	if (Array.isArray(value)) {
+		return value.map(sanitizeIndexValue) as any;
+	}
+	throw new Error('Unsupported index value');
 }

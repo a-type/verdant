@@ -14,6 +14,7 @@ export type StorageBooleanFieldSchema = {
 	type: 'boolean';
 	nullable?: boolean;
 	default?: boolean | (() => boolean);
+	indexed?: boolean;
 };
 export type StorageArrayFieldSchema = {
 	type: 'array';

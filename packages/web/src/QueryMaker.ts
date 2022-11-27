@@ -11,6 +11,7 @@ import {
 	isStartsWithIndexFilter,
 	MatchCollectionIndexFilter,
 	RangeCollectionIndexFilter,
+	sanitizeIndexValue,
 	SortIndexFilter,
 	StartsWithIndexFilter,
 	StorageSchema,
@@ -62,19 +63,24 @@ export class QueryMaker {
 		const lower = filter.gte || filter.gt;
 		const upper = filter.lte || filter.lt;
 		if (lower === upper) {
-			return IDBKeyRange.only(lower);
+			return IDBKeyRange.only(sanitizeIndexValue(lower));
 		}
 		if (!lower) {
-			return IDBKeyRange.upperBound(upper, !!filter.lt);
+			return IDBKeyRange.upperBound(sanitizeIndexValue(upper), !!filter.lt);
 		} else if (!upper) {
-			return IDBKeyRange.lowerBound(lower, !!filter.gt);
+			return IDBKeyRange.lowerBound(sanitizeIndexValue(lower), !!filter.gt);
 		} else {
-			return IDBKeyRange.bound(lower, upper, !!filter.gt, !!filter.lt);
+			return IDBKeyRange.bound(
+				sanitizeIndexValue(lower),
+				sanitizeIndexValue(upper),
+				!!filter.gt,
+				!!filter.lt,
+			);
 		}
 	};
 
 	private matchIndexToIdbKeyRange = (filter: MatchCollectionIndexFilter) => {
-		return IDBKeyRange.only(filter.equals as string | number);
+		return IDBKeyRange.only(sanitizeIndexValue(filter.equals));
 	};
 
 	private sortIndexToIdbKeyRange = (filter: SortIndexFilter) => {
