@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 5.0.2
+
+### Patch Changes
+
+- 7e380cc: Auto-open client descriptor when used in React
+- Updated dependencies [d5f9c4a]
+  - @lo-fi/web@1.4.2
+
 ## 5.0.1
 
 ### Patch Changes

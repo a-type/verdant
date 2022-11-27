@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.4.2
+
+### Patch Changes
+
+- d5f9c4a: Clean up baselines on deletion
+
 ## 1.4.1
 
 ### Patch Changes
