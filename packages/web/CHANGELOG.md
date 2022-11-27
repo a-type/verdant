@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.4.3
+
+### Patch Changes
+
+- 4ebc8c2: Support more index value types
+
 ## 1.4.2
 
 ### Patch Changes
