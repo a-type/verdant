@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.4.4
+
+### Patch Changes
+
+- 5ff038a: add sanitize index value function
+- Updated dependencies [5ff038a]
+  - @lo-fi/common@1.3.3
+
 ## 1.4.3
 
 ### Patch Changes
