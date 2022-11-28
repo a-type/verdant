@@ -3,7 +3,9 @@ import { ObjectEntity } from './reactives/Entity.js';
 
 export const UPDATE = '@@update';
 
-export class Query<T extends (ObjectEntity<any> | null) | ObjectEntity<any>[]> {
+export class Query<
+	T extends (ObjectEntity<any, any> | null) | ObjectEntity<any, any>[],
+> {
 	private _rawEntities: T | null = null;
 	private _resultEntities: T | null = null;
 	private _subscribers: Set<(value: T | null) => void> = new Set();

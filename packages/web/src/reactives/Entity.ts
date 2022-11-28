@@ -48,14 +48,6 @@ type DataFromInit<Init> = Init extends { [key: string]: any }
 	? Init
 	: any;
 
-type GetSnapshotProp<Snapshot, Key> = Snapshot extends Array<any>
-	? Key extends number
-		? Snapshot[Key]
-		: never
-	: Key extends keyof Snapshot
-	? Snapshot[Key]
-	: never;
-
 export type EntityShape<E extends EntityBase<any, any>> = E extends EntityBase<
 	infer Value,
 	any

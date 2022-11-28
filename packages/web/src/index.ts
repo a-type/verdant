@@ -6,7 +6,6 @@ export type {
 	Entity,
 	EntityShape,
 	AccessibleEntityProperty,
-	DestructuredEntity,
 } from './reactives/Entity.js';
 export { ServerSync } from './Sync.js';
 

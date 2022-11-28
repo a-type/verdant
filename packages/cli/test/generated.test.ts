@@ -53,5 +53,19 @@ describe('generated react hooks', () => {
 		expect(hooks.useTodo).toBeDefined();
 		expect(hooks.useAllTodos).toBeDefined();
 		expect(hooks.useOneTodo).toBeDefined();
+
+		// for testing typings... uncomment.
+		// can't actually run this as React doesn't exist here (yet?)
+
+		// const client = await makeClient();
+
+		// const item = await client.todos.put({
+		// 	attachments: [],
+		// 	category: null,
+		// 	content: 'test',
+		// 	done: false,
+		// });
+
+		// const { tags } = hooks.useWatch(item)
 	});
 });

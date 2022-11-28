@@ -26,7 +26,10 @@ export class QueryMaker {
 		private readonly schema: StorageSchema<any>,
 	) {}
 
-	get = (collection: string, primaryKey: string): Query<ObjectEntity<any>> => {
+	get = (
+		collection: string,
+		primaryKey: string,
+	): Query<ObjectEntity<any, any>> => {
 		return this.queryStore.get({
 			collection: collection as string,
 			range: primaryKey,
@@ -37,7 +40,7 @@ export class QueryMaker {
 	findOne = (
 		collection: string,
 		query?: CollectionFilter,
-	): Query<ObjectEntity<any>> => {
+	): Query<ObjectEntity<any, any>> => {
 		return this.queryStore.get({
 			collection,
 			range: this.getRange(collection, query),
@@ -50,7 +53,7 @@ export class QueryMaker {
 	findAll = (
 		collection: string,
 		query?: CollectionFilter,
-	): Query<ObjectEntity<any>[]> => {
+	): Query<ObjectEntity<any, any>[]> => {
 		return this.queryStore.get({
 			collection,
 			range: this.getRange(collection, query),
