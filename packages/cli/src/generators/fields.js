@@ -1,4 +1,5 @@
 import { getObjectProperty, objectExpressionEntries } from './tools.js';
+import * as changeCase from 'change-case';
 
 export function getFieldSnapshotTyping(field, { flattenArrays = false } = {}) {
 	const type = getObjectProperty(field, 'type').value;
@@ -99,6 +100,25 @@ export function getFieldInitTyping(field) {
 	};
 }
 
+export function getFieldDestructuredTyping(name, field) {
+	const type = getObjectProperty(field, 'type').value;
+
+	const nullable = getObjectProperty(field, 'nullable')?.value === true;
+
+	let baseType;
+
+	if (type === 'array' || type === 'object' || type === 'map') {
+		baseType = name;
+	} else {
+		return null;
+	}
+	if (nullable) {
+		baseType = `${baseType} | null`;
+	}
+
+	return baseType;
+}
+
 export function getAllIndexedFieldsAsMap(collection) {
 	const fields = objectExpressionEntries(
 		getObjectProperty(collection, 'fields'),
@@ -120,4 +140,24 @@ export function getAllFieldsAndSyntheticsAsMap(collection) {
 		getObjectProperty(collection, 'synthetics'),
 	);
 	return new Map([...fields, ...synthetics]);
+}
+
+export function getSubObjectFieldName(baseName, key) {
+	return baseName + changeCase.pascalCase(key);
+}
+
+export function parseField(field) {
+	const type = getObjectProperty(field, 'type').value;
+	const nullable = getObjectProperty(field, 'nullable')?.value === true;
+	const defaulted =
+		getObjectProperty(field, 'default') !== undefined ||
+		type === 'array' ||
+		type === 'map' ||
+		type === 'any';
+
+	return {
+		type,
+		optional: defaulted || nullable,
+		nullable,
+	};
 }

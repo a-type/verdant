@@ -28,7 +28,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 	private unconfirmedOperationsMap: Map<ObjectIdentifier, Operation[]>;
 	private baselinesMap: Map<ObjectIdentifier, DocumentBaseline>;
 
-	private entities: Map<ObjectIdentifier, EntityBase<any>> = new Map();
+	private entities: Map<ObjectIdentifier, EntityBase<any, any>> = new Map();
 
 	private store: EntityStore;
 
@@ -181,7 +181,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 	getEntity = (
 		oid: ObjectIdentifier,
 		schema: StorageFieldSchema,
-		parent?: EntityBase<any>,
+		parent?: EntityBase<any, any>,
 	): Entity => {
 		let entity = this.entities.get(oid);
 		if (!entity) {
@@ -219,9 +219,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return this.operationsMap.has(oid) || this.baselinesMap.has(oid);
 	};
 
-	private onSubscribed = (entity: EntityBase<any>) => {};
+	private onSubscribed = (entity: EntityBase<any, any>) => {};
 
-	private onAllUnsubscribed = (entity: EntityBase<any>) => {
+	private onAllUnsubscribed = (entity: EntityBase<any, any>) => {
 		this.enqueueCacheRemoval(entity.oid);
 	};
 

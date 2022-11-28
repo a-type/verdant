@@ -181,7 +181,7 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 	typingsFile += `import type schema from '${relativeSchemaPath}';
 	export type Schema = typeof schema;`;
 	for (const [name, definition] of Object.entries(collections)) {
-		typingsFile += getCollectionTypings(name, definition) + '\n';
+		typingsFile += getCollectionTypings(definition) + '\n';
 	}
 
 	typingsFile += getClientTypings(Object.values(collections));

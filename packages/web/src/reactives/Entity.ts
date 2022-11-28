@@ -30,8 +30,8 @@ const REFRESH = '@@refresh';
 const DEEP_CHANGE = '@@deepChange';
 
 interface CacheEvents {
-	onSubscribed: (entity: EntityBase<any>) => void;
-	onAllUnsubscribed: (entity: EntityBase<any>) => void;
+	onSubscribed: (entity: EntityBase<any, any>) => void;
+	onAllUnsubscribed: (entity: EntityBase<any, any>) => void;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -48,56 +48,35 @@ type DataFromInit<Init> = Init extends { [key: string]: any }
 	? Init
 	: any;
 
-export type EntityPropertyValue<
-	Init,
-	K extends keyof Init | number,
-> = Init extends Array<any>
-	? Init[K] extends Array<any>
-		? ListEntity<Init[K][number]>
-		: Init[K] extends object
-		? ObjectEntity<Init[K]>
-		: Init[K]
-	: Init extends object
-	? K extends keyof Init
-		? Init[K] extends Array<any>
-			? ListEntity<Init[K][number]>
-			: Init[K] extends object
-			? ObjectEntity<Init[K]>
-			: Init[K]
+type GetSnapshotProp<Snapshot, Key> = Snapshot extends Array<any>
+	? Key extends number
+		? Snapshot[Key]
 		: never
+	: Key extends keyof Snapshot
+	? Snapshot[Key]
 	: never;
 
-type Test = Exclude<{ foo: 'bar' } | null, null> extends object ? 1 : never;
-
-type DestructuredEntityProperty<Value> = Exclude<Value, null> extends Array<any>
-	? ListEntity<Exclude<Value, null>[number] | null>
-	: Exclude<Value, null> extends object
-	? ObjectEntity<Exclude<Value, null>> | null
-	: Value;
-
-export type DestructuredEntity<Init> = Init extends Array<any>
-	? DestructuredEntityProperty<Init[number]>[]
-	: Init extends object
-	? {
-			[K in keyof Init]: DestructuredEntityProperty<Init[K]>;
-	  }
-	: never;
-
-export type EntityShape<E extends EntityBase<any>> = E extends EntityBase<
-	infer Init
+export type EntityShape<E extends EntityBase<any, any>> = E extends EntityBase<
+	infer Value,
+	any
 >
-	? Init
+	? Value
 	: never;
 
-export function refreshEntity(entity: EntityBase<any>) {
+export function refreshEntity(entity: EntityBase<any, any>) {
 	return entity[REFRESH]();
 }
 
-export function deepChangeEntity(entity: EntityBase<any>) {
+export function deepChangeEntity(entity: EntityBase<any, any>) {
 	return entity[DEEP_CHANGE]();
 }
 
-export abstract class EntityBase<Snapshot> {
+type BaseEntityValue = { [Key: string]: any } | any[];
+
+export abstract class EntityBase<
+	KeyValue extends BaseEntityValue,
+	Snapshot extends any,
+> {
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
 
@@ -108,10 +87,10 @@ export abstract class EntityBase<Snapshot> {
 	protected readonly keyPath;
 	protected readonly cache: DocumentFamilyCache;
 	protected _deleted = false;
-	protected parent: EntityBase<any> | undefined;
+	protected parent: EntityBase<any, any> | undefined;
 
-	private cachedSnapshot: Snapshot | null = null;
-	private cachedDestructure: DestructuredEntity<Snapshot> | null = null;
+	private cachedSnapshot: any = null;
+	private cachedDestructure: KeyValue | null = null;
 
 	protected events = new EventSubscriber<{
 		change: () => void;
@@ -163,7 +142,7 @@ export abstract class EntityBase<Snapshot> {
 		cacheEvents: CacheEvents;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
 		cache: DocumentFamilyCache;
-		parent?: EntityBase<any>;
+		parent?: EntityBase<any, any>;
 	}) {
 		this.oid = oid;
 		this.parent = parent;
@@ -258,15 +237,15 @@ export abstract class EntityBase<Snapshot> {
 		return this.cache.getEntity(oid, fieldSchema, this);
 	};
 
-	protected wrapValue = <Key extends AccessibleEntityProperty<Snapshot>>(
+	protected wrapValue = <Key extends keyof KeyValue>(
 		value: any,
 		key: Key,
-	): EntityPropertyValue<Snapshot, Key> => {
+	): KeyValue[Key] => {
 		if (isObjectRef(value)) {
 			const oid = value.id;
 			const subObject = this.getSubObject(oid, key);
 			if (subObject) {
-				return subObject as EntityPropertyValue<Snapshot, Key>;
+				return subObject as any;
 			}
 			throw new Error(
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
@@ -275,9 +254,7 @@ export abstract class EntityBase<Snapshot> {
 		return value;
 	};
 
-	get = <Key extends AccessibleEntityProperty<Snapshot>>(
-		key: Key,
-	): EntityPropertyValue<Snapshot, Key> => {
+	get = <Key extends keyof KeyValue>(key: Key): KeyValue[Key] => {
 		if (this.value === undefined || this.value === null) {
 			throw new Error('Cannot access deleted entity');
 		}
@@ -286,7 +263,7 @@ export abstract class EntityBase<Snapshot> {
 		return this.wrapValue(value, key);
 	};
 
-	getAll = (): DestructuredEntity<Snapshot> => {
+	getAll = (): KeyValue => {
 		if (this.value === undefined || this.value === null) {
 			throw new Error('Cannot access deleted entity');
 		}
@@ -345,11 +322,15 @@ export abstract class EntityBase<Snapshot> {
 	};
 }
 
-export class ListEntity<ItemInit>
-	extends EntityBase<DataFromInit<ItemInit>[]>
-	implements Iterable<EntityPropertyValue<DataFromInit<ItemInit>[], number>>
+export class ListEntity<
+		ItemInit,
+		ItemValue,
+		ItemSnapshot = DataFromInit<ItemInit>,
+	>
+	extends EntityBase<ItemValue[], ItemSnapshot[]>
+	implements Iterable<ItemValue>
 {
-	private getItemOid = (item: DataFromInit<ItemInit>) => {
+	private getItemOid = (item: ItemValue) => {
 		const itemOid = maybeGetOid(item);
 		if (!itemOid || !this.cache.hasOid(itemOid)) {
 			throw new Error(
@@ -402,7 +383,7 @@ export class ListEntity<ItemInit>
 			this.store.meta.patchCreator.createListMoveByIndex(this.oid, from, to),
 		);
 	};
-	moveItem = (item: DataFromInit<ItemInit>, to: number) => {
+	moveItem = (item: ItemValue, to: number) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createListMoveByRef(
 				this.oid,
@@ -416,7 +397,7 @@ export class ListEntity<ItemInit>
 			this.store.meta.patchCreator.createListDelete(this.oid, index),
 		);
 	};
-	remove = (item: DataFromInit<ItemInit>) => {
+	remove = (item: ItemValue) => {
 		this.addPatches(
 			this.store.meta.patchCreator.createListRemove(
 				this.oid,
@@ -433,10 +414,7 @@ export class ListEntity<ItemInit>
 			next: () => {
 				if (index < this.value.length) {
 					return {
-						value: this.get(index++) as EntityPropertyValue<
-							DataFromInit<ItemInit>[],
-							number
-						>,
+						value: this.get(index++) as ItemValue,
 						done: false,
 					} as const;
 				}
@@ -450,35 +428,26 @@ export class ListEntity<ItemInit>
 
 	// additional access methods
 
-	private getAsWrapped = (): EntityPropertyValue<
-		DataFromInit<ItemInit>[],
-		number
-	>[] => {
+	private getAsWrapped = (): ItemValue[] => {
 		return this.value.map(this.wrapValue);
 	};
 
-	map = <U>(
-		callback: (
-			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
-			index: number,
-		) => U,
-	) => {
+	map = <U>(callback: (value: ItemValue, index: number) => U) => {
 		return this.getAsWrapped().map(callback);
 	};
 
-	filter = (
-		callback: (
-			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
-			index: number,
-		) => boolean,
-	) => {
+	filter = (callback: (value: ItemValue, index: number) => boolean) => {
 		return this.getAsWrapped().filter((val, index) => {
 			return callback(val, index);
 		});
 	};
 }
 
-export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
+export class ObjectEntity<
+	Init,
+	Value extends BaseEntityValue,
+	Snapshot = DataFromInit<Init>,
+> extends EntityBase<Value, Snapshot> {
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
 		const fieldSchema = this.getChildFieldSchema(key);
 		if (fieldSchema) {
@@ -519,4 +488,4 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 	};
 }
 
-export type Entity = ListEntity<any> | ObjectEntity<any>;
+export type Entity = ListEntity<any, any, any> | ObjectEntity<any, any, any>;

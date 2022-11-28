@@ -1,4 +1,10 @@
-import { getFieldInitTyping, getFieldSnapshotTyping } from './fields.js';
+import {
+	getFieldDestructuredTyping,
+	getFieldInitTyping,
+	getFieldSnapshotTyping,
+	getSubObjectFieldName,
+	parseField,
+} from './fields.js';
 import { getObjectProperty, objectExpressionEntries } from './tools.js';
 import * as path from 'path';
 import * as changeCase from 'change-case';
@@ -58,18 +64,36 @@ function lookupCollection(ast, name) {
 	}
 }
 
-export function getCollectionTypings(name, definition) {
+export function getCollectionTypings(definition) {
 	const fieldsExpression = getObjectProperty(definition, 'fields');
 	const fields = objectExpressionEntries(fieldsExpression);
 
+	const name = getObjectProperty(definition, 'name').value;
 	const pascalName = changeCase.pascalCase(name);
 
 	let content = '';
-	content += getCollectionSnapshotTyping(definition);
-	content += getCollectionInitTyping(definition);
 	content += getCollectionDocumentTyping(definition);
-	content += getCollectionSubObjectTypings(definition);
+	content += '\n';
 	content += getCollectionFilterTypings(definition);
+	content += '\n';
+	content += `export type ${pascalName}Destructured = ${getObjectDestructuredTypings(
+		name,
+		fields,
+	)}`;
+	content += `export type ${pascalName}Init = ${getObjectInitTypings(
+		name,
+		fields,
+	)}`;
+	content += `export type ${pascalName}Snapshot = ${getObjectSnapshotTypings(
+		name,
+		fields,
+	)}`;
+
+	content += `/** ${pascalName} sub-object types */\n\n`;
+
+	for (const [key, value] of fields) {
+		content += getObjectTypings(value, getSubObjectFieldName(pascalName, key));
+	}
 
 	return content;
 }
@@ -78,42 +102,7 @@ function getCollectionDocumentTyping(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pascalName = changeCase.pascalCase(collectionName);
 
-	return `export type ${pascalName} = ObjectEntity<${pascalName}Init>;\n\n`;
-}
-
-function getCollectionSnapshotTyping(collection) {
-	const collectionName = getObjectProperty(collection, 'name').value;
-	const pascalName = changeCase.pascalCase(collectionName);
-
-	const fieldsExpression = getObjectProperty(collection, 'fields');
-	const fields = objectExpressionEntries(fieldsExpression);
-
-	return `
-export interface ${pascalName}Snapshot {
-  ${fields
-		.map(([key, value]) => `${key}: ${getFieldSnapshotTyping(value)}`)
-		.join(';\n')}
-}
-`;
-}
-
-function getCollectionInitTyping(collection) {
-	const collectionName = getObjectProperty(collection, 'name').value;
-	const pascalName = changeCase.pascalCase(collectionName);
-
-	const fieldsExpression = getObjectProperty(collection, 'fields');
-	const fields = objectExpressionEntries(fieldsExpression);
-
-	return `
-export interface ${pascalName}Init {
-  ${fields
-		.map(([key, value]) => {
-			const { type, optional } = getFieldInitTyping(value);
-			return `${key}${optional ? '?' : ''}: ${type}`;
-		})
-		.join(';\n')}
-}
-`;
+	return `export type ${pascalName} = ObjectEntity<${pascalName}Init, ${pascalName}Destructured>;\n\n`;
 }
 
 export function getCollectionPluralName(collection) {
@@ -122,44 +111,101 @@ export function getCollectionPluralName(collection) {
 	return pluralName ?? collectionName + 's';
 }
 
-function getCollectionSubObjectTypings(collection) {
-	const fields = objectExpressionEntries(
-		getObjectProperty(collection, 'fields'),
-	);
-	const baseName = getObjectProperty(collection, 'name').value;
-	return getSubObjectFieldTypings(fields, changeCase.pascalCase(baseName));
+function getObjectTypings(field, name) {
+	let content = '';
+	const { type, optional, nullable } = parseField(field);
+	if (type === 'object' || type === 'array' || type === 'map') {
+		if (type === 'object' || type === 'map') {
+			content += `export type ${name} = ObjectEntity<${name}Init, ${name}Destructured>;\n`;
+
+			if (type === 'object') {
+				const fields = objectExpressionEntries(
+					getObjectProperty(field, 'properties'),
+				);
+				content += `export type ${name}Init = ${getObjectInitTypings(
+					name,
+					fields,
+				)};`;
+				content += `export type ${name}Destructured = ${getObjectDestructuredTypings(
+					name,
+					fields,
+				)};`;
+				content += `export type ${name}Snapshot = ${getObjectSnapshotTypings(
+					name,
+					fields,
+				)};`;
+				for (const [key, value] of fields) {
+					content += getObjectTypings(value, getSubObjectFieldName(name, key));
+				}
+			} else {
+				const valueFieldType = getObjectProperty(field, 'values');
+				const valueName = getSubObjectFieldName(name, 'Value');
+				content += `export type ${name}Init = Record<string, ${getObjectInitTypings(
+					name,
+					fields,
+				)}>;`;
+				content += `export type ${name}Destructured = Record<string, ${valueName}>;`;
+				content += `export type ${name}Snapshot = Record<string, ${valueName}Snapshot>;`;
+				content += getObjectTypings(valueFieldType, valueName);
+			}
+		} else {
+			const itemFieldType = getObjectProperty(field, 'items');
+			const itemName = getSubObjectFieldName(name, 'Item');
+			content += `export type ${name} = ListEntity<${itemName}Init, ${itemName}>;`;
+			content += `export type ${name}Init = Array<${itemName}Init>;`;
+			content += `export type ${name}Destructured = Array<${itemName}>;`;
+			content += `export type ${name}Snapshot = Array<${itemName}Snapshot>;`;
+			content +=
+				getObjectTypings(itemFieldType, getSubObjectFieldName(name, 'Item')) +
+				';';
+		}
+		content += '\n\n';
+	} else {
+		content += `type ${name} = ${type}${nullable ? ' | null' : ''};\n`;
+		content += `type ${name}Init = ${name}${optional ? ' | undefined' : ''};\n`;
+		content += `type ${name}Snapshot = ${name};\n`;
+		content += `type ${name}Destructured = ${name};\n`;
+	}
+
+	return content;
 }
 
-function getSubObjectFieldTypings(fields, parentName) {
-	let content = '';
-	for (const [key, value] of fields) {
-		const type = getObjectProperty(value, 'type').value;
-		if (type === 'object') {
-			const subName = parentName + changeCase.pascalCase(key);
-			content += `export type ${subName} = ObjectEntity<${getFieldSnapshotTyping(
-				value,
-			)}>;\n\n`;
-			const fieldValue = getObjectProperty(value, 'properties');
-			content += getSubObjectFieldTypings(
-				objectExpressionEntries(fieldValue),
-				subName,
-			);
-		} else if (type === 'array') {
-			const subName = parentName + changeCase.pascalCase(key);
-			content += `export type ${subName} = ListEntity<${getFieldSnapshotTyping(
-				value,
-				{ flattenArrays: true },
-			)}>;\n\n`;
-			const fieldValue = getObjectProperty(value, 'items');
-			content += getSubObjectFieldTypings([['item', fieldValue]], subName);
-		} else if (type === 'map') {
-			const subName = parentName + changeCase.pascalCase(key) + 'Value';
-			content += `export type ${subName} = ObjectEntity<Record<string, ${getFieldSnapshotTyping(
-				value,
-			)}>>;\n\n`;
-			const fieldValue = getObjectProperty(value, 'values');
-			content += getSubObjectFieldTypings([['value', fieldValue]], subName);
-		}
-	}
-	return content;
+function getObjectInitTypings(name, fields) {
+	return getObjectRecursiveTypings(name, fields, 'Init');
+}
+
+function getObjectDestructuredTypings(name, fields) {
+	return getObjectRecursiveTypings(name, fields, '', false);
+}
+
+function getObjectSnapshotTypings(name, fields) {
+	return getObjectRecursiveTypings(name, fields, 'Snapshot', false);
+}
+
+function getObjectRecursiveTypings(
+	name,
+	fields,
+	suffix,
+	respectOptional = true,
+) {
+	const pascalName = changeCase.pascalCase(name);
+	return `
+{
+  ${fields
+		.map(([key, value]) => {
+			const { type, optional, nullable } = parseField(value);
+			let content = `${key}${optional && respectOptional ? '?' : ''}: `;
+			if (type === 'object' || type === 'array' || type === 'map') {
+				content += `${getSubObjectFieldName(pascalName, key)}${suffix}`;
+			} else {
+				content += type;
+			}
+			if (nullable) {
+				content += ' | null';
+			}
+			return content;
+		})
+		.join(';\n')}
+}
+`;
 }

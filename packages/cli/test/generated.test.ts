@@ -19,7 +19,7 @@ describe('generated client', () => {
 	it('should expose model accessors which produce usable models', async () => {
 		const client = await makeClient();
 
-		const item = await client.todos.create({
+		const item = await client.todos.put({
 			attachments: [],
 			category: null,
 			content: 'test',
