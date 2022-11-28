@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.3.3
+
+### Patch Changes
+
+- 5ff038a: add sanitize index value function
+
 ## 1.3.2
 
 ### Patch Changes
