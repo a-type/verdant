@@ -36,20 +36,20 @@ type CollectionHooks<
 > = {
 	[key in Collection['name'] as `use${Capitalize<Collection['name']>}`]: (
 		id: string,
-	) => QueryHookResult<ObjectEntity<any>>;
+	) => QueryHookResult<ObjectEntity<any, any>>;
 } & {
 	[key in Collection['name'] as `useAll${PluralCapital<
 		Collection['name'],
 		Collection['pluralName']
 	>}`]: (config?: {
 		index?: CollectionIndexFilter;
-	}) => QueryHookResult<ObjectEntity<any>[]>;
+	}) => QueryHookResult<ObjectEntity<any, any>[]>;
 } & {
 	[key in Collection['name'] as `useOne${Capitalize<
 		Collection['name']
 	>}`]: (config?: {
 		index?: CollectionIndexFilter;
-	}) => QueryHookResult<ObjectEntity<any>>;
+	}) => QueryHookResult<ObjectEntity<any, any>>;
 };
 
 type UnionToIntersection<T> = (T extends any ? (k: T) => void : never) extends (
@@ -124,10 +124,7 @@ export function createHooks<Presence = any, Profile = any>(
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]);
 	}
 
-	function useWatch<T>(
-		liveObject: EntityBase<T> | null,
-		prop?: AccessibleEntityProperty<T>,
-	) {
+	function useWatch<S>(liveObject: EntityBase<any, S> | null, prop?: keyof S) {
 		return useSyncExternalStore(
 			(handler) => {
 				if (liveObject) {
