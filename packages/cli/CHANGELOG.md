@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.6.0
+
+### Minor Changes
+
+- 7eeee9e: Rework entity typings and codegen
+
 ## 1.5.1
 
 ### Patch Changes
