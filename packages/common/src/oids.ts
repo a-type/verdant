@@ -199,10 +199,6 @@ export function maybeGetOidProperty(obj: any) {
 	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
 }
 
-function hasOidProperty(obj: any) {
-	return !!maybeGetOidProperty(obj);
-}
-
 function removeOidProperty(obj: any) {
 	if (!isObject(obj)) {
 		return obj;
@@ -274,6 +270,10 @@ export function createRef(oid: ObjectIdentifier): ObjectRef {
 		'@@type': 'ref',
 		id: oid,
 	};
+}
+
+export function createDocumentRef(collection: string, primaryKey: string) {
+	return createRef(createOid(collection, primaryKey, []));
 }
 
 export function normalize(

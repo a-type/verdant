@@ -90,6 +90,10 @@ export const weirdCollection = collection({
 				},
 			},
 		},
+		reference: {
+			type: 'ref',
+			collection: 'todos',
+		},
 	},
 	synthetics: {},
 	compounds: {},

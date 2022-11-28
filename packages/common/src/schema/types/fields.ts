@@ -34,6 +34,13 @@ export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 	type: 'map';
 	values: V;
 };
+/**
+ * All document references are nullable!
+ */
+export type StorageReferenceFieldSchema = {
+	type: 'ref';
+	collection: string;
+};
 
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
@@ -42,7 +49,8 @@ export type StorageFieldSchema =
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
 	| StorageAnyFieldSchema
-	| StorageMapFieldSchema<any>;
+	| StorageMapFieldSchema<any>
+	| StorageReferenceFieldSchema;
 
 // nested versions don't have index info
 export type NestedStorageStringFieldSchema = {
@@ -63,7 +71,8 @@ export type NestedStorageFieldSchema =
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
 	| StorageAnyFieldSchema
-	| StorageMapFieldSchema<any>;
+	| StorageMapFieldSchema<any>
+	| StorageReferenceFieldSchema;
 
 export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
 

@@ -1,21 +1,13 @@
 import {
-	applyPatch,
 	assignOid,
 	cloneDeep,
 	createRef,
 	decomposeOid,
 	EventSubscriber,
-	isObject,
 	isObjectRef,
-	KeyPath,
 	maybeGetOid,
-	Normalized,
-	NormalizedObject,
-	normalizeFirstLevel,
 	ObjectIdentifier,
 	Operation,
-	OperationPatch,
-	removeOid,
 	StorageFieldSchema,
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
@@ -48,26 +40,19 @@ type DataFromInit<Init> = Init extends { [key: string]: any }
 	? Init
 	: any;
 
-export type EntityPropertyValue<
-	Init,
-	K extends keyof Init | number,
-> = Init extends Array<any>
-	? Init[K] extends Array<any>
-		? ListEntity<Init[K][number]>
-		: Init[K] extends object
-		? ObjectEntity<Init[K]>
-		: Init[K]
-	: Init extends object
-	? K extends keyof Init
-		? Init[K] extends Array<any>
-			? ListEntity<Init[K][number]>
-			: Init[K] extends object
-			? ObjectEntity<Init[K]>
-			: Init[K]
+type GetSnapshotProp<Snapshot, Key> = Snapshot extends Array<any>
+	? Key extends number
+		? Snapshot[Key]
 		: never
+	: Key extends keyof Snapshot
+	? Snapshot[Key]
 	: never;
 
-type Test = Exclude<{ foo: 'bar' } | null, null> extends object ? 1 : never;
+export type EntityPropertyValue<Value> = Value extends Array<any>
+	? ListEntity<Value[number]>
+	: Value extends object
+	? ObjectEntity<Value>
+	: Value;
 
 type DestructuredEntityProperty<Value> = Exclude<Value, null> extends Array<any>
 	? ListEntity<Exclude<Value, null>[number] | null>
@@ -253,20 +238,27 @@ export abstract class EntityBase<Snapshot> {
 		return cloneDeep(this._current);
 	};
 
-	protected getSubObject = (oid: ObjectIdentifier, key: any): Entity => {
+	protected getSubObject = (
+		oid: ObjectIdentifier,
+		key: any,
+	): Entity | Promise<Entity> => {
 		const fieldSchema = this.getChildFieldSchema(key);
-		return this.cache.getEntity(oid, fieldSchema, this);
+		if (fieldSchema.type === 'ref') {
+			return this.store.get(oid);
+		} else {
+			return this.cache.getEntity(oid, fieldSchema, this);
+		}
 	};
 
 	protected wrapValue = <Key extends AccessibleEntityProperty<Snapshot>>(
 		value: any,
 		key: Key,
-	): EntityPropertyValue<Snapshot, Key> => {
+	): EntityPropertyValue<GetSnapshotProp<Snapshot, Key>> => {
 		if (isObjectRef(value)) {
 			const oid = value.id;
 			const subObject = this.getSubObject(oid, key);
 			if (subObject) {
-				return subObject as EntityPropertyValue<Snapshot, Key>;
+				return subObject as EntityPropertyValue<GetSnapshotProp<Snapshot, Key>>;
 			}
 			throw new Error(
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
@@ -277,7 +269,7 @@ export abstract class EntityBase<Snapshot> {
 
 	get = <Key extends AccessibleEntityProperty<Snapshot>>(
 		key: Key,
-	): EntityPropertyValue<Snapshot, Key> => {
+	): EntityPropertyValue<GetSnapshotProp<Snapshot, Key>> => {
 		if (this.value === undefined || this.value === null) {
 			throw new Error('Cannot access deleted entity');
 		}
@@ -326,7 +318,11 @@ export abstract class EntityBase<Snapshot> {
 		if (Array.isArray(this.value)) {
 			snapshot = this.value.map((item, idx) => {
 				if (isObjectRef(item)) {
-					return this.getSubObject(item.id, idx)?.getSnapshot();
+					const resolved = this.getSubObject(item.id, idx);
+					if (resolved instanceof Promise) {
+						return item;
+					}
+					return resolved.getSnapshot();
 				}
 				return item;
 			}) as Snapshot;
@@ -334,7 +330,12 @@ export abstract class EntityBase<Snapshot> {
 			snapshot = { ...this.value };
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
-					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
+					const resolved = this.getSubObject(value.id, key);
+					if (resolved instanceof Promise) {
+						snapshot[key] = value;
+					} else {
+						snapshot[key] = resolved.getSnapshot();
+					}
 				}
 			}
 		}
@@ -347,7 +348,10 @@ export abstract class EntityBase<Snapshot> {
 
 export class ListEntity<ItemInit>
 	extends EntityBase<DataFromInit<ItemInit>[]>
-	implements Iterable<EntityPropertyValue<DataFromInit<ItemInit>[], number>>
+	implements
+		Iterable<
+			EntityPropertyValue<GetSnapshotProp<DataFromInit<ItemInit>[], number>>
+		>
 {
 	private getItemOid = (item: DataFromInit<ItemInit>) => {
 		const itemOid = maybeGetOid(item);
@@ -371,12 +375,12 @@ export class ListEntity<ItemInit>
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createSet(
-				this.oid,
-				index,
+			this.store.meta.patchCreator.createSet({
+				oid: this.oid,
+				key: index,
 				value,
-				this.keyPath,
-			),
+				keyPath: this.keyPath,
+			}),
 		);
 	};
 	push = (value: ItemInit) => {
@@ -434,8 +438,7 @@ export class ListEntity<ItemInit>
 				if (index < this.value.length) {
 					return {
 						value: this.get(index++) as EntityPropertyValue<
-							DataFromInit<ItemInit>[],
-							number
+							GetSnapshotProp<DataFromInit<ItemInit>[], number>
 						>,
 						done: false,
 					} as const;
@@ -451,15 +454,16 @@ export class ListEntity<ItemInit>
 	// additional access methods
 
 	private getAsWrapped = (): EntityPropertyValue<
-		DataFromInit<ItemInit>[],
-		number
+		GetSnapshotProp<DataFromInit<ItemInit>[], number>
 	>[] => {
 		return this.value.map(this.wrapValue);
 	};
 
 	map = <U>(
 		callback: (
-			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
+			value: EntityPropertyValue<
+				GetSnapshotProp<DataFromInit<ItemInit>[], number>
+			>,
 			index: number,
 		) => U,
 	) => {
@@ -468,7 +472,9 @@ export class ListEntity<ItemInit>
 
 	filter = (
 		callback: (
-			value: EntityPropertyValue<DataFromInit<ItemInit>[], number>,
+			value: EntityPropertyValue<
+				GetSnapshotProp<DataFromInit<ItemInit>[], number>
+			>,
 			index: number,
 		) => boolean,
 	) => {
@@ -485,12 +491,12 @@ export class ObjectEntity<Init> extends EntityBase<DataFromInit<Init>> {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createSet(
-				this.oid,
-				key as string | number,
+			this.store.meta.patchCreator.createSet({
+				oid: this.oid,
+				key: key as string | number,
 				value,
-				this.keyPath,
-			),
+				keyPath: this.keyPath,
+			}),
 		);
 	};
 	remove = (key: string) => {

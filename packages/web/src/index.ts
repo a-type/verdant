@@ -21,6 +21,8 @@ export type {
 	StorageSchema,
 	StorageCollectionSchema,
 	Migration,
+	ObjectRef,
+	createDocumentRef,
 } from '@lo-fi/common';
 
 export type { UserInfo } from '@lo-fi/common';

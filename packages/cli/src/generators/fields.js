@@ -1,4 +1,5 @@
 import { getObjectProperty, objectExpressionEntries } from './tools.js';
+import * as changeCase from 'change-case';
 
 export function getFieldSnapshotTyping(field, { flattenArrays = false } = {}) {
 	const type = getObjectProperty(field, 'type').value;
@@ -52,7 +53,7 @@ export function getFieldInitTyping(field) {
 		getObjectProperty(field, 'nullable')?.value === true ||
 		getObjectProperty(field, 'default') !== undefined;
 
-	const nullable = getObjectProperty(field, 'nullable')?.value === true;
+	let nullable = getObjectProperty(field, 'nullable')?.value === true;
 
 	let baseType;
 
@@ -86,6 +87,9 @@ export function getFieldInitTyping(field) {
 		baseType = `Record<string, ${getFieldInitTyping(values).type}>`;
 	} else if (type === 'any') {
 		baseType = 'any';
+	} else if (type === 'ref') {
+		baseType = `ObjectRef`;
+		nullable = true;
 	} else {
 		throw new Error(`Unknown field type: ${type}`);
 	}

@@ -3,7 +3,6 @@ import {
 	assignOid,
 	assignOidsToAllSubObjects,
 	createRef,
-	decomposeOid,
 	ensureOid,
 	getOid,
 	getOidRoot,
@@ -12,7 +11,6 @@ import {
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
-	OID_KEY,
 	removeOid,
 } from './oids.js';
 import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';

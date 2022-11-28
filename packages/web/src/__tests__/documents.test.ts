@@ -255,4 +255,6 @@ describe('storage documents', () => {
 		item1.get('objectMap').set('baz', { content: 'qux' });
 		expect(item1.get('objectMap').get('baz').get('content')).toBe('qux');
 	});
+
+	it('should be able to reference other documents', async () => {});
 });

@@ -2,7 +2,14 @@
  * High-level patch creation for use with complex nested objects.
  */
 
-import { createRef, createSubOid, KeyPath, ObjectIdentifier } from './oids.js';
+import { StorageFieldSchema } from './index.js';
+import {
+	createOid,
+	createRef,
+	createSubOid,
+	KeyPath,
+	ObjectIdentifier,
+} from './oids.js';
 import {
 	diffToPatches,
 	initialToPatches,
@@ -39,12 +46,17 @@ export class PatchCreator {
 		return initialToPatches(obj, oid, this.getNow, this.createSubId);
 	};
 
-	createSet = (
-		oid: ObjectIdentifier,
-		key: PropertyName,
-		value: any,
-		keyPath: KeyPath,
-	): Operation[] => {
+	createSet = ({
+		oid,
+		key,
+		value,
+		keyPath,
+	}: {
+		oid: ObjectIdentifier;
+		key: PropertyName;
+		value: any;
+		keyPath: KeyPath;
+	}): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
 		if (!isObject(value)) {
