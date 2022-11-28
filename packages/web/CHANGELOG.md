@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.5.0
+
+### Minor Changes
+
+- 7eeee9e: Rework entity typings and codegen
+
 ## 1.4.4
 
 ### Patch Changes
