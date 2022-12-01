@@ -8,6 +8,11 @@ export class EventSubscriber<
 		Record<string, (...args: any[]) => void>
 	> = {} as any;
 	protected counts: Record<string, number> = {} as any;
+	private _disabled = false;
+
+	get disabled() {
+		return this._disabled;
+	}
 
 	subscriberCount = (event: Extract<keyof Events, string>) => {
 		return this.counts[event] ?? 0;
@@ -38,6 +43,7 @@ export class EventSubscriber<
 		event: K,
 		...args: Parameters<Events[K]>
 	) => {
+		if (this._disabled) return;
 		if (this.subscribers[event]) {
 			Object.values(this.subscribers[event]).forEach((c) => c(...args));
 		}
@@ -46,6 +52,10 @@ export class EventSubscriber<
 	dispose = () => {
 		this.subscribers = {} as any;
 		this.counts = {} as any;
+	};
+
+	disable = () => {
+		this._disabled = true;
 	};
 }
 

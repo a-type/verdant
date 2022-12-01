@@ -1,6 +1,6 @@
 export { StorageDescriptor, Storage } from './Storage.js';
 export type { StorageInitOptions } from './Storage.js';
-export { Query } from './Query.js';
+export { LiveQuery as Query } from './queries/LiveQuery.js';
 export { ObjectEntity, ListEntity } from './reactives/Entity.js';
 export type {
 	Entity,

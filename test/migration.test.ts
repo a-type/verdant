@@ -22,7 +22,7 @@ async function createTestClient({
 	indexedDb = new IDBFactory(),
 }: {
 	schema: any;
-	migrations: Migration[];
+	migrations: Migration<any>[];
 	server?: { port: number };
 	library: string;
 	user: string;
@@ -38,6 +38,7 @@ async function createTestClient({
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
 					initialPresence: {},
+					defaultProfile: {},
 					initialTransport: 'realtime',
 			  }
 			: undefined,
@@ -49,6 +50,8 @@ async function createTestClient({
 	const client = await desc.open();
 	return client;
 }
+
+async function closeAllDatabases(indexedDB: IDBFactory) {}
 
 // Using the ungenerated client to be more dynamic with the schema
 // This means a lot of ts-ignore because the inner typings are
@@ -73,7 +76,7 @@ it(
 			},
 		});
 
-		let migrations = [createDefaultMigration(v1Schema)];
+		let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
 
 		const clientInit = {
 			migrations,
@@ -86,25 +89,29 @@ it(
 		let client = await createTestClient({
 			schema: v1Schema,
 			...clientInit,
+			logId: 'client1',
 		});
 
-		// create some initial data
-		await client.items.create({
+		console.debug('📈 Version 1 client created');
+
+		await client.items.put({
 			id: '1',
 			contents: 'hello',
 		});
-		await client.items.create({
+		await client.items.put({
 			id: '2',
 			contents: 'world',
 			tags: ['a', 'b', 'c'],
 		});
-		await client.items.create({
+		await client.items.put({
 			id: '3',
 			contents: 'foo',
 			tags: ['a', 'b'],
 		});
 
 		await client.close();
+		await closeAllDatabases(indexedDb);
+		await new Promise<void>((resolve) => resolve());
 
 		const v2Item = collection({
 			name: 'item',
@@ -113,6 +120,7 @@ it(
 				id: { type: 'string', default: () => 'default' },
 				contents: { type: 'string', default: 'empty' },
 				tags: { type: 'array', items: { type: 'string' } },
+				listId: { type: 'string', nullable: true, indexed: true },
 			},
 			synthetics: {
 				hasTags: {
@@ -149,29 +157,34 @@ it(
 		client = await createTestClient({
 			schema: v2Schema,
 			...clientInit,
+			logId: 'client2',
 		});
+
+		console.debug('📈 Version 2 client created');
 
 		// check our test items
 		let item1 = await client.items.get('1').resolved;
 		expect(item1.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "hello",
-		  "id": "1",
-		  "tags": [],
-		}
-	`);
+			{
+			  "contents": "hello",
+			  "id": "1",
+			  "listId": null,
+			  "tags": [],
+			}
+		`);
 		let item2 = await client.items.get('2').resolved;
 		expect(item2.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "world",
-		  "id": "2",
-		  "tags": [
-		    "a",
-		    "b",
-		    "c",
-		  ],
-		}
-	`);
+			{
+			  "contents": "world",
+			  "id": "2",
+			  "listId": null,
+			  "tags": [
+			    "a",
+			    "b",
+			    "c",
+			  ],
+			}
+		`);
 
 		// check our new indexes
 		const emptyResults = await client.items.findAll({
@@ -190,18 +203,22 @@ it(
 		expect(compoundResults.length).toBe(1);
 
 		// create some more test data
-		let item3 = await client.items.create({});
-		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "empty",
-		  "id": "default",
-		  "tags": [],
-		}
-	`);
-
-		await client.lists.create({
+		let list1 = await client.lists.create({
+			id: 'list1',
 			name: 'list 1',
 		});
+
+		let item3 = await client.items.create({
+			listId: list1.get('id'),
+		});
+		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "contents": "empty",
+			  "id": "default",
+			  "listId": "list1",
+			  "tags": [],
+			}
+		`);
 
 		await client.close();
 
@@ -227,6 +244,7 @@ it(
 						},
 					},
 				},
+				listId: { type: 'string', nullable: true, indexed: true },
 			},
 			synthetics: {
 				hasTags: {
@@ -266,55 +284,147 @@ it(
 			...clientInit,
 		});
 
+		console.debug('📈 Version 3 client created');
+
 		// check our test items
 		item1 = await client.items.get('1').resolved;
 		expect(item1.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "hello",
-		  "id": "1",
-		  "tags": [],
-		}
-	`);
+			{
+			  "contents": "hello",
+			  "id": "1",
+			  "listId": null,
+			  "tags": [],
+			}
+		`);
 		item2 = await client.items.get('2').resolved;
 		expect(item2.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "world",
-		  "id": "2",
-		  "tags": [
-		    {
-		      "color": "red",
-		      "name": "a",
-		    },
-		    {
-		      "color": "red",
-		      "name": "b",
-		    },
-		    {
-		      "color": "red",
-		      "name": "c",
-		    },
-		  ],
-		}
-	`);
+			{
+			  "contents": "world",
+			  "id": "2",
+			  "listId": null,
+			  "tags": [
+			    {
+			      "color": "red",
+			      "name": "a",
+			    },
+			    {
+			      "color": "red",
+			      "name": "b",
+			    },
+			    {
+			      "color": "red",
+			      "name": "c",
+			    },
+			  ],
+			}
+		`);
 		item3 = await client.items.get('3').resolved;
 		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
-		{
-		  "contents": "foo",
-		  "id": "3",
-		  "tags": [
-		    {
-		      "color": "red",
-		      "name": "a",
-		    },
-		    {
-		      "color": "red",
-		      "name": "b",
-		    },
-		  ],
-		}
-	`);
+			{
+			  "contents": "foo",
+			  "id": "3",
+			  "listId": null,
+			  "tags": [
+			    {
+			      "color": "red",
+			      "name": "a",
+			    },
+			    {
+			      "color": "red",
+			      "name": "b",
+			    },
+			  ],
+			}
+		`);
+
+		await client.close();
+
+		// for our last act... move items into lists inside lists!
+		const v4List = collection({
+			name: 'list',
+			primaryKey: 'id',
+			fields: {
+				id: { type: 'string', default: () => 'default' },
+				name: { type: 'string', default: 'empty' },
+				items: {
+					type: 'array',
+					items: {
+						type: 'object',
+						properties: {
+							...v3Item.fields,
+						},
+					},
+				},
+			},
+		});
+
+		const v4Schema = schema({
+			version: 4,
+			collections: {
+				list: v4List,
+			},
+		});
+
+		migrations.push(
+			migrate(v3Schema, v4Schema, async ({ migrate, queries, mutations }) => {
+				await migrate('list', async (old) => {
+					const items = await queries.item.findAll({
+						where: 'listId',
+						equals: old.id,
+					});
+					return {
+						...old,
+						items,
+					};
+				});
+
+				// we have to create a list for non-assigned items and assign them
+				// so they're not lost!
+				const unassignedItems = await queries.item.findAll({
+					where: 'listId',
+					equals: null,
+				});
+				await mutations.list.put({
+					id: 'uncategorized',
+					name: 'Uncategorized',
+					items: unassignedItems,
+				});
+			}),
+		);
+
+		client = await createTestClient({
+			schema: v4Schema,
+			...clientInit,
+		});
+
+		console.debug('📈 Version 4 client created');
+
+		// check our test items
+		const defaultList = await client.lists.get('uncategorized').resolved;
+		expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "id": "uncategorized",
+			  "items": [],
+			  "name": "Uncategorized",
+			}
+		`);
+		list1 = await client.lists.get('list1').resolved;
+		expect(list1.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "id": "list1",
+			  "items": [
+			    {
+			      "contents": "empty",
+			      "id": "default",
+			      "listId": "list1",
+			      "tags": [],
+			    },
+			  ],
+			  "name": "list 1",
+			}
+		`);
 	},
-	60 * 1000,
+	15 * 1000,
 );
 
 it.todo(

@@ -36,6 +36,8 @@ export class EntityStore extends EventSubscriber<{
 
 	private unsubscribes: (() => void)[] = [];
 
+	private _disposed = false;
+
 	constructor({
 		db,
 		schema,
@@ -126,10 +128,12 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private writeDocumentToStorage = async (oid: ObjectIdentifier) => {
+		if (this._disposed) return;
 		const rootOid = getOidRoot(oid);
 		const { id, collection } = decomposeOid(rootOid);
 		const entity = await this.get(rootOid);
-		const snapshot = entity.getSnapshot();
+		if (this._disposed) return;
+		const snapshot = entity?.getSnapshot();
 		if (snapshot) {
 			const stored = cloneDeep(snapshot);
 			assignIndexValues(this.schema.collections[collection], stored);
@@ -265,8 +269,8 @@ export class EntityStore extends EventSubscriber<{
 		);
 	};
 
-	flushPatches = async () => {
-		this.operationBatcher.flush('default');
+	flushPatches = async (batch = 'default') => {
+		await this.operationBatcher.flush(batch);
 	};
 
 	private flushOperations = async (
@@ -369,7 +373,9 @@ export class EntityStore extends EventSubscriber<{
 		}
 	};
 
-	destroy = async () => {
+	destroy = () => {
+		this._disposed = true;
+		this.disable();
 		for (const unsubscribe of this.unsubscribes) {
 			unsubscribe();
 		}

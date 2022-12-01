@@ -1,8 +1,8 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from './Sync.js';
 import { Metadata } from './metadata/Metadata.js';
-import { QueryMaker } from './QueryMaker.js';
-import { QueryStore } from './QueryStore.js';
+import { LiveQueryMaker } from './queries/LiveQueryMaker.js';
+import { LiveQueryStore } from './queries/LiveQueryStore.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
 import { DocumentManager } from './DocumentManager.js';
 import { EntityStore } from './reactives/EntityStore.js';
@@ -45,10 +45,10 @@ export class Storage {
 			undoHistory: this.undoHistory,
 			log: this.config.log,
 		});
-		this.queryStore = new QueryStore(this.documentDb, this.entities, {
+		this.queryStore = new LiveQueryStore(this.documentDb, this.entities, {
 			log: this.config.log,
 		});
-		this.queryMaker = new QueryMaker(this.queryStore, this.schema);
+		this.queryMaker = new LiveQueryMaker(this.queryStore, this.schema);
 		this.documentManager = new DocumentManager(
 			this.meta,
 			this.schema,
@@ -84,6 +84,26 @@ export class Storage {
 				findAll: (query: any) => this.queryMaker.findAll(name, query),
 			};
 		}
+
+		this.documentDb.addEventListener('versionchange', () => {
+			config.log?.(
+				`Another tab has requested a version change for ${this.namespace}`,
+			);
+			this.documentDb.close();
+			if (typeof window !== 'undefined') {
+				window.location.reload();
+			}
+		});
+
+		this.components.metaDb.addEventListener('versionchange', () => {
+			config.log?.(
+				`Another tab has requested a version change for ${this.namespace}`,
+			);
+			this.components.metaDb.close();
+			if (typeof window !== 'undefined') {
+				window.location.reload();
+			}
+		});
 	}
 
 	get meta() {
@@ -179,15 +199,19 @@ export class Storage {
 		};
 	};
 
-	close = () => {
+	close = async () => {
 		this.sync.stop();
 		this.sync.dispose();
+
+		this.meta.close();
 
 		this.queryStore.destroy();
 		this.entities.destroy();
 
 		this.documentDb.close();
 		this.components.metaDb.close();
+
+		this.config.log?.('Client closed');
 	};
 
 	__dangerous__resetLocal = async () => {
@@ -214,7 +238,7 @@ export interface StorageInitOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
 	schema: StorageSchema<any>;
 	/** Migrations, in order, to upgrade to each successive version of the schema */
-	migrations: Migration[];
+	migrations: Migration<any>[];
 	/** Provide a sync config to turn on synchronization with a server */
 	sync?: ServerSyncOptions<Profile, Presence>;
 	/** Optionally override the IndexedDB implementation */
@@ -232,12 +256,6 @@ export interface StorageInitOptions<Presence = any, Profile = any> {
 	 * Provide a log function to log internal debug messages
 	 */
 	log?: (...args: any[]) => void;
-	/**
-	 * If existing storage does not exist, you can provide this function to initialize it.
-	 * Initialization will complete before the open() request resolves. The function
-	 * is called with the client instance.
-	 */
-	loadInitialData?: (client: Storage) => Promise<void>;
 }
 
 /**
@@ -274,12 +292,11 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 		this._initializing = true;
 		try {
 			const metaDbName = [init.namespace, 'meta'].join('_');
-			const { db: metaDb, wasInitialized: isFirstTimeInitialization } =
-				await openMetadataDatabase(this._namespace, {
-					indexedDB: init.indexedDb,
-					log: init.log,
-					databaseName: metaDbName,
-				});
+			const { db: metaDb } = await openMetadataDatabase(this._namespace, {
+				indexedDB: init.indexedDb,
+				log: init.log,
+				databaseName: metaDbName,
+			});
 			const meta = new Metadata(metaDb, init.schema, { log: init.log });
 
 			// verify schema integrity
@@ -308,10 +325,6 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 					undoHistory: init.undoHistory || new UndoHistory(),
 				},
 			);
-
-			if (isFirstTimeInitialization && init.loadInitialData) {
-				await init.loadInitialData(storage);
-			}
 
 			this.resolveReady(storage);
 			this._resolvedValue = storage;

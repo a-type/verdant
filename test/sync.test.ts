@@ -146,6 +146,10 @@ it('can sync multiple clients even if they go offline', async () => {
 		content: 'This is a comment from B',
 	});
 
+	// simulate being online long enough to propagate batch operations
+	await clientA.entities.flushPatches();
+	await clientB.entities.flushPatches();
+
 	console.info('🔺--- Going online again ---');
 	clientA.sync.start();
 	clientB.sync.start();

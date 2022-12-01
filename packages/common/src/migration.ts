@@ -4,18 +4,22 @@ import {
 	StorageSchema,
 	addFieldDefaults,
 	StorageDocument,
+	CollectionFilter,
+	StorageDocumentInit,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 > {
-	(old: Old): void;
+	(old: Old): void | Promise<void>;
 }
 export interface PreservedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 	New extends StorageCollectionSchema<any, any, any>,
 > {
-	(old: StorageDocument<Old>): StorageDocument<New>;
+	(old: StorageDocument<Old>):
+		| StorageDocument<New>
+		| Promise<StorageDocument<New>>;
 }
 
 type MigrationStrategy<
@@ -112,6 +116,31 @@ type MigrationRunner<
 	strategy: StrategyFor<Collection, Old, New>,
 ) => Promise<void>;
 
+type MigrationQueryMaker<
+	Collection extends StorageCollectionSchema<any, any, any>,
+> = {
+	get(primaryKey: string): Promise<StorageDocument<Collection> | undefined>;
+	findOne(
+		query: CollectionFilter,
+	): Promise<StorageDocument<Collection> | undefined>;
+	findAll(query: CollectionFilter): Promise<StorageDocument<Collection>[]>;
+};
+
+type MigrationQueries<Old extends StorageSchema<any>> = {
+	[Key in keyof Old['collections']]: MigrationQueryMaker<
+		Old['collections'][Key]
+	>;
+};
+
+type MigrationMutations<New extends StorageSchema> = {
+	[Key in keyof New['collections']]: {
+		put(
+			document: StorageDocumentInit<New['collections'][Key]>,
+		): Promise<StorageDocument<New['collections'][Key]>>;
+		delete(primaryKey: string): Promise<void>;
+	};
+};
+
 export interface MigrationTools<
 	Old extends StorageSchema<any>,
 	New extends StorageSchema<any>,
@@ -119,6 +148,8 @@ export interface MigrationTools<
 	migrate: MigrationRunner<Old, New>;
 	identity: <T>(val: T) => T;
 	withDefaults: (collectionName: string, value: any) => any;
+	queries: MigrationQueries<Old>;
+	mutations: MigrationMutations<New>;
 	info: {
 		changedCollections: string[];
 		addedCollections: string[];
@@ -126,28 +157,65 @@ export interface MigrationTools<
 	};
 }
 
-interface MigrationEngine {
+export interface MigrationEngine<
+	Old extends StorageSchema,
+	New extends StorageSchema,
+> {
 	migrate: (
 		collection: string,
 		strategy: MigrationStrategy<any, any>,
 	) => Promise<void>;
+	queries: MigrationQueries<Old>;
+	mutations: MigrationMutations<New>;
+	newOids: string[];
 }
 
-export function migrate<
-	Old extends StorageSchema<any>,
-	New extends StorageSchema<any>,
->(
+type MigrationProcedure<
+	Old extends StorageSchema,
+	New extends StorageSchema,
+> = (tools: MigrationTools<Old, New>) => Promise<void>;
+
+type EmptySchema = {
+	version: 0;
+	collections: {};
+};
+const emptySchema: EmptySchema = {
+	version: 0,
+	collections: {},
+};
+
+export function migrate<Schema extends StorageSchema>(
+	schema: Schema,
+	procedure: MigrationProcedure<EmptySchema, Schema>,
+): Migration<EmptySchema, Schema>;
+export function migrate<Old extends StorageSchema, New extends StorageSchema>(
 	oldSchema: Old,
 	newSchema: New,
-	procedure: (tools: MigrationTools<Old, New>) => void | Promise<void>,
-): Migration {
+	procedure: MigrationProcedure<Old, New>,
+): Migration<Old, New>;
+export function migrate(
+	oldSchemaOrNewSchema: any,
+	newSchemaOrProcedure: any,
+	procedureIfTwoSchemas?: any,
+) {
+	const isProcedureSecondArgument = typeof newSchemaOrProcedure === 'function';
+	const oldSchema = isProcedureSecondArgument
+		? emptySchema
+		: oldSchemaOrNewSchema;
+	const newSchema = isProcedureSecondArgument
+		? oldSchemaOrNewSchema
+		: newSchemaOrProcedure;
+	const procedure = isProcedureSecondArgument
+		? newSchemaOrProcedure
+		: procedureIfTwoSchemas;
 	// diff to determine changed collections
 	const changedCollections: string[] = Object.keys(
 		newSchema.collections,
 	).filter(
 		(key) =>
+			oldSchema.collections[key] &&
 			stableStringify(oldSchema.collections[key]) !==
-			stableStringify(newSchema.collections[key]),
+				stableStringify(newSchema.collections[key]),
 	);
 	const removedCollections: string[] = Object.keys(
 		oldSchema.collections,
@@ -158,7 +226,7 @@ export function migrate<
 
 	const addedIndexes: Record<string, MigrationIndexDescription[]> = {};
 	const removedIndexes: Record<string, MigrationIndexDescription[]> = {};
-	for (const changed of changedCollections) {
+	for (const changed of [...changedCollections, ...addedCollections]) {
 		const oldIndexes = getIndexes(oldSchema.collections[changed]);
 		const newIndexes = getIndexes(newSchema.collections[changed]);
 		const added = newIndexes.filter(
@@ -177,10 +245,11 @@ export function migrate<
 
 	return {
 		version: newSchema.version,
-		migrate: async (engine: MigrationEngine) => {
+		migrate: async (engine: MigrationEngine<any, any>) => {
 			const migratedCollections: string[] = [];
 			await procedure({
-				migrate: async (collection, strategy) => {
+				migrate: async (collection: any, strategy: any) => {
+					// @ts-ignore
 					await engine.migrate(collection, strategy);
 					migratedCollections.push(collection);
 				},
@@ -193,6 +262,8 @@ export function migrate<
 					addedCollections,
 					removedCollections,
 				},
+				queries: engine.queries,
+				mutations: engine.mutations,
 			});
 
 			const unmigrated = changedCollections.filter(
@@ -208,6 +279,7 @@ export function migrate<
 		allCollections: Object.keys(newSchema.collections),
 		changedCollections,
 		addedCollections,
+		oldCollections: Object.keys(oldSchema.collections),
 		oldSchema,
 		newSchema,
 	};
@@ -220,14 +292,23 @@ export interface MigrationIndexDescription {
 	compound: boolean;
 }
 
-export interface Migration {
+export interface Migration<
+	Old extends StorageSchema = any,
+	New extends StorageSchema = any,
+> {
 	version: number;
-	oldSchema: StorageSchema<any>;
-	newSchema: StorageSchema<any>;
-	migrate: (engine: MigrationEngine) => Promise<void>;
+	oldSchema: Old;
+	newSchema: New;
+	migrate: (engine: MigrationEngine<Old, New>) => Promise<void>;
+	/** Collections which are added in the new schema and not present in the old */
 	addedCollections: string[];
+	/** Collections which were removed from the old schema */
 	removedCollections: string[];
+	/** All collections which exist after the migration has completed - i.e. the ones in the new schema */
 	allCollections: string[];
+	/** Only the collections which were in the old schema */
+	oldCollections: string[];
+	/** Collections whose fields or indexes changed between schemas */
 	changedCollections: string[];
 	// new indexes mapped by collection name
 	addedIndexes: Record<string, MigrationIndexDescription[]>;
@@ -274,9 +355,16 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 }
 
 export function createDefaultMigration(
-	schema: StorageSchema<any>,
+	schema: StorageSchema,
+): Migration<{ version: 0; collections: {} }>;
+export function createDefaultMigration<Old extends StorageSchema>(
+	oldSchema: Old,
+	newSchema: StorageSchema,
+): Migration<Old>;
+export function createDefaultMigration(
+	schema: StorageSchema,
 	newSchema?: StorageSchema<any>,
-): Migration {
+) {
 	let oldSchema = newSchema
 		? schema
 		: {
@@ -287,6 +375,8 @@ export function createDefaultMigration(
 		oldSchema,
 		newSchema || schema,
 		async ({ migrate, withDefaults, info }) => {
+			if ((newSchema || schema).version === 1) return;
+
 			for (const collection of info.changedCollections) {
 				// @ts-ignore indefinite type resolution
 				await migrate(collection, (old) => withDefaults(collection, old));

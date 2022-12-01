@@ -14,20 +14,21 @@ import type {
   ListEntity,
   EntityBase,
   AccessibleEntityProperty,
-  DestructuredEntity,
   EntityShape,
 } from "@lo-fi/web";
 
-export interface GeneratedHooks {
+export interface GeneratedHooks<Presence, Profile> {
   Provider: Provider<ClientDescriptor<Schema>>;
-  useStorage: () => Client;
-  useSelf: () => UserInfo;
+  /** @deprecated use useClient instead */
+  useStorage: () => Client<Presence, Profile>;
+  useClient: () => Client<Presence, Profile>;
+  useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
-  usePeer: (peerId: string) => UserInfo;
+  usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
   useWatch<T extends EntityBase<any> | null>(
     entity: T
-  ): T extends EntityBase<any> ? DestructuredEntity<EntityShape<T>> : T;
+  ): T extends EntityBase<any> ? EntityShape<T> : T;
   useWatch<
     T extends EntityBase<any> | null,
     P extends AccessibleEntityProperty<EntityShape<T>>
@@ -35,6 +36,8 @@ export interface GeneratedHooks {
     entity: T,
     props: P
   ): EntityShape<T>[P];
+  useCanUndo(): boolean;
+  useCanRedo(): boolean;
 
   useItem: (id: string) => Item;
   useOneItem: (config: { index: ItemFilter }) => Item;
@@ -45,4 +48,7 @@ export interface GeneratedHooks {
   useAllCategories: (config?: { index: CategoryFilter }) => Category[];
 }
 
-export const hooks: GeneratedHooks;
+export function createHooks<Presence = any, Profile = any>(): GeneratedHooks<
+  Presence,
+  Profile
+>;

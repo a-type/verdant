@@ -5,51 +5,13 @@ import type {
   ObjectEntity,
   ListEntity,
   Query,
+  ServerSync,
 } from "@lo-fi/web";
 export * from "@lo-fi/web";
 
 import type schema from "./schema.js";
 export type Schema = typeof schema;
-export interface ItemSnapshot {
-  id: string;
-  content: string;
-  tags: Array<string>;
-  purchased: boolean;
-  categoryId: string | null;
-  comments: Array<{
-    id: string;
-    content: string;
-    authorId: string;
-  }>;
-}
-
-export interface ItemInit {
-  id?: string;
-  content?: string;
-  tags?: Array<string>;
-  purchased?: boolean;
-  categoryId?: string | null;
-  comments?: Array<{
-    id?: string;
-    content?: string;
-    authorId: string;
-  }>;
-}
-export type Item = ObjectEntity<ItemInit>;
-
-export type ItemTags = ListEntity<string>;
-
-export type ItemComments = ListEntity<{
-  id: string;
-  content: string;
-  authorId: string;
-}>;
-
-export type ItemCommentsItem = ObjectEntity<{
-  id: string;
-  content: string;
-  authorId: string;
-}>;
+export type Item = ObjectEntity<ItemInit, ItemDestructured>;
 
 export interface ItemCategoryIdMatchFilter {
   where: "categoryId";
@@ -66,18 +28,103 @@ export interface ItemCategoryIdRangeFilter {
   order?: "asc" | "desc";
 }
 
-export type ItemFilter = ItemCategoryIdMatchFilter | ItemCategoryIdRangeFilter;
+export interface ItemCategoryIdStartsWithFilter {
+  where: "categoryId";
+  startsWith: string;
+  order?: "asc" | "desc";
+}
+export type ItemFilter =
+  | ItemCategoryIdMatchFilter
+  | ItemCategoryIdRangeFilter
+  | ItemCategoryIdStartsWithFilter;
 
-export interface CategorySnapshot {
+export type ItemDestructured = {
   id: string;
-  name: string;
-}
-
-export interface CategoryInit {
+  content: string;
+  tags: ItemTags;
+  purchased: boolean;
+  categoryId: string | null;
+  comments: ItemComments;
+};
+export type ItemInit = {
   id?: string;
-  name: string;
-}
-export type Category = ObjectEntity<CategoryInit>;
+  content?: string;
+  tags?: ItemTagsInit;
+  purchased?: boolean;
+  categoryId?: string | null;
+  comments?: ItemCommentsInit;
+};
+export type ItemSnapshot = {
+  id: string;
+  content: string;
+  tags: ItemTagsSnapshot;
+  purchased: boolean;
+  categoryId: string | null;
+  comments: ItemCommentsSnapshot;
+};
+/** Item sub-object types */
+
+type ItemId = string;
+type ItemIdInit = ItemId | undefined;
+type ItemIdSnapshot = ItemId;
+type ItemIdDestructured = ItemId;
+type ItemContent = string;
+type ItemContentInit = ItemContent | undefined;
+type ItemContentSnapshot = ItemContent;
+type ItemContentDestructured = ItemContent;
+export type ItemTags = ListEntity<ItemTagsItemInit, ItemTagsItem>;
+export type ItemTagsInit = Array<ItemTagsItemInit>;
+export type ItemTagsDestructured = Array<ItemTagsItem>;
+export type ItemTagsSnapshot = Array<ItemTagsItemSnapshot>;
+type ItemTagsItem = string;
+type ItemTagsItemInit = ItemTagsItem;
+type ItemTagsItemSnapshot = ItemTagsItem;
+type ItemTagsItemDestructured = ItemTagsItem;
+type ItemPurchased = boolean;
+type ItemPurchasedInit = ItemPurchased | undefined;
+type ItemPurchasedSnapshot = ItemPurchased;
+type ItemPurchasedDestructured = ItemPurchased;
+type ItemCategoryId = string | null;
+type ItemCategoryIdInit = ItemCategoryId | undefined;
+type ItemCategoryIdSnapshot = ItemCategoryId;
+type ItemCategoryIdDestructured = ItemCategoryId;
+export type ItemComments = ListEntity<ItemCommentsItemInit, ItemCommentsItem>;
+export type ItemCommentsInit = Array<ItemCommentsItemInit>;
+export type ItemCommentsDestructured = Array<ItemCommentsItem>;
+export type ItemCommentsSnapshot = Array<ItemCommentsItemSnapshot>;
+export type ItemCommentsItem = ObjectEntity<
+  ItemCommentsItemInit,
+  ItemCommentsItemDestructured
+>;
+export type ItemCommentsItemInit = {
+  id?: string;
+  content?: string;
+  authorId: string;
+};
+export type ItemCommentsItemDestructured = {
+  id: string;
+  content: string;
+  authorId: string;
+};
+export type ItemCommentsItemSnapshot = {
+  id: string;
+  content: string;
+  authorId: string;
+};
+type ItemCommentsItemId = string;
+type ItemCommentsItemIdInit = ItemCommentsItemId | undefined;
+type ItemCommentsItemIdSnapshot = ItemCommentsItemId;
+type ItemCommentsItemIdDestructured = ItemCommentsItemId;
+type ItemCommentsItemContent = string;
+type ItemCommentsItemContentInit = ItemCommentsItemContent | undefined;
+type ItemCommentsItemContentSnapshot = ItemCommentsItemContent;
+type ItemCommentsItemContentDestructured = ItemCommentsItemContent;
+type ItemCommentsItemAuthorId = string;
+type ItemCommentsItemAuthorIdInit = ItemCommentsItemAuthorId;
+type ItemCommentsItemAuthorIdSnapshot = ItemCommentsItemAuthorId;
+type ItemCommentsItemAuthorIdDestructured = ItemCommentsItemAuthorId;
+
+export type Category = ObjectEntity<CategoryInit, CategoryDestructured>;
 
 export interface CategoryNameMatchFilter {
   where: "name";
@@ -94,7 +141,38 @@ export interface CategoryNameRangeFilter {
   order?: "asc" | "desc";
 }
 
-export type CategoryFilter = CategoryNameMatchFilter | CategoryNameRangeFilter;
+export interface CategoryNameStartsWithFilter {
+  where: "name";
+  startsWith: string;
+  order?: "asc" | "desc";
+}
+export type CategoryFilter =
+  | CategoryNameMatchFilter
+  | CategoryNameRangeFilter
+  | CategoryNameStartsWithFilter;
+
+export type CategoryDestructured = {
+  id: string;
+  name: string;
+};
+export type CategoryInit = {
+  id?: string;
+  name: string;
+};
+export type CategorySnapshot = {
+  id: string;
+  name: string;
+};
+/** Category sub-object types */
+
+type CategoryId = string;
+type CategoryIdInit = CategoryId | undefined;
+type CategoryIdSnapshot = CategoryId;
+type CategoryIdDestructured = CategoryId;
+type CategoryName = string;
+type CategoryNameInit = CategoryName;
+type CategoryNameSnapshot = CategoryName;
+type CategoryNameDestructured = CategoryName;
 
 interface Collection<
   Document extends ObjectEntity<any>,
@@ -114,7 +192,7 @@ interface Collection<
   findAll: (filter?: Filter) => Query<Document[]>;
 }
 
-export class Client {
+export class Client<Presence = any, Profile = any> {
   readonly items: Collection<Item, ItemSnapshot, ItemInit, ItemFilter>;
 
   readonly categories: Collection<
@@ -124,8 +202,7 @@ export class Client {
     CategoryFilter
   >;
 
-  presence: Storage["sync"]["presence"];
-  sync: Storage["sync"];
+  sync: ServerSync<Profile, Presence>;
   undoHistory: Storage["undoHistory"];
   namespace: Storage["namespace"];
   entities: Storage["entities"];
@@ -137,16 +214,19 @@ export class Client {
 }
 
 // schema is provided internally. loadInitialData must be revised to pass the typed Client
-interface ClientInitOptions
-  extends Omit<StorageInitOptions, "schema" | "loadInitialData"> {
+interface ClientInitOptions<Presence = any, Profile = any>
+  extends Omit<
+    StorageInitOptions<Presence, Profile>,
+    "schema" | "loadInitialData"
+  > {
   loadInitialData?: (client: Client) => Promise<void>;
 }
 
-export class ClientDescriptor {
-  constructor(init: ClientInitOptions);
-  open: () => Promise<Client>;
-  readonly current: Client | null;
-  readonly readyPromise: Promise<Client>;
+export class ClientDescriptor<Presence = any, Profile = any> {
+  constructor(init: ClientInitOptions<Presence, Profile>);
+  open: () => Promise<Client<Presence, Profile>>;
+  readonly current: Client<Presence, Profile> | null;
+  readonly readyPromise: Promise<Client<Presence, Profile>>;
   readonly schema: StorageSchema;
   readonly namespace: string;
   close: () => Promise<void>;

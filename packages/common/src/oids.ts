@@ -77,8 +77,7 @@ export function hasOid(obj: any) {
 }
 
 export function removeOid(obj: any) {
-	delete obj[LEGACY_OID_KEY];
-	delete obj[OID_KEY];
+	oidMap.delete(obj);
 	return obj;
 }
 
@@ -261,6 +260,20 @@ export function removeOidPropertiesFromAllSubObjects(obj: any) {
 	} else if (isObject(obj)) {
 		for (const key of Object.keys(obj)) {
 			removeOidPropertiesFromAllSubObjects(obj[key]);
+		}
+	}
+}
+
+export function removeOidsFromAllSubObjects(obj: any) {
+	removeOid(obj);
+
+	if (Array.isArray(obj)) {
+		for (let i = 0; i < obj.length; i++) {
+			removeOidsFromAllSubObjects(obj[i]);
+		}
+	} else if (isObject(obj)) {
+		for (const key of Object.keys(obj)) {
+			removeOidsFromAllSubObjects(obj[key]);
 		}
 	}
 }

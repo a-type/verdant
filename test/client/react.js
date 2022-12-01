@@ -1,4 +1,6 @@
-import { createHooks } from "@lo-fi/react";
+import { createHooks as baseCreateHooks } from "@lo-fi/react";
 import schema from "./schema.js";
 
-export const hooks = createHooks(schema);
+export function createHooks() {
+  return baseCreateHooks(schema);
+}

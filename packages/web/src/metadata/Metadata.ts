@@ -37,6 +37,8 @@ export class Metadata extends EventSubscriber<{
 	readonly time = new HybridLogicalClockTimestampProvider();
 	private readonly log = (...args: any[]) => {};
 
+	private _closing = false;
+
 	constructor(
 		private readonly db: IDBDatabase,
 		schemaDefinition: StorageSchema<any>,
@@ -56,6 +58,10 @@ export class Metadata extends EventSubscriber<{
 	get now() {
 		return this.time.now(this.schema.currentVersion);
 	}
+
+	close = () => {
+		this._closing = true;
+	};
 
 	/**
 	 * Methods for accessing data
@@ -98,6 +104,42 @@ export class Metadata extends EventSubscriber<{
 		]);
 
 		return Array.from(oids);
+	};
+
+	getDocumentSnapshot = async (oid: ObjectIdentifier) => {
+		const documentOid = getOidRoot(oid);
+		assert(documentOid === oid, 'Must be root document OID');
+		const transaction = this.db.transaction(
+			['baselines', 'operations'],
+			'readwrite',
+		);
+		const baselines = await this.baselines.getAllForDocument(documentOid, {
+			transaction,
+		});
+		const objectMap = new Map<ObjectIdentifier, any>();
+		for (const baseline of baselines) {
+			if (baseline.snapshot) {
+				assignOid(baseline.snapshot, baseline.oid);
+			}
+			objectMap.set(baseline.oid, baseline.snapshot);
+		}
+		await this.operations.iterateOverAllOperationsForDocument(
+			documentOid,
+			(op) => {
+				const obj = objectMap.get(op.oid) || undefined;
+				const newObj = applyPatch(obj, op.data);
+				if (newObj) {
+					assignOid(newObj, op.oid);
+				}
+				objectMap.set(op.oid, newObj);
+			},
+			{ transaction },
+		);
+		const root = objectMap.get(documentOid);
+		if (root) {
+			substituteRefsWithObjects(root, objectMap);
+		}
+		return root;
 	};
 
 	/**
@@ -208,6 +250,8 @@ export class Metadata extends EventSubscriber<{
 	 * their undo stack.
 	 */
 	private runRebase = async (globalAckTimestamp: string) => {
+		if (this._closing) return;
+
 		// find all operations before the global ack
 		let lastTimestamp;
 		const toRebase = new Set<ObjectIdentifier>();
@@ -230,6 +274,10 @@ export class Metadata extends EventSubscriber<{
 
 		if (!toRebase.size) {
 			this.log('Cannot rebase, no operations prior to', globalAckTimestamp);
+			return;
+		}
+
+		if (this._closing) {
 			return;
 		}
 

@@ -54,7 +54,7 @@ export class Batcher<T> {
 		batch.flushTimeout && clearTimeout(batch.flushTimeout);
 		const items = batch.items;
 		batch.items = [];
-		this.flusher(items, key);
+		await this.flusher(items, key);
 	};
 
 	private scheduleFlush = (key: string) => {

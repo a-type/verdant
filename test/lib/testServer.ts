@@ -5,7 +5,7 @@ import * as fs from 'fs/promises';
 
 const SECRET = 'notsecret';
 
-export async function startTestServer() {
+export async function startTestServer(log = false) {
 	const port = Math.floor(Math.random() * 9000) + 1000;
 	const app = express();
 	const httpServer = createServer(app);
@@ -21,6 +21,7 @@ export async function startTestServer() {
 			},
 		},
 		httpServer,
+		log: log ? (...args: any[]) => console.log('[SERVER]', ...args) : undefined,
 	});
 
 	const tokenProvider = new TokenProvider({
