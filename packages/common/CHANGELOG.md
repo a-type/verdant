@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.4.0
+
+### Minor Changes
+
+- 0562878: Overhaul migrations to include arbitrary mutations and querying
+
 ## 1.3.3
 
 ### Patch Changes

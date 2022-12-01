@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.7.0
+
+### Minor Changes
+
+- 99358b7: Remove loadInitialData
+
 ## 1.6.0
 
 ### Minor Changes
