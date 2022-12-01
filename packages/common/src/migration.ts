@@ -167,7 +167,10 @@ export interface MigrationEngine<
 	) => Promise<void>;
 	queries: MigrationQueries<Old>;
 	mutations: MigrationMutations<New>;
+	/** OIDs of any new documents created during the migration */
 	newOids: string[];
+	/** Promises that should be resolved before completing the migration */
+	awaitables: Promise<any>[];
 }
 
 type MigrationProcedure<

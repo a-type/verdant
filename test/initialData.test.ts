@@ -3,6 +3,14 @@ import { it, expect } from 'vitest';
 import v1 from './client/schemaVersions/v1.js';
 import { createTestClient } from './lib/testClient.js';
 
+async function fakeApi() {
+	return new Promise<string>((resolve) => {
+		setTimeout(() => {
+			resolve('hello world');
+		}, 200);
+	});
+}
+
 it('can load initial data before the client opens', async () => {
 	const indexedDb = new IDBFactory();
 
@@ -14,8 +22,9 @@ it('can load initial data before the client opens', async () => {
 			const category = await mutations.categories.put({
 				name: 'default',
 			});
+			const value = await fakeApi();
 			await mutations.items.put({
-				content: 'hello world',
+				content: value,
 				categoryId: category.id,
 			});
 		}),

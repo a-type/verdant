@@ -15,6 +15,7 @@ import {
 	CollectionFilter,
 	removeOidsFromAllSubObjects,
 	addFieldDefaults,
+	decomposeOid,
 } from '@lo-fi/common';
 import { MigrationEngine } from '@lo-fi/common/src/migration.js';
 import { Metadata } from './metadata/Metadata.js';
@@ -92,6 +93,8 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 						log,
 					});
 					await migration.migrate(engine);
+					// wait on any out-of-band async operations to complete
+					await Promise.all(engine.awaitables);
 
 					// now we have to open the database again with the next version and
 					// make the appropriate schema changes during the upgrade.
@@ -147,20 +150,28 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 					const keys = await getAllKeys(readStore);
 					// map the keys to OIDs
 					const oids = keys.map((key) => createOid(collection, `${key}`, []));
-					oids.push(...engine.newOids);
-
-					const snapshots = await Promise.all(
-						oids.map(meta.getDocumentSnapshot),
+					oids.push(
+						...engine.newOids.filter((oid) => {
+							return decomposeOid(oid).collection === collection;
+						}),
 					);
 
-					const views = snapshots.map((snapshot) => {
+					const snapshots = await Promise.all(
+						oids.map(async (oid) => {
+							const snap = await meta.getDocumentSnapshot(oid);
+							return [oid, snap];
+						}),
+					);
+
+					const views = snapshots.map(([oid, snapshot]) => {
+						if (!snapshot) return [oid, undefined];
 						const view = assignIndexValues(
 							migration.newSchema.collections[collection],
 							snapshot,
 						);
 						// TODO: remove the need for this by only storing index values!
 						assignOidPropertiesToAllSubObjects(view);
-						return view;
+						return [oid, view];
 					});
 
 					// now we can write the documents back
@@ -169,7 +180,16 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 						'readwrite',
 					);
 					const writeStore = documentWriteTransaction.objectStore(collection);
-					await Promise.all(views.map((view) => putView(writeStore, view)));
+					await Promise.all(
+						views.map(([oid, view]) => {
+							if (view) {
+								return putView(writeStore, view);
+							} else {
+								const { id } = decomposeOid(oid);
+								return deleteView(writeStore, id);
+							}
+						}),
+					);
 				}
 
 				await closeDatabase(upgradedDatabase);
@@ -335,8 +355,6 @@ function getMigrationEngine({
 		return meta.time.zero(migration.version);
 	}
 
-	const transaction = db.transaction(migration.oldCollections, 'readonly');
-
 	const newOids = new Array<ObjectIdentifier>();
 
 	const queries = migration.oldCollections.reduce((acc, collectionName) => {
@@ -369,10 +387,13 @@ function getMigrationEngine({
 		newOids,
 		meta,
 	});
+	const awaitables = new Array<Promise<any>>();
 	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
 		newOids,
 		migrate: async (collection, strategy) => {
 			const docs = await new Promise<any[]>((resolve, reject) => {
+				const transaction = db.transaction(collection, 'readonly');
+
 				const store = transaction.objectStore(collection);
 				const cursorReq = store.openCursor();
 
@@ -431,6 +452,7 @@ function getMigrationEngine({
 		},
 		queries,
 		mutations,
+		awaitables,
 	};
 	return engine;
 }
@@ -473,6 +495,7 @@ function getVersion1MigrationEngine({
 		},
 		queries,
 		mutations,
+		awaitables: [],
 	};
 	return engine;
 }
@@ -535,6 +558,18 @@ async function getAllKeys(store: IDBObjectStore) {
 		const request = store.getAllKeys();
 		request.onsuccess = (event) => {
 			resolve(request.result);
+		};
+		request.onerror = (event) => {
+			reject(request.error);
+		};
+	});
+}
+
+async function deleteView(store: IDBObjectStore, id: string) {
+	const request = store.delete(id);
+	return new Promise<void>((resolve, reject) => {
+		request.onsuccess = (event) => {
+			resolve();
 		};
 		request.onerror = (event) => {
 			reject(request.error);

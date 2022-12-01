@@ -266,7 +266,7 @@ it(
 		});
 
 		migrations.push(
-			migrate(v2Schema, v3Schema, async ({ migrate }) => {
+			migrate(v2Schema, v3Schema, async ({ migrate, withDefaults }) => {
 				await migrate('item', ({ tags, ...rest }) => {
 					return {
 						...rest,
@@ -276,6 +276,7 @@ it(
 						})),
 					};
 				});
+				await migrate('list', (old) => withDefaults('list', old));
 			}),
 		);
 
@@ -339,7 +340,6 @@ it(
 
 		await client.close();
 
-		// for our last act... move items into lists inside lists!
 		const v4List = collection({
 			name: 'list',
 			primaryKey: 'id',
@@ -366,30 +366,34 @@ it(
 		});
 
 		migrations.push(
-			migrate(v3Schema, v4Schema, async ({ migrate, queries, mutations }) => {
-				await migrate('list', async (old) => {
-					const items = await queries.item.findAll({
-						where: 'listId',
-						equals: old.id,
+			migrate(
+				v3Schema,
+				v4Schema,
+				async ({ migrate, queries, mutations, withDefaults }) => {
+					await migrate('list', async (old) => {
+						const items = await queries.item.findAll({
+							where: 'listId',
+							equals: old.id,
+						});
+						return {
+							...old,
+							items,
+						};
 					});
-					return {
-						...old,
-						items,
-					};
-				});
 
-				// we have to create a list for non-assigned items and assign them
-				// so they're not lost!
-				const unassignedItems = await queries.item.findAll({
-					where: 'listId',
-					equals: null,
-				});
-				await mutations.list.put({
-					id: 'uncategorized',
-					name: 'Uncategorized',
-					items: unassignedItems,
-				});
-			}),
+					// we have to create a list for non-assigned items and assign them
+					// so they're not lost!
+					const unassignedItems = await queries.item.findAll({
+						where: 'listId',
+						equals: null,
+					});
+					await mutations.list.put({
+						id: 'uncategorized',
+						name: 'Uncategorized',
+						items: unassignedItems,
+					});
+				},
+			),
 		);
 
 		client = await createTestClient({
