@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.6.1
+
+### Patch Changes
+
+- e87c01b: Expose a getCached method for retrieving cached entities
+
 ## 1.6.0
 
 ### Minor Changes
