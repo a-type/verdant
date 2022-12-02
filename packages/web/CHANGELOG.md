@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.6.2
+
+### Patch Changes
+
+- 6d88c9f: Fix to remove promise from getCached
+
 ## 1.6.1
 
 ### Patch Changes
