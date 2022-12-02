@@ -162,7 +162,7 @@ export class EntityStore extends EventSubscriber<{
 	 * Immediately returns an entity if it exists in the memory cache. An
 	 * entity would be cached if it has been retrieved by a live query.
 	 */
-	getCached = async (oid: ObjectIdentifier) => {
+	getCached = (oid: ObjectIdentifier) => {
 		const cache = this.documentFamilyCaches.get(oid);
 		if (cache) {
 			return cache.getEntity(oid, this.getDocumentSchema(oid));
