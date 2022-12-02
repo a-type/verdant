@@ -118,6 +118,8 @@ export class EntityStore extends EventSubscriber<{
 				familyCache.subscribe('change:*', this.onEntityChange),
 			);
 			this.documentFamilyCaches.set(documentOid, familyCache);
+
+			// TODO: cleanup cache when all documents are disposed
 		}
 
 		return familyCache;
@@ -153,6 +155,19 @@ export class EntityStore extends EventSubscriber<{
 		const familyCache = await this.openFamilyCache(oid);
 
 		return familyCache.getEntity(oid, this.getDocumentSchema(oid));
+	};
+
+	/**
+	 * Advanced usage!
+	 * Immediately returns an entity if it exists in the memory cache. An
+	 * entity would be cached if it has been retrieved by a live query.
+	 */
+	getCached = async (oid: ObjectIdentifier) => {
+		const cache = this.documentFamilyCaches.get(oid);
+		if (cache) {
+			return cache.getEntity(oid, this.getDocumentSchema(oid));
+		}
+		return null;
 	};
 
 	/**
