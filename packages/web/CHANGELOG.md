@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.6.3
+
+### Patch Changes
+
+- 1486b2f: More advanced watch tools for changes
+- Updated dependencies [1486b2f]
+  - @lo-fi/common@1.4.1
+
 ## 1.6.2
 
 ### Patch Changes

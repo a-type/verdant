@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.4.1
+
+### Patch Changes
+
+- 1486b2f: More advanced watch tools for changes
+
 ## 1.4.0
 
 ### Minor Changes
