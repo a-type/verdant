@@ -55,13 +55,23 @@ export type EntityShape<E extends EntityBase<any, any>> = E extends EntityBase<
 	? Value
 	: never;
 
-export function refreshEntity(entity: EntityBase<any, any>) {
-	return entity[REFRESH]();
+export function refreshEntity(
+	entity: EntityBase<any, any>,
+	info: EntityChangeInfo,
+) {
+	return entity[REFRESH](info);
 }
 
-export function deepChangeEntity(entity: EntityBase<any, any>) {
-	return entity[DEEP_CHANGE]();
+export interface EntityChangeInfo {
+	isLocal?: boolean;
 }
+
+type EntityEvents = {
+	change: (info: EntityChangeInfo) => void;
+	changeDeep: (target: Entity, info: EntityChangeInfo) => void;
+	delete: (info: EntityChangeInfo) => void;
+	restore: (info: EntityChangeInfo) => void;
+};
 
 type BaseEntityValue = { [Key: string]: any } | any[];
 
@@ -84,12 +94,7 @@ export abstract class EntityBase<
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
 
-	protected events = new EventSubscriber<{
-		change: () => void;
-		changeDeep: () => void;
-		delete: () => void;
-		restore: () => void;
-	}>();
+	protected events = new EventSubscriber<EntityEvents>();
 
 	protected hasSubscribersToDeepChanges() {
 		return this.events.subscriberCount('changeDeep') > 0;
@@ -152,7 +157,7 @@ export abstract class EntityBase<
 		}
 	}
 
-	private [REFRESH] = () => {
+	private [REFRESH] = (info: EntityChangeInfo) => {
 		const { view, deleted } = this.cache.computeView(this.oid);
 		this._current = view;
 		const restored = this._deleted && !deleted;
@@ -160,22 +165,22 @@ export abstract class EntityBase<
 		this.cachedDestructure = null;
 
 		if (this._deleted) {
-			this.events.emit('delete');
+			this.events.emit('delete', info);
 		} else {
-			this.events.emit('change');
-			this[DEEP_CHANGE]();
+			this.events.emit('change', info);
+			this[DEEP_CHANGE](this as unknown as Entity, info);
 		}
 		if (restored) {
 			this.cachedSnapshot = null;
-			this.events.emit('restore');
+			this.events.emit('restore', info);
 		}
 	};
 
-	private [DEEP_CHANGE] = () => {
+	private [DEEP_CHANGE] = (source: Entity, info: EntityChangeInfo) => {
 		this.cachedSnapshot = null;
-		this.events.emit('changeDeep');
+		this.events.emit('changeDeep', source, info);
 		if (this.parent) {
-			this.parent[DEEP_CHANGE]();
+			this.parent[DEEP_CHANGE](source, info);
 		}
 	};
 
@@ -196,18 +201,20 @@ export abstract class EntityBase<
 		this.events.dispose();
 	};
 
-	subscribe = (
-		event: 'change' | 'delete' | 'restore' | 'changeDeep',
-		callback: () => void,
+	subscribe = <EventName extends keyof EntityEvents>(
+		event: EventName,
+		callback: EntityEvents[EventName],
 	) => {
+		const wasNotSubscribed = this.hasSubscribers;
 		const unsubscribe = this.events.subscribe(event, callback);
-		if (this.events.subscriberCount('change') === 1) {
+		const isNowSubscribed = this.hasSubscribers;
+		if (wasNotSubscribed && isNowSubscribed) {
 			this.cacheEvents.onSubscribed(this);
 		}
 
 		return () => {
 			unsubscribe();
-			if (this.events.subscriberCount('change') === 0) {
+			if (!this.hasSubscribers) {
 				this.cacheEvents.onAllUnsubscribed(this);
 			}
 		};

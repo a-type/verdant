@@ -237,6 +237,20 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		// remove any remaining items at the end of the array
 		const deletedItemsAtEnd = from.length - to.length;
 		if (deletedItemsAtEnd > 0) {
+			// if sub-items were objects, we need to delete them all
+			for (let i = to.length; i < from.length; i++) {
+				const value = from[i];
+				const valueOid = maybeGetOid(value);
+				if (valueOid) {
+					patches.push({
+						oid: valueOid,
+						timestamp: getNow(),
+						data: {
+							op: 'delete',
+						},
+					});
+				}
+			}
 			// push the list-delete for the deleted items
 			patches.push({
 				oid,

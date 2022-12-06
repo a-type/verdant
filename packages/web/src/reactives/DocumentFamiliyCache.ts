@@ -53,14 +53,14 @@ export class DocumentFamilyCache extends EventSubscriber<
 		for (const oid of oidSet) {
 			const entity = this.entities.get(oid);
 			if (entity) {
-				refreshEntity(entity);
+				refreshEntity(entity, { isLocal: true });
 				this.emit(`change:${oid}`);
 				this.emit('change:*', oid);
 			}
 		}
 	};
 
-	insertOperations = (operations: Operation[]) => {
+	insertOperations = (operations: Operation[], info: { isLocal: boolean }) => {
 		const oidSet = new Set<ObjectIdentifier>();
 		for (const operation of operations) {
 			const { oid } = operation;
@@ -95,14 +95,17 @@ export class DocumentFamilyCache extends EventSubscriber<
 		for (const oid of oidSet) {
 			const entity = this.entities.get(oid);
 			if (entity) {
-				refreshEntity(entity);
+				refreshEntity(entity, info);
 				this.emit(`change:${oid}`);
 				this.emit('change:*', oid);
 			}
 		}
 	};
 
-	insertBaselines = (baselines: DocumentBaseline[]) => {
+	insertBaselines = (
+		baselines: DocumentBaseline[],
+		_: { isLocal: boolean },
+	) => {
 		for (const baseline of baselines) {
 			const { oid } = baseline;
 			this.baselinesMap.set(oid, baseline);
@@ -118,17 +121,20 @@ export class DocumentFamilyCache extends EventSubscriber<
 		operations,
 		baselines,
 		reset,
+		isLocal,
 	}: {
 		operations: Operation[];
 		baselines: DocumentBaseline[];
 		reset?: boolean;
+		isLocal?: boolean;
 	}) => {
 		if (reset) {
 			this.operationsMap.clear();
 			this.baselinesMap.clear();
 		}
-		this.insertBaselines(baselines);
-		this.insertOperations(operations);
+		const info = { isLocal: isLocal || false };
+		this.insertBaselines(baselines, info);
+		this.insertOperations(operations, info);
 	};
 
 	private applyOperations = (
@@ -244,15 +250,16 @@ export class DocumentFamilyCache extends EventSubscriber<
 	};
 
 	reset = (operations: Operation[], baselines: DocumentBaseline[]) => {
+		const info = { isLocal: false };
 		this.baselinesMap = new Map(
 			baselines.map((baseline) => [baseline.oid, baseline]),
 		);
 		this.operationsMap = new Map();
-		this.insertOperations(operations);
+		this.insertOperations(operations, info);
 		for (const oid of this.entities.keys()) {
 			const entity = this.entities.get(oid);
 			if (entity) {
-				refreshEntity(entity);
+				refreshEntity(entity, info);
 				this.emit(`change:${oid}`);
 				this.emit('change:*', oid);
 			}

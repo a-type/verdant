@@ -187,6 +187,7 @@ export class EntityStore extends EventSubscriber<{
 	private addOperationsToOpenCaches = async (
 		operations: Operation[],
 		confirmed = true,
+		info: { isLocal: boolean },
 	) => {
 		const operationsByOid = groupPatchesByRootOid(operations);
 		const oids = Object.keys(operationsByOid);
@@ -194,7 +195,7 @@ export class EntityStore extends EventSubscriber<{
 			const familyCache = this.documentFamilyCaches.get(oid);
 			if (familyCache) {
 				if (confirmed) {
-					familyCache.insertOperations(operationsByOid[oid]);
+					familyCache.insertOperations(operationsByOid[oid], info);
 				} else {
 					familyCache.insertUnconfirmedOperations(operationsByOid[oid]);
 				}
@@ -202,7 +203,10 @@ export class EntityStore extends EventSubscriber<{
 		});
 	};
 
-	private addBaselinesToCaches = async (baselines: DocumentBaseline[]) => {
+	private addBaselinesToCaches = async (
+		baselines: DocumentBaseline[],
+		info: { isLocal: boolean },
+	) => {
 		const baselinesByOid = groupBaselinesByRootOid(baselines);
 		const oids = Object.keys(baselinesByOid);
 		const caches = await Promise.all(
@@ -211,7 +215,7 @@ export class EntityStore extends EventSubscriber<{
 		oids.forEach((oid, i) => {
 			const familyCache = caches[i];
 			if (familyCache) {
-				familyCache.insertBaselines(baselinesByOid[oid]);
+				familyCache.insertBaselines(baselinesByOid[oid], info);
 			}
 		});
 	};
@@ -220,10 +224,12 @@ export class EntityStore extends EventSubscriber<{
 		baselines,
 		operations,
 		reset,
+		isLocal,
 	}: {
 		baselines: DocumentBaseline[];
 		operations: Operation[];
 		reset?: boolean;
+		isLocal?: boolean;
 	}) => {
 		const baselinesByDocumentOid = groupBaselinesByRootOid(baselines);
 		const operationsByDocumentOid = groupPatchesByRootOid(operations);
@@ -237,6 +243,7 @@ export class EntityStore extends EventSubscriber<{
 					operations: operationsByDocumentOid[oid] || [],
 					baselines: baselinesByDocumentOid[oid] || [],
 					reset,
+					isLocal,
 				});
 			}
 		}
@@ -277,7 +284,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	addLocalOperations = async (operations: Operation[], notUndoable = false) => {
-		this.addOperationsToOpenCaches(operations, false);
+		this.addOperationsToOpenCaches(operations, false, { isLocal: false });
 		this.operationBatcher.add(
 			notUndoable ? 'notUndoable' : 'default',
 			...operations,
@@ -311,7 +318,7 @@ export class EntityStore extends EventSubscriber<{
 		);
 
 		// confirm the operations
-		this.addDataToOpenCaches({ operations, baselines: [] });
+		this.addDataToOpenCaches({ operations, baselines: [], isLocal: true });
 
 		for (const oid of allDocumentOids) {
 			await this.writeDocumentToStorage(oid);
@@ -402,6 +409,6 @@ export class EntityStore extends EventSubscriber<{
 
 	private handleRebase = (baselines: DocumentBaseline[]) => {
 		this.log('Reacting to rebases', baselines.length);
-		this.addBaselinesToCaches(baselines);
+		this.addBaselinesToCaches(baselines, { isLocal: true });
 	};
 }
