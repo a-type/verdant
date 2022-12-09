@@ -22,3 +22,9 @@ An IndexedDB-powered database and data sync solution for lightweight, local-firs
 This is a very experimental set of libraries which I'm developing slowly alongside my app [Aglio](https://aglio.gfor.rest) to suit my [own goals](https://blog.gfor.rest/blog/lo-fi-intro). The usage and behavior is subject to change, although I will either try to avoid changes that fundamentally change how data is stored, or provide upgrade paths which won't disrupt apps already in use as much as possible.
 
 Documentation will be sparse for a while. If you'd like to see a full-sized example, [Aglio is open source.](https://github.com/a-type/aglio)
+
+## What is lo-fi trying to accomplish?
+
+More than just a software tool for its own sake, I built lo-fi for a specific purpose: making sustainable web apps for individual users as a personal, small business.
+
+If you want to read more about how and why, it's in the [manifesto](./manifesto.md). I've always wanted to write a manifesto! That's not too pretentious, is it?

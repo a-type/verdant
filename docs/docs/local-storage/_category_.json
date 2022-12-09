@@ -1,6 +1,6 @@
 {
 	"label": "Storing & Querying",
-	"position": 2,
+	"position": 3,
 	"link": {
 		"type": "generated-index",
 		"description": "How to store and reactively query data in your local-first app"
