@@ -468,13 +468,16 @@ export type NormalizedObject =
 	  }
 	| Array<PropertyValue>;
 
-function listCheck(obj: any): asserts obj is Array<unknown> {
+function listCheck(obj: any): obj is Array<unknown> {
 	if (!Array.isArray(obj)) {
-		throw new Error(
+		console.error(
 			`Cannot apply list patch; expected array, received ${JSON.stringify(
 				obj,
-			)}`,
+			)}. This suggests your data is changing from a list to an object over time.`,
 		);
+		return false;
+	} else {
+		return true;
 	}
 }
 
@@ -503,62 +506,70 @@ export function applyPatch<T extends NormalizedObject>(
 			delete baseAsAny[patch.name];
 			break;
 		case 'list-push':
-			listCheck(base);
-			base.push(patch.value);
+			if (listCheck(base)) {
+				base.push(patch.value);
+			}
 			break;
 		case 'list-delete':
-			listCheck(base);
-			base.splice(patch.index, patch.count);
+			if (listCheck(base)) {
+				base.splice(patch.index, patch.count);
+			}
 			break;
 		case 'list-move-by-index':
-			listCheck(base);
-			spliceResult = base.splice(patch.from, 1);
-			base.splice(patch.to, 0, spliceResult[0]);
+			if (listCheck(base)) {
+				spliceResult = base.splice(patch.from, 1);
+				base.splice(patch.to, 0, spliceResult[0]);
+			}
 			break;
 		case 'list-remove':
-			listCheck(base);
-			do {
-				const valueToRemove = patch.value;
-				if (patch.only === 'last') {
-					if (isObjectRef(valueToRemove)) {
-						index = findLastIndex(
-							base,
-							(item: any) => item.id === valueToRemove.id,
-						);
+			if (listCheck(base)) {
+				do {
+					const valueToRemove = patch.value;
+					if (patch.only === 'last') {
+						if (isObjectRef(valueToRemove)) {
+							index = findLastIndex(
+								base,
+								(item: any) => item.id === valueToRemove.id,
+							);
+						} else {
+							index = base.lastIndexOf(valueToRemove);
+						}
 					} else {
-						index = base.lastIndexOf(valueToRemove);
+						if (isObjectRef(valueToRemove)) {
+							index = base.findIndex(
+								(item: any) => item.id === valueToRemove.id,
+							);
+						} else {
+							index = base.indexOf(valueToRemove);
+						}
 					}
-				} else {
-					if (isObjectRef(valueToRemove)) {
-						index = base.findIndex((item: any) => item.id === valueToRemove.id);
-					} else {
-						index = base.indexOf(valueToRemove);
+					if (index !== -1) {
+						base.splice(index, 1);
 					}
-				}
-				if (index !== -1) {
-					base.splice(index, 1);
-				}
-			} while (!patch.only && index !== -1);
+				} while (!patch.only && index !== -1);
+			}
 			break;
 		case 'list-move-by-ref':
-			listCheck(base);
-			index = base.indexOf(patch.value);
-			spliceResult = base.splice(index, 1);
-			base.splice(patch.index, 0, spliceResult[0]);
+			if (listCheck(base)) {
+				index = base.indexOf(patch.value);
+				spliceResult = base.splice(index, 1);
+				base.splice(patch.index, 0, spliceResult[0]);
+			}
 			break;
 		case 'list-insert':
-			listCheck(base);
-			if (!patch.value && !patch.values) {
-				throw new Error(
-					`Cannot apply list insert patch; expected value or values, received ${JSON.stringify(
-						patch,
-					)}`,
-				);
-			}
-			if (patch.value) {
-				base.splice(patch.index, 0, patch.value);
-			} else {
-				base.splice(patch.index, 0, ...patch.values!);
+			if (listCheck(base)) {
+				if (!patch.value && !patch.values) {
+					throw new Error(
+						`Cannot apply list insert patch; expected value or values, received ${JSON.stringify(
+							patch,
+						)}`,
+					);
+				}
+				if (patch.value) {
+					base.splice(patch.index, 0, patch.value);
+				} else {
+					base.splice(patch.index, 0, ...patch.values!);
+				}
 			}
 			break;
 		case 'delete':
