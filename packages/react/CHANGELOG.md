@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 7.0.2
+
+### Patch Changes
+
+- 91f4c5f: Add declarative sync control in React
+- Updated dependencies [f13043f]
+  - @lo-fi/common@1.4.2
+  - @lo-fi/web@1.6.4
+
 ## 7.0.1
 
 ### Patch Changes
