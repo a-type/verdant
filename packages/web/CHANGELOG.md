@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.6.5
+
+### Patch Changes
+
+- c0d8b3f: Catch storage write errors
+
 ## 1.6.4
 
 ### Patch Changes
