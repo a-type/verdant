@@ -4,7 +4,7 @@ import { getObjectProperty } from './tools.js';
 
 export function getReactTypings(collections) {
 	return `
-import { Provider } from 'react';
+import { Context, ComponentType, ReactNode } from 'react';
 import type { Client, ClientDescriptor, Schema, ${collections
 		.map((c) => getObjectProperty(c, 'name').value)
 		.map((c) => pascalCase(c))
@@ -20,7 +20,15 @@ import type { Client, ClientDescriptor, Schema, ${collections
 		} from '@lo-fi/web';
 
 export interface GeneratedHooks<Presence, Profile> {
-	Provider: Provider<ClientDescriptor<Schema>>;
+	/**
+	 * Render this context Provider at the top level of your
+	 * React tree to provide a Client to all hooks.
+	 */
+  Provider: ComponentType<{ value: ClientDescriptor<Schema>; children: ReactNode; sync?: boolean }>;
+	/**
+	 * Direct access to the React Context, if needed.
+	 */
+	Context: Context<ClientDescriptor<Schema>>;
 	/** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
 	useClient: () => Client<Presence, Profile>;
@@ -40,6 +48,15 @@ export interface GeneratedHooks<Presence, Profile> {
 	): EntityShape<T>[P];
 	useCanUndo(): boolean;
 	useCanRedo(): boolean;
+	/**
+	 * This non-blocking hook declaratively controls sync on/off state.
+	 * Render it anywhere in your tree and pass it a boolean to turn sync on/off.
+	 * Since it doesn't trigger Suspense, you can do this in, say, a top-level
+	 * route component.
+	 *
+	 * It must still be rendered within your Provider.
+	 */
+	useSync(isOn: boolean): void;
   ${collections
 		.map((col) => {
 			const name = getObjectProperty(col, 'name').value;

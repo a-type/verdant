@@ -1,76 +1,18 @@
-import {
-	CollectionIndexFilter,
-	SchemaCollectionName,
-	StorageCollectionSchema,
-	StorageSchema,
-} from '@lo-fi/common';
-import {
-	Entity,
-	ObjectEntity,
-	Query,
-	Storage,
-	StorageDescriptor,
-	UserInfo,
-	AccessibleEntityProperty,
-} from '@lo-fi/web';
+import { CollectionIndexFilter, StorageSchema } from '@lo-fi/common';
+import { Query, Storage, StorageDescriptor, UserInfo } from '@lo-fi/web';
 import { EntityBase } from '@lo-fi/web/src/reactives/Entity.js';
 import {
+	Context,
 	createContext,
 	Provider,
+	ReactNode,
 	useContext,
+	useEffect,
 	useMemo,
-	useState,
+	useReducer,
 	useSyncExternalStore,
 } from 'react';
 import { suspend } from 'suspend-react';
-
-type QueryHookResult<T> = T;
-
-type PluralCapital<
-	Name extends string,
-	PluralName extends string | undefined,
-> = PluralName extends string ? Capitalize<PluralName> : `${Capitalize<Name>}s`;
-
-type CollectionHooks<
-	Collection extends StorageCollectionSchema<any, any, any>,
-> = {
-	[key in Collection['name'] as `use${Capitalize<Collection['name']>}`]: (
-		id: string,
-	) => QueryHookResult<ObjectEntity<any, any>>;
-} & {
-	[key in Collection['name'] as `useAll${PluralCapital<
-		Collection['name'],
-		Collection['pluralName']
-	>}`]: (config?: {
-		index?: CollectionIndexFilter;
-	}) => QueryHookResult<ObjectEntity<any, any>[]>;
-} & {
-	[key in Collection['name'] as `useOne${Capitalize<
-		Collection['name']
-	>}`]: (config?: {
-		index?: CollectionIndexFilter;
-	}) => QueryHookResult<ObjectEntity<any, any>>;
-};
-
-type UnionToIntersection<T> = (T extends any ? (k: T) => void : never) extends (
-	k: infer U,
-) => void
-	? U
-	: never;
-type Flatten<T extends Record<string, any>> = T extends Record<string, infer V>
-	? UnionToIntersection<V>
-	: never;
-
-type GeneratedHooks<
-	Schema extends StorageSchema<{
-		[k: string]: StorageCollectionSchema<any, any, any>;
-	}>,
-> = Flatten<{
-	[CollectionName in Extract<
-		keyof Schema['collections'],
-		string
-	>]: CollectionHooks<Schema['collections'][CollectionName]>;
-}>;
 
 function useLiveQuery(liveQuery: Query<any>) {
 	suspend(() => liveQuery.resolved, [liveQuery]);
@@ -88,30 +30,9 @@ function capitalize<T extends string>(str: T) {
 	return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>;
 }
 
-type CapitalizedCollectionName<
-	Schema extends StorageSchema<{
-		[k: string]: StorageCollectionSchema<any, any, any>;
-	}>,
-> = Capitalize<Extract<keyof Schema['collections'], string>>;
-
-type CreatedHooks<Presence = any, Profile = any> = {
-	useWatch<T>(liveObject: T): T;
-	useSelf(): UserInfo<Profile, Presence>;
-	usePeerIds(): string[];
-	usePeer(peerId: string): UserInfo<Profile, Presence>;
-	useSyncStatus(): boolean;
-	/** @deprecated use useClient */
-	useStorage(): Storage;
-	useClient(): Storage;
-	useCanUndo(): boolean;
-	useCanRedo(): boolean;
-	Provider: Provider<StorageDescriptor<any>>;
-	[other: string]: any;
-};
-
 export function createHooks<Presence = any, Profile = any>(
 	schema: StorageSchema<any>,
-): CreatedHooks<Presence, Profile> {
+) {
 	const Context = createContext<StorageDescriptor<Presence, Profile> | null>(
 		null,
 	);
@@ -215,6 +136,36 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
+	/**
+	 * Non-suspending hook which allows declarative sync start/stop
+	 * control.
+	 */
+	function useSync(isOn: boolean) {
+		const desc = useContext(Context);
+
+		const client = desc?.current;
+
+		const [_, forceUpdate] = useReducer((s) => s + 1, 0);
+		if (desc && !client) {
+			desc.readyPromise.then(forceUpdate);
+		}
+
+		useEffect(() => {
+			if (client) {
+				if (isOn) {
+					client.sync.start();
+				} else {
+					client.sync.stop();
+				}
+			}
+		}, [client, isOn]);
+	}
+
+	function SyncController({ isOn }: { isOn: boolean }) {
+		useSync(isOn);
+		return null;
+	}
+
 	const hooks: Record<string, any> = {
 		useStorage,
 		useClient: useStorage,
@@ -225,12 +176,28 @@ export function createHooks<Presence = any, Profile = any>(
 		useSyncStatus,
 		useCanUndo,
 		useCanRedo,
-		Provider: ({ value, ...rest }: { value: StorageDescriptor }) => {
+		useSync,
+		Context,
+		Provider: ({
+			value,
+			children,
+			sync,
+			...rest
+		}: {
+			children?: ReactNode;
+			value: StorageDescriptor;
+			sync?: boolean;
+		}) => {
 			// auto-open storage when used in provider
 			useMemo(() => {
 				value.open();
 			}, [value]);
-			return <Context.Provider value={value} {...rest} />;
+			return (
+				<Context.Provider value={value} {...rest}>
+					{children}
+					{sync !== undefined && <SyncController isOn={sync} />}
+				</Context.Provider>
+			);
 		},
 	};
 
