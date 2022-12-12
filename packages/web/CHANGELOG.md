@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 1.6.4
+
+### Patch Changes
+
+- Updated dependencies [f13043f]
+  - @lo-fi/common@1.4.2
+
 ## 1.6.3
 
 ### Patch Changes
