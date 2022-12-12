@@ -141,9 +141,20 @@ export class EntityStore extends EventSubscriber<{
 			assignIndexValues(this.schema.collections[collection], stored);
 			// IMPORTANT! this property must be assigned
 			assignOidPropertiesToAllSubObjects(stored);
-			const tx = this.db.transaction(collection, 'readwrite');
-			const store = tx.objectStore(collection);
-			await storeRequestPromise(store.put(stored));
+			try {
+				const tx = this.db.transaction(collection, 'readwrite');
+				const store = tx.objectStore(collection);
+				await storeRequestPromise(store.put(stored));
+			} catch (err) {
+				// if the document can't be written, something's very wrong :(
+				// log the error and move on...
+				this.log(
+					"⚠️ CRITICAL: possibly corrupt data couldn't be written to queryable storage. This is probably a bug in lo-fi! Please report at https://github.com/a-type/lo-fi/issues",
+					'\n',
+					'Invalid data:',
+					JSON.stringify(stored),
+				);
+			}
 		} else {
 			const tx = this.db.transaction(collection, 'readwrite');
 			const store = tx.objectStore(collection);
