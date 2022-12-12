@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.4.2
+
+### Patch Changes
+
+- f13043f: No longer crash on list operations for non lists, just ignore them and log a warning
+
 ## 1.4.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/common",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",

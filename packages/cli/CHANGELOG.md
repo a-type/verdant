@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.7.1
+
+### Patch Changes
+
+- 91f4c5f: Add declarative sync control in React
+
 ## 1.7.0
 
 ### Minor Changes
