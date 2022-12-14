@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.6.6
+
+### Patch Changes
+
+- b03fa61: Refactor for sync stability
+- Updated dependencies [b03fa61]
+  - @lo-fi/common@1.4.3
+
 ## 1.6.5
 
 ### Patch Changes
