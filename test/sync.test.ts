@@ -177,4 +177,4 @@ it('can sync multiple clients even if they go offline', async () => {
 		(item) => item?.get('comments').length === 2,
 	);
 	await expectCommentsToExist(clientC, a_unknownItem.get('id'), 2);
-}, 20000);
+}, 30000);

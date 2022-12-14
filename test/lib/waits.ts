@@ -50,7 +50,7 @@ export function waitForQueryResult(
 
 		const timeout = setTimeout(() => {
 			reject(new Error('Timed out waiting for query ' + query.key));
-		}, 10000);
+		}, 15000);
 		const unsubscribe = query.subscribe((result) => {
 			if (predicate(query.current)) {
 				unsubscribe();
