@@ -269,7 +269,11 @@ export class ServerSync<Profile = any, Presence = any>
 		if (automaticTransportSelection) {
 			// automatically shift between transport modes depending
 			// on whether any peers are present
+			let switchoverTimeout: NodeJS.Timer;
 			this.presence.subscribe('peersChanged', (peers) => {
+				if (switchoverTimeout) {
+					clearTimeout(switchoverTimeout);
+				}
 				if (Object.keys(peers).length > 0) {
 					// only upgrade if token allows it
 					if (this.canDoRealtime) {
@@ -279,7 +283,12 @@ export class ServerSync<Profile = any, Presence = any>
 					}
 				} else {
 					if (this.mode === 'realtime') {
-						this.setMode('pull');
+						// wait 1 second then switch to pull mode if still emtpy
+						switchoverTimeout = setTimeout(() => {
+							if (Object.keys(this.presence.peers).length === 0) {
+								this.setMode('pull');
+							}
+						}, 1000);
 					}
 				}
 			});
