@@ -1,6 +1,6 @@
 import { CollectionIndexFilter, StorageSchema } from '@lo-fi/common';
 import { Query, Storage, StorageDescriptor, UserInfo } from '@lo-fi/web';
-import { EntityBase } from '@lo-fi/web/src/reactives/Entity.js';
+import { Entity } from '@lo-fi/web/src/reactives/Entity.js';
 import {
 	Context,
 	createContext,
@@ -45,7 +45,7 @@ export function createHooks<Presence = any, Profile = any>(
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]);
 	}
 
-	function useWatch<S>(liveObject: EntityBase<any, S> | null, prop?: keyof S) {
+	function useWatch(liveObject: Entity | null, prop?: any) {
 		return useSyncExternalStore(
 			(handler) => {
 				if (liveObject) {
