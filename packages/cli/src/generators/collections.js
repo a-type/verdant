@@ -151,7 +151,7 @@ function getObjectTypings(field, name) {
 		} else {
 			const itemFieldType = getObjectProperty(field, 'items');
 			const itemName = getSubObjectFieldName(name, 'Item');
-			content += `export type ${name} = ListEntity<${itemName}Init, ${itemName}>;`;
+			content += `export type ${name} = ListEntity<${name}Init, ${name}Destructured>;`;
 			content += `export type ${name}Init = Array<${itemName}Init>;`;
 			content += `export type ${name}Destructured = Array<${itemName}>;`;
 			content += `export type ${name}Snapshot = Array<${itemName}Snapshot>;`;

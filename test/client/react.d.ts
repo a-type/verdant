@@ -1,4 +1,4 @@
-import { Provider } from "react";
+import { Context, ComponentType, ReactNode } from "react";
 import type {
   Client,
   ClientDescriptor,
@@ -12,13 +12,25 @@ import type {
   UserInfo,
   ObjectEntity,
   ListEntity,
-  EntityBase,
+  Entity,
   AccessibleEntityProperty,
   EntityShape,
 } from "@lo-fi/web";
 
 export interface GeneratedHooks<Presence, Profile> {
-  Provider: Provider<ClientDescriptor<Schema>>;
+  /**
+   * Render this context Provider at the top level of your
+   * React tree to provide a Client to all hooks.
+   */
+  Provider: ComponentType<{
+    value: ClientDescriptor<Schema>;
+    children: ReactNode;
+    sync?: boolean;
+  }>;
+  /**
+   * Direct access to the React Context, if needed.
+   */
+  Context: Context<ClientDescriptor<Schema>>;
   /** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
   useClient: () => Client<Presence, Profile>;
@@ -26,11 +38,11 @@ export interface GeneratedHooks<Presence, Profile> {
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
-  useWatch<T extends EntityBase<any> | null>(
+  useWatch<T extends Entity<any, any> | null>(
     entity: T
-  ): T extends EntityBase<any> ? EntityShape<T> : T;
+  ): T extends Entity<any, any> ? EntityShape<T> : T;
   useWatch<
-    T extends EntityBase<any> | null,
+    T extends Entity<any, any> | null,
     P extends AccessibleEntityProperty<EntityShape<T>>
   >(
     entity: T,
@@ -38,6 +50,15 @@ export interface GeneratedHooks<Presence, Profile> {
   ): EntityShape<T>[P];
   useCanUndo(): boolean;
   useCanRedo(): boolean;
+  /**
+   * This non-blocking hook declaratively controls sync on/off state.
+   * Render it anywhere in your tree and pass it a boolean to turn sync on/off.
+   * Since it doesn't trigger Suspense, you can do this in, say, a top-level
+   * route component.
+   *
+   * It must still be rendered within your Provider.
+   */
+  useSync(isOn: boolean): void;
 
   useItem: (id: string) => Item;
   useOneItem: (config: { index: ItemFilter }) => Item;

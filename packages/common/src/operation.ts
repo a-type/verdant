@@ -473,7 +473,9 @@ function listCheck(obj: any): obj is Array<unknown> {
 		console.error(
 			`Cannot apply list patch; expected array, received ${JSON.stringify(
 				obj,
-			)}. This suggests your data is changing from a list to an object over time.`,
+			)}. This suggests your data is changing from a list to an object over time. (OID: ${maybeGetOid(
+				obj,
+			)})`,
 		);
 		return false;
 	} else {

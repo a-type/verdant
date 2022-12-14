@@ -44,34 +44,23 @@ it('can sync multiple clients even if they go offline', async () => {
 
 	// seed data offline with A
 	console.info('🔺 --- Client A offline seed ---');
-	const a_produceCategory = await clientA.categories.create({
+	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
 	});
-	await clientA.items.create({
+	await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Apples',
 	});
-	await clientA.items.create({
+	await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Oranges',
 	});
-	const a_unknownItem = await clientA.items.create({
+	const a_unknownItem = await clientA.items.put({
 		content: 'Unknown',
 	});
 	// subscribe to make this a live item for later
 	const a_unknownItemChanged = vitest.fn();
 	a_unknownItem.subscribe('change', a_unknownItemChanged);
-
-	// seed data offline with B, too
-	console.info('🔺--- Client B offline seed ---');
-	const b_deliCategory = await clientB.categories.create({ name: 'Deli' });
-	const b_steakItem = await clientB.items.create({
-		categoryId: b_deliCategory.get('id'),
-		content: 'Steak',
-	});
-	// subscribe to make this a live item for later
-	const b_steakItemChanged = vitest.fn();
-	b_steakItem.subscribe('change', b_steakItemChanged);
 
 	// bring all clients online
 	clientA.sync.start();
@@ -81,6 +70,16 @@ it('can sync multiple clients even if they go offline', async () => {
 	console.info('🔺--- Going online ---');
 	await waitForPeerCount(clientA, 2);
 	console.info('🔺--- All clients online ---');
+
+	// add some data to B
+	const b_deliCategory = await clientB.categories.put({ name: 'Deli' });
+	const b_steakItem = await clientB.items.put({
+		categoryId: b_deliCategory.get('id'),
+		content: 'Steak',
+	});
+	// subscribe to make this a live item for later
+	const b_steakItemChanged = vitest.fn();
+	b_steakItem.subscribe('change', b_steakItemChanged);
 
 	async function expectCategoryToExist(
 		client: Client,

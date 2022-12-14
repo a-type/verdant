@@ -33,10 +33,10 @@ it('an offline client rebases everything', async () => {
 	});
 	const client = await desc.open();
 
-	const produce = await client.categories.create({
+	const produce = await client.categories.put({
 		name: 'Produce',
 	});
-	const apples = await client.items.create({
+	const apples = await client.items.put({
 		content: 'Apples',
 		categoryId: produce.get('id'),
 	});
@@ -45,7 +45,7 @@ it('an offline client rebases everything', async () => {
 		authorId: 'Anon',
 	});
 	apples.set('purchased', true);
-	const oranges = await client.items.create({
+	const oranges = await client.items.put({
 		content: 'Oranges',
 		categoryId: produce.get('id'),
 	});

@@ -244,8 +244,12 @@ export class EntityStore extends EventSubscriber<{
 	}) => {
 		const baselinesByDocumentOid = groupBaselinesByRootOid(baselines);
 		const operationsByDocumentOid = groupPatchesByRootOid(operations);
-		const allDocumentOids = Object.keys(baselinesByDocumentOid).concat(
-			Object.keys(operationsByDocumentOid),
+		const allDocumentOids = Array.from(
+			new Set(
+				Object.keys(baselinesByDocumentOid).concat(
+					Object.keys(operationsByDocumentOid),
+				),
+			),
 		);
 		for (const oid of allDocumentOids) {
 			const familyCache = this.documentFamilyCaches.get(oid);
@@ -279,6 +283,17 @@ export class EntityStore extends EventSubscriber<{
 		});
 
 		// then, asynchronously add data to storage
+		if (reset) {
+			this.log(
+				'Resetting local store to replicate remote synced data',
+				baselines.length,
+				'baselines, and',
+				operations.length,
+				'operations',
+			);
+			await this.meta.reset();
+			await this.resetStoredDocuments();
+		}
 		await this.meta.insertRemoteBaselines(baselines);
 		await this.meta.insertRemoteOperations(operations);
 
@@ -421,5 +436,16 @@ export class EntityStore extends EventSubscriber<{
 	private handleRebase = (baselines: DocumentBaseline[]) => {
 		this.log('Reacting to rebases', baselines.length);
 		this.addBaselinesToCaches(baselines, { isLocal: true });
+	};
+
+	private resetStoredDocuments = async () => {
+		const tx = this.db.transaction(
+			Object.keys(this.schema.collections),
+			'readwrite',
+		);
+		for (const collection of Object.keys(this.schema.collections)) {
+			const store = tx.objectStore(collection);
+			await storeRequestPromise(store.clear());
+		}
 	};
 }

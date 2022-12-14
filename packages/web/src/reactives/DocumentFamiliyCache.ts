@@ -6,16 +6,9 @@ import {
 	EventSubscriber,
 	ObjectIdentifier,
 	Operation,
-	removeOid,
 	StorageFieldSchema,
 } from '@lo-fi/common';
-import {
-	Entity,
-	EntityBase,
-	ListEntity,
-	ObjectEntity,
-	refreshEntity,
-} from './Entity.js';
+import { Entity, refreshEntity } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
 
 export class DocumentFamilyCache extends EventSubscriber<
@@ -28,7 +21,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 	private unconfirmedOperationsMap: Map<ObjectIdentifier, Operation[]>;
 	private baselinesMap: Map<ObjectIdentifier, DocumentBaseline>;
 
-	private entities: Map<ObjectIdentifier, EntityBase<any, any>> = new Map();
+	private entities: Map<ObjectIdentifier, Entity> = new Map();
 
 	private store: EntityStore;
 
@@ -60,7 +53,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 	};
 
-	insertOperations = (operations: Operation[], info: { isLocal: boolean }) => {
+	insertOperations = (
+		operations: Operation[],
+		info: { isLocal: boolean },
+		refreshEntities = true,
+	) => {
 		const oidSet = new Set<ObjectIdentifier>();
 		for (const operation of operations) {
 			const { oid } = operation;
@@ -92,12 +89,14 @@ export class DocumentFamilyCache extends EventSubscriber<
 				);
 			}
 		}
-		for (const oid of oidSet) {
-			const entity = this.entities.get(oid);
-			if (entity) {
-				refreshEntity(entity, info);
-				this.emit(`change:${oid}`);
-				this.emit('change:*', oid);
+		if (refreshEntities) {
+			for (const oid of oidSet) {
+				const entity = this.entities.get(oid);
+				if (entity) {
+					refreshEntity(entity, info);
+					this.emit(`change:${oid}`);
+					this.emit('change:*', oid);
+				}
 			}
 		}
 	};
@@ -134,7 +133,14 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 		const info = { isLocal: isLocal || false };
 		this.insertBaselines(baselines, info);
-		this.insertOperations(operations, info);
+		// for reset scenario, don't immediately update entities;
+		// we will update all of them in one go.
+		this.insertOperations(operations, info, !reset);
+		if (reset) {
+			for (const entity of this.entities.values()) {
+				refreshEntity(entity, info);
+			}
+		}
 	};
 
 	private applyOperations = (
@@ -187,32 +193,19 @@ export class DocumentFamilyCache extends EventSubscriber<
 	getEntity = (
 		oid: ObjectIdentifier,
 		schema: StorageFieldSchema,
-		parent?: EntityBase<any, any>,
+		parent?: Entity,
 	): Entity => {
 		let entity = this.entities.get(oid);
 		if (!entity) {
-			const { view } = this.computeView(oid);
-			// FIXME: I dont' like this
-			const isList = Array.isArray(view) || (!view && schema.type === 'array');
-			if (isList) {
-				entity = new ListEntity({
-					oid,
-					cache: this,
-					cacheEvents: this.cacheEvents,
-					fieldSchema: schema,
-					store: this.store,
-					parent,
-				});
-			} else {
-				entity = new ObjectEntity({
-					oid,
-					cache: this,
-					cacheEvents: this.cacheEvents,
-					fieldSchema: schema,
-					store: this.store,
-					parent,
-				});
-			}
+			entity = new Entity({
+				oid,
+				cache: this,
+				cacheEvents: this.cacheEvents,
+				fieldSchema: schema,
+				store: this.store,
+				parent,
+			});
+
 			// immediately add to cache and queue a removal if nobody subscribed
 			this.entities.set(oid, entity);
 			this.enqueueCacheRemoval(oid);
@@ -225,9 +218,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return this.operationsMap.has(oid) || this.baselinesMap.has(oid);
 	};
 
-	private onSubscribed = (entity: EntityBase<any, any>) => {};
+	private onSubscribed = (entity: Entity) => {};
 
-	private onAllUnsubscribed = (entity: EntityBase<any, any>) => {
+	private onAllUnsubscribed = (entity: Entity) => {
 		this.enqueueCacheRemoval(entity.oid);
 	};
 

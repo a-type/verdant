@@ -256,6 +256,7 @@ export interface StorageInitOptions<Presence = any, Profile = any> {
 	 * Provide a log function to log internal debug messages
 	 */
 	log?: (...args: any[]) => void;
+	disableRebasing?: boolean;
 }
 
 /**
@@ -297,7 +298,10 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 				log: init.log,
 				databaseName: metaDbName,
 			});
-			const meta = new Metadata(metaDb, init.schema, { log: init.log });
+			const meta = new Metadata(metaDb, init.schema, {
+				log: init.log,
+				disableRebasing: init.disableRebasing,
+			});
 
 			// verify schema integrity
 			await meta.updateSchema(init.schema);

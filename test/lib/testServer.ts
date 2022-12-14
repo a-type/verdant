@@ -5,7 +5,13 @@ import * as fs from 'fs/promises';
 
 const SECRET = 'notsecret';
 
-export async function startTestServer(log = false) {
+export async function startTestServer({
+	log = false,
+	disableRebasing = false,
+}: {
+	log?: boolean;
+	disableRebasing?: boolean;
+} = {}) {
 	const port = Math.floor(Math.random() * 9000) + 1000;
 	const app = express();
 	const httpServer = createServer(app);
@@ -13,6 +19,7 @@ export async function startTestServer(log = false) {
 	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
 
 	const server = new Server({
+		disableRebasing,
 		databaseFile: dbFileName,
 		tokenSecret: SECRET,
 		profiles: {
@@ -21,7 +28,13 @@ export async function startTestServer(log = false) {
 			},
 		},
 		httpServer,
-		log: log ? (...args: any[]) => console.log('[SERVER]', ...args) : undefined,
+		log: log
+			? (...args: any[]) =>
+					console.log(
+						'[SERVER]',
+						...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
+					)
+			: undefined,
 	});
 
 	const tokenProvider = new TokenProvider({

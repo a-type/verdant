@@ -47,6 +47,10 @@ export interface ServerOptions {
 	 * Supply a logging function to log debug messages.
 	 */
 	log?: (...args: any[]) => void;
+	/**
+	 * Disable history compaction. Storage usage will grow indefinitely. Not recommended.
+	 */
+	disableRebasing?: boolean;
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
@@ -84,6 +88,7 @@ export class Server extends EventEmitter implements MessageSender {
 			profiles: options.profiles || new DefaultProfiles(),
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
 			log: this.log,
+			disableRebasing: options.disableRebasing,
 		});
 
 		this.wss = new WebSocketServer({
@@ -255,7 +260,7 @@ export class Server extends EventEmitter implements MessageSender {
 				setTimeout(() => {
 					console.warn('HTTP server close timed out');
 					resolve();
-				}, 10 * 1000);
+				}, 5 * 1000);
 				this.httpServer.close(() => {
 					resolve();
 					this.log('HTTP server closed');
@@ -265,7 +270,7 @@ export class Server extends EventEmitter implements MessageSender {
 				setTimeout(() => {
 					console.warn('Socket server close timed out');
 					resolve();
-				}, 10 * 1000);
+				}, 5 * 1000);
 				this.wss.close(() => {
 					resolve();
 					this.log('Socket server closed');

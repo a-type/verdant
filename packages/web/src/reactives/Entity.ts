@@ -30,8 +30,8 @@ const REFRESH = '@@refresh';
 const DEEP_CHANGE = '@@deepChange';
 
 interface CacheEvents {
-	onSubscribed: (entity: EntityBase<any, any>) => void;
-	onAllUnsubscribed: (entity: EntityBase<any, any>) => void;
+	onSubscribed: (entity: Entity<any, any>) => void;
+	onAllUnsubscribed: (entity: Entity<any, any>) => void;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -48,7 +48,7 @@ type DataFromInit<Init> = Init extends { [key: string]: any }
 	? Init
 	: any;
 
-export type EntityShape<E extends EntityBase<any, any>> = E extends EntityBase<
+export type EntityShape<E extends Entity<any, any>> = E extends Entity<
 	infer Value,
 	any
 >
@@ -56,7 +56,7 @@ export type EntityShape<E extends EntityBase<any, any>> = E extends EntityBase<
 	: never;
 
 export function refreshEntity(
-	entity: EntityBase<any, any>,
+	entity: Entity<any, any>,
 	info: EntityChangeInfo,
 ) {
 	return entity[REFRESH](info);
@@ -68,17 +68,21 @@ export interface EntityChangeInfo {
 
 type EntityEvents = {
 	change: (info: EntityChangeInfo) => void;
-	changeDeep: (target: Entity, info: EntityChangeInfo) => void;
+	changeDeep: (target: Entity<any, any>, info: EntityChangeInfo) => void;
 	delete: (info: EntityChangeInfo) => void;
 	restore: (info: EntityChangeInfo) => void;
 };
 
 type BaseEntityValue = { [Key: string]: any } | any[];
 
-export abstract class EntityBase<
-	KeyValue extends BaseEntityValue,
-	Snapshot extends any,
-> {
+export class Entity<
+	Init = any,
+	KeyValue extends BaseEntityValue = any,
+	Snapshot extends any = DataFromInit<Init>,
+> implements
+		ObjectEntity<Init, KeyValue, Snapshot>,
+		ListEntity<Init, KeyValue, Snapshot>
+{
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
 
@@ -89,7 +93,7 @@ export abstract class EntityBase<
 	protected readonly keyPath;
 	protected readonly cache: DocumentFamilyCache;
 	protected _deleted = false;
-	protected parent: EntityBase<any, any> | undefined;
+	protected parent: Entity<any, any> | undefined;
 
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
@@ -126,6 +130,10 @@ export abstract class EntityBase<
 		return this._current;
 	}
 
+	get isList() {
+		return Array.isArray(this._current) as any;
+	}
+
 	constructor({
 		oid,
 		store,
@@ -139,7 +147,7 @@ export abstract class EntityBase<
 		cacheEvents: CacheEvents;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
 		cache: DocumentFamilyCache;
-		parent?: EntityBase<any, any>;
+		parent?: Entity<any, any>;
 	}) {
 		this.oid = oid;
 		this.parent = parent;
@@ -168,7 +176,7 @@ export abstract class EntityBase<
 			this.events.emit('delete', info);
 		} else {
 			this.events.emit('change', info);
-			this[DEEP_CHANGE](this as unknown as Entity, info);
+			this[DEEP_CHANGE](this as unknown as Entity<any, any>, info);
 		}
 		if (restored) {
 			this.cachedSnapshot = null;
@@ -176,7 +184,10 @@ export abstract class EntityBase<
 		}
 	};
 
-	private [DEEP_CHANGE] = (source: Entity, info: EntityChangeInfo) => {
+	private [DEEP_CHANGE] = (
+		source: Entity<any, any>,
+		info: EntityChangeInfo,
+	) => {
 		this.cachedSnapshot = null;
 		this.events.emit('changeDeep', source, info);
 		if (this.parent) {
@@ -209,13 +220,13 @@ export abstract class EntityBase<
 		const unsubscribe = this.events.subscribe(event, callback);
 		const isNowSubscribed = this.hasSubscribers;
 		if (wasNotSubscribed && isNowSubscribed) {
-			this.cacheEvents.onSubscribed(this);
+			this.cacheEvents.onSubscribed(this as any);
 		}
 
 		return () => {
 			unsubscribe();
 			if (!this.hasSubscribers) {
-				this.cacheEvents.onAllUnsubscribed(this);
+				this.cacheEvents.onAllUnsubscribed(this as any);
 			}
 		};
 	};
@@ -231,7 +242,10 @@ export abstract class EntityBase<
 		return cloneDeep(this._current);
 	};
 
-	protected getSubObject = (oid: ObjectIdentifier, key: any): Entity => {
+	protected getSubObject = (
+		oid: ObjectIdentifier,
+		key: any,
+	): Entity<any, any> => {
 		const fieldSchema = this.getChildFieldSchema(key);
 		return this.cache.getEntity(oid, fieldSchema, this);
 	};
@@ -288,7 +302,7 @@ export abstract class EntityBase<
 	 * Returns a copy of the entity and all sub-objects as
 	 * a plain object or array.
 	 */
-	getSnapshot = (): Snapshot | null => {
+	getSnapshot = (): any => {
 		if (!this.value) {
 			return null;
 		}
@@ -319,134 +333,16 @@ export abstract class EntityBase<
 		this.cachedSnapshot = snapshot;
 		return snapshot;
 	};
-}
 
-export class ListEntity<
-		ItemInit,
-		ItemValue,
-		ItemSnapshot = DataFromInit<ItemInit>,
-	>
-	extends EntityBase<ItemValue[], ItemSnapshot[]>
-	implements Iterable<ItemValue>
-{
-	private getItemOid = (item: ItemValue) => {
-		const itemOid = maybeGetOid(item);
-		if (!itemOid || !this.cache.hasOid(itemOid)) {
-			throw new Error(
-				`Cannot move object ${JSON.stringify(
-					item,
-				)} which does not exist in this list`,
-			);
-		}
-		return itemOid;
+	/**
+	 * Object methods
+	 */
+	keys = () => {
+		return Object.keys(this.value);
 	};
-
-	get length() {
-		return this.value.length;
-	}
-
-	set = (index: number, value: ItemInit) => {
-		const fieldSchema = this.getChildFieldSchema(index);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
-		this.addPatches(
-			this.store.meta.patchCreator.createSet(
-				this.oid,
-				index,
-				value,
-				this.keyPath,
-			),
-		);
+	entries = () => {
+		return Object.entries(this.getAll());
 	};
-	push = (value: ItemInit) => {
-		const fieldSchema = this.getChildFieldSchema(this.value.length);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
-		this.addPatches(
-			this.store.meta.patchCreator.createListPush(this.oid, value),
-		);
-	};
-	insert = (index: number, value: ItemInit) => {
-		const fieldSchema = this.getChildFieldSchema(index);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
-		this.addPatches(
-			this.store.meta.patchCreator.createListInsert(this.oid, index, value),
-		);
-	};
-	move = (from: number, to: number) => {
-		this.addPatches(
-			this.store.meta.patchCreator.createListMoveByIndex(this.oid, from, to),
-		);
-	};
-	moveItem = (item: ItemValue, to: number) => {
-		this.addPatches(
-			this.store.meta.patchCreator.createListMoveByRef(
-				this.oid,
-				createRef(this.getItemOid(item)),
-				to,
-			),
-		);
-	};
-	delete = (index: number) => {
-		this.addPatches(
-			this.store.meta.patchCreator.createListDelete(this.oid, index),
-		);
-	};
-	remove = (item: ItemValue) => {
-		this.addPatches(
-			this.store.meta.patchCreator.createListRemove(
-				this.oid,
-				createRef(this.getItemOid(item)),
-			),
-		);
-	};
-
-	// list implements an iterator which maps items to wrapped
-	// versions
-	[Symbol.iterator]() {
-		let index = 0;
-		return {
-			next: () => {
-				if (index < this.value.length) {
-					return {
-						value: this.get(index++) as ItemValue,
-						done: false,
-					} as const;
-				}
-				return {
-					value: undefined,
-					done: true,
-				} as const;
-			},
-		};
-	}
-
-	// additional access methods
-
-	private getAsWrapped = (): ItemValue[] => {
-		return this.value.map(this.wrapValue);
-	};
-
-	map = <U>(callback: (value: ItemValue, index: number) => U) => {
-		return this.getAsWrapped().map(callback);
-	};
-
-	filter = (callback: (value: ItemValue, index: number) => boolean) => {
-		return this.getAsWrapped().filter((val, index) => {
-			return callback(val, index);
-		});
-	};
-}
-
-export class ObjectEntity<
-	Init,
-	Value extends BaseEntityValue,
-	Snapshot = DataFromInit<Init>,
-> extends EntityBase<Value, Snapshot> {
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
 		const fieldSchema = this.getChildFieldSchema(key);
 		if (fieldSchema) {
@@ -461,11 +357,14 @@ export class ObjectEntity<
 			),
 		);
 	};
-	remove = (key: string) => {
+	delete = (key: any) => {
 		this.addPatches(this.store.meta.patchCreator.createRemove(this.oid, key));
 	};
+	/** @deprecated - renamed to delete */
+	remove = this.delete.bind(this);
+
 	update = (
-		value: Partial<DataFromInit<Init>>,
+		value: Partial<Snapshot>,
 		{ replaceSubObjects } = {
 			/**
 			 * If true, merged sub-objects will be replaced entirely if there's
@@ -485,6 +384,192 @@ export class ObjectEntity<
 			),
 		);
 	};
+
+	/**
+	 * List methods
+	 */
+	private getItemOid = (item: ListItemValue<KeyValue>) => {
+		const itemOid = maybeGetOid(item);
+		if (!itemOid || !this.cache.hasOid(itemOid)) {
+			throw new Error(
+				`Cannot move object ${JSON.stringify(
+					item,
+				)} which does not exist in this list`,
+			);
+		}
+		return itemOid;
+	};
+
+	get length() {
+		return this.value.length;
+	}
+
+	push = (value: ListItemInit<Init>) => {
+		const fieldSchema = this.getChildFieldSchema(this.value.length);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
+		this.addPatches(
+			this.store.meta.patchCreator.createListPush(this.oid, value),
+		);
+	};
+	insert = (index: number, value: ListItemInit<Init>) => {
+		const fieldSchema = this.getChildFieldSchema(index);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
+		this.addPatches(
+			this.store.meta.patchCreator.createListInsert(this.oid, index, value),
+		);
+	};
+	move = (from: number, to: number) => {
+		this.addPatches(
+			this.store.meta.patchCreator.createListMoveByIndex(this.oid, from, to),
+		);
+	};
+	moveItem = (item: ListItemValue<KeyValue>, to: number) => {
+		this.addPatches(
+			this.store.meta.patchCreator.createListMoveByRef(
+				this.oid,
+				createRef(this.getItemOid(item)),
+				to,
+			),
+		);
+	};
+	removeAll = (item: ListItemValue<KeyValue>) => {
+		this.addPatches(
+			this.store.meta.patchCreator.createListRemove(
+				this.oid,
+				createRef(this.getItemOid(item)),
+			),
+		);
+	};
+	removeFirst = (item: ListItemValue<KeyValue>) => {
+		this.addPatches(
+			this.store.meta.patchCreator.createListRemove(
+				this.oid,
+				createRef(this.getItemOid(item)),
+				'first',
+			),
+		);
+	};
+	removeLast = (item: ListItemValue<KeyValue>) => {
+		this.addPatches(
+			this.store.meta.patchCreator.createListRemove(
+				this.oid,
+				createRef(this.getItemOid(item)),
+				'last',
+			),
+		);
+	};
+
+	// list implements an iterator which maps items to wrapped
+	// versions
+	[Symbol.iterator]() {
+		let index = 0;
+		return {
+			next: () => {
+				if (index < this.value.length) {
+					return {
+						value: this.get(index++) as ListItemValue<KeyValue>,
+						done: false,
+					} as const;
+				}
+				return {
+					value: undefined,
+					done: true,
+				} as const;
+			},
+		};
+	}
+
+	// additional access methods
+
+	private getAsWrapped = (): ListItemValue<KeyValue>[] => {
+		return this.value.map(this.wrapValue);
+	};
+
+	map = <U>(callback: (value: ListItemValue<KeyValue>, index: number) => U) => {
+		return this.getAsWrapped().map(callback);
+	};
+
+	filter = (
+		callback: (value: ListItemValue<KeyValue>, index: number) => boolean,
+	) => {
+		return this.getAsWrapped().filter((val, index) => {
+			return callback(val, index);
+		});
+	};
 }
 
-export type Entity = ListEntity<any, any, any> | ObjectEntity<any, any, any>;
+export interface BaseEntity<
+	Init,
+	Value extends BaseEntityValue,
+	Snapshot = DataFromInit<Init>,
+> {
+	dispose: () => void;
+	subscribe<EventName extends keyof EntityEvents>(
+		event: EventName,
+		callback: EntityEvents[EventName],
+	): () => void;
+	get<Key extends keyof Value>(key: Key): Value[Key];
+	getAll(): Value;
+	getSnapshot(): Snapshot;
+	readonly deleted: boolean;
+	readonly hasSubscribers: boolean;
+}
+
+export interface ObjectEntity<
+	Init,
+	Value extends BaseEntityValue,
+	Snapshot = DataFromInit<Init>,
+> extends BaseEntity<Init, Value, Snapshot> {
+	keys(): string[];
+	entries(): [string, Value[keyof Value]][];
+	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
+	delete(key: keyof Value): void;
+	update(
+		value: Partial<Snapshot>,
+		options: { replaceSubObjects: boolean },
+	): void;
+	readonly isList: false;
+}
+
+export interface ListEntity<
+	Init,
+	Value extends BaseEntityValue,
+	Snapshot = DataFromInit<Init>,
+> extends Iterable<ListItemValue<Value>>,
+		BaseEntity<Init, Value, Snapshot> {
+	readonly isList: true;
+	readonly length: number;
+	push(value: ListItemInit<Init>): void;
+	insert(index: number, value: ListItemInit<Init>): void;
+	move(from: number, to: number): void;
+	moveItem(item: ListItemValue<Value>, to: number): void;
+	removeAll(item: ListItemValue<Value>): void;
+	removeFirst(item: ListItemValue<Value>): void;
+	removeLast(item: ListItemValue<Value>): void;
+	map<U>(callback: (value: ListItemValue<Value>, index: number) => U): U[];
+	filter(
+		callback: (value: ListItemValue<Value>, index: number) => boolean,
+	): ListItemValue<Value>[];
+	delete(index: number): void;
+}
+
+export type PolymorphicEntity<
+	Init,
+	KeyValue extends BaseEntityValue,
+	Snapshot extends any,
+> =
+	| ListEntity<Init, KeyValue, Snapshot>
+	| ObjectEntity<Init, KeyValue, Snapshot>;
+
+type AnyEntityValue<Shape> = Shape extends Array<infer T>
+	? T
+	: Shape extends Record<any, any>
+	? Shape[keyof Shape]
+	: never;
+type ListItemValue<KeyValue> = KeyValue extends Array<infer T> ? T : never;
+type ListItemSnapshot<Snapshot> = Snapshot extends Array<infer T> ? T : never;
+type ListItemInit<Init> = Init extends Array<infer T> ? T : never;

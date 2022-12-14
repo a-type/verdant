@@ -154,7 +154,11 @@ export class PatchCreator {
 		}
 	};
 
-	createListRemove = (oid: ObjectIdentifier, value: any): Operation[] => {
+	createListRemove = (
+		oid: ObjectIdentifier,
+		value: any,
+		only?: 'first' | 'last',
+	): Operation[] => {
 		return [
 			{
 				oid,
@@ -162,6 +166,7 @@ export class PatchCreator {
 				data: {
 					op: 'list-remove',
 					value,
+					only,
 				},
 			},
 		];

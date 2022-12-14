@@ -82,12 +82,32 @@ export async function waitForBaselineCount(client: Client, count = 1) {
 	});
 }
 
-export async function waitForCondition(condition: () => boolean) {
-	await new Promise<void>((resolve) => {
-		setInterval(() => {
-			if (condition()) {
-				resolve();
+export async function waitForCondition(
+	condition: () => boolean | Promise<boolean>,
+	timeout?: number,
+) {
+	await new Promise<void>((resolve, reject) => {
+		if (timeout) {
+			setTimeout(() => {
+				reject(new Error('Timed out waiting for condition'));
+			}, timeout);
+		}
+
+		async function run() {
+			try {
+				let result = condition();
+				if (result instanceof Promise) {
+					result = await result;
+				}
+				if (result) {
+					resolve();
+				} else {
+					setTimeout(run, 300);
+				}
+			} catch (e) {
+				reject(e);
 			}
-		}, 300);
+		}
+		run();
 	});
 }

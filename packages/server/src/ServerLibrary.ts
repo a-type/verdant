@@ -31,6 +31,7 @@ export class ServerLibrary {
 	private operations;
 	private baselines;
 	private presences = new Presence();
+	private disableRebasing: boolean;
 
 	private log: (...args: any[]) => void;
 	constructor({
@@ -40,6 +41,7 @@ export class ServerLibrary {
 		id,
 		replicaTruancyMinutes,
 		log = () => {},
+		disableRebasing,
 	}: {
 		db: Database;
 		sender: MessageSender;
@@ -47,9 +49,11 @@ export class ServerLibrary {
 		id: string;
 		replicaTruancyMinutes: number;
 		log?: (...args: any[]) => void;
+		disableRebasing?: boolean;
 	}) {
 		this.db = db;
 		this.log = log;
+		this.disableRebasing = !!disableRebasing;
 		this.sender = sender;
 		this.profiles = profiles;
 		this.id = id;
@@ -200,18 +204,6 @@ export class ServerLibrary {
 			return;
 		}
 
-		// store all incoming operations and baselines
-		this.baselines.insertAll(message.baselines);
-
-		this.log('Storing', message.operations.length, 'operations');
-		this.operations.insertAll(replicaId, message.operations);
-		this.rebroadcastOperations(
-			clientKey,
-			message.replicaId,
-			message.operations,
-			message.baselines,
-		);
-
 		if (message.resyncAll) {
 			// forget our local understanding of the replica and reset it
 			this.replicas.delete(replicaId);
@@ -219,12 +211,6 @@ export class ServerLibrary {
 
 		const { status, replicaInfo: clientReplicaInfo } =
 			this.replicas.getOrCreate(replicaId, info);
-
-		if (status === 'truant') {
-			this.log('A truant replica has reconnected', replicaId);
-		}
-
-		// respond to client
 
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
@@ -248,6 +234,47 @@ export class ServerLibrary {
 		const isEmptyLibrary =
 			changesSince === null && ops.length === 0 && baselines.length === 0;
 
+		const overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
+		if (overwriteLocalData) {
+			this.log(
+				'Overwriting local data for replica',
+				replicaId,
+				'with',
+				baselines.length,
+				'baselines and',
+				ops.length,
+				'operations',
+			);
+		}
+
+		// only write incoming replica data to storage if
+		// we are not overwriting the replica's data
+		if (!overwriteLocalData) {
+			// store all incoming operations and baselines
+			this.baselines.insertAll(message.baselines);
+
+			this.log(
+				'Storing',
+				message.baselines.length,
+				'baselines and',
+				message.operations.length,
+				'operations',
+			);
+			this.operations.insertAll(replicaId, message.operations);
+			this.rebroadcastOperations(
+				clientKey,
+				message.replicaId,
+				message.operations,
+				message.baselines,
+			);
+		}
+
+		if (status === 'truant') {
+			this.log('A truant replica has reconnected', replicaId);
+		}
+
+		// respond to client
+
 		this.sender.send(this.id, clientKey, {
 			type: 'sync-resp',
 			operations: ops.map(this.removeExtraOperationData),
@@ -261,7 +288,7 @@ export class ServerLibrary {
 			// only request the client to overwrite local data if a reset is requested
 			// and there is data to overwrite it. otherwise the client may still
 			// send its own history to us.
-			overwriteLocalData: replicaShouldReset && !isEmptyLibrary,
+			overwriteLocalData,
 			ackedTimestamp: message.timestamp,
 		});
 	};
@@ -292,12 +319,16 @@ export class ServerLibrary {
 
 	private pendingRebaseTimeout: NodeJS.Timeout | null = null;
 	private enqueueRebase = () => {
+		if (this.disableRebasing) return;
+
 		if (!this.pendingRebaseTimeout) {
 			setTimeout(this.rebase, 0);
 		}
 	};
 
 	private rebase = () => {
+		if (this.disableRebasing) return;
+
 		this.log('Performing rebase check');
 
 		// fundamentally a rebase occurs when some conditions are met:
@@ -418,6 +449,7 @@ export class ServerLibraryManager {
 	private replicaTruancyMinutes;
 	private cache = new Map<string, ServerLibrary>();
 	private log: (...args: any[]) => void;
+	private disableRebasing: boolean;
 
 	constructor({
 		db,
@@ -425,18 +457,21 @@ export class ServerLibraryManager {
 		profileLoader,
 		replicaTruancyMinutes,
 		log,
+		disableRebasing = false,
 	}: {
 		db: Database;
 		sender: MessageSender;
 		profileLoader: UserProfileLoader<any>;
 		replicaTruancyMinutes: number;
 		log: (...args: any[]) => void;
+		disableRebasing?: boolean;
 	}) {
 		this.db = db;
 		this.log = log;
 		this.sender = sender;
 		this.profileLoader = profileLoader;
 		this.replicaTruancyMinutes = replicaTruancyMinutes;
+		this.disableRebasing = disableRebasing;
 	}
 
 	open = (id: string) => {
@@ -450,6 +485,7 @@ export class ServerLibraryManager {
 					id,
 					replicaTruancyMinutes: this.replicaTruancyMinutes,
 					log: this.log,
+					disableRebasing: this.disableRebasing,
 				}),
 			);
 		}

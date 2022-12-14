@@ -414,10 +414,14 @@ class WebSocketSync
 	private meta: Metadata;
 	readonly presence: PresenceManager;
 	private socket: WebSocket | null = null;
-	private messageQueue: ClientMessage[] = [];
+	// messages awaiting websocket connection to send
+	private connectQueue: ClientMessage[] = [];
+	// messages awaiting sync response to send
+	private syncQueue: ClientMessage[] = [];
 	private endpointProvider;
 	private _status: 'active' | 'paused' = 'paused';
 	private synced = false;
+	private hasStartedSync = false;
 
 	readonly mode = 'realtime';
 	private log = (...args: any[]) => {};
@@ -454,12 +458,12 @@ class WebSocketSync
 			throw new Error('Invalid sync state: online but socket is null');
 		}
 		this.synced = false;
-		if (this.messageQueue.length) {
-			for (const msg of this.messageQueue) {
+		if (this.connectQueue.length) {
+			for (const msg of this.connectQueue) {
 				this.log('Sending queued message', JSON.stringify(msg, null, 2));
 				this.socket.send(JSON.stringify(msg));
 			}
-			this.messageQueue = [];
+			this.connectQueue = [];
 		}
 		this.log('Sync connected');
 		this.onOnlineChange(true);
@@ -469,8 +473,13 @@ class WebSocketSync
 	private onOnlineChange = async (online: boolean) => {
 		this.log('Socket online change', online);
 		if (!online) {
+			this.hasStartedSync = false;
+			this.synced = false;
 			this.heartbeat.stop();
 		} else {
+			this.log('Starting sync');
+			this.hasStartedSync = true;
+			this.synced = false;
 			this.send(await this.meta.messageCreator.createSyncStep1());
 			this.send(
 				await this.meta.messageCreator.createPresenceUpdate(
@@ -484,12 +493,23 @@ class WebSocketSync
 
 	private onMessage = (event: MessageEvent) => {
 		const message = JSON.parse(event.data) as ServerMessage;
+		if (message.type === 'sync-resp') {
+			this.hasStartedSync = true;
+			this.synced = true;
+			if (this.syncQueue.length) {
+				for (const msg of this.syncQueue) {
+					this.send(msg);
+				}
+				this.syncQueue = [];
+			}
+		} else if (!this.synced && !message.type.startsWith('presence')) {
+			// TODO: clean this up ^^^^
+			// ignore incoming messages until synced.
+			return;
+		}
 		this.emit('message', message);
 		if (message.type === 'heartbeat-response') {
 			this.heartbeat.keepAlive();
-		}
-		if (message.type === 'sync-resp') {
-			this.synced = true;
 		}
 	};
 
@@ -525,21 +545,41 @@ class WebSocketSync
 		this.start();
 	};
 
+	private canSkipSyncWait = (message: ClientMessage) => {
+		return message.type === 'sync' || message.type === 'presence-update';
+	};
+
 	send = (message: ClientMessage) => {
-		// ignore new messages until synced
-		if (
-			!this.synced &&
-			message.type !== 'sync' &&
-			message.type !== 'presence-update'
-		) {
+		if (this.status !== 'active') return;
+
+		// wait until a sync has started before doing anything other than sync.
+		// new "op" messages can arrive before sync has started, so we need to wait
+		if (!this.hasStartedSync && !this.canSkipSyncWait(message)) {
 			return;
 		}
 
-		if (this.socket?.readyState === WebSocket.OPEN) {
-			this.log('Sending message', JSON.stringify(message, null, 2));
-			this.socket.send(JSON.stringify(message));
-		} else if (this._status === 'active') {
-			this.messageQueue.push(message);
+		if (this.canSkipSyncWait(message)) {
+			if (this.socket?.readyState === WebSocket.OPEN) {
+				this.log('Sending message', JSON.stringify(message, null, 2));
+				this.socket!.send(JSON.stringify(message));
+			} else {
+				this.log(
+					'Enqueueing message until socket is open',
+					JSON.stringify(message, null, 2),
+				);
+				this.connectQueue.push(message);
+			}
+		} else if (this.synced) {
+			if (this.socket?.readyState === WebSocket.OPEN) {
+				this.log('Sending message', JSON.stringify(message, null, 2));
+				this.socket.send(JSON.stringify(message));
+			}
+		} else if (this.hasStartedSync) {
+			this.log(
+				'Enqueueing message until synced',
+				JSON.stringify(message, null, 2),
+			);
+			this.syncQueue.push(message);
 		}
 	};
 

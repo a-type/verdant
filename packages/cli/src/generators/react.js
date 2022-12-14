@@ -14,7 +14,7 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			UserInfo,
 			ObjectEntity,
 			ListEntity,
-			EntityBase,
+			Entity,
 			AccessibleEntityProperty,
 			EntityShape,
 		} from '@lo-fi/web';
@@ -36,11 +36,11 @@ export interface GeneratedHooks<Presence, Profile> {
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
-	useWatch<T extends EntityBase<any> | null>(
+	useWatch<T extends Entity<any, any> | null>(
 		entity: T,
-	): T extends EntityBase<any> ? EntityShape<T> : T;
+	): T extends Entity<any, any> ? EntityShape<T> : T;
 	useWatch<
-		T extends EntityBase<any> | null,
+		T extends Entity<any, any> | null,
 		P extends AccessibleEntityProperty<EntityShape<T>>,
 	>(
 		entity: T,

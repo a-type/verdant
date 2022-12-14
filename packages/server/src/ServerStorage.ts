@@ -11,6 +11,7 @@ interface ServerStorageOptions {
 	profiles: UserProfiles<any>;
 	replicaTruancyMinutes: number;
 	log?: (...args: any[]) => void;
+	disableRebasing?: boolean;
 }
 
 export class ServerStorage {
@@ -24,6 +25,7 @@ export class ServerStorage {
 		sender,
 		profiles,
 		replicaTruancyMinutes,
+		disableRebasing = false,
 		log = () => {},
 	}: ServerStorageOptions) {
 		this.db = db;
@@ -36,6 +38,7 @@ export class ServerStorage {
 			profileLoader: this.profileLoader,
 			replicaTruancyMinutes,
 			log,
+			disableRebasing,
 		});
 	}
 

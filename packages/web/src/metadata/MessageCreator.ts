@@ -70,6 +70,8 @@ export class MessageCreator {
 			},
 			{
 				after: provideChangesSince,
+				// block on writes to prevent race conditions
+				mode: 'readwrite',
 			},
 		);
 		// we only need to send baselines if we've never synced before

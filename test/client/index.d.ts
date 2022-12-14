@@ -72,7 +72,7 @@ type ItemContent = string;
 type ItemContentInit = ItemContent | undefined;
 type ItemContentSnapshot = ItemContent;
 type ItemContentDestructured = ItemContent;
-export type ItemTags = ListEntity<ItemTagsItemInit, ItemTagsItem>;
+export type ItemTags = ListEntity<ItemTagsInit, ItemTagsDestructured>;
 export type ItemTagsInit = Array<ItemTagsItemInit>;
 export type ItemTagsDestructured = Array<ItemTagsItem>;
 export type ItemTagsSnapshot = Array<ItemTagsItemSnapshot>;
@@ -88,7 +88,10 @@ type ItemCategoryId = string | null;
 type ItemCategoryIdInit = ItemCategoryId | undefined;
 type ItemCategoryIdSnapshot = ItemCategoryId;
 type ItemCategoryIdDestructured = ItemCategoryId;
-export type ItemComments = ListEntity<ItemCommentsItemInit, ItemCommentsItem>;
+export type ItemComments = ListEntity<
+  ItemCommentsInit,
+  ItemCommentsDestructured
+>;
 export type ItemCommentsInit = Array<ItemCommentsItemInit>;
 export type ItemCommentsDestructured = Array<ItemCommentsItem>;
 export type ItemCommentsSnapshot = Array<ItemCommentsItemSnapshot>;
@@ -215,12 +218,7 @@ export class Client<Presence = any, Profile = any> {
 
 // schema is provided internally. loadInitialData must be revised to pass the typed Client
 interface ClientInitOptions<Presence = any, Profile = any>
-  extends Omit<
-    StorageInitOptions<Presence, Profile>,
-    "schema" | "loadInitialData"
-  > {
-  loadInitialData?: (client: Client) => Promise<void>;
-}
+  extends Omit<StorageInitOptions<Presence, Profile>, "schema"> {}
 
 export class ClientDescriptor<Presence = any, Profile = any> {
   constructor(init: ClientInitOptions<Presence, Profile>);

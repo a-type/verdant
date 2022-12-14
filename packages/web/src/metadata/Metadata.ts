@@ -36,13 +36,17 @@ export class Metadata extends EventSubscriber<{
 	readonly patchCreator;
 	readonly time = new HybridLogicalClockTimestampProvider();
 	private readonly log = (...args: any[]) => {};
+	private readonly disableRebasing: boolean = false;
 
 	private _closing = false;
 
 	constructor(
 		private readonly db: IDBDatabase,
 		schemaDefinition: StorageSchema<any>,
-		{ log }: { log?: (...args: any[]) => void } = {},
+		{
+			log,
+			disableRebasing,
+		}: { log?: (...args: any[]) => void; disableRebasing?: boolean } = {},
 	) {
 		super();
 		this.schema = new SchemaStore(db, schemaDefinition.version);
@@ -53,6 +57,7 @@ export class Metadata extends EventSubscriber<{
 		this.messageCreator = new MessageCreator(this);
 		this.patchCreator = new PatchCreator(() => this.now);
 		if (log) this.log = log;
+		if (disableRebasing) this.disableRebasing = disableRebasing;
 	}
 
 	get now() {
@@ -237,6 +242,8 @@ export class Metadata extends EventSubscriber<{
 	};
 
 	private tryAutonomousRebase = async () => {
+		if (this.disableRebasing) return;
+
 		const localReplicaInfo = await this.localReplica.get();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
 		// but if we have never synced... we can rebase everything!
@@ -389,7 +396,9 @@ export class Metadata extends EventSubscriber<{
 
 	setGlobalAck = async (timestamp: string) => {
 		await this.ackInfo.setGlobalAck(timestamp);
-		await this.runRebase(timestamp);
+		if (!this.disableRebasing) {
+			await this.runRebase(timestamp);
+		}
 	};
 
 	stats = async () => {
