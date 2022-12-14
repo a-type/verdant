@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.7.2
+
+### Patch Changes
+
+- b03fa61: Refactor for sync stability
+
 ## 1.7.1
 
 ### Patch Changes

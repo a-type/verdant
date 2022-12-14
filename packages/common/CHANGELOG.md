@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.4.3
+
+### Patch Changes
+
+- b03fa61: Refactor for sync stability
+
 ## 1.4.2
 
 ### Patch Changes
