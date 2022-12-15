@@ -557,7 +557,7 @@ export interface ListEntity<
 	delete(index: number): void;
 }
 
-export type PolymorphicEntity<
+export type AnyEntity<
 	Init,
 	KeyValue extends BaseEntityValue,
 	Snapshot extends any,
@@ -565,11 +565,13 @@ export type PolymorphicEntity<
 	| ListEntity<Init, KeyValue, Snapshot>
 	| ObjectEntity<Init, KeyValue, Snapshot>;
 
-type AnyEntityValue<Shape> = Shape extends Array<infer T>
-	? T
-	: Shape extends Record<any, any>
-	? Shape[keyof Shape]
-	: never;
 type ListItemValue<KeyValue> = KeyValue extends Array<infer T> ? T : never;
-type ListItemSnapshot<Snapshot> = Snapshot extends Array<infer T> ? T : never;
 type ListItemInit<Init> = Init extends Array<infer T> ? T : never;
+
+export type EntityDestructured<T extends AnyEntity<any, any, any> | null> =
+	| (T extends ListEntity<any, infer KeyValue, any>
+			? KeyValue
+			: T extends ObjectEntity<any, infer KeyValue, any>
+			? KeyValue
+			: never)
+	| (T extends null ? null : never);

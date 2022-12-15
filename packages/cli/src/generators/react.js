@@ -17,6 +17,8 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			Entity,
 			AccessibleEntityProperty,
 			EntityShape,
+			AnyEntity,
+			EntityDestructured,
 		} from '@lo-fi/web';
 
 export interface GeneratedHooks<Presence, Profile> {
@@ -36,16 +38,16 @@ export interface GeneratedHooks<Presence, Profile> {
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
-	useWatch<T extends Entity<any, any> | null>(
-		entity: T,
-	): T extends Entity<any, any> ? EntityShape<T> : T;
-	useWatch<
-		T extends Entity<any, any> | null,
-		P extends AccessibleEntityProperty<EntityShape<T>>,
-	>(
-		entity: T,
-		props: P,
-	): EntityShape<T>[P];
+	useWatch<T extends AnyEntity<any, any, any> | null>(
+    entity: T
+  ): EntityDestructured<T>;
+  useWatch<
+    T extends AnyEntity<any, any, any> | null,
+    P extends AccessibleEntityProperty<EntityShape<T>>
+  >(
+    entity: T,
+    props: P
+  ): EntityDestructured<T>[P];
 	useCanUndo(): boolean;
 	useCanRedo(): boolean;
 	/**
