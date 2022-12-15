@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.7.3
+
+### Patch Changes
+
+- a7113ed: fix useWatch typings
+
 ## 1.7.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.6.7
+
+### Patch Changes
+
+- a7113ed: fix useWatch typings
+
 ## 1.6.6
 
 ### Patch Changes
