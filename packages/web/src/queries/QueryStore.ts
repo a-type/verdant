@@ -1,4 +1,5 @@
 import { createOid, hashObject, ObjectIdentifier } from '@lo-fi/common';
+import { Context } from '../context.js';
 import { storeRequestPromise } from '../idb.js';
 import { BaseQuery, Query } from './Query.js';
 
@@ -19,20 +20,14 @@ export interface BaseQueryStore<QueryType extends BaseQuery<any>> {
 }
 
 export class QueryStore<Result> implements BaseQueryStore<Query> {
-	private log: (...args: any[]) => void;
 	private _disposed = false;
 	constructor(
-		private db: IDBDatabase,
 		private hydrator: (oid: ObjectIdentifier) => Promise<Result>,
-		config: {
-			log?: (...args: any[]) => void;
-		},
-	) {
-		this.log = config.log || (() => {});
-	}
+		private context: Context,
+	) {}
 
 	private getStore = (collection: string, write?: boolean) => {
-		return this.db
+		return this.context.documentDb
 			.transaction(collection, write ? 'readwrite' : 'readonly')
 			.objectStore(collection);
 	};
@@ -84,7 +79,7 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 						: null;
 				} catch (error) {
 					if (error instanceof Error && error.name === 'InvalidStateError') {
-						this.log('Query failed with InvalidStateError', error);
+						this.context.log('Query failed with InvalidStateError', error);
 						return null;
 					} else {
 						throw error;
@@ -125,7 +120,7 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 					return Promise.all(oids.map((oid) => this.hydrator(oid)));
 				} catch (error) {
 					if (error instanceof Error && error.name === 'InvalidStateError') {
-						this.log('Query failed with InvalidStateError', error);
+						this.context.log('Query failed with InvalidStateError', error);
 						return null;
 					} else {
 						throw error;
@@ -138,5 +133,9 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 
 	dispose = () => {
 		this._disposed = true;
+	};
+
+	setContext = (context: Context) => {
+		this.context = context;
 	};
 }

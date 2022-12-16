@@ -69,3 +69,20 @@ export function getSizeOfObjectStore(
 		};
 	});
 }
+
+export function getAllFromObjectStores(db: IDBDatabase, stores: string[]) {
+	const transaction = db.transaction(stores, 'readonly');
+	const promises = stores.map((store) => {
+		const objectStore = transaction.objectStore(store);
+		return storeRequestPromise(objectStore.getAll());
+	});
+	return Promise.all(promises);
+}
+
+export async function closeDatabase(db: IDBDatabase) {
+	db.close();
+	// wait for microtask queue to clear
+	await new Promise<void>((resolve, reject) => {
+		resolve();
+	});
+}

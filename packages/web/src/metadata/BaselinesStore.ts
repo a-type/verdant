@@ -104,13 +104,17 @@ export class BaselinesStore extends IDBService {
 		);
 	};
 
-	setAll = async <T>(baselines: DocumentBaseline<T>[]) => {
+	setAll = async <T>(
+		baselines: DocumentBaseline<T>[],
+		{ transaction }: { transaction?: IDBTransaction } = {},
+	) => {
 		await this.runAll(
 			'baselines',
 			(store) => {
 				return baselines.map((baseline) => store.put(baseline));
 			},
 			'readwrite',
+			transaction,
 		);
 	};
 

@@ -1,13 +1,11 @@
 import { CollectionFilter, StorageSchema } from '@lo-fi/common';
+import { Context } from '../context.js';
 import { Query } from './Query.js';
 import { BaseQueryStore } from './QueryStore.js';
 import { getRange } from './ranges.js';
 
 export class QueryMaker<Result, Store extends BaseQueryStore<Query>> {
-	constructor(
-		private readonly queryStore: Store,
-		private readonly schema: StorageSchema<any>,
-	) {}
+	constructor(private readonly queryStore: Store, private context: Context) {}
 
 	get = (collection: string, primaryKey: string): Query<Result> => {
 		return this.queryStore.get({
@@ -37,6 +35,10 @@ export class QueryMaker<Result, Store extends BaseQueryStore<Query>> {
 	};
 
 	private getRange = (collection: string, index?: CollectionFilter) => {
-		return getRange(this.schema, collection, index);
+		return getRange(this.context.schema, collection, index);
+	};
+
+	setContext = (context: Context) => {
+		this.context = context;
 	};
 }

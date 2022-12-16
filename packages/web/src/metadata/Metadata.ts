@@ -17,11 +17,23 @@ import {
 } from '@lo-fi/common';
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
-import { getSizeOfObjectStore } from '../idb.js';
-import { LocalReplicaStore } from './LocalReplicaStore.js';
+import {
+	getAllFromObjectStores,
+	getSizeOfObjectStore,
+	storeRequestPromise,
+} from '../idb.js';
+import { LocalReplicaInfo, LocalReplicaStore } from './LocalReplicaStore.js';
 import { MessageCreator } from './MessageCreator.js';
 import { ClientOperation, OperationsStore } from './OperationsStore.js';
 import { SchemaStore } from './SchemaStore.js';
+import { Context } from '../context.js';
+
+export interface ExportData {
+	operations: Operation[];
+	baselines: DocumentBaseline[];
+	localReplica: LocalReplicaInfo;
+	schema: StorageSchema;
+}
 
 export class Metadata extends EventSubscriber<{
 	message: (message: ClientMessage) => void;
@@ -31,34 +43,46 @@ export class Metadata extends EventSubscriber<{
 	readonly baselines;
 	readonly localReplica;
 	readonly ackInfo;
-	readonly schema;
 	readonly messageCreator;
 	readonly patchCreator;
+	readonly schema;
 	readonly time = new HybridLogicalClockTimestampProvider();
-	private readonly log = (...args: any[]) => {};
-	private readonly disableRebasing: boolean = false;
 
+	private readonly disableRebasing: boolean = false;
 	private _closing = false;
 
-	constructor(
-		private readonly db: IDBDatabase,
-		schemaDefinition: StorageSchema<any>,
-		{
-			log,
-			disableRebasing,
-		}: { log?: (...args: any[]) => void; disableRebasing?: boolean } = {},
-	) {
+	private context: Omit<Context, 'documentDb'>;
+
+	constructor({
+		disableRebasing,
+		context,
+	}: {
+		disableRebasing?: boolean;
+		context: Omit<Context, 'documentDb'>;
+	}) {
 		super();
-		this.schema = new SchemaStore(db, schemaDefinition.version);
+		this.context = context;
+		this.schema = new SchemaStore(context.metaDb, context.schema.version);
 		this.operations = new OperationsStore(this.db);
 		this.baselines = new BaselinesStore(this.db);
 		this.localReplica = new LocalReplicaStore(this.db);
 		this.ackInfo = new AckInfoStore(this.db);
 		this.messageCreator = new MessageCreator(this);
 		this.patchCreator = new PatchCreator(() => this.now);
-		if (log) this.log = log;
 		if (disableRebasing) this.disableRebasing = disableRebasing;
 	}
+
+	private get db() {
+		return this.context.metaDb;
+	}
+
+	private get log() {
+		return this.context.log;
+	}
+
+	setContext = (context: Context) => {
+		this.context = context;
+	};
 
 	get now() {
 		return this.time.now(this.schema.currentVersion);
@@ -399,6 +423,48 @@ export class Metadata extends EventSubscriber<{
 		if (!this.disableRebasing) {
 			await this.runRebase(timestamp);
 		}
+	};
+
+	export = async (): Promise<ExportData> => {
+		const db = this.db;
+		const [baselines, operations] = await getAllFromObjectStores(db, [
+			'baselines',
+			'operations',
+		]);
+		const localReplica = await this.localReplica.get();
+		const schema = await this.schema.get();
+		if (!schema) {
+			throw new Error('Cannot export Client data before initializing');
+		}
+		return {
+			operations,
+			baselines,
+			localReplica,
+			schema,
+		};
+	};
+
+	/**
+	 * Resets local metadata and clears operation/baseline stores.
+	 * DOES NOT add operations/baselines - this should be done
+	 * through the normal higher level systems.
+	 */
+	resetFrom = async (data: ExportData) => {
+		const db = this.db;
+		const transaction = db.transaction(
+			['baselines', 'operations', 'info'],
+			'readwrite',
+		);
+		await storeRequestPromise(transaction.objectStore('baselines').clear());
+		await storeRequestPromise(transaction.objectStore('operations').clear());
+		await storeRequestPromise(transaction.objectStore('info').clear());
+		await this.localReplica.update(
+			{
+				ackedLogicalTime: data.localReplica.ackedLogicalTime,
+				lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
+			},
+			{ transaction },
+		);
 	};
 
 	stats = async () => {

@@ -13,7 +13,7 @@ const cleanupClients: Client[] = [];
 
 let server: { port: number; cleanup: () => Promise<void> };
 beforeAll(async () => {
-	server = await startTestServer();
+	server = await startTestServer({ log: true });
 });
 
 afterAll(async () => {
@@ -32,7 +32,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
@@ -62,8 +62,16 @@ it('can sync multiple clients even if they go offline', async () => {
 	const a_unknownItemChanged = vitest.fn();
 	a_unknownItem.subscribe('change', a_unknownItemChanged);
 
-	// bring all clients online
+	await clientA.entities.flushPatches();
+
+	// bring all clients online - but A must come up first to populate data.
 	clientA.sync.start();
+	await new Promise<void>((resolve) => {
+		clientA.sync.subscribe('onlineChange', (isOnline) => {
+			if (isOnline) resolve();
+		});
+	});
+
 	clientB.sync.start();
 	clientC.sync.start();
 

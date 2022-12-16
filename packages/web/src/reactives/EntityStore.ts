@@ -17,6 +17,7 @@ import {
 	Operation,
 	StorageSchema,
 } from '@lo-fi/common';
+import { Context } from '../context.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { UndoHistory } from '../UndoHistory.js';
@@ -27,44 +28,52 @@ export class EntityStore extends EventSubscriber<{
 }> {
 	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
 
-	private readonly db;
-	private readonly schema;
-	public readonly meta;
-	public readonly undoHistory;
-	private log;
+	public meta;
 	private operationBatcher;
+
+	private context: Context;
 
 	private unsubscribes: (() => void)[] = [];
 
 	private _disposed = false;
 
+	private get log() {
+		return this.context.log;
+	}
+	private get db() {
+		return this.context.documentDb;
+	}
+	private get undoHistory() {
+		return this.context.undoHistory;
+	}
+	private get schema() {
+		return this.context.schema;
+	}
+
 	constructor({
-		db,
-		schema,
+		context,
 		meta,
-		undoHistory,
 		batchTimeout = 200,
-		log = () => {},
 	}: {
-		db: IDBDatabase;
-		schema: StorageSchema;
+		context: Context;
 		meta: Metadata;
-		undoHistory: UndoHistory;
 		batchTimeout?: number;
-		log?: (...args: any[]) => void;
 	}) {
 		super();
-		this.db = db;
-		this.schema = schema;
+
+		this.context = context;
+
 		this.meta = meta;
-		this.undoHistory = undoHistory;
-		this.log = log;
 		this.operationBatcher = new Batcher(this.flushOperations, {
 			max: 100,
 			timeout: batchTimeout,
 		});
 		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
 	}
+
+	setContext = (context: Context) => {
+		this.context = context;
+	};
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
 		const { collection } = decomposeOid(oid);

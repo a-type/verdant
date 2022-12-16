@@ -222,8 +222,9 @@ export class OperationsStore extends IDBService {
 	 */
 	addOperations = async (
 		patches: ClientOperation[],
+		{ transaction }: { transaction?: IDBTransaction } = {},
 	): Promise<ObjectIdentifier[]> => {
-		return this.insert(patches.map(this.addCompoundIndexes));
+		return this.insert(patches.map(this.addCompoundIndexes), { transaction });
 	};
 
 	private addCompoundIndexes = (
@@ -245,22 +246,19 @@ export class OperationsStore extends IDBService {
 
 	private insert = async (
 		operations: StoredClientOperation[],
+		{ transaction }: { transaction?: IDBTransaction },
 	): Promise<ObjectIdentifier[]> => {
-		const transaction = this.db.transaction('operations', 'readwrite');
-		const store = transaction.objectStore('operations');
 		const affected = new Set<ObjectIdentifier>();
-		for (const patch of operations) {
-			store.put(patch);
-			affected.add(getOidRoot(patch.oid));
-		}
-		await new Promise<void>((resolve, reject) => {
-			transaction.oncomplete = () => {
-				resolve();
-			};
-			transaction.onerror = () => {
-				reject();
-			};
-		});
+		await this.runAll(
+			'operations',
+			(store) =>
+				operations.map((op) => {
+					affected.add(getOidRoot(op.oid));
+					return store.put(op);
+				}),
+			'readwrite',
+			transaction,
+		);
 		return Array.from(affected);
 	};
 

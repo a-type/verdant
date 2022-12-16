@@ -1,31 +1,31 @@
+import { Context } from '../context.js';
 import { ObjectEntity } from '../index.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { LiveQuery, UPDATE } from './LiveQuery.js';
 import { BaseQueryStore, QueryParams, QueryStore } from './QueryStore.js';
 
 export class LiveQueryStore<
-	Result extends (ObjectEntity<any, any> | null) | ObjectEntity<any, any>[],
+	Result extends (ObjectEntity<any, any> | null) | ObjectEntity<any, any>[] =
+		| (ObjectEntity<any, any> | null)
+		| ObjectEntity<any, any>[],
 > implements BaseQueryStore<LiveQuery<Result>>
 {
 	private queries: QueryStore<any>;
 	private cache = new Map<string, LiveQuery<any>>();
-	private log: (...args: any[]) => void = () => {};
 
 	private _unsubscribes: (() => void)[] = [];
 
-	constructor(
-		private db: IDBDatabase,
-		private entities: EntityStore,
-		config: {
-			log?: (...args: any[]) => void;
-		},
-	) {
-		this.queries = new QueryStore(db, entities.get, config);
+	constructor(private entities: EntityStore, private context: Context) {
+		this.queries = new QueryStore(entities.get, context);
 		this._unsubscribes.push(
 			this.entities.subscribe('collectionsChanged', this.onCollectionsChanged),
 		);
-		this.log = config.log || this.log;
 	}
+
+	setContext = (context: Context) => {
+		this.context = context;
+		this.queries.setContext(context);
+	};
 
 	getQueryKey(params: QueryParams): string {
 		return this.queries.getQueryKey(params);
@@ -87,6 +87,12 @@ export class LiveQueryStore<
 		this.cache.get(key)?.[UPDATE]();
 	};
 
+	updateAll = () => {
+		for (const query of this.cache.values()) {
+			query[UPDATE]();
+		}
+	};
+
 	private onCollectionsChanged = (collections: string[]) => {
 		let updated = 0;
 		// FIXME: This is a naive implementation, improve beyond O(n)
@@ -94,7 +100,7 @@ export class LiveQueryStore<
 			if (collections.includes(query.collection)) {
 				query[UPDATE]();
 				updated++;
-				this.log('🔄 updated query', key);
+				this.context.log('🔄 updated query', key);
 			}
 		}
 	};

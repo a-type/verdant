@@ -6,5 +6,7 @@ export default defineConfig({
 		clearMocks: true,
 
 		setupFiles: ['setup/indexedDB.ts'],
+
+		testTimeout: 10000,
 	},
 });

@@ -11,14 +11,16 @@ export type LocalReplicaInfo = {
 export class LocalReplicaStore extends IDBService {
 	private cached: LocalReplicaInfo | undefined;
 
-	get = async () => {
+	get = async ({ transaction }: { transaction?: IDBTransaction } = {}) => {
 		if (this.cached) {
 			return this.cached;
 		}
 
-		const db = this.db;
-		const lookup = await this.run<LocalReplicaInfo>('info', (store) =>
-			store.get('localReplicaInfo'),
+		const lookup = await this.run<LocalReplicaInfo>(
+			'info',
+			(store) => store.get('localReplicaInfo'),
+			undefined,
+			transaction,
 		);
 
 		if (!lookup) {
@@ -39,8 +41,11 @@ export class LocalReplicaStore extends IDBService {
 		return lookup;
 	};
 
-	update = async (data: Partial<LocalReplicaInfo>) => {
-		const localReplicaInfo = await this.get();
+	update = async (
+		data: Partial<LocalReplicaInfo>,
+		{ transaction }: { transaction?: IDBTransaction } = {},
+	) => {
+		const localReplicaInfo = await this.get({ transaction });
 		Object.assign(localReplicaInfo, data);
 		await this.run('info', (store) => store.put(localReplicaInfo), 'readwrite');
 		this.cached = localReplicaInfo;

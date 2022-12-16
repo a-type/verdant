@@ -1,73 +1,46 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from './Sync.js';
-import { Metadata } from './metadata/Metadata.js';
+import { ExportData, Metadata } from './metadata/Metadata.js';
 import { LiveQueryMaker } from './queries/LiveQueryMaker.js';
 import { LiveQueryStore } from './queries/LiveQueryStore.js';
 import { openDocumentDatabase } from './openDocumentDatabase.js';
 import { DocumentManager } from './DocumentManager.js';
 import { EntityStore } from './reactives/EntityStore.js';
-import { getSizeOfObjectStore } from './idb.js';
+import { closeDatabase, getSizeOfObjectStore } from './idb.js';
 import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
 import { UndoHistory } from './UndoHistory.js';
-
-interface StorageComponents {
-	meta: Metadata;
-	documentDb: IDBDatabase;
-	metaDb: IDBDatabase;
-	undoHistory: UndoHistory;
-}
+import { Context } from './context.js';
 
 interface StorageConfig<Presence = any> {
-	schema: StorageSchema;
-	namespace: string;
 	syncConfig?: ServerSyncOptions<Presence>;
+	migrations: Migration[];
 	log?: (...args: any[]) => void;
 }
 
 export class Storage {
-	readonly entities;
-	readonly queryStore;
-	readonly queryMaker;
-	readonly documentManager;
+	readonly meta: Metadata;
+	private entities!: EntityStore;
+	private queryStore!: LiveQueryStore;
+	private queryMaker!: LiveQueryMaker;
+	private documentManager!: DocumentManager<any>;
 
 	readonly collectionNames: string[];
 
-	readonly sync: Sync;
+	private sync!: Sync;
 
 	constructor(
 		private config: StorageConfig,
-		private components: StorageComponents,
+		private context: Context,
+		components: { meta: Metadata },
 	) {
-		this.entities = new EntityStore({
-			db: this.documentDb,
-			schema: this.schema,
-			meta: this.meta,
-			undoHistory: this.undoHistory,
-			log: this.config.log,
-		});
-		this.queryStore = new LiveQueryStore(this.documentDb, this.entities, {
-			log: this.config.log,
-		});
-		this.queryMaker = new LiveQueryMaker(this.queryStore, this.schema);
-		this.documentManager = new DocumentManager(
-			this.meta,
-			this.schema,
-			this.entities,
-		);
-		this.collectionNames = Object.keys(config.schema.collections);
-
-		this.sync = config.syncConfig
-			? new ServerSync(config.syncConfig, {
-					meta: this.meta,
-					entities: this.entities,
-					log: this.config.log,
-			  })
-			: new NoSync();
+		this.meta = components.meta;
+		this.collectionNames = Object.keys(context.schema.collections);
+		this.initialize();
 
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
 		for (const [name, _collection] of Object.entries(
-			config.schema.collections,
+			context.schema.collections,
 		)) {
 			const collection = _collection as SchemaCollection<any, any>;
 			const collectionName = collection.pluralName ?? collection.name + 's';
@@ -84,9 +57,31 @@ export class Storage {
 				findAll: (query: any) => this.queryMaker.findAll(name, query),
 			};
 		}
+	}
+
+	private initialize = () => {
+		this.entities = new EntityStore({
+			context: this.context,
+			meta: this.meta,
+		});
+		this.queryStore = new LiveQueryStore(this.entities, this.context);
+		this.queryMaker = new LiveQueryMaker(this.queryStore, this.context);
+		this.documentManager = new DocumentManager(
+			this.meta,
+			this.schema,
+			this.entities,
+		);
+
+		this.sync = this.config.syncConfig
+			? new ServerSync(this.config.syncConfig, {
+					meta: this.meta,
+					entities: this.entities,
+					log: this.config.log,
+			  })
+			: new NoSync();
 
 		this.documentDb.addEventListener('versionchange', () => {
-			config.log?.(
+			this.config.log?.(
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
 			this.documentDb.close();
@@ -95,35 +90,35 @@ export class Storage {
 			}
 		});
 
-		this.components.metaDb.addEventListener('versionchange', () => {
-			config.log?.(
+		this.metaDb.addEventListener('versionchange', () => {
+			this.config.log?.(
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
-			this.components.metaDb.close();
+			this.metaDb.close();
 			if (typeof window !== 'undefined') {
 				window.location.reload();
 			}
 		});
-	}
-
-	get meta() {
-		return this.components.meta;
-	}
+	};
 
 	get documentDb() {
-		return this.components.documentDb;
+		return this.context.documentDb;
+	}
+
+	get metaDb() {
+		return this.context.metaDb;
 	}
 
 	get schema() {
-		return this.config.schema;
+		return this.context.schema;
 	}
 
 	get namespace() {
-		return this.config.namespace;
+		return this.context.namespace;
 	}
 
 	get undoHistory() {
-		return this.components.undoHistory;
+		return this.context.undoHistory;
 	}
 
 	/**
@@ -136,27 +131,27 @@ export class Storage {
 	/**
 	 * @deprecated - use put
 	 */
-	create: this['documentManager']['create'] = async (...args) => {
+	create: DocumentManager<any>['create'] = async (...args) => {
 		return this.documentManager.create(...args);
 	};
 
-	put: this['documentManager']['create'] = async (...args) => {
+	put: DocumentManager<any>['create'] = async (...args) => {
 		return this.documentManager.create(...args);
 	};
 
-	delete: this['documentManager']['delete'] = async (...args) => {
+	delete: DocumentManager<any>['delete'] = async (...args) => {
 		return this.documentManager.delete(...args);
 	};
 
-	get: this['queryMaker']['get'] = (...args) => {
+	get: LiveQueryMaker['get'] = (...args) => {
 		return this.queryMaker.get(...args);
 	};
 
-	findOne: this['queryMaker']['findOne'] = (...args) => {
+	findOne: LiveQueryMaker['findOne'] = (...args) => {
 		return this.queryMaker.findOne(...args);
 	};
 
-	findAll: this['queryMaker']['findAll'] = (...args) => {
+	findAll: LiveQueryMaker['findAll'] = (...args) => {
 		return this.queryMaker.findAll(...args);
 	};
 
@@ -208,8 +203,8 @@ export class Storage {
 		this.queryStore.destroy();
 		this.entities.destroy();
 
-		this.documentDb.close();
-		this.components.metaDb.close();
+		await closeDatabase(this.documentDb);
+		await closeDatabase(this.metaDb);
 
 		this.config.log?.('Client closed');
 	};
@@ -231,6 +226,62 @@ export class Storage {
 			}),
 		]);
 		window.location.reload();
+	};
+
+	export = async () => {
+		const metaExport = await this.meta.export();
+		return Buffer.from(JSON.stringify(metaExport));
+	};
+
+	import = async (buffer: Buffer) => {
+		this.context.log('Importing data...');
+		// close the document DB
+		await closeDatabase(this.context.documentDb);
+
+		const metaExport = JSON.parse(buffer.toString()) as ExportData;
+		await this.meta.resetFrom(metaExport);
+		// now reset the document DB to the specified version
+		// and run migrations to get it to the latest version
+		const version = metaExport.schema.version;
+		const deleteReq = indexedDB.deleteDatabase(
+			[this.namespace, 'collections'].join('_'),
+		);
+		await new Promise((resolve, reject) => {
+			deleteReq.onsuccess = resolve;
+			deleteReq.onerror = reject;
+		});
+		// reset our context to the imported schema for now
+		const currentSchema = this.context.schema;
+		this.context.schema = metaExport.schema;
+		// now open the document DB empty at the specified version
+		// and initialize it from the meta DB
+		this.context.documentDb = await openDocumentDatabase({
+			meta: this.meta,
+			migrations: this.config.migrations,
+			context: this.context,
+			version,
+		});
+		// re-initialize data
+		this.context.log('Re-initializing data from imported data...');
+		await this.entities.addData({
+			operations: metaExport.operations,
+			baselines: metaExport.baselines,
+			reset: true,
+		});
+		// close the database and reopen to latest version, applying
+		// migrations
+		await closeDatabase(this.context.documentDb);
+		this.context.log('Migrating up to latest schema...');
+		// put the schema back
+		this.context.schema = currentSchema;
+		this.context.documentDb = await openDocumentDatabase({
+			meta: this.meta,
+			migrations: this.config.migrations,
+			context: this.context,
+			version: currentSchema.version,
+		});
+		// re-initialize query store
+		this.queryStore.updateAll();
 	};
 }
 
@@ -298,8 +349,16 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 				log: init.log,
 				databaseName: metaDbName,
 			});
-			const meta = new Metadata(metaDb, init.schema, {
-				log: init.log,
+
+			const context: Omit<Context, 'documentDb'> = {
+				namespace: this._namespace,
+				metaDb,
+				schema: init.schema,
+				log: init.log || (() => {}),
+				undoHistory: init.undoHistory || new UndoHistory(),
+			};
+			const meta = new Metadata({
+				context,
 				disableRebasing: init.disableRebasing,
 			});
 
@@ -307,26 +366,23 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 			await meta.updateSchema(init.schema);
 
 			const documentDb = await openDocumentDatabase({
-				namespace: this._namespace,
-				schema: init.schema,
+				context,
+				version: init.schema.version,
 				meta,
 				migrations: init.migrations,
 				indexedDB: init.indexedDb,
-				log: init.log,
 			});
+
+			const fullContext: Context = Object.assign(context, { documentDb });
 
 			const storage = new Storage(
 				{
-					schema: init.schema,
-					namespace: this._namespace,
 					syncConfig: init.sync,
-					log: init.log,
+					migrations: init.migrations,
 				},
+				fullContext,
 				{
 					meta,
-					metaDb,
-					documentDb,
-					undoHistory: init.undoHistory || new UndoHistory(),
 				},
 			);
 

@@ -18,6 +18,7 @@ import {
 	decomposeOid,
 } from '@lo-fi/common';
 import { MigrationEngine } from '@lo-fi/common/src/migration.js';
+import { Context } from './context.js';
 import { Metadata } from './metadata/Metadata.js';
 import { QueryMaker } from './queries/QueryMaker.js';
 import { QueryStore } from './queries/QueryStore.js';
@@ -25,34 +26,34 @@ import { QueryStore } from './queries/QueryStore.js';
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
 
-export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
-	schema,
+type OpenDocumentDbContext = Omit<Context, 'documentDb'>;
+
+export async function openDocumentDatabase({
+	version,
 	indexedDB = globalIDB,
 	migrations,
 	meta,
-	namespace,
-	log = () => {},
+	context,
 }: {
-	schema: Schema;
+	version: number;
 	migrations: Migration<any>[];
 	indexedDB?: IDBFactory;
 	meta: Metadata;
-	namespace: string;
-	log?: (...args: any[]) => void;
+	context: OpenDocumentDbContext;
 }) {
-	const { collections, version } = schema;
-	// initialize collections as indexddb databases
-	const keys = Object.keys(collections);
-	log('Initializing database for:', keys);
-
 	const currentVersion = await getDatabaseVersion(
 		indexedDB,
-		namespace,
+		context.namespace,
 		version,
-		log,
+		context.log,
 	);
 
-	log('Current database version:', currentVersion, 'target version:', version);
+	context.log(
+		'Current database version:',
+		currentVersion,
+		'target version:',
+		version,
+	);
 
 	const toRunVersions = migrationRange(currentVersion, version);
 	const toRun = toRunVersions.map((ver) =>
@@ -63,7 +64,7 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 	}
 
 	if (toRun.length > 0) {
-		await acquireLock(namespace, async () => {
+		await acquireLock(context.namespace, async () => {
 			// now the fun part
 			for (const migration of toRun as Migration<any>[]) {
 				// special case: if this is the version 1 migration, we have no pre-existing database
@@ -73,7 +74,7 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 					engine = getVersion1MigrationEngine({
 						meta,
 						migration,
-						log,
+						context,
 					});
 					await migration.migrate(engine);
 				} else {
@@ -81,16 +82,18 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 					// align with the database's current version.
 					const originalDatabase = await openDatabase(
 						indexedDB,
-						namespace,
+						context.namespace,
 						migration.oldSchema.version,
 					);
 
 					// this will only write to our metadata store via operations!
 					engine = getMigrationEngine({
 						meta,
-						db: originalDatabase,
 						migration,
-						log,
+						context: {
+							...context,
+							documentDb: originalDatabase,
+						},
 					});
 					await migration.migrate(engine);
 					// wait on any out-of-band async operations to complete
@@ -102,7 +105,7 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 				}
 				await upgradeDatabase(
 					indexedDB,
-					namespace,
+					context.namespace,
 					migration.newSchema.version,
 					(transaction, db) => {
 						for (const newCollection of migration.addedCollections) {
@@ -131,13 +134,13 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 							db.deleteObjectStore(removedCollection);
 						}
 					},
-					log,
+					context.log,
 				);
 
 				// once the schema is ready, we can write back the migrated documents
 				const upgradedDatabase = await openDatabase(
 					indexedDB,
-					namespace,
+					context.namespace,
 					migration.newSchema.version,
 				);
 				for (const collection of migration.allCollections) {
@@ -194,7 +197,7 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 
 				await closeDatabase(upgradedDatabase);
 
-				log(`
+				context.log(`
 					⬆️ v${migration.newSchema.version} Migration complete. Here's the rundown:
 						- Added collections: ${migration.addedCollections.join(', ')}
 						- Removed collections: ${migration.removedCollections.join(', ')}
@@ -214,10 +217,10 @@ export async function openDocumentDatabase<Schema extends StorageSchema<any>>({
 				`);
 			}
 		});
-		return openDatabase(indexedDB, namespace, version);
+		return openDatabase(indexedDB, context.namespace, version);
 	} else {
 		// just open the database
-		return openDatabase(indexedDB, namespace, version);
+		return openDatabase(indexedDB, context.namespace, version);
 	}
 }
 
@@ -341,15 +344,14 @@ function getMigrationMutations({
 }
 
 function getMigrationEngine({
-	log,
 	meta,
-	db,
 	migration,
+	context,
 }: {
 	log?: (...args: any[]) => void;
 	migration: Migration;
-	db: IDBDatabase;
 	meta: Metadata;
+	context: Context;
 }): MigrationEngine<any, any> {
 	function getMigrationNow() {
 		return meta.time.zero(migration.version);
@@ -359,7 +361,7 @@ function getMigrationEngine({
 
 	const queries = migration.oldCollections.reduce((acc, collectionName) => {
 		const queryMaker = new QueryMaker(
-			new QueryStore(db, meta.getDocumentSnapshot, { log }),
+			new QueryStore(meta.getDocumentSnapshot, context),
 			migration.oldSchema,
 		);
 		acc[collectionName] = {
@@ -392,7 +394,10 @@ function getMigrationEngine({
 		newOids,
 		migrate: async (collection, strategy) => {
 			const docs = await new Promise<any[]>((resolve, reject) => {
-				const transaction = db.transaction(collection, 'readonly');
+				const transaction = context.documentDb.transaction(
+					collection,
+					'readonly',
+				);
 
 				const store = transaction.objectStore(collection);
 				const cursorReq = store.openCursor();
@@ -458,11 +463,10 @@ function getMigrationEngine({
 }
 
 function getVersion1MigrationEngine({
-	log,
 	meta,
 	migration,
 }: {
-	log?: (...args: any[]) => void;
+	context: OpenDocumentDbContext;
 	migration: Migration;
 	meta: Metadata;
 }): MigrationEngine<any, any> {
