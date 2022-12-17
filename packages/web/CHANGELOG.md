@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.7.0
+
+### Minor Changes
+
+- 20419d8: Experimental import/export feature
+
 ## 1.6.7
 
 ### Patch Changes
