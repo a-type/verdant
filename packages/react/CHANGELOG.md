@@ -1,5 +1,12 @@
 # @lo-fi/react
 
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [20419d8]
+  - @lo-fi/web@1.7.0
+
 ## 7.0.3
 
 ### Patch Changes
