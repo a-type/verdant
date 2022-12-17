@@ -43,10 +43,10 @@ export interface GeneratedHooks<Presence, Profile> {
   ): EntityDestructured<T>;
   useWatch<
     T extends AnyEntity<any, any, any> | null,
-    P extends AccessibleEntityProperty<EntityShape<T>>
+    P extends keyof EntityShape<T>
   >(
     entity: T,
-    props: P
+    prop: P
   ): EntityDestructured<T>[P];
 	useCanUndo(): boolean;
 	useCanRedo(): boolean;
