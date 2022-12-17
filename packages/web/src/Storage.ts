@@ -19,14 +19,34 @@ interface StorageConfig<Presence = any> {
 
 export class Storage {
 	readonly meta: Metadata;
-	private entities!: EntityStore;
-	private queryStore!: LiveQueryStore;
-	private queryMaker!: LiveQueryMaker;
-	private documentManager!: DocumentManager<any>;
+	private _entities!: EntityStore;
+	private _queryStore!: LiveQueryStore;
+	private _queryMaker!: LiveQueryMaker;
+	private _documentManager!: DocumentManager<any>;
 
 	readonly collectionNames: string[];
 
-	private sync!: Sync;
+	private _sync!: Sync;
+
+	get queryMaker() {
+		return this._queryMaker;
+	}
+
+	get sync() {
+		return this._sync;
+	}
+
+	get entities() {
+		return this._entities;
+	}
+
+	get queryStore() {
+		return this._queryStore;
+	}
+
+	get documentManager() {
+		return this._documentManager;
+	}
 
 	constructor(
 		private config: StorageConfig,
@@ -47,35 +67,35 @@ export class Storage {
 			// @ts-ignore
 			this[collectionName] = {
 				/** @deprecated - use put */
-				create: (doc: any) => this.documentManager.create(name, doc),
-				put: (doc: any) => this.documentManager.create(name, doc),
-				delete: (id: string) => this.documentManager.delete(name, id),
+				create: (doc: any) => this._documentManager.create(name, doc),
+				put: (doc: any) => this._documentManager.create(name, doc),
+				delete: (id: string) => this._documentManager.delete(name, id),
 				deleteAll: (ids: string[]) =>
-					this.documentManager.deleteAll(ids.map((id) => [name, id])),
-				get: (id: string) => this.queryMaker.get(name, id),
-				findOne: (query: any) => this.queryMaker.findOne(name, query),
-				findAll: (query: any) => this.queryMaker.findAll(name, query),
+					this._documentManager.deleteAll(ids.map((id) => [name, id])),
+				get: (id: string) => this._queryMaker.get(name, id),
+				findOne: (query: any) => this._queryMaker.findOne(name, query),
+				findAll: (query: any) => this._queryMaker.findAll(name, query),
 			};
 		}
 	}
 
 	private initialize = () => {
-		this.entities = new EntityStore({
+		this._entities = new EntityStore({
 			context: this.context,
 			meta: this.meta,
 		});
-		this.queryStore = new LiveQueryStore(this.entities, this.context);
-		this.queryMaker = new LiveQueryMaker(this.queryStore, this.context);
-		this.documentManager = new DocumentManager(
+		this._queryStore = new LiveQueryStore(this._entities, this.context);
+		this._queryMaker = new LiveQueryMaker(this._queryStore, this.context);
+		this._documentManager = new DocumentManager(
 			this.meta,
 			this.schema,
-			this.entities,
+			this._entities,
 		);
 
-		this.sync = this.config.syncConfig
+		this._sync = this.config.syncConfig
 			? new ServerSync(this.config.syncConfig, {
 					meta: this.meta,
-					entities: this.entities,
+					entities: this._entities,
 					log: this.config.log,
 			  })
 			: new NoSync();
@@ -132,27 +152,27 @@ export class Storage {
 	 * @deprecated - use put
 	 */
 	create: DocumentManager<any>['create'] = async (...args) => {
-		return this.documentManager.create(...args);
+		return this._documentManager.create(...args);
 	};
 
 	put: DocumentManager<any>['create'] = async (...args) => {
-		return this.documentManager.create(...args);
+		return this._documentManager.create(...args);
 	};
 
 	delete: DocumentManager<any>['delete'] = async (...args) => {
-		return this.documentManager.delete(...args);
+		return this._documentManager.delete(...args);
 	};
 
 	get: LiveQueryMaker['get'] = (...args) => {
-		return this.queryMaker.get(...args);
+		return this._queryMaker.get(...args);
 	};
 
 	findOne: LiveQueryMaker['findOne'] = (...args) => {
-		return this.queryMaker.findOne(...args);
+		return this._queryMaker.findOne(...args);
 	};
 
 	findAll: LiveQueryMaker['findAll'] = (...args) => {
-		return this.queryMaker.findAll(...args);
+		return this._queryMaker.findAll(...args);
 	};
 
 	stats = async () => {
@@ -200,8 +220,8 @@ export class Storage {
 
 		this.meta.close();
 
-		this.queryStore.destroy();
-		this.entities.destroy();
+		this._queryStore.destroy();
+		this._entities.destroy();
 
 		await closeDatabase(this.documentDb);
 		await closeDatabase(this.metaDb);
@@ -263,7 +283,7 @@ export class Storage {
 		});
 		// re-initialize data
 		this.context.log('Re-initializing data from imported data...');
-		await this.entities.addData({
+		await this._entities.addData({
 			operations: metaExport.operations,
 			baselines: metaExport.baselines,
 			reset: true,
@@ -281,7 +301,7 @@ export class Storage {
 			version: currentSchema.version,
 		});
 		// re-initialize query store
-		this.queryStore.updateAll();
+		this._queryStore.updateAll();
 	};
 }
 
