@@ -4,6 +4,8 @@ import {
 	assignOidPropertiesToAllSubObjects,
 	assignOidProperty,
 	assignOidsToAllSubObjects,
+	createOid,
+	decomposeOid,
 	getOid,
 	getOidRange,
 	maybeGetOidProperty,
@@ -289,5 +291,23 @@ describe('assigning OIDs as properties', () => {
 		expect(getOid(initial.qux[0])).toEqual('test/a.qux.#:2');
 		expect(getOid(initial.qux[1])).toEqual('test/a.qux.#:4');
 		expect(getOid(initial.qux[1].grault)).toEqual('test/a.qux.#.grault:3');
+	});
+});
+
+it('should handle special characters in document id or collection', () => {
+	expect(
+		decomposeOid(
+			createOid(
+				'test.teesssst/asdf::',
+				'foo/bar (.) : huh:',
+				['baz?.quoo:/', 'qux'],
+				'corge',
+			),
+		),
+	).toEqual({
+		collection: 'test.teesssst/asdf::',
+		id: 'foo/bar (.) : huh:',
+		keyPath: ['baz?.quoo:/', 'qux'],
+		subId: 'corge',
 	});
 });

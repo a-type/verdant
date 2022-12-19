@@ -12,7 +12,7 @@ export async function startTestServer({
 	log?: boolean;
 	disableRebasing?: boolean;
 } = {}) {
-	const port = Math.floor(Math.random() * 9000) + 1000;
+	const port = Math.floor(Math.random() * 4000) + 4000;
 	const app = express();
 	const httpServer = createServer(app);
 
