@@ -18,7 +18,8 @@
 		"access": "public"
 	},
 	"files": [
-		"dist/"
+		"dist/",
+		"src/"
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
