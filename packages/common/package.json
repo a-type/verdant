@@ -28,7 +28,7 @@
 		"link": "pnpm link --global"
 	},
 	"dependencies": {
-		"fast-json-patch": "^3.1.1",
+		"cuid": "^2.1.8",
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
