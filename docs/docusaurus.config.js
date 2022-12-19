@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
 	title: 'lo-fi',
 	tagline: 'Local-first framework',
-	url: 'https://a-type.github.io/lo-fi',
+	url: 'https://lo-fi.gfor.rest',
 	baseUrl: '/',
 	onBrokenLinks: 'throw',
 	onBrokenMarkdownLinks: 'warn',
