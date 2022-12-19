@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.4.4
+
+### Patch Changes
+
+- fab4656: New more compact timestamp format
+
 ## 1.4.3
 
 ### Patch Changes

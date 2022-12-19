@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 1.2.8
+
+### Patch Changes
+
+- fab4656: New more compact timestamp format
+- Updated dependencies [fab4656]
+  - @lo-fi/common@1.4.4
+
 ## 1.2.7
 
 ### Patch Changes
