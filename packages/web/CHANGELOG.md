@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.7.1
+
+### Patch Changes
+
+- fab4656: New more compact timestamp format
+- Updated dependencies [fab4656]
+  - @lo-fi/common@1.4.4
+
 ## 1.7.0
 
 ### Minor Changes
