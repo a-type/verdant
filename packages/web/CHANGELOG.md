@@ -1,5 +1,14 @@
 # @lo-fi/web
 
+## 1.7.2
+
+### Patch Changes
+
+- 4a9a9c8: Add sources to npm files
+- Updated dependencies [b1a4646]
+- Updated dependencies [4a9a9c8]
+  - @lo-fi/common@1.4.5
+
 ## 1.7.1
 
 ### Patch Changes
