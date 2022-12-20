@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 1.8.0
+
+### Minor Changes
+
+- 49d7f88: Advanced batching and undo control. Bugfixes for undo application.
+
+### Patch Changes
+
+- Updated dependencies [49d7f88]
+  - @lo-fi/common@1.5.0
+
 ## 1.7.2
 
 ### Patch Changes
