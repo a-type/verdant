@@ -31,6 +31,7 @@ export class Client<Presence = any, Profile = any> {
   namespace: Storage['namespace'];
   entities: Storage['entities'];
   queryStore: Storage['queryStore'];
+  batch: Storage['batch'];
 
   close: Storage['close'];
 

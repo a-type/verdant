@@ -175,6 +175,20 @@ export class Storage {
 		return this._queryMaker.findAll(...args);
 	};
 
+	/**
+	 * Batch multiple operations together to be executed in a single transaction.
+	 * The changes made will not be included in the same undo history step as
+	 * any other changes made outside of the batch. You can also disable undo
+	 * for your batch to omit changes from undo history.
+	 *
+	 * Provide a batch name to apply multiple changes to the same batch
+	 * across different invocations. Batches will automatically flush after
+	 * a short delay or if they reach a maximum size.
+	 */
+	get batch() {
+		return this.entities.batch;
+	}
+
 	stats = async () => {
 		const collectionNames = Object.keys(this.schema.collections);
 		let collections = {} as Record<string, { count: number; size: number }>;
