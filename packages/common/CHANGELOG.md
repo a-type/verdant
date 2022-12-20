@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.5.0
+
+### Minor Changes
+
+- 49d7f88: Advanced batching and undo control. Bugfixes for undo application.
+
 ## 1.4.5
 
 ### Patch Changes

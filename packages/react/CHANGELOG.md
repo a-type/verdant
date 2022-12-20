@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [49d7f88]
+  - @lo-fi/common@1.5.0
+  - @lo-fi/web@1.8.0
+
 ## 8.0.2
 
 ### Patch Changes
