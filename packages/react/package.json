@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/react",
-	"version": "8.0.2",
+	"version": "9.0.0",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -29,7 +29,7 @@
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",
-		"@lo-fi/web": "^1.7.2"
+		"@lo-fi/web": "^1.8.0"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
