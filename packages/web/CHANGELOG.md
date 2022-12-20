@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.8.1
+
+### Patch Changes
+
+- 5df835e: fix push/pull sync timing
+
 ## 1.8.0
 
 ### Minor Changes
