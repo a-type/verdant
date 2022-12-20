@@ -677,23 +677,19 @@ class PushPullSync
 				credentials: 'include',
 			});
 			if (response.ok) {
+				this.heartbeat.keepAlive();
 				const json = (await response.json()) as {
 					messages: ServerMessage[];
 				};
 				for (const message of json.messages) {
 					this.handleServerMessage(message);
 				}
-				this.heartbeat.keepAlive();
 				if (!this._isConnected) {
 					this._isConnected = true;
 					this.emit('onlineChange', true);
 				}
 			} else {
-				console.error(
-					'Sync request failed',
-					response.status,
-					await response.text(),
-				);
+				this.log('Sync request failed', response.status, await response.text());
 
 				if (this._isConnected) {
 					this._isConnected = false;
@@ -710,7 +706,7 @@ class PushPullSync
 				this._isConnected = false;
 				this.emit('onlineChange', false);
 			}
-			console.error(error);
+			this.log(error);
 
 			this.heartbeat.keepAlive();
 		}
@@ -739,6 +735,9 @@ class PushPullSync
 	};
 
 	start(): void {
+		if (this.status === 'active') {
+			return;
+		}
 		this.heartbeat.start(true);
 		this._status = 'active';
 	}
@@ -767,6 +766,7 @@ class PushPullSync
 	// the connection is lost and go offline.
 	private onHeartbeatMissed = async () => {
 		this.emit('onlineChange', false);
+		this.log('Missed heartbeat');
 		this._isConnected = false;
 	};
 
@@ -808,6 +808,7 @@ class Heartbeat extends EventSubscriber<{
 	};
 
 	start = (immediate = false) => {
+		this.stop();
 		if (immediate) {
 			this.beat();
 		} else {
