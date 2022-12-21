@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.6.0
+
+### Minor Changes
+
+- 8c95fbc: Expose method to reset server-side data for a library
+
 ## 1.5.0
 
 ### Minor Changes

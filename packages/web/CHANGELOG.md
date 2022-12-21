@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 1.9.0
+
+### Minor Changes
+
+- 8c95fbc: Expose method to reset server-side data for a library
+
+### Patch Changes
+
+- Updated dependencies [8c95fbc]
+  - @lo-fi/common@1.6.0
+
 ## 1.8.1
 
 ### Patch Changes

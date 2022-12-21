@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.9.0
+
+### Minor Changes
+
+- 8c95fbc: Expose method to reset server-side data for a library
+
 ## 1.8.0
 
 ### Minor Changes
