@@ -67,6 +67,7 @@ export async function startTestServer({
 
 	return {
 		port,
+		server,
 		cleanup: async () => {
 			await server.close();
 			await fs.unlink(dbFileName);

@@ -234,6 +234,22 @@ export class ServerLibrary {
 		const isEmptyLibrary =
 			changesSince === null && ops.length === 0 && baselines.length === 0;
 
+		// if the local library is empty and the replica is new to us,
+		// but the replica is providing a "since" timestamp, this
+		// suggests the local data is incomplete or gone. we request
+		// this replica should respond with a full history.
+		if (isEmptyLibrary && status === 'new' && message.since !== null) {
+			this.log(
+				'Detected local data is incomplete, requesting full history from replica',
+				replicaId,
+			);
+			this.sender.send(this.id, clientKey, {
+				type: 'need-since',
+				since: null,
+			});
+			return;
+		}
+
 		const overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
 		if (overwriteLocalData) {
 			this.log(
@@ -439,6 +455,13 @@ export class ServerLibrary {
 			replicaId,
 			userId,
 		});
+	};
+
+	destroy = () => {
+		this.presences.clear();
+		this.replicas.deleteAll();
+		this.operations.deleteAll();
+		this.baselines.deleteAll();
 	};
 }
 

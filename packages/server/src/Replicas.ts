@@ -172,4 +172,15 @@ export class ReplicaInfos {
 			)
 			.run(replicaId);
 	};
+
+	deleteAll = () => {
+		return this.db
+			.prepare(
+				`
+			DELETE FROM ReplicaInfo
+			WHERE libraryId = ?
+		`,
+			)
+			.run(this.libraryId);
+	};
 }

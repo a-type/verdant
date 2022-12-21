@@ -69,6 +69,7 @@ export class PresenceManager<
 				peerIdsSet.add(message.userInfo.id);
 				this._peers[message.userInfo.id] = message.userInfo;
 				peersChanged = true;
+				this.emit('peerChanged', message.userInfo.id, message.userInfo);
 			}
 		} else if (message.type === 'sync-resp') {
 			for (const [id, presence] of Object.entries(message.peerPresence)) {

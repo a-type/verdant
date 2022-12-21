@@ -110,4 +110,15 @@ export class Baselines {
 		baseline.timestamp = operations[operations.length - 1].timestamp;
 		this.set(baseline);
 	};
+
+	deleteAll = () => {
+		this.db
+			.prepare(
+				`
+			DELETE FROM DocumentBaseline
+			WHERE libraryId = ?
+		`,
+			)
+			.run(this.libraryId);
+	};
 }

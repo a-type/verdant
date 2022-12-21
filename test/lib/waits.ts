@@ -1,4 +1,4 @@
-import { Mock } from 'vitest';
+import { expect, Mock } from 'vitest';
 import { Client, Query } from '../client/index.js';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
@@ -8,6 +8,18 @@ export async function waitForMockCall(mock: Mock, calls = 1) {
 				resolve();
 			}
 		}, 100);
+	});
+}
+
+export async function waitForOnline(client: Client, online = true) {
+	return new Promise<void>((resolve) => {
+		if (client.sync.isConnected) {
+			resolve();
+			return;
+		}
+		client.sync.subscribe('onlineChange', (isOnline) => {
+			if (isOnline === online) resolve();
+		});
 	});
 }
 
@@ -36,13 +48,13 @@ export function waitForPeerCount(client: Client, count: number, gte = false) {
 	});
 }
 
-export function waitForQueryResult(
+export async function waitForQueryResult(
 	query: Query<any>,
 	predicate: (value: any) => boolean = (value) => {
 		return !!value && (Array.isArray(value) ? value.length > 0 : true);
 	},
 ) {
-	return new Promise<void>((resolve, reject) => {
+	await new Promise<void>((resolve, reject) => {
 		if (predicate(query.current)) {
 			resolve();
 			return;
@@ -59,6 +71,8 @@ export function waitForQueryResult(
 			}
 		});
 	});
+
+	expect(predicate(query.current)).toBe(true);
 }
 
 export async function waitForEverythingToRebase(client: Client) {
@@ -110,4 +124,34 @@ export async function waitForCondition(
 		}
 		run();
 	});
+}
+
+export async function waitForPeerPresence(
+	client: Client,
+	peerId: string,
+	predicate: (presence: any) => boolean = (presence) => {
+		return !!presence;
+	},
+) {
+	await new Promise<void>((resolve, reject) => {
+		if (predicate(client.sync.presence.peers[peerId]?.presence)) {
+			resolve();
+			return;
+		}
+
+		const timeout = setTimeout(() => {
+			reject(new Error('Timed out waiting for peer presence'));
+		}, 15000);
+		const unsubscribe = client.sync.presence.subscribe(
+			'peerChanged',
+			(otherId, info) => {
+				if (peerId === otherId && predicate(info?.presence)) {
+					unsubscribe();
+					clearTimeout(timeout);
+					resolve();
+				}
+			},
+		);
+	});
+	expect(predicate(client.sync.presence.peers[peerId]?.presence)).toBe(true);
 }

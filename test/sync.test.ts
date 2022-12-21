@@ -13,7 +13,7 @@ const cleanupClients: Client[] = [];
 
 let server: { port: number; cleanup: () => Promise<void> };
 beforeAll(async () => {
-	server = await startTestServer({ log: true });
+	server = await startTestServer({ log: false });
 });
 
 afterAll(async () => {
@@ -32,7 +32,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,

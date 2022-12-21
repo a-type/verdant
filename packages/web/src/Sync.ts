@@ -342,6 +342,11 @@ export class ServerSync<Profile = any, Presence = any>
 
 				await this.meta.updateLastSynced(message.ackedTimestamp);
 				break;
+			case 'need-since':
+				this.activeSync.send(
+					await this.meta.messageCreator.createSyncStep1(message.since),
+				);
+				break;
 			case 'server-ack':
 				await this.meta.updateLastSynced(message.timestamp);
 		}
@@ -502,23 +507,30 @@ class WebSocketSync
 
 	private onMessage = (event: MessageEvent) => {
 		const message = JSON.parse(event.data) as ServerMessage;
-		if (message.type === 'sync-resp') {
-			this.hasStartedSync = true;
-			this.synced = true;
-			if (this.syncQueue.length) {
-				for (const msg of this.syncQueue) {
-					this.send(msg);
+		switch (message.type) {
+			case 'sync-resp':
+				this.hasStartedSync = true;
+				this.synced = true;
+				if (this.syncQueue.length) {
+					for (const msg of this.syncQueue) {
+						this.send(msg);
+					}
+					this.syncQueue = [];
 				}
-				this.syncQueue = [];
-			}
-		} else if (!this.synced && !message.type.startsWith('presence')) {
-			// TODO: clean this up ^^^^
-			// ignore incoming messages until synced.
-			return;
-		}
-		this.emit('message', message);
-		if (message.type === 'heartbeat-response') {
-			this.heartbeat.keepAlive();
+			case 'need-since':
+			case 'presence-changed':
+			case 'presence-offline':
+				this.emit('message', message);
+				break;
+			case 'heartbeat-response':
+				this.heartbeat.keepAlive();
+				this.emit('message', message);
+				break;
+			default:
+				if (this.synced) {
+					this.emit('message', message);
+				}
+				break;
 		}
 	};
 

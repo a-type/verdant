@@ -21,12 +21,25 @@ export class Storage {
 	readonly meta: Metadata;
 	private entities!: EntityStore;
 	private queryStore!: LiveQueryStore;
-	private queryMaker!: LiveQueryMaker;
 	private documentManager!: DocumentManager<any>;
 
 	readonly collectionNames: string[];
 
-	private sync!: Sync;
+	private _queryMaker!: LiveQueryMaker;
+	get queryMaker() {
+		return this._queryMaker;
+	}
+	private set queryMaker(val: LiveQueryMaker) {
+		this._queryMaker = val;
+	}
+
+	private _sync!: Sync;
+	get sync() {
+		return this._sync;
+	}
+	private set sync(val: Sync) {
+		this._sync = val;
+	}
 
 	constructor(
 		private config: StorageConfig,

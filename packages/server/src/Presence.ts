@@ -34,4 +34,10 @@ export class Presence extends EventEmitter {
 	all = () => {
 		return this.presences;
 	};
+
+	clear = () => {
+		this.presences = {};
+		this.replicaToUser = {};
+		this.userToReplica = {};
+	};
 }

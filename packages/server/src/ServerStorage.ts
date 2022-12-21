@@ -63,6 +63,11 @@ export class ServerStorage {
 		library.remove(replicaId);
 	};
 
+	evictLibrary = (libraryId: string) => {
+		const library = this.libraries.open(libraryId);
+		library.destroy();
+	};
+
 	private createSchema = () => {
 		const run = this.db.transaction(() => {
 			this.db
