@@ -58,6 +58,11 @@ export type SyncMessage = {
 	 * and receive a full baseline
 	 */
 	resyncAll?: boolean;
+	/**
+	 * timestamp of when the replica changes began. null means
+	 * full changeset from start of time
+	 */
+	since: string | null;
 };
 
 export type SyncResponseMessage = {
@@ -129,6 +134,11 @@ export type ServerAckMessage = {
 	timestamp: string;
 };
 
+export type ServerNeedSinceMessage = {
+	type: 'need-since';
+	since: string | null;
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
@@ -143,4 +153,5 @@ export type ServerMessage =
 	| PresenceOfflineMessage
 	| GlobalAckMessage
 	| ForbiddenMessage
-	| ServerAckMessage;
+	| ServerAckMessage
+	| ServerNeedSinceMessage;

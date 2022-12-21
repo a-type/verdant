@@ -153,4 +153,15 @@ export class OperationHistory {
 			}
 		})();
 	};
+
+	deleteAll = () => {
+		this.db
+			.prepare(
+				`
+			DELETE FROM OperationHistory
+			WHERE libraryId = ?
+			`,
+			)
+			.run(this.libraryId);
+	};
 }

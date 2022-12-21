@@ -10,7 +10,6 @@ export async function createTestClient({
 	user,
 	type = ReplicaType.Realtime,
 	logId,
-	loadInitialData,
 	indexedDb = new IDBFactory(),
 	migrations = defaultMigrations,
 }: {
@@ -19,7 +18,6 @@ export async function createTestClient({
 	user: string;
 	type?: ReplicaType;
 	logId?: string;
-	loadInitialData?: (client: Client) => Promise<void>;
 	indexedDb?: IDBFactory;
 	migrations?: Migration<any>[];
 }) {
@@ -41,7 +39,6 @@ export async function createTestClient({
 		log: logId
 			? (...args: any[]) => console.log(`[${logId}]`, ...args)
 			: undefined,
-		loadInitialData,
 	});
 	const client = await desc.open();
 	return client;

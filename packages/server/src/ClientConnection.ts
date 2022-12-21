@@ -41,7 +41,7 @@ class RequestClientConnection extends ClientConnection {
 class WebSocketClientConnection extends ClientConnection {
 	readonly type = 'websocket';
 
-	constructor(key: string, private readonly ws: WebSocket) {
+	constructor(key: string, readonly ws: WebSocket) {
 		super(key);
 	}
 
@@ -123,5 +123,15 @@ export class ClientConnectionManager {
 				connection.respond(message);
 			}
 		}
+	};
+
+	disconnectAll = (libraryId: string) => {
+		const lib = this.getLibraryConnections(libraryId);
+		for (const connection of lib.values()) {
+			if (connection instanceof WebSocketClientConnection) {
+				connection.ws.close();
+			}
+		}
+		lib.clear();
 	};
 }

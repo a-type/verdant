@@ -50,10 +50,14 @@ export class MessageCreator {
 		};
 	};
 
-	createSyncStep1 = async (): Promise<SyncMessage> => {
+	/**
+	 * @param since - override local understanding of last sync time
+	 */
+	createSyncStep1 = async (since?: string | null): Promise<SyncMessage> => {
 		const localReplicaInfo = await this.meta.localReplica.get();
 
-		const provideChangesSince = localReplicaInfo.lastSyncedLogicalTime;
+		const provideChangesSince =
+			since === null ? null : localReplicaInfo.lastSyncedLogicalTime;
 
 		// collect all of our operations that are newer than the server's last operation
 		// if server replica isn't stored, we're syncing for the first time.
@@ -76,7 +80,7 @@ export class MessageCreator {
 		);
 		// we only need to send baselines if we've never synced before
 		let baselines: DocumentBaseline[] = [];
-		if (!localReplicaInfo.lastSyncedLogicalTime) {
+		if (!provideChangesSince) {
 			baselines = await this.meta.baselines.getAllSince('');
 		}
 
@@ -85,9 +89,10 @@ export class MessageCreator {
 			schemaVersion: this.meta.schema.currentVersion,
 			timestamp: this.meta.now,
 			replicaId: localReplicaInfo.id,
-			resyncAll: !provideChangesSince,
+			resyncAll: !localReplicaInfo.lastSyncedLogicalTime,
 			operations,
 			baselines,
+			since: provideChangesSince,
 		};
 	};
 

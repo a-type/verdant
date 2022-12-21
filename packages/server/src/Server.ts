@@ -279,4 +279,19 @@ export class Server extends EventEmitter implements MessageSender {
 		]);
 		await this.storage.close();
 	};
+
+	/**
+	 * Completely remove a library from the server.
+	 * This will remove all data associated with the library.
+	 * Use it very carefully! Data will still be stored on user
+	 * devices, so this is not as scary as it sounds - the next time
+	 * any replica connects, it will repopulate the library. But
+	 * you should still be careful.
+	 */
+	evictLibrary = (libraryId: string) => {
+		// disconnect all clients
+		this.clientConnections.disconnectAll(libraryId);
+		this.storage.evictLibrary(libraryId);
+		this.log('Evicted library', libraryId);
+	};
 }

@@ -285,5 +285,5 @@ it(
 		await waitForConsistency(client1, client2);
 		console.info('✅ Offline consistency achieved');
 	},
-	{ timeout: 80 * 1000 },
+	{ timeout: 30 * 1000 },
 );
