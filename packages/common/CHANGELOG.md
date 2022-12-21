@@ -1,5 +1,24 @@
 # @lo-fi/common
 
+## 1.5.0
+
+### Minor Changes
+
+- 49d7f88: Advanced batching and undo control. Bugfixes for undo application.
+
+## 1.4.5
+
+### Patch Changes
+
+- b1a4646: Handle special characters in document IDs
+- 4a9a9c8: Add sources to npm files
+
+## 1.4.4
+
+### Patch Changes
+
+- fab4656: New more compact timestamp format
+
 ## 1.4.3
 
 ### Patch Changes

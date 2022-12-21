@@ -28,7 +28,7 @@ export function getUndoOperations(
 	const undoOperations: Operation[] = [];
 	for (const operation of operations) {
 		const undo = getUndoOperation(oid, state, operation, getNow);
-		undoOperations.push(...undo);
+		undoOperations.unshift(...undo);
 		applyPatch(state, operation.data);
 	}
 	return undoOperations;

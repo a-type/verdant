@@ -1,5 +1,17 @@
 # @lo-fi/cli
 
+## 1.8.0
+
+### Minor Changes
+
+- 49d7f88: Advanced batching and undo control. Bugfixes for undo application.
+
+## 1.7.4
+
+### Patch Changes
+
+- 17ce9dc: fix useWatch on specific property
+
 ## 1.7.3
 
 ### Patch Changes

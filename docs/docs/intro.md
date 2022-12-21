@@ -28,3 +28,11 @@ Documentation will be sparse for a while. If you'd like to see a full-sized exam
 More than just a software tool for its own sake, I built lo-fi for a specific purpose: making sustainable web apps for individual users as a personal, small business.
 
 If you want to read more about how and why, it's in the [manifesto](./manifesto.md). I've always wanted to write a manifesto! That's not too pretentious, is it?
+
+## What's it like to use?
+
+I've recorded myself working on my app, [Aglio](https://aglio.app), adding a new feature with lo-fi.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/RUykjG-L8Z4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+I think that gives you a decent overview of how easy it is to use day-to-day.

@@ -104,15 +104,40 @@ export function ensureOid(
 	}
 }
 
+const SANTIIZE_PLACEHOLDERS = {
+	'.': '&dot;',
+	'/': '&slash;',
+	':': '&colon;',
+};
+function sanitizeFragment(id: string) {
+	// replaces separator characters with placeholders
+	return id
+		.replace(/[/]/g, SANTIIZE_PLACEHOLDERS['/'])
+		.replace(/[:]/g, SANTIIZE_PLACEHOLDERS[':'])
+		.replace(/[.]/g, SANTIIZE_PLACEHOLDERS['.']);
+}
+function unsanitizeFragment(id: string) {
+	// replaces placeholders with separator characters
+	return id
+		.replace(/&slash;/g, '/')
+		.replace(/&colon;/g, ':')
+		.replace(/&dot;/g, '.');
+}
+
 export function createOid(
 	collection: string,
 	documentId: string,
 	keyPath: KeyPath,
 	subId?: string,
 ) {
-	let oid = collection + COLLECTION_SEPARATOR + documentId;
+	let oid =
+		sanitizeFragment(collection) +
+		COLLECTION_SEPARATOR +
+		sanitizeFragment(documentId);
 	if (subId) {
-		const keyPathItems = keyPath.map((k) => (typeof k === 'number' ? '#' : k));
+		const keyPathItems = keyPath.map((k) =>
+			typeof k === 'number' ? '#' : sanitizeFragment(k),
+		);
 		oid += KEY_PATH_SEPARATOR + keyPathItems.join(KEY_PATH_SEPARATOR);
 		oid += RANDOM_SEPARATOR + subId;
 	}
@@ -137,7 +162,12 @@ export function decomposeOid(oid: ObjectIdentifier): {
 	const [core, random] = oid.split(RANDOM_SEPARATOR);
 	const [collection, paths] = core.split('/');
 	const [id, ...keyPath] = paths.split(KEY_PATH_SEPARATOR);
-	return { collection, id, subId: random, keyPath };
+	return {
+		collection: unsanitizeFragment(collection),
+		id: unsanitizeFragment(id),
+		subId: random,
+		keyPath: keyPath.map(unsanitizeFragment),
+	};
 }
 
 export function assertAllLevelsHaveOids(obj: any, root?: any) {

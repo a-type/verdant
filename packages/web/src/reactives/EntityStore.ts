@@ -8,6 +8,7 @@ import {
 	decomposeOid,
 	DocumentBaseline,
 	EventSubscriber,
+	generateId,
 	getOidRoot,
 	getUndoOperations,
 	groupBaselinesByRootOid,
@@ -15,13 +16,19 @@ import {
 	groupPatchesByRootOid,
 	ObjectIdentifier,
 	Operation,
-	StorageSchema,
 } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { UndoHistory } from '../UndoHistory.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
+
+const DEFAULT_BATCH_KEY = '@@default';
+
+export interface OperationBatch {
+	run: (fn: () => void) => this;
+	flush: () => Promise<void>;
+	discard: () => void;
+}
 
 export class EntityStore extends EventSubscriber<{
 	collectionsChanged: (collections: string[]) => void;
@@ -50,6 +57,9 @@ export class EntityStore extends EventSubscriber<{
 		return this.context.schema;
 	}
 
+	private currentBatchKey = DEFAULT_BATCH_KEY;
+	private defaultBatchTimeout: number;
+
 	constructor({
 		context,
 		meta,
@@ -63,10 +73,18 @@ export class EntityStore extends EventSubscriber<{
 
 		this.context = context;
 
+		this.defaultBatchTimeout = batchTimeout;
 		this.meta = meta;
-		this.operationBatcher = new Batcher(this.flushOperations, {
+		this.operationBatcher = new Batcher<Operation, { undoable?: boolean }>(
+			this.flushOperations,
+		);
+		// initialize default batch
+		this.operationBatcher.add({
+			key: DEFAULT_BATCH_KEY,
+			items: [],
 			max: 100,
 			timeout: batchTimeout,
+			userData: { undoable: true },
 		});
 		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
 	}
@@ -318,30 +336,67 @@ export class EntityStore extends EventSubscriber<{
 		this.emit('collectionsChanged', Array.from(affectedCollections));
 	};
 
-	addLocalOperations = async (operations: Operation[], notUndoable = false) => {
+	addLocalOperations = async (operations: Operation[]) => {
 		this.addOperationsToOpenCaches(operations, false, { isLocal: false });
-		this.operationBatcher.add(
-			notUndoable ? 'notUndoable' : 'default',
-			...operations,
-		);
+		this.operationBatcher.add({
+			key: this.currentBatchKey,
+			items: operations,
+		});
 	};
 
-	flushPatches = async (batch = 'default') => {
-		await this.operationBatcher.flush(batch);
+	batch = ({
+		undoable = true,
+		batchName = generateId(),
+		max = null,
+		timeout = this.defaultBatchTimeout,
+	}: {
+		undoable?: boolean;
+		batchName?: string;
+		max?: number | null;
+		timeout?: number | null;
+	} = {}): OperationBatch => {
+		const internalBatch = this.operationBatcher.add({
+			key: batchName,
+			max,
+			timeout,
+			items: [],
+			userData: { undoable },
+		});
+		const externalApi: OperationBatch = {
+			run: (fn: () => void) => {
+				// while the provided function runs, operations are forwarded
+				// to the new batch instead of default. this relies on the function
+				// being synchronous.
+				this.currentBatchKey = batchName;
+				fn();
+				this.currentBatchKey = DEFAULT_BATCH_KEY;
+				return externalApi;
+			},
+			flush: () => internalBatch.flush(),
+			discard: () => {
+				this.operationBatcher.discard(batchName);
+			},
+		};
+		return externalApi;
+	};
+
+	flushPatches = async () => {
+		await this.operationBatcher.flush(this.currentBatchKey);
 	};
 
 	private flushOperations = async (
 		operations: Operation[],
 		batchKey: string,
+		meta: { undoable?: boolean },
 	) => {
-		await this.submitOperations(operations, batchKey === 'notUndoable');
+		await this.submitOperations(operations, meta);
 	};
 
 	private submitOperations = async (
 		operations: Operation[],
-		notUndoable = false,
+		{ undoable = true }: { undoable?: boolean } = {},
 	) => {
-		if (!notUndoable) {
+		if (undoable) {
 			// FIXME: this is too slow and needs to be optimized.
 			this.undoHistory.addUndo(await this.createUndo(operations));
 		}
@@ -375,7 +430,7 @@ export class EntityStore extends EventSubscriber<{
 			const familyCache = await this.openFamilyCache(oid);
 			let { view, deleted } = familyCache.computeConfirmedView(oid);
 			const inverse = getUndoOperations(oid, view, patches, getNow);
-			inverseOps.push(...inverse);
+			inverseOps.unshift(...inverse);
 		}
 		return inverseOps;
 	};
@@ -389,7 +444,9 @@ export class EntityStore extends EventSubscriber<{
 					op.timestamp = this.meta.now;
 					return op;
 				}),
-				true,
+				// undos should not generate their own undo operations
+				// since they already calculate redo as the inverse.
+				{ undoable: false },
 			);
 			return redo;
 		};

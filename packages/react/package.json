@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/react",
-	"version": "7.0.3",
+	"version": "9.0.0",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -18,7 +18,8 @@
 		"access": "public"
 	},
 	"files": [
-		"dist/"
+		"dist/",
+		"src/"
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
@@ -28,7 +29,7 @@
 	},
 	"peerDependencies": {
 		"react": "^18.2.0",
-		"@lo-fi/web": "^1.6.7"
+		"@lo-fi/web": "^1.8.1"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",

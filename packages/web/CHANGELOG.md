@@ -1,5 +1,45 @@
 # @lo-fi/web
 
+## 1.8.1
+
+### Patch Changes
+
+- 5df835e: fix push/pull sync timing
+
+## 1.8.0
+
+### Minor Changes
+
+- 49d7f88: Advanced batching and undo control. Bugfixes for undo application.
+
+### Patch Changes
+
+- Updated dependencies [49d7f88]
+  - @lo-fi/common@1.5.0
+
+## 1.7.2
+
+### Patch Changes
+
+- 4a9a9c8: Add sources to npm files
+- Updated dependencies [b1a4646]
+- Updated dependencies [4a9a9c8]
+  - @lo-fi/common@1.4.5
+
+## 1.7.1
+
+### Patch Changes
+
+- fab4656: New more compact timestamp format
+- Updated dependencies [fab4656]
+  - @lo-fi/common@1.4.4
+
+## 1.7.0
+
+### Minor Changes
+
+- 20419d8: Experimental import/export feature
+
 ## 1.6.7
 
 ### Patch Changes

@@ -1,5 +1,38 @@
 # @lo-fi/react
 
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [49d7f88]
+  - @lo-fi/common@1.5.0
+  - @lo-fi/web@1.8.0
+
+## 8.0.2
+
+### Patch Changes
+
+- 4a9a9c8: Add sources to npm files
+- Updated dependencies [b1a4646]
+- Updated dependencies [4a9a9c8]
+  - @lo-fi/common@1.4.5
+  - @lo-fi/web@1.7.2
+
+## 8.0.1
+
+### Patch Changes
+
+- Updated dependencies [fab4656]
+  - @lo-fi/common@1.4.4
+  - @lo-fi/web@1.7.1
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [20419d8]
+  - @lo-fi/web@1.7.0
+
 ## 7.0.3
 
 ### Patch Changes
