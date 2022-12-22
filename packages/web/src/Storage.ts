@@ -372,6 +372,11 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 	}
 
 	private initialize = async (init: StorageInitOptions) => {
+		// if server-side, return an interminable promise
+		if (typeof window === 'undefined') {
+			return new Promise(() => {}) as any;
+		}
+
 		if (this._initializing) {
 			return this._readyPromise;
 		}
