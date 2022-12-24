@@ -65,7 +65,7 @@ describe('storage documents', () => {
 		const allItemsQuery = storage.queryMaker.findAll('todo');
 		const allItemsResult = await allItemsQuery.resolved;
 		const allItemsReferenceToItem1 = allItemsResult.find(
-			(item) => item.get('id') === item1.get('id'),
+			(item: any) => item.get('id') === item1.get('id'),
 		);
 		expect(singleItemResult).toBe(allItemsReferenceToItem1);
 	});
@@ -254,5 +254,80 @@ describe('storage documents', () => {
 		expect(item1.get('objectMap').get('baz')).toBe(undefined);
 		item1.get('objectMap').set('baz', { content: 'qux' });
 		expect(item1.get('objectMap').get('baz').get('content')).toBe('qux');
+	});
+
+	it('should merge .update fields and not discard undefined ones', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('weird', {
+			weird: null,
+			map: {
+				foo: 'bar',
+				baz: 'qux',
+			},
+			objectMap: {
+				foo: {
+					content: 'bar',
+				},
+			},
+		});
+
+		item1.update({
+			weird: 'foo',
+		});
+
+		expect(item1.get('weird')).toBe('foo');
+		expect(item1.get('map').get('foo')).toBe('bar');
+	});
+
+	it('should delete undefined fields in .update if merge is false', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('weird', {
+			weird: {
+				bar: 2,
+				qux: 3,
+			},
+			map: {
+				foo: 'bar',
+				baz: 'qux',
+			},
+			objectMap: {
+				foo: {
+					content: 'bar',
+				},
+			},
+		});
+
+		item1.get('weird').update(
+			{
+				bar: 1,
+			},
+			{
+				merge: false,
+			},
+		);
+
+		expect(item1.get('weird').getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "bar": 1,
+			}
+		`);
+	});
+
+	it('should not allow merge: false in strict schema field updates', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('todo', {
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		expect(() => {
+			item1.update({ content: 'bar' }, { merge: false });
+		}).toThrowErrorMatchingInlineSnapshot('"Cannot use .update without merge if the field has a strict schema type. merge: false is only available on \\"any\\" or \\"map\\" types."');
 	});
 });

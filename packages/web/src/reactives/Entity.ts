@@ -365,14 +365,30 @@ export class Entity<
 
 	update = (
 		value: Partial<Snapshot>,
-		{ replaceSubObjects } = {
+		{
+			replaceSubObjects = false,
+			merge = true,
+		}: { replaceSubObjects?: boolean; merge?: boolean } = {
 			/**
 			 * If true, merged sub-objects will be replaced entirely if there's
 			 * ambiguity about their identity.
 			 */
 			replaceSubObjects: false,
+			/**
+			 * If false, omitted keys will erase their respective fields.
+			 */
+			merge: true,
 		},
 	) => {
+		if (
+			!merge &&
+			this.fieldSchema.type !== 'any' &&
+			this.fieldSchema.type !== 'map'
+		) {
+			throw new Error(
+				'Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.',
+			);
+		}
 		this.addPatches(
 			this.store.meta.patchCreator.createDiff(
 				this.getSnapshot(),
@@ -380,6 +396,7 @@ export class Entity<
 				this.keyPath,
 				{
 					mergeUnknownObjects: !replaceSubObjects,
+					defaultUndefined: merge,
 				},
 			),
 		);
@@ -530,7 +547,7 @@ export interface ObjectEntity<
 	delete(key: keyof Value): void;
 	update(
 		value: Partial<Snapshot>,
-		options: { replaceSubObjects: boolean },
+		options?: { replaceSubObjects?: boolean; merge?: boolean },
 	): void;
 	readonly isList: false;
 }

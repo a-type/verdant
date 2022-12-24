@@ -147,7 +147,16 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	createSubId?: () => string,
 	patches: Operation[] = [],
 	options: {
+		/**
+		 * If an object is merged with another and the new one does not
+		 * have an OID assigned, assume it is the same identity as previous
+		 */
 		mergeUnknownObjects?: boolean;
+		/**
+		 * If an incoming value is not assigned on the new object, use the previous value.
+		 * If false, undefined properties will erase the previous value.
+		 */
+		defaultUndefined?: boolean;
 	} = {},
 ): Operation[] {
 	const oid = getOid(from);
@@ -277,17 +286,19 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		}
 
 		// this set now only contains keys which were not in the new object
-		for (const key of oldKeys) {
-			if (isOidKey(key)) continue;
-			// push the delete for the property
-			patches.push({
-				oid,
-				timestamp: getNow(),
-				data: {
-					op: 'remove',
-					name: key,
-				},
-			});
+		if (!options.defaultUndefined) {
+			for (const key of oldKeys) {
+				if (isOidKey(key)) continue;
+				// push the delete for the property
+				patches.push({
+					oid,
+					timestamp: getNow(),
+					data: {
+						op: 'remove',
+						name: key,
+					},
+				});
+			}
 		}
 	}
 

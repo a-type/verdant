@@ -198,6 +198,43 @@ describe('creating diff patch operations', () => {
 				]
 			`);
 		});
+		it('retains keys which are undefined in new object if defaultUndefined is set', () => {
+			const from = {
+				foo: 'bar',
+				baz: { qux: 'corge' },
+			};
+			assignOid(from, 'test/a');
+			assignOid(from.baz, 'test/a:0');
+			const to = {
+				foo: 'bip',
+			};
+			assignOid(to, 'test/a');
+			const patches = diffToPatches(
+				from,
+				to,
+				createClock(),
+				[],
+				undefined,
+				[],
+				{
+					defaultUndefined: true,
+					mergeUnknownObjects: true,
+				},
+			);
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "data": {
+				      "name": "foo",
+				      "op": "set",
+				      "value": "bip",
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				]
+			`);
+		});
 	});
 	describe('on lists of primitives', () => {
 		it('pushes items', async () => {

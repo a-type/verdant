@@ -22,7 +22,7 @@ export class PatchCreator {
 		from: any,
 		to: any,
 		keyPath: KeyPath,
-		options: { mergeUnknownObjects?: boolean } = {},
+		options: { mergeUnknownObjects?: boolean; defaultUndefined?: boolean } = {},
 	) => {
 		return diffToPatches(
 			from,
