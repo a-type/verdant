@@ -136,9 +136,10 @@ export function getAllFieldsAndSyntheticsAsMap(collection) {
 	const fields = objectExpressionEntries(
 		getObjectProperty(collection, 'fields'),
 	);
-	const synthetics = objectExpressionEntries(
-		getObjectProperty(collection, 'synthetics'),
-	);
+	const syntheticsMap = getObjectProperty(collection, 'synthetics');
+	const synthetics = syntheticsMap
+		? objectExpressionEntries(syntheticsMap)
+		: [];
 	return new Map([...fields, ...synthetics]);
 }
 

@@ -123,7 +123,7 @@ type MigrationQueryMaker<
 	findOne(
 		query: CollectionFilter,
 	): Promise<StorageDocument<Collection> | undefined>;
-	findAll(query: CollectionFilter): Promise<StorageDocument<Collection>[]>;
+	findAll(query?: CollectionFilter): Promise<StorageDocument<Collection>[]>;
 };
 
 type MigrationQueries<Old extends StorageSchema<any>> = {
@@ -151,9 +151,9 @@ export interface MigrationTools<
 	queries: MigrationQueries<Old>;
 	mutations: MigrationMutations<New>;
 	info: {
-		changedCollections: string[];
-		addedCollections: string[];
-		removedCollections: string[];
+		changedCollections: keyof Old['collections'][];
+		addedCollections: keyof New['collections'][];
+		removedCollections: keyof Old['collections'][];
 	};
 }
 
@@ -380,7 +380,7 @@ export function createDefaultMigration(
 		async ({ migrate, withDefaults, info }) => {
 			if ((newSchema || schema).version === 1) return;
 
-			for (const collection of info.changedCollections) {
+			for (const collection of info.changedCollections as any) {
 				// @ts-ignore indefinite type resolution
 				await migrate(collection, (old) => withDefaults(collection, old));
 			}
