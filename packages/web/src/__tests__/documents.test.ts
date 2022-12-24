@@ -328,6 +328,30 @@ describe('storage documents', () => {
 
 		expect(() => {
 			item1.update({ content: 'bar' }, { merge: false });
-		}).toThrowErrorMatchingInlineSnapshot('"Cannot use .update without merge if the field has a strict schema type. merge: false is only available on \\"any\\" or \\"map\\" types."');
+		}).toThrowErrorMatchingInlineSnapshot(
+			'"Cannot use .update without merge if the field has a strict schema type. merge: false is only available on \\"any\\" or \\"map\\" types."',
+		);
+	});
+
+	it('should apply defaults to created sub-objects in .update', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('todo', {
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		item1.update({
+			attachments: [
+				{
+					name: 'attachment 1',
+				},
+			],
+		});
+
+		expect(item1.get('attachments').get(0).get('test')).toBe(1);
 	});
 });

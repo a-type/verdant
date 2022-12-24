@@ -389,6 +389,12 @@ export class Entity<
 				'Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.',
 			);
 		}
+		for (const [key, field] of Object.entries(value)) {
+			const fieldSchema = this.getChildFieldSchema(key);
+			if (fieldSchema) {
+				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
+			}
+		}
 		this.addPatches(
 			this.store.meta.patchCreator.createDiff(
 				this.getSnapshot(),
