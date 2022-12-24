@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.9.1
+
+### Patch Changes
+
+- 28fdcbb: fix bug in codegen with only compound indexes
+
 ## 1.9.0
 
 ### Minor Changes

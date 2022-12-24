@@ -1,5 +1,15 @@
 # @lo-fi/common
 
+## 1.7.0
+
+### Minor Changes
+
+- 272e859: Fix a big bug in .update on entities erasing properties
+
+### Patch Changes
+
+- 28fdcbb: fix bug in codegen with only compound indexes
+
 ## 1.6.0
 
 ### Minor Changes
