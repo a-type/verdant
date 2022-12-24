@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.10.1
+
+### Patch Changes
+
+- 2f7ec9a: Apply defaults to sub-objects created in .update
+
 ## 1.10.0
 
 ### Minor Changes
