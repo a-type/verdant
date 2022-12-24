@@ -69,7 +69,7 @@ describe('storage queries', () => {
 		});
 		const results = await query.resolved;
 
-		expect(results.map((i) => i.get('id'))).toEqual([
+		expect(results.map((i: any) => i.get('id'))).toEqual([
 			items[0].get('id'),
 			items[2].get('id'),
 			items[1].get('id'),
@@ -90,7 +90,7 @@ describe('storage queries', () => {
 		});
 		const results = await query.resolved;
 
-		expect(results.map((i) => i.get('id'))).toEqual([
+		expect(results.map((i: any) => i.get('id'))).toEqual([
 			items[0].get('id'),
 			items[4].get('id'),
 			items[1].get('id'),
@@ -110,7 +110,7 @@ describe('storage queries', () => {
 
 		const results = await query.resolved;
 
-		expect(results.map((i) => i.get('id'))).toEqual([
+		expect(results.map((i: any) => i.get('id'))).toEqual([
 			items[0].get('id'),
 			items[1].get('id'),
 			items[2].get('id'),
