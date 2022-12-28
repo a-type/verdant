@@ -117,6 +117,15 @@ describe('storage documents', () => {
 			category: 'general',
 			attachments: [],
 		});
+
+		const callbackDeep = vi.fn();
+		liveItem1.subscribe('changeDeep', callbackDeep);
+		liveItem1.update({
+			tags: ['tag 1', 'tag 2'],
+		});
+
+		await waitForStoragePropagation(callbackDeep);
+		expect(liveItem1.getSnapshot().tags).toEqual(['tag 1', 'tag 2']);
 	});
 
 	it('should expose array mutators on nested arrays', async () => {

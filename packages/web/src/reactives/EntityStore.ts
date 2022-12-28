@@ -337,7 +337,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	addLocalOperations = async (operations: Operation[]) => {
-		this.addOperationsToOpenCaches(operations, false, { isLocal: false });
+		this.addOperationsToOpenCaches(operations, false, { isLocal: true });
 		this.operationBatcher.add({
 			key: this.currentBatchKey,
 			items: operations,
