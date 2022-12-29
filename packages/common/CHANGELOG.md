@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.7.1
+
+### Patch Changes
+
+- aa40deb: Fix bug in merge behavior for update
+
 ## 1.7.0
 
 ### Minor Changes
