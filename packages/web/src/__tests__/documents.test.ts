@@ -287,6 +287,11 @@ describe('storage documents', () => {
 
 		expect(item1.get('weird')).toBe('foo');
 		expect(item1.get('map').get('foo')).toBe('bar');
+
+		item1.update({
+			weird: undefined,
+		});
+		expect(item1.get('weird')).toBe('foo');
 	});
 
 	it('should delete undefined fields in .update if merge is false', async () => {

@@ -276,6 +276,8 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	} else if (isObject(from) && isObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
+			if (value === undefined && options.defaultUndefined) continue;
+
 			oldKeys.delete(key);
 
 			if (isOidKey(key)) continue;
