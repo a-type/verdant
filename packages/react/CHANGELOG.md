@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 11.0.1
+
+### Patch Changes
+
+- Updated dependencies [aa40deb]
+  - @lo-fi/common@1.7.1
+  - @lo-fi/web@1.10.2
+
 ## 11.0.0
 
 ### Patch Changes

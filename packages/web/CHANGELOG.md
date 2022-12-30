@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 1.10.2
+
+### Patch Changes
+
+- Updated dependencies [aa40deb]
+  - @lo-fi/common@1.7.1
+
 ## 1.10.1
 
 ### Patch Changes
