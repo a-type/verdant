@@ -131,4 +131,9 @@ export class ServerStorage {
 	close = async () => {
 		this.db.close();
 	};
+
+	getLibraryPresence = (libraryId: string) => {
+		const library = this.libraries.open(libraryId);
+		return library.getPresence();
+	};
 }

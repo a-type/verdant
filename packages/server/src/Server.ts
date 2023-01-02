@@ -294,4 +294,8 @@ export class Server extends EventEmitter implements MessageSender {
 		this.storage.evictLibrary(libraryId);
 		this.log('Evicted library', libraryId);
 	};
+
+	getLibraryPresence = (libraryId: string) => {
+		return this.storage.getLibraryPresence(libraryId);
+	};
 }

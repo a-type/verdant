@@ -463,6 +463,10 @@ export class ServerLibrary {
 		this.operations.deleteAll();
 		this.baselines.deleteAll();
 	};
+
+	getPresence = () => {
+		return this.presences.all();
+	};
 }
 
 export class ServerLibraryManager {
