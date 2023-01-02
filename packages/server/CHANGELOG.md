@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.3.3
+
+### Patch Changes
+
+- beaffd5: Expose presence API from server
+
 ## 1.3.2
 
 ### Patch Changes
