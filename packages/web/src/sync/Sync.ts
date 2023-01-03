@@ -15,7 +15,7 @@ import {
 	ServerSyncEndpointProvider,
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
-import { WebSocketSync } from './WebsocketSync.js';
+import { WebSocketSync } from './WebSocketSync.js';
 import { PushPullSync } from './PushPullSync.js';
 
 type SyncEvents = {
