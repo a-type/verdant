@@ -1,22 +1,18 @@
 import {
 	ClientMessage,
-	ServerMessage,
 	EventSubscriber,
-	ObjectIdentifier,
-	assert,
 	ReplicaType,
+	ServerMessage,
 } from '@lo-fi/common';
-import { default as jwtDecode } from 'jwt-decode';
-import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
-import { EntityStore } from '../reactives/EntityStore.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from '../PresenceManager.js';
+import { EntityStore } from '../reactives/EntityStore.js';
+import { PushPullSync } from './PushPullSync.js';
 import {
 	ServerSyncEndpointProvider,
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
-import { PushPullSync } from './PushPullSync.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
