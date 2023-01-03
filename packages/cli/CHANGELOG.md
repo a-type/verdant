@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.9.2
+
+### Patch Changes
+
+- d5c8187: Hook for querying peers
+
 ## 1.9.1
 
 ### Patch Changes
