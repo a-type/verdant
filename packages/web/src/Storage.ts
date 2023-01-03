@@ -1,5 +1,5 @@
 import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
-import { NoSync, ServerSync, ServerSyncOptions, Sync } from './Sync.js';
+import { NoSync, ServerSync, ServerSyncOptions, Sync } from './sync/Sync.js';
 import { ExportData, Metadata } from './metadata/Metadata.js';
 import { LiveQueryMaker } from './queries/LiveQueryMaker.js';
 import { LiveQueryStore } from './queries/LiveQueryStore.js';

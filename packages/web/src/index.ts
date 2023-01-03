@@ -10,7 +10,7 @@ export type {
 	AnyEntity,
 	EntityDestructured,
 } from './reactives/Entity.js';
-export { ServerSync } from './Sync.js';
+export { ServerSync } from './sync/Sync.js';
 
 export {
 	collection,
