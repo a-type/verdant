@@ -37,6 +37,7 @@ export interface GeneratedHooks<Presence, Profile> {
   useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
+	useFindPeer: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence> | null;
   useSyncStatus: () => boolean;
 	useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T

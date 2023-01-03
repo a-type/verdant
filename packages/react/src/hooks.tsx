@@ -111,6 +111,52 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
+	function useFindPeer(
+		query: (peer: UserInfo<any, any>) => boolean,
+		options?: { includeSelf: boolean },
+	) {
+		const storage = useStorage();
+		return useSyncExternalStore(
+			(callback) => {
+				const unsubs: (() => void)[] = [];
+				unsubs.push(
+					storage.sync.presence.subscribe('peerChanged', (id, user) => {
+						if (query(user)) {
+							callback();
+						}
+					}),
+				);
+				unsubs.push(
+					storage.sync.presence.subscribe('peerLeft', (id) => {
+						if (query(storage.sync.presence.peers[id])) {
+							callback();
+						}
+					}),
+				);
+				if (options?.includeSelf) {
+					unsubs.push(
+						storage.sync.presence.subscribe('selfChanged', (user) => {
+							if (query(user)) {
+								callback();
+							}
+						}),
+					);
+				}
+
+				return () => {
+					unsubs.forEach((unsub) => unsub());
+				};
+			},
+			() => {
+				const peers = Object.values(storage.sync.presence.peers);
+				if (options?.includeSelf) {
+					peers.push(storage.sync.presence.self);
+				}
+				return peers.find(query) || null;
+			},
+		);
+	}
+
 	function useSyncStatus() {
 		const storage = useStorage();
 		return useSyncExternalStore(
@@ -173,6 +219,7 @@ export function createHooks<Presence = any, Profile = any>(
 		useSelf,
 		usePeerIds,
 		usePeer,
+		useFindPeer,
 		useSyncStatus,
 		useCanUndo,
 		useCanRedo,
