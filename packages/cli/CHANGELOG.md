@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.9.3
+
+### Patch Changes
+
+- 15ed2a2: Skippable hooks, new advanced hooks, configurable sync
+
 ## 1.9.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.10.4
+
+### Patch Changes
+
+- 15ed2a2: Skippable hooks, new advanced hooks, configurable sync
+
 ## 1.10.3
 
 ### Patch Changes
