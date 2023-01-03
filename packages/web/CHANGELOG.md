@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.10.3
+
+### Patch Changes
+
+- 3dbe685: Dynamically set pull interval for sync
+
 ## 1.10.2
 
 ### Patch Changes

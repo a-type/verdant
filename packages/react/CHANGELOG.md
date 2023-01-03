@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 11.0.2
+
+### Patch Changes
+
+- d5c8187: Hook for querying peers
+- Updated dependencies [3dbe685]
+  - @lo-fi/web@1.10.3
+
 ## 11.0.1
 
 ### Patch Changes
