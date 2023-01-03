@@ -51,6 +51,10 @@ export class PushPullSync
 		this.heartbeat.setInterval(interval);
 	};
 
+	get interval() {
+		return this.heartbeat.interval;
+	}
+
 	private sendRequest = async (messages: ClientMessage[]) => {
 		this.log('Sending sync request');
 		try {

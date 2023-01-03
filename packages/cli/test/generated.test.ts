@@ -67,5 +67,22 @@ describe('generated react hooks', () => {
 		// });
 
 		// const { tags } = hooks.useWatch(item)
+
+		// const definitelyArray = hooks.useAllTodos({
+		// 	index: { where: 'content', equals: '' },
+		// });
+		// const maybeNull = hooks.useAllTodos({
+		// 	index: { where: 'content', equals: '' },
+		// 	skip: false,
+		// });
+		// const definitelyDefined = hooks.useTodo('test');
+		// const maybeNull2 = hooks.useTodo('test', { skip: false });
+		// const definitelyDefined2 = hooks.useOneTodo({
+		// 	index: { where: 'content', equals: '' },
+		// });
+		// const maybeNull3 = hooks.useOneTodo({
+		// 	index: { where: 'content', equals: '' },
+		// 	skip: false,
+		// });
 	});
 });

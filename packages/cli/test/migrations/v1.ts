@@ -1,5 +1,8 @@
 import v1Schema from "../.generated/schemaVersions/v1.js";
-import { createDefaultMigration } from "@lo-fi/web";
+import { migrate } from "@lo-fi/web";
 
 // this is your first migration, so no logic is necessary!
-export default createDefaultMigration(v1Schema);
+export default migrate(v1Schema, async ({ mutations }) => {
+  // for version 1, there isn't any data to modify, but you can
+  // still use mutations to seed initial data here.
+});

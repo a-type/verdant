@@ -21,6 +21,14 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			EntityDestructured,
 		} from '@lo-fi/web';
 
+		type NullIfSkip<V, C> = C extends { skip: boolean } ? V | null : V;
+		type SkippableFilterConfig<F> = {
+			index: F;
+		} | {
+			index: F;
+			skip: boolean;
+		}
+
 export interface GeneratedHooks<Presence, Profile> {
 	/**
 	 * Render this context Provider at the top level of your
@@ -34,10 +42,12 @@ export interface GeneratedHooks<Presence, Profile> {
 	/** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
 	useClient: () => Client<Presence, Profile>;
+	useUnsuspendedClient: () => Client<Presence, Profile> | null;
   useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
 	useFindPeer: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence> | null;
+	useFindPeers: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence>[];
   useSyncStatus: () => boolean;
 	useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T
@@ -68,13 +78,10 @@ export interface GeneratedHooks<Presence, Profile> {
 				getObjectProperty(col, 'pluralName')?.value || name + 's',
 			);
 			return `
-use${pascalName}: (id: string) => ${pascalName};
-useOne${pascalName}: (config: {
-  index: ${pascalName}Filter;
-}) => ${pascalName};
-useAll${pascalPlural}: (config?: {
-  index: ${pascalName}Filter;
-}) => ${pascalName}[];
+use${pascalName}(id: string): ${pascalName};
+use${pascalName}(id: string, config: { skip: boolean }): ${pascalName} | null;
+useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => NullIfSkip<${pascalName}, Config>;
+useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => NullIfSkip<${pascalName}[], Config>;
     `;
 		})
 		.join('\n')}

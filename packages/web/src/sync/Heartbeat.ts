@@ -4,10 +4,14 @@ export class Heartbeat extends EventSubscriber<{
 	missed: () => void;
 	beat: () => void;
 }> {
-	private interval: number;
+	private _interval: number;
 	private deadlineLength: number;
 	private nextBeat: NodeJS.Timeout | null = null;
 	private deadline: NodeJS.Timeout | null = null;
+
+	get interval() {
+		return this._interval;
+	}
 
 	constructor({
 		interval = 15 * 1000,
@@ -17,7 +21,7 @@ export class Heartbeat extends EventSubscriber<{
 		deadlineLength?: number;
 	} = {}) {
 		super();
-		this.interval = interval;
+		this._interval = interval;
 		this.deadlineLength = deadlineLength;
 	}
 
@@ -34,7 +38,7 @@ export class Heartbeat extends EventSubscriber<{
 		if (immediate) {
 			this.beat();
 		} else {
-			this.nextBeat = setTimeout(this.beat, this.interval);
+			this.nextBeat = setTimeout(this.beat, this._interval);
 		}
 	};
 
@@ -61,6 +65,6 @@ export class Heartbeat extends EventSubscriber<{
 	 * Only takes affect after the next beat
 	 */
 	setInterval = (interval: number) => {
-		this.interval = interval;
+		this._interval = interval;
 	};
 }

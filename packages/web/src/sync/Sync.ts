@@ -47,6 +47,8 @@ export interface SyncTransport {
 
 export interface Sync extends SyncTransport {
 	setMode(mode: SyncTransportMode): void;
+	setPullInterval(interval: number): void;
+	readonly pullInterval: number;
 }
 
 export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
@@ -63,9 +65,11 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 	public reconnect(): void {}
 
 	public setMode(): void {}
+	public setPullInterval(): void {}
 
 	public readonly isConnected = false;
 	public readonly status = 'paused';
+	public readonly pullInterval = 0;
 
 	public readonly presence = new PresenceManager({
 		initialPresence: {},
@@ -320,6 +324,10 @@ export class ServerSync<Profile = any, Presence = any>
 	setPullInterval = (interval: number) => {
 		this.pushPullSync.setInterval(interval);
 	};
+
+	get pullInterval() {
+		return this.pushPullSync.interval;
+	}
 
 	public send = (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
