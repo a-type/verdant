@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 11.0.3
+
+### Patch Changes
+
+- 15ed2a2: Skippable hooks, new advanced hooks, configurable sync
+- Updated dependencies [15ed2a2]
+  - @lo-fi/web@1.10.4
+
 ## 11.0.2
 
 ### Patch Changes
