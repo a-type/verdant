@@ -3,3 +3,4 @@ packages:
   - 'docs'
   - 'test'
   - 'examples/**'
+  - 'scaleTest'

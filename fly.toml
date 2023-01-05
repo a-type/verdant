@@ -1,0 +1,43 @@
+# fly.toml file generated for aglio on 2022-08-27T12:52:19-04:00
+
+app = "lo-fi-scale-test"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+dockerfile = "Dockerfile.scaleTest"
+
+[env]
+HOST = "https://lo-fi-scale-test.fly.dev"
+
+[experimental]
+allowed_public_ports = []
+auto_rollback = true
+
+[[services]]
+internal_port = 3000
+protocol = "tcp"
+[services.concurrency]
+type = "connections"
+hard_limit = 1000
+soft_limit = 1000
+
+[[services.ports]]
+force_https = true
+handlers = ["http"]
+port = 80
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
+
+[[services.http_checks]]
+interval = 10000
+grace_period = "5s"
+method = "get"
+path = "/"
+protocol = "http"
+restart_limit = 0
+timeout = 2000
+tls_skip_verify = false

@@ -1,0 +1,27 @@
+# basic NodeJS image
+FROM node:18-alpine3.16 AS base
+
+RUN npm install -g pnpm
+WORKDIR /root/monorepo
+
+RUN apk add --no-cache git
+
+RUN apk add --no-cache libc6-compat
+
+ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+FROM base as dev
+COPY ./pnpm-lock.yaml .
+RUN pnpm fetch
+
+COPY . .
+
+RUN pnpm install --filter . --frozen-lockfile
+RUN pnpm install --filter "@lo-fi/scale-test..." --frozen-lockfile --unsafe-perm
+
+WORKDIR /root/monorepo/scaleTest
+EXPOSE 3000
+ENV NODE_ENV=production
+ENTRYPOINT ["pnpm", "run", "server"]

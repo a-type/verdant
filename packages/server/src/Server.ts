@@ -184,6 +184,8 @@ export class Server extends EventEmitter implements MessageSender {
 				}
 
 				finish();
+
+				this.emit('request', info);
 			}
 		} catch (e) {
 			this.emit('error', e);
@@ -247,7 +249,11 @@ export class Server extends EventEmitter implements MessageSender {
 			}
 
 			this.storage.remove(info.libraryId, replicaId);
+
+			this.emit('socket-close', info);
 		});
+
+		this.emit('socket-connection', info);
 	};
 
 	listen = (...params: Parameters<HttpServer['listen']>) => {

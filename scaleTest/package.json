@@ -1,0 +1,26 @@
+{
+	"name": "@lo-fi/scale-test",
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"generate": "lo-fi -s ./client/src/store/schema.ts -o ./client/src/store/client",
+		"client": "tsx ./client/index.ts",
+		"server": "tsx ./server/index.ts"
+	},
+	"dependencies": {
+		"@lo-fi/cli": "workspace:*",
+		"@lo-fi/server": "workspace:*",
+		"@lo-fi/web": "workspace:*",
+		"cors": "^2.8.5",
+		"cuid": "^2.1.8",
+		"express": "^4.18.2",
+		"puppeteer": "^19.4.1",
+		"tsx": "^3.12.1",
+		"typescript": "^4.9.4",
+		"vite": "^4.0.4"
+	},
+	"devDependencies": {
+		"@types/express": "^4.17.15",
+		"@types/cors": "^2.8.13"
+	}
+}
