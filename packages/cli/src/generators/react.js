@@ -80,8 +80,8 @@ export interface GeneratedHooks<Presence, Profile> {
 			return `
 use${pascalName}(id: string): ${pascalName};
 use${pascalName}(id: string, config: { skip: boolean }): ${pascalName} | null;
-useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => NullIfSkip<${pascalName}, Config>;
-useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => NullIfSkip<${pascalName}[], Config>;
+useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter> = { index: any }>(config?: Config) => NullIfSkip<${pascalName}, Config>;
+useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter> = { index: any }>(config?: Config) => NullIfSkip<${pascalName}[], Config>;
     `;
 		})
 		.join('\n')}
