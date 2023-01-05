@@ -8,7 +8,7 @@ import {
 	Operation,
 	StorageFieldSchema,
 } from '@lo-fi/common';
-import { Entity, refreshEntity } from './Entity.js';
+import { Entity, refreshEntity, StoreTools } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
 
 export class DocumentFamilyCache extends EventSubscriber<
@@ -21,9 +21,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 	private unconfirmedOperationsMap: Map<ObjectIdentifier, Operation[]>;
 	private baselinesMap: Map<ObjectIdentifier, DocumentBaseline>;
 
-	private entities: Map<ObjectIdentifier, Entity> = new Map();
+	private entities: Map<ObjectIdentifier, WeakRef<Entity>> = new Map();
 
-	private store: EntityStore;
+	private storeTools: StoreTools;
 
 	constructor({ oid, store }: { oid: ObjectIdentifier; store: EntityStore }) {
 		super();
@@ -31,7 +31,10 @@ export class DocumentFamilyCache extends EventSubscriber<
 		this.operationsMap = new Map();
 		this.unconfirmedOperationsMap = new Map();
 		this.baselinesMap = new Map();
-		this.store = store;
+		this.storeTools = {
+			addLocalOperations: store.addLocalOperations,
+			patchCreator: store.meta.patchCreator,
+		};
 	}
 
 	insertUnconfirmedOperations = (operations: Operation[]) => {
@@ -44,7 +47,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 			this.unconfirmedOperationsMap.set(oid, existingOperations);
 		}
 		for (const oid of oidSet) {
-			const entity = this.entities.get(oid);
+			const entityRef = this.entities.get(oid);
+			const entity = entityRef?.deref();
 			if (entity) {
 				refreshEntity(entity, { isLocal: true });
 				this.emit(`change:${oid}`);
@@ -91,7 +95,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 		if (refreshEntities) {
 			for (const oid of oidSet) {
-				const entity = this.entities.get(oid);
+				const entityRef = this.entities.get(oid);
+				const entity = entityRef?.deref();
 				if (entity) {
 					refreshEntity(entity, info);
 					this.emit(`change:${oid}`);
@@ -137,8 +142,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		// we will update all of them in one go.
 		this.insertOperations(operations, info, !reset);
 		if (reset) {
-			for (const entity of this.entities.values()) {
-				refreshEntity(entity, info);
+			for (const entityRef of this.entities.values()) {
+				const entity = entityRef.deref();
+				if (entity) {
+					refreshEntity(entity, info);
+				}
 			}
 		}
 	};
@@ -195,20 +203,19 @@ export class DocumentFamilyCache extends EventSubscriber<
 		schema: StorageFieldSchema,
 		parent?: Entity,
 	): Entity => {
-		let entity = this.entities.get(oid);
+		let entityRef = this.entities.get(oid);
+		let entity = entityRef?.deref();
 		if (!entity) {
 			entity = new Entity({
 				oid,
 				cache: this,
-				cacheEvents: this.cacheEvents,
 				fieldSchema: schema,
-				store: this.store,
+				store: this.storeTools,
 				parent,
 			});
 
 			// immediately add to cache and queue a removal if nobody subscribed
-			this.entities.set(oid, entity);
-			this.enqueueCacheRemoval(oid);
+			this.entities.set(oid, new WeakRef(entity));
 		}
 
 		return entity as any;
@@ -218,27 +225,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return this.operationsMap.has(oid) || this.baselinesMap.has(oid);
 	};
 
-	private onSubscribed = (entity: Entity) => {};
-
-	private onAllUnsubscribed = (entity: Entity) => {
-		this.enqueueCacheRemoval(entity.oid);
-	};
-
-	private cacheEvents = {
-		onSubscribed: this.onSubscribed,
-		onAllUnsubscribed: this.onAllUnsubscribed,
-	};
-
-	private enqueueCacheRemoval = (oid: ObjectIdentifier) => {
-		setTimeout(() => {
-			if (!this.entities.get(oid)?.hasSubscribers) {
-				this.entities.delete(oid);
-			}
-		}, 1000);
-	};
-
 	dispose = () => {
-		this.entities.forEach((entity) => entity.dispose());
+		this.entities.forEach((entity) => entity.deref()?.dispose());
 		this.entities.clear();
 	};
 
@@ -250,7 +238,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 		this.operationsMap = new Map();
 		this.insertOperations(operations, info);
 		for (const oid of this.entities.keys()) {
-			const entity = this.entities.get(oid);
+			const entityRef = this.entities.get(oid);
+			const entity = entityRef?.deref();
 			if (entity) {
 				refreshEntity(entity, info);
 				this.emit(`change:${oid}`);

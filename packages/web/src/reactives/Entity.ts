@@ -1,27 +1,18 @@
 import {
-	applyPatch,
 	assignOid,
 	cloneDeep,
 	createRef,
 	decomposeOid,
 	EventSubscriber,
-	isObject,
 	isObjectRef,
-	KeyPath,
 	maybeGetOid,
-	Normalized,
-	NormalizedObject,
-	normalizeFirstLevel,
 	ObjectIdentifier,
 	Operation,
-	OperationPatch,
-	removeOid,
+	PatchCreator,
 	StorageFieldSchema,
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
-import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
-import { EntityStore } from './EntityStore.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
@@ -29,9 +20,19 @@ export const REBASE = '@@rebase';
 const REFRESH = '@@refresh';
 const DEEP_CHANGE = '@@deepChange';
 
-interface CacheEvents {
-	onSubscribed: (entity: Entity<any, any>) => void;
-	onAllUnsubscribed: (entity: Entity<any, any>) => void;
+export interface CacheTools {
+	computeView(oid: ObjectIdentifier): { view: any; deleted: boolean };
+	getEntity(
+		oid: ObjectIdentifier,
+		schema: StorageFieldSchema,
+		parent?: Entity,
+	): Entity;
+	hasOid(oid: ObjectIdentifier): boolean;
+}
+
+export interface StoreTools {
+	addLocalOperations(operations: Operation[]): void;
+	patchCreator: PatchCreator;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -87,13 +88,12 @@ export class Entity<
 	protected _current: any | null = null;
 
 	readonly oid: ObjectIdentifier;
-	protected readonly store: EntityStore;
-	protected readonly cacheEvents: CacheEvents;
+	protected readonly store: StoreTools;
 	protected readonly fieldSchema;
 	protected readonly keyPath;
-	protected readonly cache: DocumentFamilyCache;
+	protected readonly cache: CacheTools;
 	protected _deleted = false;
-	protected parent: Entity<any, any> | undefined;
+	protected parent: WeakRef<Entity<any, any>> | undefined;
 
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
@@ -111,12 +111,12 @@ export class Entity<
 
 		// even if nobody subscribes directly to this entity, if a parent
 		// has a deep subscription that counts.
-		let parent = this.parent;
+		let parent = this.parent?.deref();
 		while (parent) {
 			if (parent.hasSubscribersToDeepChanges()) {
 				return true;
 			}
-			parent = parent.parent;
+			parent = parent.parent?.deref();
 		}
 
 		return false;
@@ -137,22 +137,19 @@ export class Entity<
 	constructor({
 		oid,
 		store,
-		cacheEvents,
 		fieldSchema,
 		cache,
 		parent,
 	}: {
 		oid: ObjectIdentifier;
-		store: EntityStore;
-		cacheEvents: CacheEvents;
+		store: StoreTools;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
-		cache: DocumentFamilyCache;
+		cache: CacheTools;
 		parent?: Entity<any, any>;
 	}) {
 		this.oid = oid;
-		this.parent = parent;
+		this.parent = parent && new WeakRef(parent);
 		this.store = store;
-		this.cacheEvents = cacheEvents;
 		this.fieldSchema = fieldSchema;
 		this.keyPath = decomposeOid(oid).keyPath;
 		this.cache = cache;
@@ -190,8 +187,9 @@ export class Entity<
 	) => {
 		this.cachedSnapshot = null;
 		this.events.emit('changeDeep', source, info);
-		if (this.parent) {
-			this.parent[DEEP_CHANGE](source, info);
+		const parent = this.parent?.deref();
+		if (parent) {
+			parent[DEEP_CHANGE](source, info);
 		}
 	};
 
@@ -216,19 +214,9 @@ export class Entity<
 		event: EventName,
 		callback: EntityEvents[EventName],
 	) => {
-		const wasNotSubscribed = this.hasSubscribers;
 		const unsubscribe = this.events.subscribe(event, callback);
-		const isNowSubscribed = this.hasSubscribers;
-		if (wasNotSubscribed && isNowSubscribed) {
-			this.cacheEvents.onSubscribed(this as any);
-		}
 
-		return () => {
-			unsubscribe();
-			if (!this.hasSubscribers) {
-				this.cacheEvents.onAllUnsubscribed(this as any);
-			}
-		};
+		return unsubscribe;
 	};
 
 	protected addPatches = (patches: Operation[]) => {
@@ -349,7 +337,7 @@ export class Entity<
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createSet(
+			this.store.patchCreator.createSet(
 				this.oid,
 				key as string | number,
 				value,
@@ -358,7 +346,13 @@ export class Entity<
 		);
 	};
 	delete = (key: any) => {
-		this.addPatches(this.store.meta.patchCreator.createRemove(this.oid, key));
+		if (Array.isArray(this.value)) {
+			this.addPatches(
+				this.store.patchCreator.createListDelete(this.oid, key as number, 1),
+			);
+		} else {
+			this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
+		}
 	};
 	/** @deprecated - renamed to delete */
 	remove = this.delete.bind(this);
@@ -396,7 +390,7 @@ export class Entity<
 			}
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createDiff(
+			this.store.patchCreator.createDiff(
 				this.getSnapshot(),
 				assignOid(value, this.oid),
 				this.keyPath,
@@ -432,9 +426,7 @@ export class Entity<
 		if (fieldSchema) {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
-		this.addPatches(
-			this.store.meta.patchCreator.createListPush(this.oid, value),
-		);
+		this.addPatches(this.store.patchCreator.createListPush(this.oid, value));
 	};
 	insert = (index: number, value: ListItemInit<Init>) => {
 		const fieldSchema = this.getChildFieldSchema(index);
@@ -442,17 +434,17 @@ export class Entity<
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
 		this.addPatches(
-			this.store.meta.patchCreator.createListInsert(this.oid, index, value),
+			this.store.patchCreator.createListInsert(this.oid, index, value),
 		);
 	};
 	move = (from: number, to: number) => {
 		this.addPatches(
-			this.store.meta.patchCreator.createListMoveByIndex(this.oid, from, to),
+			this.store.patchCreator.createListMoveByIndex(this.oid, from, to),
 		);
 	};
 	moveItem = (item: ListItemValue<KeyValue>, to: number) => {
 		this.addPatches(
-			this.store.meta.patchCreator.createListMoveByRef(
+			this.store.patchCreator.createListMoveByRef(
 				this.oid,
 				createRef(this.getItemOid(item)),
 				to,
@@ -461,7 +453,7 @@ export class Entity<
 	};
 	removeAll = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.meta.patchCreator.createListRemove(
+			this.store.patchCreator.createListRemove(
 				this.oid,
 				createRef(this.getItemOid(item)),
 			),
@@ -469,7 +461,7 @@ export class Entity<
 	};
 	removeFirst = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.meta.patchCreator.createListRemove(
+			this.store.patchCreator.createListRemove(
 				this.oid,
 				createRef(this.getItemOid(item)),
 				'first',
@@ -478,7 +470,7 @@ export class Entity<
 	};
 	removeLast = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.meta.patchCreator.createListRemove(
+			this.store.patchCreator.createListRemove(
 				this.oid,
 				createRef(this.getItemOid(item)),
 				'last',

@@ -368,4 +368,43 @@ describe('storage documents', () => {
 
 		expect(item1.get('attachments').get(0).get('test')).toBe(1);
 	});
+
+	it('should remove items from list when .delete is called', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.create('todo', {
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		item1.get('attachments').push({
+			name: 'attachment 1',
+		});
+
+		item1.get('attachments').push({
+			name: 'attachment 2',
+		});
+
+		item1.get('attachments').push({
+			name: 'attachment 3',
+		});
+
+		item1.get('attachments').delete(1);
+
+		expect(item1.get('attachments').length).toBe(2);
+		expect(item1.get('attachments').get(0).get('name')).toBe('attachment 1');
+		expect(item1.get('attachments').get(1).get('name')).toBe('attachment 3');
+
+		// should work on lists which are not field-validated
+		const item2 = await storage.create('weird', {
+			weird: ['foo', 'bar', 'baz'],
+		});
+		item2.get('weird').delete(1);
+		expect(item2.get('weird').length).toBe(2);
+		expect(item2.get('weird').get(0)).toBe('foo');
+		expect(item2.get('weird').get(1)).toBe('baz');
+	});
 });
