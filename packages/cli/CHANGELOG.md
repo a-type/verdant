@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.9.4
+
+### Patch Changes
+
+- 3603f95: Fix hook typings when no index provided
+
 ## 1.9.3
 
 ### Patch Changes

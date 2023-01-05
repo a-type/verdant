@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.10.5
+
+### Patch Changes
+
+- b13d81d: Bugfix: list deletes were not pruning lists
+
 ## 1.10.4
 
 ### Patch Changes
