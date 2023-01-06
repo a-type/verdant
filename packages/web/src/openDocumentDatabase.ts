@@ -257,7 +257,7 @@ async function getDatabaseVersion(
 			// }, 200);
 		};
 		request.onerror = (event) => {
-			resolve([currentVersion!, database!]);
+			reject(request.error!);
 		};
 	}
 	const [currentVersion, db] = await new Promise<[number, IDBDatabase]>(
