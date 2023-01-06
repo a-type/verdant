@@ -393,7 +393,7 @@ export class Metadata extends EventSubscriber<{
 		await this.localReplica.reset();
 	};
 
-	updateSchema = async (schema: StorageSchema) => {
+	updateSchema = async (schema: StorageSchema, overrideConflict?: number) => {
 		const storedSchema = await this.schema.get();
 		if (storedSchema) {
 			// version changes will be handled by migration routines in
@@ -402,6 +402,7 @@ export class Metadata extends EventSubscriber<{
 			// but this check determines if the schema has been changed without
 			// a version change. if so, it will error.
 			if (
+				overrideConflict === storedSchema.version &&
 				storedSchema.version === schema.version &&
 				JSON.stringify(storedSchema) !== JSON.stringify(schema)
 			) {

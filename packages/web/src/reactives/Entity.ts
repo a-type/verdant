@@ -405,16 +405,27 @@ export class Entity<
 	/**
 	 * List methods
 	 */
-	private getItemOid = (item: ListItemValue<KeyValue>) => {
-		const itemOid = maybeGetOid(item);
-		if (!itemOid || !this.cache.hasOid(itemOid)) {
-			throw new Error(
-				`Cannot move object ${JSON.stringify(
-					item,
-				)} which does not exist in this list`,
-			);
+
+	/**
+	 * Returns the referent value of an item in the list, used for
+	 * operations which act on items. if the item is an object,
+	 * it will attempt to create an OID reference to it. If it
+	 * is a primitive, it will return the primitive.
+	 */
+	private getItemRefValue = (item: ListItemValue<KeyValue>) => {
+		if (typeof item === 'object') {
+			const itemOid = maybeGetOid(item);
+			if (!itemOid || !this.cache.hasOid(itemOid)) {
+				throw new Error(
+					`Cannot move object ${JSON.stringify(
+						item,
+					)} which does not exist in this list`,
+				);
+			}
+			return itemOid;
+		} else {
+			return item;
 		}
-		return itemOid;
 	};
 
 	get length() {
@@ -443,19 +454,23 @@ export class Entity<
 		);
 	};
 	moveItem = (item: ListItemValue<KeyValue>, to: number) => {
-		this.addPatches(
-			this.store.patchCreator.createListMoveByRef(
-				this.oid,
-				createRef(this.getItemOid(item)),
-				to,
-			),
-		);
+		const itemRef = this.getItemRefValue(item);
+		if (isObjectRef(itemRef)) {
+			this.addPatches(
+				this.store.patchCreator.createListMoveByRef(this.oid, itemRef, to),
+			);
+		} else {
+			const index = this.value.indexOf(itemRef);
+			this.addPatches(
+				this.store.patchCreator.createListMoveByIndex(this.oid, index, to),
+			);
+		}
 	};
 	removeAll = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
 			this.store.patchCreator.createListRemove(
 				this.oid,
-				createRef(this.getItemOid(item)),
+				this.getItemRefValue(item),
 			),
 		);
 	};
@@ -463,7 +478,7 @@ export class Entity<
 		this.addPatches(
 			this.store.patchCreator.createListRemove(
 				this.oid,
-				createRef(this.getItemOid(item)),
+				this.getItemRefValue(item),
 				'first',
 			),
 		);
@@ -472,10 +487,22 @@ export class Entity<
 		this.addPatches(
 			this.store.patchCreator.createListRemove(
 				this.oid,
-				createRef(this.getItemOid(item)),
+				this.getItemRefValue(item),
 				'last',
 			),
 		);
+	};
+	add = (item: ListItemValue<KeyValue>) => {
+		this.addPatches(this.store.patchCreator.createListAdd(this.oid, item));
+	};
+	has = (item: ListItemValue<KeyValue>) => {
+		if (typeof item === 'object') {
+			return this.value.some((val: unknown) => {
+				if (isObjectRef(val)) return val.id === maybeGetOid(item);
+				return false;
+			});
+		}
+		return this.value.includes(item);
 	};
 
 	// list implements an iterator which maps items to wrapped
@@ -562,6 +589,11 @@ export interface ListEntity<
 	insert(index: number, value: ListItemInit<Init>): void;
 	move(from: number, to: number): void;
 	moveItem(item: ListItemValue<Value>, to: number): void;
+	/**
+	 * A Set operation which adds a value if an equivalent value is not already present.
+	 * Object values are never the same.
+	 */
+	add(value: ListItemValue<Value>): void;
 	removeAll(item: ListItemValue<Value>): void;
 	removeFirst(item: ListItemValue<Value>): void;
 	removeLast(item: ListItemValue<Value>): void;
@@ -570,6 +602,7 @@ export interface ListEntity<
 		callback: (value: ListItemValue<Value>, index: number) => boolean,
 	): ListItemValue<Value>[];
 	delete(index: number): void;
+	has(value: ListItemValue<Value>): boolean;
 }
 
 export type AnyEntity<

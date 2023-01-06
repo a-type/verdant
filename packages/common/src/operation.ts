@@ -117,6 +117,11 @@ export interface OperationPatchListRemove extends BaseOperationPatch {
 	only?: 'first' | 'last';
 }
 
+export interface OperationPatchListAdd extends BaseOperationPatch {
+	op: 'list-add';
+	value: PropertyValue;
+}
+
 export interface OperationPatchDelete extends BaseOperationPatch {
 	op: 'delete';
 }
@@ -131,7 +136,8 @@ export type OperationPatch =
 	| OperationPatchListMoveByRef
 	| OperationPatchListMoveByIndex
 	| OperationPatchListRemove
-	| OperationPatchDelete;
+	| OperationPatchDelete
+	| OperationPatchListAdd;
 
 export type Operation = {
 	oid: ObjectIdentifier;
@@ -562,6 +568,20 @@ export function applyPatch<T extends NormalizedObject>(
 						base.splice(index, 1);
 					}
 				} while (!patch.only && index !== -1);
+			}
+			break;
+		case 'list-add':
+			if (listCheck(base)) {
+				const alreadyHas = base.some((item: any) => {
+					if (isObjectRef(item) && isObjectRef(patch.value)) {
+						return item.id === patch.value.id;
+					} else {
+						return item === patch.value;
+					}
+				});
+				if (!alreadyHas) {
+					base.push(patch.value);
+				}
 			}
 			break;
 		case 'list-move-by-ref':

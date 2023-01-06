@@ -800,4 +800,20 @@ describe('applying individual operations', () => {
 			),
 		).toEqual([createRef('a'), createRef('b'), createRef('c'), createRef('b')]);
 	});
+	it('applies a list-add of a nonexistent item', () => {
+		expect(
+			applyPatch(['a', 'b', 'c'], {
+				op: 'list-add',
+				value: 'd',
+			}),
+		).toEqual(['a', 'b', 'c', 'd']);
+	});
+	it('does not apply a list-add if the item is already present', () => {
+		expect(
+			applyPatch(['a', 'b', 'c'], {
+				op: 'list-add',
+				value: 'b',
+			}),
+		).toEqual(['a', 'b', 'c']);
+	});
 });

@@ -120,6 +120,32 @@ export class PatchCreator {
 		}
 	};
 
+	createListAdd = (oid: ObjectIdentifier, value: any): Operation[] => {
+		if (isObject(value)) {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-add',
+						value: createRef(value),
+					},
+				},
+			];
+		} else {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-add',
+						value,
+					},
+				},
+			];
+		}
+	};
+
 	createListInsert = (
 		oid: ObjectIdentifier,
 		index: number,

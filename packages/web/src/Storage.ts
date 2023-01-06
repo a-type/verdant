@@ -342,6 +342,13 @@ export interface StorageInitOptions<Presence = any, Profile = any> {
 	 */
 	log?: (...args: any[]) => void;
 	disableRebasing?: boolean;
+	/**
+	 * Provide a specific schema number to override the schema version
+	 * in the database. This is useful for testing migrations or recovering
+	 * from a mistakenly deployed incorrect schema. A specific version is required
+	 * so that you don't leave this on accidentally for all new schemas.
+	 */
+	overrideSchemaConflict?: number;
 }
 
 /**
@@ -402,7 +409,7 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 			});
 
 			// verify schema integrity
-			await meta.updateSchema(init.schema);
+			await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
 			const documentDb = await openDocumentDatabase({
 				context,

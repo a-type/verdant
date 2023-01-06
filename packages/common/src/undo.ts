@@ -173,6 +173,22 @@ function getUndoOperation(
 					},
 				}));
 			}
+		case 'list-add':
+			// this one is kind of ambiguous. in theory the set may have
+			// already included the value and so no change happened. but
+			// basically we infer the intent is to remove what was meant
+			// to be added by this change.
+			return [
+				{
+					oid,
+					timestamp: getNow(),
+					data: {
+						op: 'list-remove',
+						value: data.value,
+						only: 'last',
+					},
+				},
+			];
 		case 'initialize':
 			return [
 				{
