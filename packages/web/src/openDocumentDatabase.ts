@@ -257,7 +257,8 @@ async function getDatabaseVersion(
 			// }, 200);
 		};
 		request.onerror = (event) => {
-			reject(request.error!);
+			// FIXME: this fails if the code is older than the local database
+			resolve([currentVersion!, database!]);
 		};
 	}
 	const [currentVersion, db] = await new Promise<[number, IDBDatabase]>(
