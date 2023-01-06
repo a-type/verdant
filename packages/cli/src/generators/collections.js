@@ -140,10 +140,7 @@ function getObjectTypings(field, name) {
 			} else {
 				const valueFieldType = getObjectProperty(field, 'values');
 				const valueName = getSubObjectFieldName(name, 'Value');
-				content += `export type ${name}Init = Record<string, ${getObjectInitTypings(
-					name,
-					fields,
-				)}>;`;
+				content += `export type ${name}Init = Record<string, ${valueName}Init>;`;
 				content += `export type ${name}Destructured = Record<string, ${valueName}>;`;
 				content += `export type ${name}Snapshot = Record<string, ${valueName}Snapshot>;`;
 				content += getObjectTypings(valueFieldType, valueName);
