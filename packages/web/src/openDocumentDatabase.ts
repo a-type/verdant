@@ -257,6 +257,7 @@ async function getDatabaseVersion(
 			// }, 200);
 		};
 		request.onerror = (event) => {
+			// FIXME: this fails if the code is older than the local database
 			resolve([currentVersion!, database!]);
 		};
 	}
