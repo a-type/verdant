@@ -148,6 +148,7 @@ async function fuzz(
 	// now, do the operation at whatever level we ended up at
 	if (!current) return;
 
+	// UPSERT
 	if (Math.random() < 0.6 || avoidDelete) {
 		if (!current.isList) {
 			const keys: string[] = current.keys();
@@ -156,11 +157,17 @@ async function fuzz(
 				: randomString();
 			current.set(key, randomInitialData(avoidLists));
 		} else {
-			current.set(
-				Math.floor(Math.random() * Math.max(1, current.length)),
-				randomInitialData(avoidLists),
-			);
+			if (Math.random() < 0.2) {
+				// testing set adding with the same value
+				current.add(Math.random() < 0.5 ? 'fuzz' : 'bazz');
+			} else {
+				current.set(
+					Math.floor(Math.random() * Math.max(1, current.length)),
+					randomInitialData(avoidLists),
+				);
+			}
 		}
+		// DELETE
 	} else {
 		if (!current.isList) {
 			const keys: string[] = current.keys();

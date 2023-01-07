@@ -326,7 +326,7 @@ export class Entity<
 	 * Object methods
 	 */
 	keys = () => {
-		return Object.keys(this.value);
+		return Object.keys(this.value || {});
 	};
 	entries = () => {
 		return Object.entries(this.getAll());

@@ -1,5 +1,5 @@
 import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
-import { Client, Query } from './client/index.js';
+import { Client, Item, Query } from './client/index.js';
 import { createTestClient } from './lib/testClient.js';
 import { startTestServer } from './lib/testServer.js';
 import {
@@ -136,6 +136,30 @@ it('can sync multiple clients even if they go offline', async () => {
 	});
 	expect(b_steakItem.get('purchased')).toBe(true);
 
+	const b_unknownItem = await clientB.items.get(a_unknownItem.get('id'))
+		.resolved;
+
+	a_unknownItem.get('tags').add('tag1');
+	a_unknownItem.get('tags').add('tag2');
+	b_unknownItem.get('tags').add('tag3');
+	b_unknownItem.get('tags').add('tag1');
+
+	async function waitForTags(item: Item) {
+		await waitForCondition(() => {
+			return (
+				item.get('tags').has('tag1') &&
+				item.get('tags').has('tag2') &&
+				item.get('tags').has('tag3')
+			);
+		});
+		expect(item.get('tags').has('tag1')).toBe(true);
+		expect(item.get('tags').has('tag2')).toBe(true);
+		expect(item.get('tags').has('tag3')).toBe(true);
+	}
+	await waitForTags(a_unknownItem);
+	await waitForTags(b_unknownItem);
+	await waitForTags(await clientC.items.get(a_unknownItem.get('id')).resolved!);
+
 	console.info('🔺--- Offline sync actions ---');
 	// go offline on two clients and push different items to the comments
 	// array. both items should end up synced.
@@ -146,8 +170,6 @@ it('can sync multiple clients even if they go offline', async () => {
 		authorId: 'User A',
 		content: 'This is a comment from A',
 	});
-	const b_unknownItem = await clientB.items.get(a_unknownItem.get('id'))
-		.resolved;
 	b_unknownItem.get('comments').push({
 		authorId: 'User B',
 		content: 'This is a comment from B',
