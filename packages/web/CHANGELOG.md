@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.10.6
+
+### Patch Changes
+
+- f4917a4: Fix major bug with desc.open(), rollback WeakRef usage
+- Updated dependencies [0c93e2e]
+  - @lo-fi/common@1.8.0
+
 ## 1.10.5
 
 ### Patch Changes
