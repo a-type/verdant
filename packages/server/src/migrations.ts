@@ -1,9 +1,6 @@
 import type { Database } from 'better-sqlite3';
-import * as fs from 'fs';
-import * as path from 'path';
-import dirname from './dirname.cjs';
-
-const __dirname = dirname as unknown as string;
+import v0Sql from './migrations/v0.sql.js';
+import v1Sql from './migrations/v1.sql.js';
 
 export function migrations(db: Database) {
 	// create the versions table if it doesn't exist
@@ -26,17 +23,9 @@ export function migrations(db: Database) {
 	const version = versionResult?.version ?? 0;
 
 	if (version === 0) {
-		const v0Migration = fs.readFileSync(
-			path.resolve(__dirname, './migrations/v0.sql'),
-			'utf8',
-		);
-		const v1Migration = fs.readFileSync(
-			path.resolve(__dirname, './migrations/v1.sql'),
-			'utf8',
-		);
 		const run = db.transaction(() => {
-			db.exec(v0Migration);
-			db.exec(v1Migration);
+			db.exec(v0Sql);
+			db.exec(v1Sql);
 			db.prepare(
 				`
         INSERT INTO versions (version) VALUES (1);

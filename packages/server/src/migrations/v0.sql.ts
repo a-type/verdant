@@ -1,3 +1,4 @@
+export default `
 CREATE TABLE IF NOT EXISTS ReplicaInfo (
   id TEXT PRIMARY KEY NOT NULL,
   libraryId TEXT NOT NULL,
@@ -22,3 +23,4 @@ CREATE TABLE IF NOT EXISTS DocumentBaseline (
   timestamp TEXT NOT NULL,
   libraryId TEXT NOT NULL
 );
+`;

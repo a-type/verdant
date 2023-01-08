@@ -1,3 +1,4 @@
+export default `
 ALTER TABLE
   ReplicaInfo RENAME TO ReplicaInfoOld;
 
@@ -24,3 +25,4 @@ FROM
   ReplicaInfoOld;
 
 DROP TABLE ReplicaInfoOld;
+`;
