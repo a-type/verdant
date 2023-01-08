@@ -384,7 +384,7 @@ export class StorageDescriptor<Presence = any, Profile = any> {
 			return new Promise(() => {}) as any;
 		}
 
-		if (this._initializing) {
+		if (this._initializing || this._resolvedValue) {
 			return this._readyPromise;
 		}
 		this._initializing = true;

@@ -13,6 +13,7 @@ import {
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
+import { WeakRef } from './FakeWeakRef.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';

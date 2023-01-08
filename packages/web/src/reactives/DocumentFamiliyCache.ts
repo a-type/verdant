@@ -10,6 +10,7 @@ import {
 } from '@lo-fi/common';
 import { Entity, refreshEntity, StoreTools } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
+import { WeakRef } from './FakeWeakRef.js';
 
 export class DocumentFamilyCache extends EventSubscriber<
 	Record<`change:${string}`, () => void> & {

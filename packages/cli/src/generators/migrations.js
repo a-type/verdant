@@ -49,6 +49,12 @@ export function createMigration(
 export function createMigrationIndex(migrationsDirectory, migrationNames) {
 	return `
   ${migrationNames
+		// they should be sorted in ascending numerical order for prettiness
+		.sort((a, b) => {
+			const aVersion = parseInt(a.replace('v', '').replace('.ts', ''));
+			const bVersion = parseInt(b.replace('v', '').replace('.ts', ''));
+			return aVersion - bVersion;
+		})
 		.map((name) => `import ${name} from './${name}.js';`)
 		.join('\n')}
 

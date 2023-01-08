@@ -217,15 +217,13 @@ export class ServerSync<Profile = any, Presence = any>
 							this.setMode('realtime');
 						}
 					}
-				} else {
-					if (this.mode === 'realtime') {
-						// wait 1 second then switch to pull mode if still emtpy
-						switchoverTimeout = setTimeout(() => {
-							if (Object.keys(this.presence.peers).length === 0) {
-								this.setMode('pull');
-							}
-						}, 1000);
-					}
+				} else if (this.mode === 'realtime') {
+					// wait 1 second then switch to pull mode if still emtpy
+					switchoverTimeout = setTimeout(() => {
+						if (Object.keys(this.presence.peers).length === 0) {
+							this.setMode('pull');
+						}
+					}, 1000);
 				}
 			});
 		}
@@ -312,6 +310,7 @@ export class ServerSync<Profile = any, Presence = any>
 		}
 
 		if (newSync === this.activeSync) return;
+		this.log('switching to', transport, 'mode');
 
 		// transfer state to new sync
 		if (this.activeSync.status === 'active') {

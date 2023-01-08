@@ -157,11 +157,19 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private writeDocumentToStorage = async (oid: ObjectIdentifier) => {
-		if (this._disposed) return;
+		if (this._disposed) {
+			this.log('warn', 'EntityStore is disposed, not writing to storage');
+			return;
+		}
 		const rootOid = getOidRoot(oid);
 		const { id, collection } = decomposeOid(rootOid);
 		const entity = await this.get(rootOid);
-		if (this._disposed) return;
+
+		if (this._disposed) {
+			this.log('warn', 'EntityStore is disposed, not writing to storage');
+			return;
+		}
+
 		const snapshot = entity?.getSnapshot();
 		if (snapshot) {
 			const stored = cloneDeep(snapshot);
@@ -172,6 +180,7 @@ export class EntityStore extends EventSubscriber<{
 				const tx = this.db.transaction(collection, 'readwrite');
 				const store = tx.objectStore(collection);
 				await storeRequestPromise(store.put(stored));
+				this.log('info', '📝', 'wrote', collection, id, 'to storage');
 			} catch (err) {
 				// if the document can't be written, something's very wrong :(
 				// log the error and move on...
@@ -232,6 +241,13 @@ export class EntityStore extends EventSubscriber<{
 		oids.forEach((oid) => {
 			const familyCache = this.documentFamilyCaches.get(oid);
 			if (familyCache) {
+				this.log(
+					'adding',
+					confirmed ? 'confirmed' : 'unconfirmed',
+					'operations to cache',
+					oid,
+					operationsByOid[oid].length,
+				);
 				if (confirmed) {
 					familyCache.insertOperations(operationsByOid[oid], info);
 				} else {
@@ -337,6 +353,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	addLocalOperations = async (operations: Operation[]) => {
+		this.log('Adding local operations', operations.length);
 		this.addOperationsToOpenCaches(operations, false, { isLocal: true });
 		this.operationBatcher.add({
 			key: this.currentBatchKey,
@@ -389,6 +406,7 @@ export class EntityStore extends EventSubscriber<{
 		batchKey: string,
 		meta: { undoable?: boolean },
 	) => {
+		this.log('Flushing operations', operations.length, 'to storage / sync');
 		await this.submitOperations(operations, meta);
 	};
 

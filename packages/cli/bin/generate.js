@@ -143,33 +143,43 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 		);
 	} else {
 		await fs.copyFile(schemaInputFilePath, historicalSchemaPath);
-		const migration = createMigration(
-			version,
-			historicalSchemasDirectory,
+		// write a migration file if it doesn't already exist.
+		const migrationFilePath = path.resolve(
 			migrationsDirectory,
-			collectionNames,
+			`./v${version}.ts`,
 		);
-		await fs.writeFile(
-			path.resolve(migrationsDirectory, `./v${version}.ts`),
-			prettier.format(migration, {
-				parser: 'typescript',
-			}),
-		);
-		const allMigrationFiles = await fs.readdir(migrationsDirectory);
-		const migrationFiles = allMigrationFiles.filter(
-			(f) => f.startsWith('v') && f.endsWith('.ts'),
-		);
-		const migrationFileNames = migrationFiles.map((f) => f.replace('.ts', ''));
-		const migrationIndex = createMigrationIndex(
-			migrationsDirectory,
-			migrationFileNames,
-		);
-		await fs.writeFile(
-			path.resolve(migrationsDirectory, `./index.ts`),
-			prettier.format(migrationIndex, {
-				parser: 'typescript',
-			}),
-		);
+		const migrationExists = await fileExists(migrationFilePath);
+		if (!migrationExists) {
+			const migration = createMigration(
+				version,
+				historicalSchemasDirectory,
+				migrationsDirectory,
+				collectionNames,
+			);
+			await fs.writeFile(
+				migrationFilePath,
+				prettier.format(migration, {
+					parser: 'typescript',
+				}),
+			);
+			const allMigrationFiles = await fs.readdir(migrationsDirectory);
+			const migrationFiles = allMigrationFiles.filter(
+				(f) => f.startsWith('v') && f.endsWith('.ts'),
+			);
+			const migrationFileNames = migrationFiles.map((f) =>
+				f.replace('.ts', ''),
+			);
+			const migrationIndex = createMigrationIndex(
+				migrationsDirectory,
+				migrationFileNames,
+			);
+			await fs.writeFile(
+				path.resolve(migrationsDirectory, `./index.ts`),
+				prettier.format(migrationIndex, {
+					parser: 'typescript',
+				}),
+			);
+		}
 	}
 
 	const { compiledSchemaPath, relativeSchemaPath } = await writeCanonicalSchema(
