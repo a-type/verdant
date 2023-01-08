@@ -1,8 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
+import dirname from './dirname.cjs';
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __dirname = dirname as unknown as string;
 
 export function migrations(db: Database) {
 	// create the versions table if it doesn't exist

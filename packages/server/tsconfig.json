@@ -5,5 +5,11 @@
 		"outDir": "./dist/esm",
 		"rootDir": "./src"
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts", "./typings"]
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.cts",
+		"src/**/*.tsx",
+		"src/**/*.mts",
+		"./typings"
+	]
 }
