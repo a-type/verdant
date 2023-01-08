@@ -140,8 +140,12 @@ export function sanitizeIndexValue(
 	if (typeof value === 'boolean' || value === null) {
 		return `${value}`;
 	}
+	if (value === undefined) {
+		// this shouldn't happen ,but for resiliency...
+		return 'undefined';
+	}
 	if (Array.isArray(value)) {
 		return value.map(sanitizeIndexValue) as any;
 	}
-	throw new Error('Unsupported index value');
+	throw new Error(`Unsupported index value: ${value}`);
 }

@@ -18,10 +18,10 @@ export class ReplicaInfos {
 			.prepare(
 				`
 					SELECT * FROM ReplicaInfo
-					WHERE id = ?
+					WHERE id = ? AND libraryId = ?
 				`,
 			)
-			.get(replicaId);
+			.get(replicaId, this.libraryId);
 		if (!row) {
 			return null;
 		}
@@ -46,10 +46,10 @@ export class ReplicaInfos {
 			.prepare(
 				`
 			SELECT * FROM ReplicaInfo
-			WHERE id = ?
+			WHERE id = ? AND libraryId = ?
 			`,
 			)
-			.get(replicaId);
+			.get(replicaId, this.libraryId);
 
 		if (!replicaInfo) {
 			this.db
@@ -81,10 +81,10 @@ export class ReplicaInfos {
 					`
 					UPDATE ReplicaInfo
 					SET type = ?
-					WHERE id = ?
+					WHERE id = ? AND libraryId = ?
 					`,
 				)
-				.run(info.type, replicaId);
+				.run(info.type, replicaId, this.libraryId);
 		}
 
 		if (replicaInfo.clientId !== info.userId) {
@@ -127,10 +127,10 @@ export class ReplicaInfos {
 				`
       UPDATE ReplicaInfo
       SET lastSeenWallClockTime = ?
-      WHERE id = ?
+      WHERE id = ? AND libraryId = ?
     `,
 			)
-			.run(clockTime, replicaId);
+			.run(clockTime, replicaId, this.libraryId);
 	};
 
 	updateAcknowledged = (replicaId: string, timestamp: string) => {
@@ -139,10 +139,10 @@ export class ReplicaInfos {
 				`
 			UPDATE ReplicaInfo
 			SET ackedLogicalTime = ?
-			WHERE id = ?
+			WHERE id = ? AND libraryId = ?
 		`,
 			)
-			.run(timestamp, replicaId);
+			.run(timestamp, replicaId, this.libraryId);
 	};
 
 	getGlobalAck = (onlineReplicaIds?: string[]) => {
@@ -167,10 +167,10 @@ export class ReplicaInfos {
 			.prepare(
 				`
 			DELETE FROM ReplicaInfo
-			WHERE id = ?
+			WHERE id = ? AND libraryId = ?
 		`,
 			)
-			.run(replicaId);
+			.run(replicaId, this.libraryId);
 	};
 
 	deleteAll = () => {

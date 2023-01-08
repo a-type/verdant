@@ -4,6 +4,7 @@ import { ServerLibraryManager } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
+import { migrations } from './migrations.js';
 
 interface ServerStorageOptions {
 	db: Database;
@@ -69,63 +70,7 @@ export class ServerStorage {
 	};
 
 	private createSchema = () => {
-		const run = this.db.transaction(() => {
-			this.db
-				.prepare(
-					`
-        CREATE TABLE IF NOT EXISTS ReplicaInfo (
-          id TEXT PRIMARY KEY NOT NULL,
-          libraryId TEXT NOT NULL,
-					clientId TEXT NOT NULL,
-          lastSeenWallClockTime INTEGER,
-          ackedLogicalTime TEXT
-        );
-      `,
-				)
-				.run();
-			try {
-				this.db
-					.prepare(
-						`
-				ALTER TABLE ReplicaInfo
-				ADD COLUMN type INTEGER NOT NULL DEFAULT 0;
-				`,
-					)
-					.run();
-			} catch (e) {
-				// ignore non-idempotent column add failure
-			}
-
-			this.db
-				.prepare(
-					`
-        CREATE TABLE IF NOT EXISTS OperationHistory (
-          libraryId TEXT NOT NULL,
-					replicaId TEXT NOT NULL,
-          oid TEXT NOT NULL,
-          data TEXT NOT NULL,
-          timestamp INTEGER NOT NULL,
-					PRIMARY KEY (libraryId, replicaId, oid, timestamp)
-        );
-      `,
-				)
-				.run();
-
-			this.db
-				.prepare(
-					`
-        CREATE TABLE IF NOT EXISTS DocumentBaseline (
-          oid TEXT PRIMARY KEY NOT NULL,
-          snapshot TEXT,
-          timestamp TEXT NOT NULL,
-					libraryId TEXT NOT NULL
-        );
-      `,
-				)
-				.run();
-		});
-
-		run();
+		migrations(this.db);
 	};
 
 	close = async () => {
