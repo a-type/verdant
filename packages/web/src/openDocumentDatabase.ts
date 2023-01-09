@@ -16,8 +16,8 @@ import {
 	removeOidsFromAllSubObjects,
 	addFieldDefaults,
 	decomposeOid,
+	MigrationEngine,
 } from '@lo-fi/common';
-import { MigrationEngine } from '@lo-fi/common/src/migration.js';
 import { Context } from './context.js';
 import { Metadata } from './metadata/Metadata.js';
 import { QueryMaker } from './queries/QueryMaker.js';

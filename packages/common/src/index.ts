@@ -11,7 +11,11 @@ export {
 	migrationRange,
 	createDefaultMigration,
 } from './migration.js';
-export type { Migration, MigrationIndexDescription } from './migration.js';
+export type {
+	Migration,
+	MigrationIndexDescription,
+	MigrationEngine,
+} from './migration.js';
 export type { UserInfo } from './presence.js';
 export * from './patch.js';
 export * from './oids.js';
