@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 1.4.0
+
+### Minor Changes
+
+- 0c93e2e: Update replica metadata to key on library ID so a replica which connects to different libraries does not wind up with incorrect metadata
+
+### Patch Changes
+
+- Updated dependencies [0c93e2e]
+  - @lo-fi/common@1.8.0
+
 ## 1.3.3
 
 ### Patch Changes

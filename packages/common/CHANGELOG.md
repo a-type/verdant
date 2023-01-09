@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.8.0
+
+### Minor Changes
+
+- 0c93e2e: Update replica metadata to key on library ID so a replica which connects to different libraries does not wind up with incorrect metadata
+
 ## 1.7.1
 
 ### Patch Changes

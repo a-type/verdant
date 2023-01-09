@@ -1,5 +1,12 @@
 # @lo-fi/cli
 
+## 1.9.5
+
+### Patch Changes
+
+- f4917a4: Fix major bug with desc.open(), rollback WeakRef usage
+- ea9928c: Fix map typings generation
+
 ## 1.9.4
 
 ### Patch Changes
