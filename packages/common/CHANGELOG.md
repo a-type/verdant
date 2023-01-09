@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.8.1
+
+### Patch Changes
+
+- 1bc2b2d: Fix import
+
 ## 1.8.0
 
 ### Minor Changes

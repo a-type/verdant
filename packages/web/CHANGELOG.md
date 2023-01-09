@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.10.7
+
+### Patch Changes
+
+- 1bc2b2d: Fix import
+- Updated dependencies [1bc2b2d]
+  - @lo-fi/common@1.8.1
+
 ## 1.10.6
 
 ### Patch Changes
