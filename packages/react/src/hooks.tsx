@@ -381,7 +381,7 @@ export function createHooks<Presence = any, Profile = any>(
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
-			return data;
+			return data || [];
 		};
 	}
 	return hooks as any;

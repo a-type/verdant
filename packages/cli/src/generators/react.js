@@ -21,13 +21,10 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			EntityDestructured,
 		} from '@lo-fi/web';
 
-		type NullIfSkip<V, C> = C extends { skip: boolean } ? V | null : V;
 		type SkippableFilterConfig<F> = {
 			index: F;
-		} | {
-			index: F;
-			skip: boolean;
-		}
+			skip?: boolean;
+		};
 
 export interface GeneratedHooks<Presence, Profile> {
 	/**
@@ -78,10 +75,9 @@ export interface GeneratedHooks<Presence, Profile> {
 				getObjectProperty(col, 'pluralName')?.value || name + 's',
 			);
 			return `
-use${pascalName}(id: string): ${pascalName};
-use${pascalName}(id: string, config: { skip: boolean }): ${pascalName} | null;
-useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter> = { index: any }>(config?: Config) => NullIfSkip<${pascalName}, Config>;
-useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter> = { index: any }>(config?: Config) => NullIfSkip<${pascalName}[], Config>;
+use${pascalName}(id: string, config?: { skip?: boolean }): ${pascalName} | null;
+useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName} | null;
+useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName}[];
     `;
 		})
 		.join('\n')}

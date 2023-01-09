@@ -240,13 +240,14 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 		}),
 	);
 
-	const packageFilePath = path.resolve(process.cwd(), output, 'package.json');
-	await fs.writeFile(
-		packageFilePath,
-		prettier.format(clientPackage, {
-			parser: 'json',
-		}),
-	);
+	// don't bother writing package.json, it doesn't seem to be helpful.
+	// const packageFilePath = path.resolve(process.cwd(), output, 'package.json');
+	// await fs.writeFile(
+	// 	packageFilePath,
+	// 	prettier.format(clientPackage, {
+	// 		parser: 'json',
+	// 	}),
+	// );
 }
 
 async function writeCanonicalSchema(output, input) {
