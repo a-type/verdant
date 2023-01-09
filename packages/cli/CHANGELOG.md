@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.10.0
+
+### Minor Changes
+
+- 5587bbf: Fix hook typings to correctly suggest that any query result may be null
+
 ## 1.9.5
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 11.1.0
+
+### Minor Changes
+
+- 5587bbf: Fix hook typings to correctly suggest that any query result may be null
+
+### Patch Changes
+
+- Updated dependencies [1bc2b2d]
+  - @lo-fi/common@1.8.1
+  - @lo-fi/web@1.10.7
+
 ## 11.0.4
 
 ### Patch Changes
