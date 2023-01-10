@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 11.1.1
+
+### Patch Changes
+
+- 036c747: Fix useFindPeers infinite loop
+
 ## 11.1.0
 
 ### Minor Changes
