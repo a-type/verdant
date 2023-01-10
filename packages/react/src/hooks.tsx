@@ -11,9 +11,10 @@ import {
 	useEffect,
 	useMemo,
 	useReducer,
-	useSyncExternalStore,
 } from 'react';
 import { suspend } from 'suspend-react';
+import { useSyncExternalStore } from 'use-sync-external-store';
+import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
 function useLiveQuery(liveQuery: Query<any> | null) {
 	if (liveQuery) {
@@ -169,7 +170,7 @@ export function createHooks<Presence = any, Profile = any>(
 		options?: { includeSelf: boolean },
 	) {
 		const storage = useStorage();
-		return useSyncExternalStore(
+		return useSyncExternalStoreWithSelector(
 			(callback) => {
 				const unsubs: (() => void)[] = [];
 				unsubs.push(
@@ -207,6 +208,9 @@ export function createHooks<Presence = any, Profile = any>(
 				}
 				return peers.filter(query);
 			},
+			() => [] as UserInfo<any, any>[],
+			(peers) => peers,
+			(a, b) => a.length === b.length && a.every((peer, i) => peer === b[i]),
 		);
 	}
 

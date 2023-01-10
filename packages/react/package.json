@@ -28,16 +28,18 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"react": "^18.2.0",
-		"@lo-fi/web": "^1.10.7"
+		"@lo-fi/web": "^1.10.7",
+		"react": "^18.2.0"
 	},
 	"dependencies": {
 		"@lo-fi/common": "workspace:*",
-		"suspend-react": "^0.0.8"
+		"suspend-react": "^0.0.8",
+		"use-sync-external-store": "^1.2.0"
 	},
 	"devDependencies": {
 		"@lo-fi/web": "workspace:*",
 		"@types/react": "^18.0.17",
+		"@types/use-sync-external-store": "^0.0.3",
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"react": "^18.2.0",

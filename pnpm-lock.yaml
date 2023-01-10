@@ -132,18 +132,22 @@ importers:
       '@lo-fi/common': workspace:*
       '@lo-fi/web': workspace:*
       '@types/react': ^18.0.17
+      '@types/use-sync-external-store': ^0.0.3
       fake-indexeddb: ^4.0.0
       jsdom: ^20.0.0
       react: ^18.2.0
       suspend-react: ^0.0.8
       typescript: ^4.7.4
+      use-sync-external-store: ^1.2.0
       vitest: ^0.22.1
     dependencies:
       '@lo-fi/common': link:../common
       suspend-react: 0.0.8_react@18.2.0
+      use-sync-external-store: 1.2.0_react@18.2.0
     devDependencies:
       '@lo-fi/web': link:../web
       '@types/react': 18.0.20
+      '@types/use-sync-external-store': 0.0.3
       fake-indexeddb: 4.0.0
       jsdom: 20.0.0
       react: 18.2.0
@@ -4629,6 +4633,10 @@ packages:
   /@types/unist/2.0.6:
     resolution: {integrity: sha512-PBjIUxZHOuj0R15/xuwJYjFi+KZdNFrehocChv4g5hu6aFroHue8m0lBP0POdK2nKzbw0cgV1mws8+V/JAcEkQ==}
     dev: false
+
+  /@types/use-sync-external-store/0.0.3:
+    resolution: {integrity: sha512-EwmlvuaxPNej9+T4v5AuBPJa2x2UOJVdjCtDHgcDqitUeOtjnJKJ+apYjVcAoBEMjKW1VVFGZLUb5+qqa09XFA==}
+    dev: true
 
   /@types/uuid/8.3.4:
     resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
