@@ -182,9 +182,7 @@ export function createHooks<Presence = any, Profile = any>(
 				);
 				unsubs.push(
 					storage.sync.presence.subscribe('peerLeft', (id) => {
-						if (query(storage.sync.presence.peers[id])) {
-							callback();
-						}
+						callback();
 					}),
 				);
 				if (options?.includeSelf) {
@@ -202,7 +200,9 @@ export function createHooks<Presence = any, Profile = any>(
 				};
 			},
 			() => {
-				const peers = Object.values(storage.sync.presence.peers);
+				const peers = Object.values(storage.sync.presence.peers).filter(
+					Boolean,
+				);
 				if (options?.includeSelf) {
 					peers.push(storage.sync.presence.self);
 				}
