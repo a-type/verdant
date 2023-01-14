@@ -39,6 +39,12 @@ export class Client<Presence = any, Profile = any> {
   import: Storage['import'];
 
   stats: () => Promise<any>;
+  /**
+   * Resets all local data. Use with caution. If this replica
+   * is synced, it can restore from the server, but if it is not,
+   * the data will be permanently lost.
+   */
+  __dangerous__resetLocal: Storage['__dangerous__resetLocal'];
 }
 
 // schema is provided internally. loadInitialData must be revised to pass the typed Client
