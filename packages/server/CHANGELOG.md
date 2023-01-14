@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.4.2
+
+### Patch Changes
+
+- 537944b: Expose API for removing a user from a library
+
 ## 1.4.1
 
 ### Patch Changes

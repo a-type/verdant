@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.10.1
+
+### Patch Changes
+
+- d36ae73: Expose **dangerous**resetLocal to users
+
 ## 1.10.0
 
 ### Minor Changes
