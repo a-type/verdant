@@ -304,4 +304,14 @@ export class Server extends EventEmitter implements MessageSender {
 	getLibraryPresence = (libraryId: string) => {
 		return this.storage.getLibraryPresence(libraryId);
 	};
+
+	/**
+	 * Removes all replicas associated with a User ID from
+	 * the server. Consistency algorithms will no longer wait on these
+	 * replicas before confirming and squashing changes.
+	 */
+	evictUser = (libraryId: string, userId: string) => {
+		this.storage.evictUser(libraryId, userId);
+		this.log('Evicted user', userId, 'from library', libraryId);
+	};
 }

@@ -69,6 +69,11 @@ export class ServerStorage {
 		library.destroy();
 	};
 
+	evictUser = (libraryId: string, userId: string) => {
+		const library = this.libraries.open(libraryId);
+		library.evictUser(userId);
+	};
+
 	private createSchema = () => {
 		migrations(this.db);
 	};

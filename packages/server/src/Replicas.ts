@@ -183,4 +183,10 @@ export class ReplicaInfos {
 			)
 			.run(this.libraryId);
 	};
+
+	deleteAllForUser = (userId: string) => {
+		return this.db
+			.prepare(`DELETE FROM ReplicaInfo WHERE clientId = ?`)
+			.run(userId);
+	};
 }

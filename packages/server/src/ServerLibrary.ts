@@ -467,6 +467,10 @@ export class ServerLibrary {
 	getPresence = () => {
 		return this.presences.all();
 	};
+
+	evictUser = (userId: string) => {
+		this.replicas.deleteAllForUser(userId);
+	};
 }
 
 export class ServerLibraryManager {
