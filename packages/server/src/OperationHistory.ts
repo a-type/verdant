@@ -25,16 +25,16 @@ export class OperationHistory {
 		};
 	};
 
-	getAllFor = (documentId: string) => {
+	getAllFor = (oid: string) => {
 		return this.db
 			.prepare(
 				`
       SELECT * FROM OperationHistory
-      WHERE libraryId = ? AND documentId = ?
+      WHERE libraryId = ? AND oid = ?
       ORDER BY timestamp ASC
     `,
 			)
-			.all(this.libraryId, documentId)
+			.all(this.libraryId, oid)
 			.map(this.hydratePatch);
 	};
 

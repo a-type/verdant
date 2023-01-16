@@ -1,6 +1,7 @@
 import {
 	AckMessage,
 	applyPatch,
+	applyOperations,
 	ClientMessage,
 	DocumentBaseline,
 	HeartbeatMessage,
@@ -11,6 +12,7 @@ import {
 	ReplicaInfo,
 	ReplicaType,
 	SyncMessage,
+	isObjectRef,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -470,6 +472,40 @@ export class ServerLibrary {
 
 	evictUser = (userId: string) => {
 		this.replicas.deleteAllForUser(userId);
+	};
+
+	getDocumentSnapshot = (documentId: string) => {
+		return this.hydrateObject(documentId);
+	};
+
+	private getObjectSnapshot = (oid: string) => {
+		const baseline = this.baselines.get(oid);
+		const ops = this.operations.getAllFor(oid);
+		const snapshot = applyOperations(baseline?.snapshot ?? undefined, ops);
+		return snapshot;
+	};
+
+	private hydrateObject = (oid: string): any => {
+		const snapshot = this.getObjectSnapshot(oid);
+		if (Array.isArray(snapshot)) {
+			return snapshot.map((item, index) => {
+				if (isObjectRef(item)) {
+					return this.hydrateObject(item.id);
+				} else {
+					return item;
+				}
+			});
+		} else if (snapshot && typeof snapshot === 'object') {
+			const hydrated = { ...snapshot };
+			for (const [key, value] of Object.entries(snapshot)) {
+				if (isObjectRef(value)) {
+					hydrated[key] = this.hydrateObject(value.id);
+				}
+			}
+			return hydrated;
+		} else {
+			return snapshot;
+		}
 	};
 }
 

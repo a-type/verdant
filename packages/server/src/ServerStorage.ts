@@ -86,4 +86,9 @@ export class ServerStorage {
 		const library = this.libraries.open(libraryId);
 		return library.getPresence();
 	};
+
+	getDocumentSnapshot = (libraryId: string, documentId: string) => {
+		const library = this.libraries.open(libraryId);
+		return library.getDocumentSnapshot(documentId);
+	};
 }

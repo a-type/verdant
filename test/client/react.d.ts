@@ -19,6 +19,11 @@ import type {
   EntityDestructured,
 } from "@lo-fi/web";
 
+type SkippableFilterConfig<F> = {
+  index: F;
+  skip?: boolean;
+};
+
 export interface GeneratedHooks<Presence, Profile> {
   /**
    * Render this context Provider at the top level of your
@@ -36,19 +41,28 @@ export interface GeneratedHooks<Presence, Profile> {
   /** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
   useClient: () => Client<Presence, Profile>;
+  useUnsuspendedClient: () => Client<Presence, Profile> | null;
   useSelf: () => UserInfo<Profile, Presence>;
   usePeerIds: () => string[];
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
+  useFindPeer: (
+    query: (peer: UserInfo<Profile, Presence>) => boolean,
+    options?: { includeSelf: boolean }
+  ) => UserInfo<Profile, Presence> | null;
+  useFindPeers: (
+    query: (peer: UserInfo<Profile, Presence>) => boolean,
+    options?: { includeSelf: boolean }
+  ) => UserInfo<Profile, Presence>[];
   useSyncStatus: () => boolean;
   useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T
   ): EntityDestructured<T>;
   useWatch<
     T extends AnyEntity<any, any, any> | null,
-    P extends AccessibleEntityProperty<EntityShape<T>>
+    P extends keyof EntityShape<T>
   >(
     entity: T,
-    props: P
+    prop: P
   ): EntityDestructured<T>[P];
   useCanUndo(): boolean;
   useCanRedo(): boolean;
@@ -62,13 +76,21 @@ export interface GeneratedHooks<Presence, Profile> {
    */
   useSync(isOn: boolean): void;
 
-  useItem: (id: string) => Item;
-  useOneItem: (config: { index: ItemFilter }) => Item;
-  useAllItems: (config?: { index: ItemFilter }) => Item[];
+  useItem(id: string, config?: { skip?: boolean }): Item | null;
+  useOneItem: <Config extends SkippableFilterConfig<ItemFilter>>(
+    config?: Config
+  ) => Item | null;
+  useAllItems: <Config extends SkippableFilterConfig<ItemFilter>>(
+    config?: Config
+  ) => Item[];
 
-  useCategory: (id: string) => Category;
-  useOneCategory: (config: { index: CategoryFilter }) => Category;
-  useAllCategories: (config?: { index: CategoryFilter }) => Category[];
+  useCategory(id: string, config?: { skip?: boolean }): Category | null;
+  useOneCategory: <Config extends SkippableFilterConfig<CategoryFilter>>(
+    config?: Config
+  ) => Category | null;
+  useAllCategories: <Config extends SkippableFilterConfig<CategoryFilter>>(
+    config?: Config
+  ) => Category[];
 }
 
 export function createHooks<Presence = any, Profile = any>(): GeneratedHooks<

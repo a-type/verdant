@@ -22,6 +22,19 @@ export class Baselines {
 		return this.hydrateSnapshot(row);
 	};
 
+	getAllWithSubObjects = (oid: string): DocumentBaseline<any>[] => {
+		const rows = this.db
+			.prepare(
+				`
+			SELECT * FROM DocumentBaseline
+			WHERE libraryId = ? AND oid LIKE ?
+		`,
+			)
+			.all(this.libraryId, `${oid}%`);
+
+		return rows.map(this.hydrateSnapshot);
+	};
+
 	set = (baseline: DocumentBaseline) => {
 		return this.db
 			.prepare(

@@ -617,13 +617,13 @@ export function applyPatch<T extends NormalizedObject>(
 	return base;
 }
 
-export function applyPatches<T extends NormalizedObject>(
-	base: T,
-	patches: OperationPatch[],
+export function applyOperations<T extends NormalizedObject>(
+	base: T | undefined,
+	operations: Operation[],
 ): T | undefined {
 	let cur = base as T | undefined;
-	for (const patch of patches) {
-		cur = applyPatch(base, patch);
+	for (const op of operations) {
+		cur = applyPatch(base, op.data);
 	}
 	return cur;
 }

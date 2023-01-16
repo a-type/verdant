@@ -1,6 +1,7 @@
 import {
 	assert,
 	ClientMessage,
+	createOid,
 	generateId,
 	ServerMessage,
 } from '@lo-fi/common';
@@ -313,5 +314,21 @@ export class Server extends EventEmitter implements MessageSender {
 	evictUser = (libraryId: string, userId: string) => {
 		this.storage.evictUser(libraryId, userId);
 		this.log('Evicted user', userId, 'from library', libraryId);
+	};
+
+	/**
+	 * Retrieves a snapshot of the full document contents at this time.
+	 * Useful for capturing the shape of data for static usage outside
+	 * of the live system.
+	 */
+	getDocumentSnapshot = (
+		libraryId: string,
+		collection: string,
+		documentId: string,
+	) => {
+		return this.storage.getDocumentSnapshot(
+			libraryId,
+			createOid(collection, documentId, []),
+		);
 	};
 }
