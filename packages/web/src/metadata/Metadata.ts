@@ -1,6 +1,5 @@
 import {
 	applyPatch,
-	applyPatches,
 	assert,
 	assignOid,
 	ClientMessage,

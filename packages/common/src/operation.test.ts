@@ -8,7 +8,7 @@ import {
 } from './oids.js';
 import {
 	applyPatch,
-	applyPatches,
+	applyOperations,
 	diffToPatches,
 	initialToPatches,
 	substituteRefsWithObjects,
@@ -48,10 +48,7 @@ describe('creating diff patch operations', () => {
 				  },
 				]
 			`);
-			const result = applyPatches(
-				from,
-				ops.map((op) => op.data),
-			);
+			const result = applyOperations(from, ops);
 			expect(result).toEqual(to);
 		});
 	});
@@ -239,10 +236,14 @@ describe('creating diff patch operations', () => {
 	describe('on lists of primitives', () => {
 		it('pushes items', async () => {
 			expect(
-				applyPatches(assignOid(['foo', 'bar'], 'test/a'), [
+				applyOperations(assignOid(['foo', 'bar'], 'test/a'), [
 					{
-						op: 'list-push',
-						value: 'baz',
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-push',
+							value: 'baz',
+						},
 					},
 				]),
 			).toEqual(assignOid(['foo', 'bar', 'baz'], 'test/a'));
