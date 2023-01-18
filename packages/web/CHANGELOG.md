@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.10.9
+
+### Patch Changes
+
+- b879919: Update and fix some react usages
+- Updated dependencies [b879919]
+  - @lo-fi/common@1.8.3
+
 ## 1.10.8
 
 ### Patch Changes

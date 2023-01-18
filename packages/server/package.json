@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/server",
-	"version": "1.5.0",
+	"version": "1.5.1",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
