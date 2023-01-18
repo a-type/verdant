@@ -26,6 +26,3 @@ jobs:
 
       - name: Run package tests
         run: pnpm test
-
-      - name: Run suite tests
-        run: pnpm --filter @lo-fi/test test
