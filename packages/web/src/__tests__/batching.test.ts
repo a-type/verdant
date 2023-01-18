@@ -5,7 +5,7 @@ describe('batching operations', () => {
 	it('should allow multiple runs with manual flush', async () => {
 		const storage = await createTestStorage();
 
-		const item = await storage.put('todo', {
+		const item = await storage.todo.put({
 			content: 'hello world',
 			category: 'general',
 			attachments: [

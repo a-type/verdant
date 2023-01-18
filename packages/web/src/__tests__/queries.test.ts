@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
-import type { Storage } from '../index.js';
+import type { ClientWithCollections } from '../index.js';
 
 describe('storage queries', () => {
-	async function addTestingItems(storage: Storage) {
+	async function addTestingItems(storage: ClientWithCollections) {
 		let items = [];
 
 		for (const item of [
@@ -50,7 +50,7 @@ describe('storage queries', () => {
 				category: 'specific',
 			},
 		]) {
-			items.push(await storage.create('todo', item));
+			items.push(await storage.todo.create(item));
 		}
 		return items;
 	}

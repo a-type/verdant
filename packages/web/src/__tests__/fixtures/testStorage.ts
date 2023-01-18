@@ -1,7 +1,7 @@
 import { collection, createDefaultMigration, schema } from '@lo-fi/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { StorageDescriptor } from '../../index.js';
+import { ClientWithCollections, StorageDescriptor } from '../../index.js';
 
 export const todoCollection = collection({
 	name: 'todo',
@@ -111,5 +111,5 @@ export function createTestStorage() {
 		indexedDb: idb,
 		namespace: 'test',
 	}).open();
-	return storage;
+	return storage as Promise<ClientWithCollections>;
 }
