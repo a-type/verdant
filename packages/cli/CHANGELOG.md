@@ -1,5 +1,12 @@
 # @lo-fi/cli
 
+## 1.10.2
+
+### Patch Changes
+
+- b879919: Update and fix some react usages
+- b879919: Add commonjs module option
+
 ## 1.10.1
 
 ### Patch Changes
