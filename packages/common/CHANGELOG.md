@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.8.2
+
+### Patch Changes
+
+- 023abf8: Server API for document snapshots
+
 ## 1.8.1
 
 ### Patch Changes

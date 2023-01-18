@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/react",
-	"version": "11.1.1",
+	"version": "11.1.2",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -28,7 +28,7 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"@lo-fi/web": "^1.10.7",
+		"@lo-fi/web": "^1.10.8",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
