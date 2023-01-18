@@ -1,19 +1,21 @@
 import { CollectionIndexFilter, StorageSchema } from '@lo-fi/common';
-import { Query, Storage, StorageDescriptor, UserInfo } from '@lo-fi/web';
-import { Entity } from '@lo-fi/web/src/reactives/Entity.js';
-import { SyncTransportMode } from '@lo-fi/web/src/sync/Sync.js';
 import {
-	Context,
+	Query,
+	SyncTransportMode,
+	StorageDescriptor,
+	UserInfo,
+	Entity,
+} from '@lo-fi/web';
+import {
 	createContext,
-	Provider,
 	ReactNode,
 	useContext,
 	useEffect,
 	useMemo,
-	useReducer,
+	useState,
+	useSyncExternalStore,
 } from 'react';
 import { suspend } from 'suspend-react';
-import { useSyncExternalStore } from 'use-sync-external-store';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
 function useLiveQuery(liveQuery: Query<any> | null) {
@@ -244,9 +246,9 @@ export function createHooks<Presence = any, Profile = any>(
 
 		const client = desc?.current;
 
-		const [_, forceUpdate] = useReducer((s) => s + 1, 0);
+		const [_, forceUpdate] = useState(0);
 		if (desc && !client) {
-			desc.readyPromise.then(forceUpdate);
+			desc.readyPromise.then(() => forceUpdate((n) => n + 1));
 		}
 
 		return client || null;

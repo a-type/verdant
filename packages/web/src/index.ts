@@ -11,6 +11,7 @@ export type {
 	EntityDestructured,
 } from './reactives/Entity.js';
 export { ServerSync } from './sync/Sync.js';
+export type { SyncTransportMode } from './sync/Sync.js';
 
 export {
 	collection,

@@ -3,8 +3,18 @@
 	"version": "1.8.1",
 	"access": "public",
 	"type": "module",
-	"main": "src/index.ts",
+	"main": "dist/cjs/index.js",
 	"module": "src/index.ts",
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"require": "./dist/cjs/index.js"
+		},
+		"./cjs": {
+			"import": "./dist/cjs/index.js",
+			"require": "./dist/cjs/index.js"
+		}
+	},
 	"publishConfig": {
 		"types": "./dist/esm/index.d.ts",
 		"main": "./dist/cjs/index.js",
