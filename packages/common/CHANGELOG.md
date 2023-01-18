@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.8.3
+
+### Patch Changes
+
+- b879919: Update and fix some react usages
+
 ## 1.8.2
 
 ### Patch Changes
