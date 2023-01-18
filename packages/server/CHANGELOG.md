@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 1.5.0
+
+### Minor Changes
+
+- 023abf8: Server API for document snapshots
+
+### Patch Changes
+
+- Updated dependencies [023abf8]
+  - @lo-fi/common@1.8.2
+
 ## 1.4.2
 
 ### Patch Changes
