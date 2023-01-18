@@ -1,23 +1,38 @@
-import { Migration, SchemaCollection, StorageSchema } from '@lo-fi/common';
-import { NoSync, ServerSync, ServerSyncOptions, Sync } from './sync/Sync.js';
-import { ExportData, Metadata } from './metadata/Metadata.js';
-import { LiveQueryMaker } from './queries/LiveQueryMaker.js';
-import { LiveQueryStore } from './queries/LiveQueryStore.js';
-import { openDocumentDatabase } from './openDocumentDatabase.js';
-import { DocumentManager } from './DocumentManager.js';
-import { EntityStore } from './reactives/EntityStore.js';
-import { closeDatabase, getSizeOfObjectStore } from './idb.js';
-import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
-import { UndoHistory } from './UndoHistory.js';
-import { Context } from './context.js';
+import { Migration, SchemaCollection } from '@lo-fi/common';
+import { Context } from '../context.js';
+import { DocumentManager } from '../DocumentManager.js';
+import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
+import { ExportData, Metadata } from '../metadata/Metadata.js';
+import { openDocumentDatabase } from '../openDocumentDatabase.js';
+import { LiveQueryMaker } from '../queries/LiveQueryMaker.js';
+import { LiveQueryStore } from '../queries/LiveQueryStore.js';
+import { EntityStore } from '../reactives/EntityStore.js';
+import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
+import { LogFunction } from '../types.js';
 
-interface StorageConfig<Presence = any> {
+interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
 	migrations: Migration[];
-	log?: (...args: any[]) => void;
+	log?: LogFunction;
 }
 
-export class Storage {
+export interface CollectionApi {
+	create: (init: any) => Promise<any>;
+	put: (init: any) => Promise<any>;
+	delete: (id: string) => Promise<void>;
+	deleteAll: (ids: string[]) => Promise<void>;
+	get: (id: string) => any;
+	findOne: (filter: any) => any;
+	findAll: (filter?: any) => any;
+}
+
+// not actually used below, but helpful for internal code which
+// might rely on this stuff...
+export type ClientWithCollections = Client & {
+	[key: string]: CollectionApi;
+};
+
+export class Client {
 	readonly meta: Metadata;
 	private _entities!: EntityStore;
 	private _queryStore!: LiveQueryStore;
@@ -49,7 +64,7 @@ export class Storage {
 	}
 
 	constructor(
-		private config: StorageConfig,
+		private config: ClientConfig,
 		private context: Context,
 		components: { meta: Metadata },
 	) {
@@ -75,7 +90,7 @@ export class Storage {
 				get: (id: string) => this._queryMaker.get(name, id),
 				findOne: (query: any) => this._queryMaker.findOne(name, query),
 				findAll: (query: any) => this._queryMaker.findAll(name, query),
-			};
+			} as CollectionApi;
 		}
 	}
 
@@ -147,33 +162,6 @@ export class Storage {
 	get presence() {
 		return this.sync.presence;
 	}
-
-	/**
-	 * @deprecated - use put
-	 */
-	create: DocumentManager<any>['create'] = async (...args) => {
-		return this._documentManager.create(...args);
-	};
-
-	put: DocumentManager<any>['create'] = async (...args) => {
-		return this._documentManager.create(...args);
-	};
-
-	delete: DocumentManager<any>['delete'] = async (...args) => {
-		return this._documentManager.delete(...args);
-	};
-
-	get: LiveQueryMaker['get'] = (...args) => {
-		return this._queryMaker.get(...args);
-	};
-
-	findOne: LiveQueryMaker['findOne'] = (...args) => {
-		return this._queryMaker.findOne(...args);
-	};
-
-	findAll: LiveQueryMaker['findAll'] = (...args) => {
-		return this._queryMaker.findAll(...args);
-	};
 
 	/**
 	 * Batch multiple operations together to be executed in a single transaction.
@@ -316,156 +304,5 @@ export class Storage {
 		});
 		// re-initialize query store
 		this._queryStore.updateAll();
-	};
-}
-
-export interface StorageInitOptions<Presence = any, Profile = any> {
-	/** The schema used to create this client */
-	schema: StorageSchema<any>;
-	/** Migrations, in order, to upgrade to each successive version of the schema */
-	migrations: Migration<any>[];
-	/** Provide a sync config to turn on synchronization with a server */
-	sync?: ServerSyncOptions<Profile, Presence>;
-	/** Optionally override the IndexedDB implementation */
-	indexedDb?: IDBFactory;
-	/**
-	 * Namespaces are used to separate data from different clients in IndexedDB.
-	 */
-	namespace: string;
-	/**
-	 * Provide your own UndoHistory to have a unified undo system across multiple
-	 * clients if you so desire.
-	 */
-	undoHistory?: UndoHistory;
-	/**
-	 * Provide a log function to log internal debug messages
-	 */
-	log?: (...args: any[]) => void;
-	disableRebasing?: boolean;
-	/**
-	 * Provide a specific schema number to override the schema version
-	 * in the database. This is useful for testing migrations or recovering
-	 * from a mistakenly deployed incorrect schema. A specific version is required
-	 * so that you don't leave this on accidentally for all new schemas.
-	 */
-	overrideSchemaConflict?: number;
-}
-
-/**
- * Since storage initialization is async, this class wraps the core
- * Storage creation promise and exposes some metadata which can
- * be useful immediately.
- */
-export class StorageDescriptor<Presence = any, Profile = any> {
-	private readonly _readyPromise: Promise<Storage>;
-	// assertions because these are defined by plucking them from
-	// Promise initializer
-	private resolveReady!: (storage: Storage) => void;
-	private rejectReady!: (err: Error) => void;
-	private _resolvedValue: Storage | undefined;
-	private _initializing = false;
-	private _namespace: string;
-
-	get namespace() {
-		return this._namespace;
-	}
-
-	constructor(private readonly init: StorageInitOptions<Presence, Profile>) {
-		this._readyPromise = new Promise((resolve, reject) => {
-			this.resolveReady = resolve;
-			this.rejectReady = reject;
-		});
-		this._namespace = init.namespace;
-	}
-
-	private initialize = async (init: StorageInitOptions) => {
-		// if server-side, return an interminable promise
-		if (typeof window === 'undefined') {
-			return new Promise(() => {}) as any;
-		}
-
-		if (this._initializing || this._resolvedValue) {
-			return this._readyPromise;
-		}
-		this._initializing = true;
-		try {
-			const metaDbName = [init.namespace, 'meta'].join('_');
-			const { db: metaDb } = await openMetadataDatabase(this._namespace, {
-				indexedDB: init.indexedDb,
-				log: init.log,
-				databaseName: metaDbName,
-			});
-
-			const context: Omit<Context, 'documentDb'> = {
-				namespace: this._namespace,
-				metaDb,
-				schema: init.schema,
-				log: init.log || (() => {}),
-				undoHistory: init.undoHistory || new UndoHistory(),
-			};
-			const meta = new Metadata({
-				context,
-				disableRebasing: init.disableRebasing,
-			});
-
-			// verify schema integrity
-			await meta.updateSchema(init.schema, init.overrideSchemaConflict);
-
-			const documentDb = await openDocumentDatabase({
-				context,
-				version: init.schema.version,
-				meta,
-				migrations: init.migrations,
-				indexedDB: init.indexedDb,
-			});
-
-			const fullContext: Context = Object.assign(context, { documentDb });
-
-			const storage = new Storage(
-				{
-					syncConfig: init.sync,
-					migrations: init.migrations,
-				},
-				fullContext,
-				{
-					meta,
-				},
-			);
-
-			this.resolveReady(storage);
-			this._resolvedValue = storage;
-			return storage;
-		} catch (err) {
-			this.rejectReady(err as Error);
-			throw err;
-		} finally {
-			this._initializing = false;
-		}
-	};
-
-	get current() {
-		// exposing an immediate value if already resolved lets us
-		// skip the promise microtask when accessing this externally if
-		// the initialization has been completed.
-		return this._resolvedValue;
-	}
-
-	get readyPromise() {
-		return this._readyPromise;
-	}
-
-	get schema() {
-		return this.init.schema;
-	}
-
-	open = () => this.initialize(this.init);
-
-	close = async () => {
-		if (this._resolvedValue) {
-			this._resolvedValue.close();
-		}
-		if (this._initializing) {
-			(await this._readyPromise).close();
-		}
 	};
 }

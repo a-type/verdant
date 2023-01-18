@@ -9,10 +9,6 @@
 		".": {
 			"import": "./src/index.ts",
 			"require": "./dist/cjs/index.js"
-		},
-		"./cjs": {
-			"import": "./dist/cjs/index.js",
-			"require": "./dist/cjs/index.js"
 		}
 	},
 	"publishConfig": {

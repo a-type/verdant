@@ -1,5 +1,16 @@
-export { StorageDescriptor, Storage } from './Storage.js';
-export type { StorageInitOptions } from './Storage.js';
+import {
+	ClientDescriptor,
+	ClientDescriptorOptions,
+} from './client/ClientDescriptor.js';
+import { Client } from './client/Client.js';
+export type { ClientWithCollections } from './client/Client.js';
+export { ClientDescriptor };
+export { Client };
+// backward compat
+export { ClientDescriptor as StorageDescriptor };
+export { Client as Storage };
+export type { ClientDescriptorOptions };
+export type { ClientDescriptorOptions as StorageInitOptions };
 export { LiveQuery as Query } from './queries/LiveQuery.js';
 export { Entity } from './reactives/Entity.js';
 export type {

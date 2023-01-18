@@ -5,6 +5,7 @@ import {
 	StorageDescriptor,
 	UserInfo,
 	Entity,
+	ClientWithCollections,
 } from '@lo-fi/web';
 import {
 	createContext,
@@ -47,12 +48,12 @@ export function createHooks<Presence = any, Profile = any>(
 		null,
 	);
 
-	function useStorage() {
+	function useStorage(): ClientWithCollections {
 		const ctx = useContext(Context);
 		if (!ctx) {
 			throw new Error('No lo-fi provider was found');
 		}
-		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]);
+		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]) as any;
 	}
 
 	function useWatch(liveObject: Entity | null, prop?: any) {
@@ -346,7 +347,7 @@ export function createHooks<Presence = any, Profile = any>(
 		) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage.get(name, id);
+				return skip ? null : storage[name].get(id);
 			}, [id, skip]);
 			const data = useLiveQuery(liveQuery);
 
@@ -363,7 +364,7 @@ export function createHooks<Presence = any, Profile = any>(
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : (storage as any).findOne(name, index);
+				return skip ? null : storage[name].findOne(index);
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery);
 			return data;
@@ -383,7 +384,7 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : (storage as any).findAll(name, index)),
+				() => (skip ? null : storage[name].findAll(index)),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
