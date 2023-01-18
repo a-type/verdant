@@ -2,14 +2,14 @@ import { pascalCase } from 'change-case';
 import { reactImplementation } from './constants.js';
 import { getObjectProperty } from './tools.js';
 
-export function getReactTypings(collections) {
+export function getReactTypings({ collections, commonjs = false }) {
 	return `
 import { Context, ComponentType, ReactNode } from 'react';
 import type { Client, ClientDescriptor, Schema, ${collections
 		.map((c) => getObjectProperty(c, 'name').value)
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
-		.join(', ')} } from './index.js';
+		.join(', ')} } from './index${commonjs ? '' : '.js'}';
 		import type {
 			UserInfo,
 			ObjectEntity,

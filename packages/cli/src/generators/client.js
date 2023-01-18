@@ -3,14 +3,20 @@ import { getCollectionPluralName } from './collections.js';
 import { clientImplementation } from './constants.js';
 import { getObjectProperty } from './tools.js';
 
-export function getClientTypings(collections) {
+export function getClientTypings({ collections, schemaPath }) {
 	const pluralNames = collections.map((collection) => ({
 		plural: getCollectionPluralName(collection),
 		singular: getObjectProperty(collection, 'name').value,
 	}));
 
 	return `
-  interface Collection<Document extends ObjectEntity<any>, Snapshot, Init, Filter> {
+  import type schema from '${schemaPath}';
+  import type { StorageSchema } from '@lo-fi/common';
+  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync } from '@lo-fi/web';
+  export * from '@lo-fi/web';
+  export type Schema = typeof schema;
+
+  interface Collection<Document extends ObjectEntity<any, any>, Snapshot, Init, Filter> {
     /**
      * @deprecated use put
      */

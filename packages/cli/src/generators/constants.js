@@ -1,10 +1,3 @@
-export const typingsPreamble = `
-import type { StorageSchema } from '@lo-fi/common';
-import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync } from '@lo-fi/web';
-export * from '@lo-fi/web';
-
-`;
-
 export const clientImplementation = `
 import { Storage, StorageDescriptor } from '@lo-fi/web';
 export * from '@lo-fi/web';

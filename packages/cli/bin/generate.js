@@ -11,7 +11,6 @@ import {
 	clientImplementation,
 	clientPackage,
 	reactImplementation,
-	typingsPreamble,
 } from '../src/generators/constants.js';
 import {
 	getClientImplementation,
@@ -66,16 +65,15 @@ const v = yargs(hideBin(process.argv))
 		description:
 			'Ignore a mismatch between the input schema and a saved historical schema of the same version.',
 	})
+	.option('commonjs', {
+		alias: 'c',
+		type: 'boolean',
+		description:
+			"Disables file extensions on module imports for environments that don't support them.",
+	})
 	.demandOption(['schema', 'output']).argv;
 
-run({
-	input: v.schema,
-	output: v.output,
-	react: v.react,
-	debug: v.debug,
-	migrations: v.migrations,
-	force: v.force,
-})
+run(v)
 	.then(() => {
 		console.log('✅ Generated lo-fi code');
 		process.exit(0);
@@ -85,7 +83,15 @@ run({
 		process.exit(1);
 	});
 
-async function run({ input, output, includeReact, debug, migrations, force }) {
+async function run({
+	schema: input,
+	output,
+	includeReact,
+	debug,
+	migrations,
+	force,
+	commonjs,
+}) {
 	const schemaInputFilePath = path.resolve(process.cwd(), input);
 
 	// get the input file as the first argument and output as second
@@ -150,12 +156,13 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 		);
 		const migrationExists = await fileExists(migrationFilePath);
 		if (!migrationExists) {
-			const migration = createMigration(
+			const migration = createMigration({
 				version,
-				historicalSchemasDirectory,
+				historyDirectory: historicalSchemasDirectory,
 				migrationsDirectory,
 				collectionNames,
-			);
+				commonjs,
+			});
 			await fs.writeFile(
 				migrationFilePath,
 				prettier.format(migration, {
@@ -169,10 +176,11 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 			const migrationFileNames = migrationFiles.map((f) =>
 				f.replace('.ts', ''),
 			);
-			const migrationIndex = createMigrationIndex(
+			const migrationIndex = createMigrationIndex({
 				migrationsDirectory,
-				migrationFileNames,
-			);
+				migrationNames: migrationFileNames,
+				commonjs,
+			});
 			await fs.writeFile(
 				path.resolve(migrationsDirectory, `./index.ts`),
 				prettier.format(migrationIndex, {
@@ -185,16 +193,17 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 	const { compiledSchemaPath, relativeSchemaPath } = await writeCanonicalSchema(
 		outputDirectory,
 		input,
+		commonjs,
 	);
 
-	let typingsFile = typingsPreamble;
-	typingsFile += `import type schema from '${relativeSchemaPath}';
-	export type Schema = typeof schema;`;
+	let typingsFile = getClientTypings({
+		collections: Object.values(collections),
+		schemaPath: relativeSchemaPath,
+		commonjs,
+	});
 	for (const [name, definition] of Object.entries(collections)) {
 		typingsFile += getCollectionTypings(definition) + '\n';
 	}
-
-	typingsFile += getClientTypings(Object.values(collections));
 
 	const typingsFilePath = path.resolve(process.cwd(), output, 'index.d.ts');
 	await fs.writeFile(
@@ -223,9 +232,12 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 	);
 	await fs.writeFile(
 		reactTypingsFilePath,
-		prettier.format(getReactTypings(Object.values(collections)), {
-			parser: 'typescript',
-		}),
+		prettier.format(
+			getReactTypings({ collections: Object.values(collections), commonjs }),
+			{
+				parser: 'typescript',
+			},
+		),
 	);
 
 	const reactImplementationFilePath = path.resolve(
@@ -250,7 +262,7 @@ async function run({ input, output, includeReact, debug, migrations, force }) {
 	// );
 }
 
-async function writeCanonicalSchema(output, input) {
+async function writeCanonicalSchema(output, input, commonjs = false) {
 	const compiledSchemaPath = path.resolve(output, 'schema.js');
 
 	const compiledSchema = await swc.transformFile(input, {
@@ -270,7 +282,12 @@ async function writeCanonicalSchema(output, input) {
 	// load the schema, parse it, and write plain JS to temporary file
 	await fs.writeFile(compiledSchemaPath, compiledSchema.code);
 
-	const relativeSchemaPath = './schema.js';
+	const relativeSchemaPath = commonjs ? './schema' : './schema.js';
 
-	return { compiledSchemaPath, relativeSchemaPath };
+	return {
+		compiledSchemaPath: commonjs
+			? compiledSchemaPath.replace('.js', '')
+			: compiledSchemaPath,
+		relativeSchemaPath,
+	};
 }

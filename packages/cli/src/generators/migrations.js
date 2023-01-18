@@ -1,11 +1,14 @@
 import * as path from 'path';
 
-export function createMigration(
+export function createMigration({
 	version,
 	historyDirectory,
 	migrationsDirectory,
 	collectionNames,
-) {
+	commonjs = false,
+}) {
+	const fileEnd = commonjs ? '' : '.js';
+
 	let relativePathToHistory = path.relative(
 		migrationsDirectory,
 		historyDirectory,
@@ -14,7 +17,7 @@ export function createMigration(
 	relativePathToHistory = relativePathToHistory.split(path.sep).join('/');
 
 	if (version === 1) {
-		return `import v${version}Schema from '${relativePathToHistory}/v${version}.js';
+		return `import v${version}Schema from '${relativePathToHistory}/v${version}${fileEnd}';
 		import { migrate } from '@lo-fi/web';
 
 		// this is your first migration, so no logic is necessary!
@@ -27,8 +30,8 @@ export function createMigration(
 
 	return `import v${version - 1}Schema from '${relativePathToHistory}/v${
 		version - 1
-	}.js';
-  import v${version}Schema from '${relativePathToHistory}/v${version}.js';
+	}${fileEnd};
+  import v${version}Schema from '${relativePathToHistory}/v${version}${fileEnd}';
   import { migrate } from '@lo-fi/web';
 
   export default migrate(v${
@@ -46,7 +49,11 @@ export function createMigration(
   `;
 }
 
-export function createMigrationIndex(migrationsDirectory, migrationNames) {
+export function createMigrationIndex({
+	migrationsDirectory,
+	migrationNames,
+	commonjs = false,
+}) {
 	return `
   ${migrationNames
 		// they should be sorted in ascending numerical order for prettiness
@@ -55,7 +62,7 @@ export function createMigrationIndex(migrationsDirectory, migrationNames) {
 			const bVersion = parseInt(b.replace('v', '').replace('.ts', ''));
 			return aVersion - bVersion;
 		})
-		.map((name) => `import ${name} from './${name}.js';`)
+		.map((name) => `import ${name} from './${name}${commonjs ? '' : '.js'}';`)
 		.join('\n')}
 
   export default [
