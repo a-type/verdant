@@ -2,8 +2,10 @@ import { assert, Migration, SchemaCollection } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
+import { Entity } from '../index.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
 import { openDocumentDatabase } from '../openDocumentDatabase.js';
+import { LiveQuery } from '../queries/LiveQuery.js';
 import { LiveQueryMaker } from '../queries/LiveQueryMaker.js';
 import { LiveQueryStore } from '../queries/LiveQueryStore.js';
 import { EntityStore } from '../reactives/EntityStore.js';
@@ -17,13 +19,12 @@ interface ClientConfig<Presence = any> {
 }
 
 export interface CollectionApi {
-	create: (init: any) => Promise<any>;
-	put: (init: any) => Promise<any>;
+	put: (init: any) => Promise<Entity>;
 	delete: (id: string) => Promise<void>;
 	deleteAll: (ids: string[]) => Promise<void>;
-	get: (id: string) => any;
-	findOne: (filter: any) => any;
-	findAll: (filter?: any) => any;
+	get: (id: string) => LiveQuery<Entity | null>;
+	findOne: (filter: any) => LiveQuery<Entity | null>;
+	findAll: (filter?: any) => LiveQuery<Entity[]>;
 }
 
 // not actually used below, but helpful for internal code which

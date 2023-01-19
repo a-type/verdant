@@ -75,7 +75,7 @@ function getUndoOperation(
 					data: {
 						op: 'list-insert',
 						index: data.index,
-						values: [initial.slice(data.index, data.count)],
+						values: initial.slice(data.index, data.count),
 					},
 				},
 			];
