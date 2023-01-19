@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 11.1.4
+
+### Patch Changes
+
+- cd41849: Attempt to make client isomorphic
+- Updated dependencies [cd41849]
+  - @lo-fi/web@1.10.10
+
 ## 11.1.3
 
 ### Patch Changes
