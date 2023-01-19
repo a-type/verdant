@@ -50,7 +50,7 @@ describe('storage queries', () => {
 				category: 'specific',
 			},
 		]) {
-			items.push(await storage.todo.create(item));
+			items.push(await storage.todos.create(item));
 		}
 		return items;
 	}
@@ -60,7 +60,7 @@ describe('storage queries', () => {
 
 		const items = await addTestingItems(storage);
 
-		const query = storage.queryMaker.findAll('todo', {
+		const query = storage.queryMaker.findAll('todos', {
 			where: 'categorySortedByDone',
 			match: {
 				category: 'general',
@@ -81,7 +81,7 @@ describe('storage queries', () => {
 
 		const items = await addTestingItems(storage);
 
-		const query = storage.queryMaker.findAll('todo', {
+		const query = storage.queryMaker.findAll('todos', {
 			where: 'tagsSortedByDone',
 			match: {
 				tags: 'a',
@@ -103,7 +103,7 @@ describe('storage queries', () => {
 
 		const items = await addTestingItems(storage);
 
-		const query = storage.queryMaker.findAll('todo', {
+		const query = storage.queryMaker.findAll('todos', {
 			where: 'content',
 			startsWith: 'item',
 		});

@@ -18,6 +18,7 @@ const fuzzSchema = schema({
 	collections: {
 		fuzz: collection({
 			name: 'fuzz',
+			pluralName: 'fuzz',
 			primaryKey: 'id',
 			fields: {
 				id: { type: 'string' },

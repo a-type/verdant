@@ -72,7 +72,7 @@ it(
 		const v1Schema = schema({
 			version: 1,
 			collections: {
-				item: v1Item,
+				items: v1Item,
 			},
 		});
 
@@ -147,8 +147,8 @@ it(
 		const v2Schema = schema({
 			version: 2,
 			collections: {
-				item: v2Item,
-				list: v2List,
+				items: v2Item,
+				lists: v2List,
 			},
 		});
 
@@ -260,14 +260,14 @@ it(
 		const v3Schema = schema({
 			version: 3,
 			collections: {
-				item: v3Item,
-				list: v2List,
+				items: v3Item,
+				lists: v2List,
 			},
 		});
 
 		migrations.push(
 			migrate(v2Schema, v3Schema, async ({ migrate, withDefaults }) => {
-				await migrate('item', ({ tags, ...rest }) => {
+				await migrate('items', ({ tags, ...rest }) => {
 					return {
 						...rest,
 						tags: tags.map((tag) => ({
@@ -276,7 +276,7 @@ it(
 						})),
 					};
 				});
-				await migrate('list', (old) => withDefaults('list', old));
+				await migrate('lists', (old) => withDefaults('lists', old));
 			}),
 		);
 
@@ -361,7 +361,7 @@ it(
 		const v4Schema = schema({
 			version: 4,
 			collections: {
-				list: v4List,
+				lists: v4List,
 			},
 		});
 
@@ -370,8 +370,8 @@ it(
 				v3Schema,
 				v4Schema,
 				async ({ migrate, queries, mutations, withDefaults }) => {
-					await migrate('list', async (old) => {
-						const items = await queries.item.findAll({
+					await migrate('lists', async (old) => {
+						const items = await queries.items.findAll({
 							where: 'listId',
 							equals: old.id,
 						});
@@ -383,11 +383,11 @@ it(
 
 					// we have to create a list for non-assigned items and assign them
 					// so they're not lost!
-					const unassignedItems = await queries.item.findAll({
+					const unassignedItems = await queries.items.findAll({
 						where: 'listId',
 						equals: null,
 					});
-					await mutations.list.put({
+					await mutations.lists.put({
 						id: 'uncategorized',
 						name: 'Uncategorized',
 						items: unassignedItems,

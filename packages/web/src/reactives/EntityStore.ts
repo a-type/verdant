@@ -95,6 +95,10 @@ export class EntityStore extends EventSubscriber<{
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
 		const { collection } = decomposeOid(oid);
+		assert(
+			this.schema.collections[collection],
+			`Missing schema collection: ${collection}`,
+		);
 		return {
 			type: 'object',
 			properties: this.schema.collections[collection].fields as any,

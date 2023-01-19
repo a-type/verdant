@@ -1,4 +1,4 @@
-import { Migration, SchemaCollection } from '@lo-fi/common';
+import { assert, Migration, SchemaCollection } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
@@ -79,17 +79,27 @@ export class Client {
 		)) {
 			const collection = _collection as SchemaCollection<any, any>;
 			const collectionName = collection.pluralName ?? collection.name + 's';
+			// TODO: untangle this requirement
+			assert(
+				collectionName === name,
+				`The key of the collection in the schema must be the plural of the name (expected: "${collectionName}")`,
+			);
 			// @ts-ignore
 			this[collectionName] = {
 				/** @deprecated - use put */
-				create: (doc: any) => this._documentManager.create(name, doc),
-				put: (doc: any) => this._documentManager.create(name, doc),
-				delete: (id: string) => this._documentManager.delete(name, id),
+				create: (doc: any) => this._documentManager.create(collectionName, doc),
+				put: (doc: any) => this._documentManager.create(collectionName, doc),
+				delete: (id: string) =>
+					this._documentManager.delete(collectionName, id),
 				deleteAll: (ids: string[]) =>
-					this._documentManager.deleteAll(ids.map((id) => [name, id])),
-				get: (id: string) => this._queryMaker.get(name, id),
-				findOne: (query: any) => this._queryMaker.findOne(name, query),
-				findAll: (query: any) => this._queryMaker.findAll(name, query),
+					this._documentManager.deleteAll(
+						ids.map((id) => [collectionName, id]),
+					),
+				get: (id: string) => this._queryMaker.get(collectionName, id),
+				findOne: (query: any) =>
+					this._queryMaker.findOne(collectionName, query),
+				findAll: (query: any) =>
+					this._queryMaker.findAll(collectionName, query),
 			} as CollectionApi;
 		}
 	}

@@ -5,7 +5,7 @@ describe('undoing operations', () => {
 	it('should undo deletes', async () => {
 		const storage = await createTestStorage();
 
-		const item = await storage.todo.put({
+		const item = await storage.todos.put({
 			content: 'item',
 			category: 'general',
 			attachments: [
@@ -15,13 +15,13 @@ describe('undoing operations', () => {
 			],
 		});
 
-		await storage.todo.delete(item.get('id'));
+		await storage.todos.delete(item.get('id'));
 
-		expect(await storage.todo.get(item.get('id')).resolved).toBeNull();
+		expect(await storage.todos.get(item.get('id')).resolved).toBeNull();
 
 		await storage.undoHistory.undo();
 
-		const restored = await storage.todo.get(item.get('id')).resolved;
+		const restored = await storage.todos.get(item.get('id')).resolved;
 		expect(restored).toBeDefined();
 		expect(restored.get('id')).toBe(item.get('id'));
 		expect(restored.get('content')).toBe('item');
@@ -32,7 +32,7 @@ describe('undoing operations', () => {
 	it('should create batches without undo', async () => {
 		const storage = await createTestStorage();
 
-		const item = await storage.todo.put({
+		const item = await storage.todos.put({
 			content: 'item',
 			category: 'general',
 			attachments: [

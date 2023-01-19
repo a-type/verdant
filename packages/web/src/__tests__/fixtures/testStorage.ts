@@ -1,7 +1,7 @@
 import { collection, createDefaultMigration, schema } from '@lo-fi/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { ClientWithCollections, StorageDescriptor } from '../../index.js';
+import { ClientWithCollections, ClientDescriptor } from '../../index.js';
 
 export const todoCollection = collection({
 	name: 'todo',
@@ -98,14 +98,14 @@ export const weirdCollection = collection({
 const testSchema = schema({
 	version: 1,
 	collections: {
-		todo: todoCollection,
-		weird: weirdCollection,
+		todos: todoCollection,
+		weirds: weirdCollection,
 	},
 });
 
 export function createTestStorage() {
 	const idb = new IDBFactory();
-	const storage = new StorageDescriptor({
+	const storage = new ClientDescriptor({
 		schema: testSchema,
 		migrations: [createDefaultMigration(testSchema)],
 		indexedDb: idb,

@@ -1,4 +1,5 @@
 import {
+	assert,
 	assignOid,
 	cloneDeep,
 	createRef,
@@ -161,6 +162,7 @@ export class Entity<
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');
 		}
+		assert(!!fieldSchema, 'Field schema must be provided');
 	}
 
 	private [REFRESH] = (info: EntityChangeInfo) => {

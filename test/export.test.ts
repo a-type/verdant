@@ -62,7 +62,7 @@ it('can export data and import it even after a schema migration', async () => {
 	const v1Schema = schema({
 		version: 1,
 		collections: {
-			item: v1Item,
+			items: v1Item,
 		},
 	});
 
@@ -137,8 +137,8 @@ it('can export data and import it even after a schema migration', async () => {
 	const v2Schema = schema({
 		version: 2,
 		collections: {
-			item: v2Item,
-			list: v2List,
+			items: v2Item,
+			lists: v2List,
 		},
 	});
 
