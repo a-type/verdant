@@ -8,7 +8,7 @@
 	"scripts": {
 		"dev": "turbo run dev",
 		"build": "turbo run build",
-		"test": "turbo run ci:test",
+		"test": "turbo run test",
 		"test:integration": "pnpm -F @lo-fi/test test",
 		"ci:test:unit": "turbo run ci:test:unit",
 		"ci:test:integration": "turbo run ci:test:integration",
