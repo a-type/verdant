@@ -5,7 +5,7 @@ import { waitForPeerCount, waitForPeerPresence } from './lib/waits.js';
 
 let server: { port: number; cleanup: () => Promise<void> };
 beforeAll(async () => {
-	server = await startTestServer({ log: true });
+	server = await startTestServer({ log: false });
 });
 
 afterAll(async () => {

@@ -12,7 +12,7 @@ let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
 	: never;
 beforeAll(async () => {
-	server = await startTestServer({ log: true });
+	server = await startTestServer({ log: false });
 });
 
 afterAll(async () => {
@@ -24,13 +24,13 @@ async function connectAndSeedData(library = 'reset-1') {
 		server,
 		library,
 		user: 'User A',
-		logId: 'A',
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library,
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 
 	// seed data into library

@@ -78,7 +78,7 @@ it('can export data and import it even after a schema migration', async () => {
 	let client = await createTestClient({
 		schema: v1Schema,
 		...clientInit,
-		logId: 'client1',
+		// logId: 'client1',
 	});
 
 	const originalLocalReplicaInfo = await client.meta.localReplica.get();
@@ -147,7 +147,7 @@ it('can export data and import it even after a schema migration', async () => {
 	client = await createTestClient({
 		schema: v2Schema,
 		...clientInit,
-		logId: 'client2',
+		// logId: 'client2',
 	});
 
 	// add more data which will be lost
