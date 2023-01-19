@@ -69,11 +69,12 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 	}
 
 	private initialize = async (init: ClientDescriptorOptions) => {
-		// if server-side, we use a fake indexed db...
-		if (!process.env.CI && typeof window === 'undefined' && !init.indexedDb) {
-			// @ts-ignore
-			const fakeIdb = await import('fake-indexeddb');
-			init.indexedDb = fakeIdb.IDBFactory;
+		// if server-side and no alternative IndexedDB implementation was provided,
+		// we can't initialize the storage
+		if (!('indexedDB' in window) && !init.indexedDb) {
+			throw new Error(
+				'A lo-fi client was initialized in an environment without IndexedDB. If you are using lo-fi in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
+			);
 		}
 
 		if (this._initializing || this._resolvedValue) {
