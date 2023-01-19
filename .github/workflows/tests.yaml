@@ -25,4 +25,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run package tests
-        run: pnpm test
+        run: pnpm ci:test:unit
+
+      - name: Run integration tests
+        run: pnpm ci:test:integration
