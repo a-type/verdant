@@ -70,7 +70,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 
 	private initialize = async (init: ClientDescriptorOptions) => {
 		// if server-side, we use a fake indexed db...
-		if (typeof window === 'undefined' && !init.indexedDb) {
+		if (!process.env.CI && typeof window === 'undefined' && !init.indexedDb) {
 			// @ts-ignore
 			const fakeIdb = await import('fake-indexeddb');
 			init.indexedDb = fakeIdb.IDBFactory;
