@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.10.10
+
+### Patch Changes
+
+- cd41849: Attempt to make client isomorphic
+
 ## 1.10.9
 
 ### Patch Changes
