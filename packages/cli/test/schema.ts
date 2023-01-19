@@ -82,7 +82,7 @@ export const person = collection({
 export default schema({
 	version: 1,
 	collections: {
-		todo,
-		person,
+		todos: todo,
+		people: person,
 	},
 });
