@@ -29,7 +29,7 @@
 	],
 	"scripts": {
 		"test": "vitest",
-		"ci:test": "vitest run",
+		"ci:test:unit": "vitest run",
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global"

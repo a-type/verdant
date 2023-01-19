@@ -24,7 +24,7 @@
 		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d",
 		"pretest:cjs": "node ./bin/generate.js -s test/schema.ts -o test/.generated-cjs -r -d -c -m test/migrations-cjs",
 		"test": "pnpm run pretest && vitest",
-		"ci:test": "pnpm run pretest && vitest run",
+		"ci:test:unit": "pnpm run pretest && vitest run",
 		"link": "pnpm link --global"
 	},
 	"dependencies": {

@@ -25,6 +25,7 @@
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
 		"test": "vitest",
+		"ci:test:unit": "vitest run",
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {

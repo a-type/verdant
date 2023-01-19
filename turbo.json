@@ -6,7 +6,11 @@
 			"dependsOn": ["^build"],
 			"outputs": [".next/**", "dist/**"]
 		},
-		"ci:test": {
+		"ci:test:unit": {
+			"outputs": [],
+			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
+		},
+		"ci:test:integration": {
 			"outputs": [],
 			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
 		},

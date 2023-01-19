@@ -19,7 +19,7 @@
 	"scripts": {
 		"pretest": "lo-fi generate -s ./schema.ts -o ./client",
 		"test": "vitest",
-		"ci:test": "vitest run",
+		"ci:test:integration": "vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts"
 	},
 	"devDependencies": {
