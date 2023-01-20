@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.8.4
+
+### Patch Changes
+
+- 01936cf: Fix a bug in undo list delete
+
 ## 1.8.3
 
 ### Patch Changes

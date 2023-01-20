@@ -1,5 +1,14 @@
 # @lo-fi/web
 
+## 1.10.11
+
+### Patch Changes
+
+- 01936cf: Fix a bug in undo list delete
+- 7252c6b: Revert attempt at mocking indexeddb for servers
+- Updated dependencies [01936cf]
+  - @lo-fi/common@1.8.4
+
 ## 1.10.10
 
 ### Patch Changes
