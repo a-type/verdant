@@ -50,7 +50,7 @@ describe('storage queries', () => {
 				category: 'specific',
 			},
 		]) {
-			items.push(await storage.todos.create(item));
+			items.push(await storage.todos.put(item));
 		}
 		return items;
 	}

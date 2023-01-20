@@ -1,3 +1,4 @@
+import { assert } from '@lo-fi/common';
 import cuid from 'cuid';
 import { describe, it, expect, vi, MockedFunction } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
@@ -23,7 +24,7 @@ describe('storage documents', () => {
 	it('should fill in default values', async () => {
 		const storage = await createTestStorage();
 
-		const item = await storage.todos.create({
+		const item = await storage.todos.put({
 			content: 'item',
 			category: 'general',
 			attachments: [
@@ -42,14 +43,14 @@ describe('storage documents', () => {
 	it('should have a stable identity across different queries when subscribed', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
 			category: 'general',
 			attachments: [],
 		});
-		await storage.todos.create({
+		await storage.todos.put({
 			content: 'item 2',
 			done: true,
 			tags: [],
@@ -60,6 +61,7 @@ describe('storage documents', () => {
 		const singleItemQuery = storage.todos.get(item1.get('id'));
 		const singleItemResult = await singleItemQuery.resolved;
 		expect(singleItemResult).toBeTruthy();
+		assert(!!singleItemResult);
 		singleItemResult.subscribe('change', vi.fn());
 
 		const allItemsQuery = storage.todos.findAll();
@@ -73,7 +75,7 @@ describe('storage documents', () => {
 	it('should immediately reflect mutations', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -88,7 +90,7 @@ describe('storage documents', () => {
 	it('should notify about changes', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -98,6 +100,7 @@ describe('storage documents', () => {
 
 		const liveItem1 = await storage.todos.get(item1.get('id')).resolved;
 		expect(liveItem1).toBeTruthy();
+		assert(!!liveItem1);
 		const callback = vi.fn();
 		liveItem1.subscribe('change', callback);
 
@@ -130,7 +133,7 @@ describe('storage documents', () => {
 	it('should expose array mutators on nested arrays', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -167,7 +170,7 @@ describe('storage documents', () => {
 	it('should expose array accessors on nested arrays', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: ['tag 1', 'tag 2'],
@@ -210,7 +213,7 @@ describe('storage documents', () => {
 
 		const storage = await createTestStorage();
 
-		const item1 = await storage.weirds.create({
+		const item1 = await storage.weirds.put({
 			weird: {
 				foo: 'bar',
 				baz: [
@@ -239,7 +242,7 @@ describe('storage documents', () => {
 	it('should provide access and updates for map-type fields', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.weirds.create({
+		const item1 = await storage.weirds.put({
 			weird: null,
 			map: {
 				foo: 'bar',
@@ -267,7 +270,7 @@ describe('storage documents', () => {
 	it('should merge .update fields and not discard undefined ones', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.weirds.create({
+		const item1 = await storage.weirds.put({
 			weird: null,
 			map: {
 				foo: 'bar',
@@ -296,7 +299,7 @@ describe('storage documents', () => {
 	it('should delete undefined fields in .update if merge is false', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.weirds.create({
+		const item1 = await storage.weirds.put({
 			weird: {
 				bar: 2,
 				qux: 3,
@@ -331,7 +334,7 @@ describe('storage documents', () => {
 	it('should not allow merge: false in strict schema field updates', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -349,7 +352,7 @@ describe('storage documents', () => {
 	it('should apply defaults to created sub-objects in .update', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -371,7 +374,7 @@ describe('storage documents', () => {
 	it('should remove items from list when .delete is called', async () => {
 		const storage = await createTestStorage();
 
-		const item1 = await storage.todos.create({
+		const item1 = await storage.todos.put({
 			content: 'item 1',
 			done: false,
 			tags: [],
@@ -398,7 +401,7 @@ describe('storage documents', () => {
 		expect(item1.get('attachments').get(1).get('name')).toBe('attachment 3');
 
 		// should work on lists which are not field-validated
-		const item2 = await storage.weirds.create({
+		const item2 = await storage.weirds.put({
 			weird: ['foo', 'bar', 'baz'],
 		});
 		item2.get('weird').delete(1);
