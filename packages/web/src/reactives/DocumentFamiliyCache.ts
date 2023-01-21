@@ -35,6 +35,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 		this.storeTools = {
 			addLocalOperations: store.addLocalOperations,
 			patchCreator: store.meta.patchCreator,
+			addFile: store.files.add,
+			getFile: store.files.get,
 		};
 	}
 

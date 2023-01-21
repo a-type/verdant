@@ -15,6 +15,7 @@ import {
 	OID_KEY,
 	removeOid,
 } from './oids.js';
+import { compareRefs, isRef } from './refs.js';
 import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';
 
 // export type ObjectIdentifier<
@@ -145,6 +146,16 @@ export type Operation = {
 	data: OperationPatch;
 };
 
+function isDiffableObject(val: any) {
+	return isObject(val) && !isRef(val);
+}
+
+function compareNonDiffable(a: any, b: any) {
+	if (a === b) return true;
+	if (isRef(a) && isRef(b)) return compareRefs(a, b);
+	return false;
+}
+
 export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	from: T,
 	to: T,
@@ -168,10 +179,10 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	const oid = getOid(from);
 
 	function diffItems(key: string | number, value: any, oldValue: any) {
-		if (!isObject(value)) {
+		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
-			if (value !== oldValue) {
+			if (!compareNonDiffable(value, oldValue)) {
 				patches.push({
 					oid,
 					timestamp: getNow(),
@@ -279,7 +290,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
-	} else if (isObject(from) && isObject(to)) {
+	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
 			if (value === undefined && options.defaultUndefined) continue;
@@ -322,10 +333,10 @@ export function shallowDiffToPatches(
 	const oid = getOid(from);
 
 	function diffItems(key: string | number, value: any, oldValue: any) {
-		if (!isObject(value) || isObjectRef(value)) {
+		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
-			if (value !== oldValue) {
+			if (!compareNonDiffable(value, oldValue)) {
 				patches.push({
 					oid,
 					timestamp: getNow(),
@@ -368,7 +379,7 @@ export function shallowDiffToPatches(
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
-	} else if (isObject(from) && isObject(to)) {
+	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
 			oldKeys.delete(key);

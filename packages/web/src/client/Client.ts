@@ -1,6 +1,7 @@
 import { assert, Migration, SchemaCollection } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
+import { FileManager } from '../files/FileManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
 import { Entity } from '../index.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
@@ -39,6 +40,7 @@ export class Client {
 	private _queryStore!: LiveQueryStore;
 	private _queryMaker!: LiveQueryMaker;
 	private _documentManager!: DocumentManager<any>;
+	private _fileManager!: FileManager;
 
 	readonly collectionNames: string[];
 
@@ -106,9 +108,13 @@ export class Client {
 	}
 
 	private initialize = () => {
+		this._fileManager = new FileManager({
+			db: this.metaDb,
+		});
 		this._entities = new EntityStore({
 			context: this.context,
 			meta: this.meta,
+			files: this._fileManager,
 		});
 		this._queryStore = new LiveQueryStore(this._entities, this.context);
 		this._queryMaker = new LiveQueryMaker(this._queryStore, this.context);
@@ -228,6 +234,7 @@ export class Client {
 	};
 
 	close = async () => {
+		await this.entities.flushPatches();
 		this.sync.stop();
 		this.sync.dispose();
 

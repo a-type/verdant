@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createFileRef } from './files.js';
 import {
 	assignOid,
 	assignOidPropertiesToAllSubObjects,
@@ -8,6 +9,7 @@ import {
 	decomposeOid,
 	getOid,
 	getOidRange,
+	hasOid,
 	maybeGetOidProperty,
 	normalize,
 	normalizeFirstLevel,
@@ -113,6 +115,70 @@ describe('normalizing an object', () => {
 					garply: 4,
 				},
 				'test/a.qux.#.grault:5',
+			),
+		);
+	});
+
+	it('should handle file references and not replace them with refs or attempt to normalize them', () => {
+		let i = 0;
+		function createSubId() {
+			return (i++).toString();
+		}
+
+		const initial = {
+			foo: {
+				bar: 1,
+				file: createFileRef('abcd123'),
+			},
+			qux: [createFileRef('efgh456'), createFileRef('ijkl789')],
+		};
+		assignOid(initial, 'test/a');
+		assignOidsToAllSubObjects(initial, createSubId);
+
+		const result = normalize(initial);
+
+		expect(result.size).toBe(3);
+
+		expect(result.get('test/a')).toEqual(
+			assignOid(
+				{
+					foo: {
+						'@@type': 'ref',
+						id: 'test/a.foo:0',
+					},
+					qux: {
+						'@@type': 'ref',
+						id: 'test/a.qux:1',
+					},
+				},
+				'test/a',
+			),
+		);
+		expect(result.get('test/a.foo:0')).toEqual(
+			assignOid(
+				{
+					bar: 1,
+					file: {
+						'@@type': 'file',
+						id: 'abcd123',
+					},
+				},
+				'test/a.foo:0',
+			),
+		);
+		expect(result.get('test/a.qux:1')).toEqual(
+			assignOid(
+				[
+					{
+						'@@type': 'file',
+						id: 'efgh456',
+					},
+					{
+						'@@type': 'file',
+						id: 'ijkl789',
+					},
+				],
+				'test/a.qux:2',
 			),
 		);
 	});
@@ -309,5 +375,21 @@ it('should handle special characters in document id or collection', () => {
 		id: 'foo/bar (.) : huh:',
 		keyPath: ['baz?.quoo:/', 'qux'],
 		subId: 'corge',
+	});
+});
+
+describe('assigning OIDs to sub-objects', () => {
+	it('should not assign oids to refs', () => {
+		const obj = {
+			foo: {
+				file: createFileRef('1a'),
+			},
+			bar: [createFileRef('2a')],
+		};
+		assignOid(obj, 'test/a');
+		assignOidsToAllSubObjects(obj);
+
+		expect(hasOid(obj.foo.file)).toBe(false);
+		expect(hasOid(obj.bar[0])).toBe(false);
 	});
 });

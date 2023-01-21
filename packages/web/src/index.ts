@@ -23,6 +23,7 @@ export type {
 } from './reactives/Entity.js';
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
+export { EntityFile } from './files/EntityFile.js';
 
 export {
 	collection,

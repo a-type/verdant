@@ -3,6 +3,7 @@
 	"private": true,
 	"type": "module",
 	"dependencies": {
+		"@a-type/utils": "^1.0.2",
 		"@lo-fi/cli": "workspace:*",
 		"@lo-fi/server": "workspace:*",
 		"@lo-fi/web": "workspace:*",
@@ -17,12 +18,15 @@
 		"ws": "^8.9.0"
 	},
 	"scripts": {
-		"pretest": "lo-fi generate -s ./schema.ts -o ./client",
+		"pretest": "lo-fi generate -s ./schema.ts -o ./client -f",
 		"test": "vitest",
 		"ci:test:integration": "vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts"
 	},
 	"devDependencies": {
 		"tsx": "^3.12.1"
+	},
+	"volta": {
+		"node": "18.13.0"
 	}
 }

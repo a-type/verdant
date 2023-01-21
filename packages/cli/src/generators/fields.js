@@ -38,6 +38,8 @@ export function getFieldSnapshotTyping(field, { flattenArrays = false } = {}) {
 		baseType = `Record<string, ${getFieldSnapshotTyping(values)}>`;
 	} else if (type === 'any') {
 		baseType = 'any';
+	} else if (type === 'file') {
+		baseType = 'string';
 	} else {
 		throw new Error(`Unknown field type: ${type}`);
 	}
@@ -87,6 +89,8 @@ export function getFieldInitTyping(field) {
 		baseType = `Record<string, ${getFieldInitTyping(values).type}>`;
 	} else if (type === 'any') {
 		baseType = 'any';
+	} else if (type === 'file') {
+		baseType = 'File';
 	} else {
 		throw new Error(`Unknown field type: ${type}`);
 	}

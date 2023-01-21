@@ -157,6 +157,11 @@ function getObjectTypings(field, name) {
 				';';
 		}
 		content += '\n\n';
+	} else if (type === 'file') {
+		content += `export type ${name} = EntityFile;\n`;
+		content += `export type ${name}Init = File;\n`;
+		content += `export type ${name}Destructured = EntityFile;\n`;
+		content += `export type ${name}Snapshot = string;\n`;
 	} else {
 		content += `type ${name} = ${type}${nullable ? ' | null' : ''};\n`;
 		content += `type ${name}Init = ${name}${optional ? ' | undefined' : ''};\n`;
@@ -192,7 +197,12 @@ function getObjectRecursiveTypings(
 		.map(([key, value]) => {
 			const { type, optional, nullable } = parseField(value);
 			let content = `${key}${optional && respectOptional ? '?' : ''}: `;
-			if (type === 'object' || type === 'array' || type === 'map') {
+			if (
+				type === 'object' ||
+				type === 'array' ||
+				type === 'map' ||
+				type === 'file'
+			) {
 				content += `${getSubObjectFieldName(pascalName, key)}${suffix}`;
 			} else {
 				content += type;

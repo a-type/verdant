@@ -1,3 +1,5 @@
+// FIXME: the below code is pretty stupid.
+// it repeats everything between every migration.
 export function openMetadataDatabase(
 	namespace: string,
 	{
@@ -12,11 +14,20 @@ export function openMetadataDatabase(
 ): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
 	return new Promise<{ wasInitialized: boolean; db: IDBDatabase }>(
 		(resolve, reject) => {
-			const request = indexedDB.open(databaseName, 3);
+			const request = indexedDB.open(databaseName, 4);
 			let wasInitialized = false;
 			request.onupgradeneeded = async (event) => {
 				const db = request.result;
-				if (event.oldVersion === 2) {
+				if (event.oldVersion === 3) {
+					/**
+					 * 3 -> 4 changes:
+					 *
+					 * Add files store
+					 */
+					db.createObjectStore('files', {
+						keyPath: 'id',
+					});
+				} else if (event.oldVersion === 2) {
 					/**
 					 * 2 -> 3 changes:
 					 *
@@ -25,6 +36,9 @@ export function openMetadataDatabase(
 					const tx = request.transaction!;
 					const operations = tx.objectStore('operations');
 					operations.createIndex('timestamp', 'timestamp');
+					db.createObjectStore('files', {
+						keyPath: 'id',
+					});
 				} else if (event.oldVersion === 1) {
 					/**
 					 * 1 -> 2 changes:
@@ -66,6 +80,9 @@ export function openMetadataDatabase(
 					operations.createIndex('l_t', 'l_t', { unique: false });
 					operations.createIndex('d_t', 'd_t', { unique: false });
 					operations.createIndex('timestamp', 'timestamp');
+					db.createObjectStore('files', {
+						keyPath: 'id',
+					});
 				} else {
 					/**
 					 * Migrating from 0: just create the desired object stores
@@ -83,6 +100,10 @@ export function openMetadataDatabase(
 					operationsStore.createIndex('l_t', 'l_t');
 					operationsStore.createIndex('d_t', 'd_t');
 					operationsStore.createIndex('timestamp', 'timestamp');
+
+					db.createObjectStore('files', {
+						keyPath: 'id',
+					});
 				}
 
 				if (!event.oldVersion) {

@@ -34,6 +34,11 @@ export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 	type: 'map';
 	values: V;
 };
+export type StorageFileFieldSchema = {
+	type: 'file';
+	nullable?: boolean;
+	// downloadRemote?: boolean; TODO: is this a good feature? maybe later.
+};
 
 export type StorageFieldSchema =
 	| StorageStringFieldSchema
@@ -42,7 +47,8 @@ export type StorageFieldSchema =
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
 	| StorageAnyFieldSchema
-	| StorageMapFieldSchema<any>;
+	| StorageMapFieldSchema<any>
+	| StorageFileFieldSchema;
 
 // nested versions don't have index info
 export type NestedStorageStringFieldSchema = {
@@ -63,7 +69,8 @@ export type NestedStorageFieldSchema =
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
 	| StorageAnyFieldSchema
-	| StorageMapFieldSchema<any>;
+	| StorageMapFieldSchema<any>
+	| StorageFileFieldSchema;
 
 export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
 

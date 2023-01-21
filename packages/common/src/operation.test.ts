@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createFileRef } from './files.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -464,6 +465,53 @@ describe('creating diff patch operations', () => {
 			    },
 			    "oid": "test/a.baz:2",
 			    "timestamp": "5",
+			  },
+			]
+		`);
+	});
+
+	it('should not diff file refs', () => {
+		const from = {
+			foo: {
+				file: createFileRef('abc123'),
+			},
+			bar: [createFileRef('def456'), createFileRef('ghi789')],
+		};
+		assignOid(from, 'test/a');
+		assignOidsToAllSubObjects(from, createClock());
+
+		const to = {
+			foo: {
+				file: createFileRef('abc456'),
+			},
+			bar: [createFileRef('def456')],
+		};
+		expect(
+			diffToPatches(from, to, createClock(), [], createClock(5), [], {
+				mergeUnknownObjects: true,
+			}),
+		).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "name": "file",
+			      "op": "set",
+			      "value": {
+			        "@@type": "file",
+			        "id": "abc456",
+			      },
+			    },
+			    "oid": "test/a.foo:0",
+			    "timestamp": "0",
+			  },
+			  {
+			    "data": {
+			      "count": 1,
+			      "index": 1,
+			      "op": "list-delete",
+			    },
+			    "oid": "test/a.bar:1",
+			    "timestamp": "1",
 			  },
 			]
 		`);

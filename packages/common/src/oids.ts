@@ -1,5 +1,7 @@
 import { v4 } from 'uuid';
+import { isFileRef } from './files.js';
 import { isObjectRef, ObjectRef } from './operation.js';
+import { isRef } from './refs.js';
 import { isObject, assert } from './utils.js';
 
 /**
@@ -197,14 +199,14 @@ export function assignOidsToAllSubObjects(
 		let item;
 		for (let i = 0; i < obj.length; i++) {
 			item = obj[i];
-			if (isObject(item)) {
+			if (isObject(item) && !isRef(item)) {
 				ensureOid(item, rootOid, i, createSubId);
 				assignOidsToAllSubObjects(item, createSubId);
 			}
 		}
-	} else if (isObject(obj)) {
+	} else if (isObject(obj) && !isRef(obj)) {
 		for (const key of Object.keys(obj)) {
-			if (isObject(obj[key])) {
+			if (isObject(obj[key]) && !isRef(obj[key])) {
 				ensureOid(obj[key], rootOid, key, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
@@ -333,16 +335,20 @@ export function normalize(
 					throw new Error(
 						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
 					);
+				} else if (isFileRef(value)) {
+					copy[i] = value;
+					continue;
+				} else {
+					const itemOid = getOid(value);
+					copy[i] = createRef(itemOid);
+					normalize(value, refs);
 				}
-				const itemOid = getOid(value);
-				copy[i] = createRef(itemOid);
-				normalize(value, refs);
 			} else {
 				copy[i] = value;
 			}
 		}
 		refs.set(oid, copy);
-	} else if (isObject(obj)) {
+	} else if (isObject(obj) && !isRef(obj)) {
 		const oid = getOid(obj);
 		const copy = assignOid({} as Record<string, any>, oid);
 		for (const key of Object.keys(obj)) {
@@ -352,15 +358,20 @@ export function normalize(
 					throw new Error(
 						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
 					);
+				} else if (isFileRef(value)) {
+					// stop here
+					copy[key] = value;
+				} else {
+					const itemOid = getOid(value);
+					copy[key] = createRef(itemOid);
+					normalize(value, refs);
 				}
-				const itemOid = getOid(value);
-				copy[key] = createRef(itemOid);
-				normalize(value, refs);
 			} else {
 				copy[key] = value;
 			}
 		}
 		refs.set(oid, copy);
+	} else if (isRef(obj)) {
 	}
 	return refs;
 }

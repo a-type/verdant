@@ -5,15 +5,19 @@ import {
 	createRef,
 	decomposeOid,
 	EventSubscriber,
+	FileData,
+	isFileRef,
 	isObjectRef,
 	maybeGetOid,
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
+	processValueFiles,
 	StorageFieldSchema,
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
+import { EntityFile } from '../files/EntityFile.js';
 import { WeakRef } from './FakeWeakRef.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
@@ -35,6 +39,8 @@ export interface CacheTools {
 export interface StoreTools {
 	addLocalOperations(operations: Operation[]): void;
 	patchCreator: PatchCreator;
+	addFile: (file: FileData) => void;
+	getFile: (id: string) => EntityFile;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -254,8 +260,18 @@ export class Entity<
 			throw new Error(
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
 			);
+		} else if (isFileRef(value)) {
+			return this.store.getFile(value.id) as any;
 		}
 		return value;
+	};
+
+	protected processInputValue = (value: any, key: any) => {
+		const fieldSchema = this.getChildFieldSchema(key);
+		if (fieldSchema) {
+			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
+		return processValueFiles(value, this.store.addFile);
 	};
 
 	get = <Key extends keyof KeyValue>(key: Key): KeyValue[Key] => {
@@ -335,15 +351,11 @@ export class Entity<
 		return Object.entries(this.getAll());
 	};
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
-		const fieldSchema = this.getChildFieldSchema(key);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
 		this.addPatches(
 			this.store.patchCreator.createSet(
 				this.oid,
 				key as string | number,
-				value,
+				this.processInputValue(value, key),
 				this.keyPath,
 			),
 		);
@@ -392,10 +404,11 @@ export class Entity<
 				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
 			}
 		}
+		const withoutFiles = processValueFiles(value, this.store.addFile);
 		this.addPatches(
 			this.store.patchCreator.createDiff(
 				this.getSnapshot(),
-				assignOid(value, this.oid),
+				assignOid(withoutFiles, this.oid),
 				this.keyPath,
 				{
 					mergeUnknownObjects: !replaceSubObjects,
@@ -436,19 +449,20 @@ export class Entity<
 	}
 
 	push = (value: ListItemInit<Init>) => {
-		const fieldSchema = this.getChildFieldSchema(this.value.length);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
-		this.addPatches(this.store.patchCreator.createListPush(this.oid, value));
+		this.addPatches(
+			this.store.patchCreator.createListPush(
+				this.oid,
+				this.processInputValue(value, this.value.length),
+			),
+		);
 	};
 	insert = (index: number, value: ListItemInit<Init>) => {
-		const fieldSchema = this.getChildFieldSchema(index);
-		if (fieldSchema) {
-			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
 		this.addPatches(
-			this.store.patchCreator.createListInsert(this.oid, index, value),
+			this.store.patchCreator.createListInsert(
+				this.oid,
+				index,
+				this.processInputValue(value, index),
+			),
 		);
 	};
 	move = (from: number, to: number) => {
@@ -496,12 +510,20 @@ export class Entity<
 		);
 	};
 	add = (item: ListItemValue<KeyValue>) => {
-		this.addPatches(this.store.patchCreator.createListAdd(this.oid, item));
+		this.addPatches(
+			this.store.patchCreator.createListAdd(
+				this.oid,
+				this.processInputValue(item, this.value.length),
+			),
+		);
 	};
 	has = (item: ListItemValue<KeyValue>) => {
 		if (typeof item === 'object') {
 			return this.value.some((val: unknown) => {
 				if (isObjectRef(val)) return val.id === maybeGetOid(item);
+				// Sets of files don't work right now, there's no way to compare them
+				// effectively.
+				if (isFileRef(val)) return false;
 				return false;
 			});
 		}
