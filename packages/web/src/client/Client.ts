@@ -1,4 +1,10 @@
-import { assert, Migration, SchemaCollection } from '@lo-fi/common';
+import {
+	assert,
+	DocumentBaseline,
+	Migration,
+	Operation,
+	SchemaCollection,
+} from '@lo-fi/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { FileManager } from '../files/FileManager.js';
@@ -107,9 +113,27 @@ export class Client {
 		}
 	}
 
+	private addData = (data: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => {
+		return this._entities.addData(data);
+	};
+
 	private initialize = () => {
+		this._sync = this.config.syncConfig
+			? new ServerSync(this.config.syncConfig, {
+					meta: this.meta,
+					onData: this.addData,
+					log: this.context.log,
+			  })
+			: new NoSync();
+
 		this._fileManager = new FileManager({
 			db: this.metaDb,
+			sync: this.sync,
+			log: this.context.log,
 		});
 		this._entities = new EntityStore({
 			context: this.context,
@@ -123,14 +147,6 @@ export class Client {
 			this.schema,
 			this._entities,
 		);
-
-		this._sync = this.config.syncConfig
-			? new ServerSync(this.config.syncConfig, {
-					meta: this.meta,
-					entities: this._entities,
-					log: this.config.log,
-			  })
-			: new NoSync();
 
 		this.documentDb.addEventListener('versionchange', () => {
 			this.config.log?.(

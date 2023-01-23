@@ -159,10 +159,12 @@ importers:
       '@lo-fi/common': workspace:*
       '@types/async-lock': ^1.3.0
       '@types/better-sqlite3': ^7.6.0
+      '@types/busboy': ^1.5.0
       '@types/jsonwebtoken': ^8.5.9
       '@types/ws': ^8.5.3
       async-lock: ^1.4.0
       better-sqlite3: ^7.6.2
+      busboy: ^1.6.0
       jsonwebtoken: ^8.5.1
       typescript: ^4.7.4
       ws: ^8.9.0
@@ -170,11 +172,13 @@ importers:
       '@lo-fi/common': link:../common
       async-lock: 1.4.0
       better-sqlite3: 7.6.2
+      busboy: 1.6.0
       jsonwebtoken: 8.5.1
       ws: 8.9.0
     devDependencies:
       '@types/async-lock': 1.3.0
       '@types/better-sqlite3': 7.6.0
+      '@types/busboy': 1.5.0
       '@types/jsonwebtoken': 8.5.9
       '@types/ws': 8.5.3
       typescript: 4.8.3
@@ -4386,6 +4390,12 @@ packages:
       '@types/node': 18.7.18
     dev: false
 
+  /@types/busboy/1.5.0:
+    resolution: {integrity: sha512-ncOOhwmyFDW76c/Tuvv9MA9VGYUCn8blzyWmzYELcNGDb0WXWLSmFi7hJq25YdRBYJrmMBB5jZZwUjlJe9HCjQ==}
+    dependencies:
+      '@types/node': 18.7.18
+    dev: true
+
   /@types/chai-subset/1.3.3:
     resolution: {integrity: sha512-frBecisrNGz+F4T6bcc+NLeolfiojh5FxW2klu669+8BARtyQv2C/GkNW6FUodVe4BroGMP/wER/YDGc7rEllw==}
     dependencies:
@@ -5346,6 +5356,13 @@ packages:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
+    dev: false
+
+  /busboy/1.6.0:
+    resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
+    engines: {node: '>=10.16.0'}
+    dependencies:
+      streamsearch: 1.1.0
     dev: false
 
   /bytes/3.0.0:
@@ -11586,6 +11603,11 @@ packages:
     dependencies:
       mixme: 0.5.4
     dev: true
+
+  /streamsearch/1.1.0:
+    resolution: {integrity: sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==}
+    engines: {node: '>=10.0.0'}
+    dev: false
 
   /string-width/4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}

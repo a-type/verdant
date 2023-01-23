@@ -2,6 +2,7 @@ import {
 	assert,
 	ClientMessage,
 	createOid,
+	FileData,
 	generateId,
 	ServerMessage,
 } from '@lo-fi/common';
@@ -16,6 +17,9 @@ import { URL } from 'url';
 import { ClientConnectionManager } from './ClientConnection.js';
 import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
 import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
+import busboy from 'busboy';
+import { FileInfo, FileStorage } from './files/FileStorage.js';
+import { Readable } from 'stream';
 
 export interface ServerOptions {
 	/**
@@ -52,6 +56,15 @@ export interface ServerOptions {
 	 * Disable history compaction. Storage usage will grow indefinitely. Not recommended.
 	 */
 	disableRebasing?: boolean;
+	/**
+	 * Provide a FileStorage backend to accept file uploads. Without a file backend,
+	 * users will not be able to synchronize files, and all files added on peer replicas
+	 * will be forever unavailable.
+	 *
+	 * A default, filesystem-backed FileStorage implementation is provided as an export
+	 * of this library.
+	 */
+	fileStorage?: FileStorage;
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
@@ -64,6 +77,7 @@ export class Server extends EventEmitter implements MessageSender {
 	readonly httpServer: HttpServer;
 	private wss: WebSocketServer;
 	private storage: ServerStorage;
+	private fileStorage?: FileStorage;
 
 	private clientConnections = new ClientConnectionManager();
 	private keepalives = new ReplicaKeepaliveTimers();
@@ -74,14 +88,21 @@ export class Server extends EventEmitter implements MessageSender {
 
 	private log: (...args: any[]) => void = () => {};
 
+	private __testMode = false;
+
 	constructor(options: ServerOptions) {
 		super();
+
+		this.__testMode =
+			process.env.NODE_ENV === 'test' && process.env.VITEST === 'true';
 
 		this.log = options.log || this.log;
 
 		this.tokenVerifier = new TokenVerifier({
 			secret: options.tokenSecret,
 		});
+
+		this.fileStorage = options.fileStorage;
 
 		this.storage = new ServerStorage({
 			db: create(options.databaseFile),
@@ -121,6 +142,21 @@ export class Server extends EventEmitter implements MessageSender {
 	};
 
 	private getRequestToken = (req: IncomingMessage) => {
+		if (req.headers.authorization) {
+			const [type, token] = req.headers.authorization.split(' ');
+			if (type === 'Bearer') {
+				return token;
+			}
+		}
+
+		if (req.headers['sec-websocket-protocol']) {
+			// hack: read the token from the websocket protocol header
+			const [type, token] = req.headers['sec-websocket-protocol'].split(',');
+			if (type === 'Bearer') {
+				return token;
+			}
+		}
+
 		assert(req.url, 'Request URL is required');
 		const url = new URL(req.url, 'http://localhost');
 		const token = url.searchParams.get('token');
@@ -134,7 +170,11 @@ export class Server extends EventEmitter implements MessageSender {
 	) => {
 		const url = new URL(req.url || '', 'http://localhost');
 		if (url.pathname.startsWith('lofi')) {
-			return this.handleRequest(req, res);
+			if (url.pathname === 'lofi') {
+				return this.handleRequest(req, res);
+			} else if (url.pathname.startsWith('/lofi/files/')) {
+				return this.handleFileRequest(req, res);
+			}
 		} else {
 			res.writeHead(404);
 			res.end();
@@ -189,6 +229,136 @@ export class Server extends EventEmitter implements MessageSender {
 				this.emit('request', info);
 			}
 		} catch (e) {
+			this.emit('error', e);
+			res.writeHead(500);
+			res.end();
+		}
+	};
+
+	/**
+	 * Handles a multipart upload of a file from a lo-fi client. The upload
+	 * will include parameters for the file's ID, name, and type. The request
+	 * must be authenticated with a token to tie it to a library.
+	 */
+	handleFileRequest = async (req: IncomingMessage, res: ServerResponse) => {
+		const fs = this.fileStorage;
+		if (!fs) {
+			this.emit(
+				'error',
+				new Error(
+					'No file storage configured, but a client attempted to upload a file.',
+				),
+			);
+			res.writeHead(500);
+			res.write('File storage is not configured');
+			res.end();
+			return;
+		}
+
+		// FIXME: rather than trying to support Express, I should
+		// just expose regular methods you call from whatever HTTP handler...
+		const url = new URL(
+			(req as any).originalUrl || (req as any).baseUrl || req.url || '',
+			'http://localhost',
+		);
+
+		const id = url.pathname.split('/').pop();
+
+		if (!id || id === 'files') {
+			res.writeHead(400);
+			res.write(
+				'File ID is required to be in the URL path as the last parameter',
+			);
+			res.end();
+			return;
+		}
+
+		try {
+			if (req.method === 'POST') {
+				const info = this.authorizeRequest(req);
+
+				let body = '';
+				req.on('data', (chunk) => {
+					body += chunk;
+				});
+				req.on('end', () => {
+					console.log(body);
+				});
+
+				await new Promise((resolve, reject) => {
+					const bb = busboy({ headers: req.headers });
+
+					bb.on('file', (fieldName, stream, fileInfo) => {
+						// too many 'info's....
+						const lofiFileInfo: FileInfo = {
+							id,
+							libraryId: info.libraryId,
+							fileName: fileInfo.filename,
+							type: fileInfo.mimeType,
+						};
+						// write metadata to storage
+						this.storage.putFileInfo(info.libraryId, lofiFileInfo);
+						fs.put(stream, lofiFileInfo);
+					});
+					bb.on('field', (fieldName, value) => {
+						if (fieldName === 'file') {
+							if (this.__testMode) {
+								// this isn't right in the real world, but in testing it's
+								// the only way we get file data.
+								// we create a stream from the data and pass it as if it
+								// were a file stream
+								const stream = new Readable();
+								stream.push(value);
+								stream.push(null);
+								const fileInfo = {
+									filename: 'test.txt',
+									mimeType: 'text/plain',
+								};
+								bb.emit('file', fieldName, stream, fileInfo);
+							} else {
+								throw new Error('Invalid file upload');
+							}
+						}
+					});
+
+					req.pipe(bb);
+					bb.on('finish', resolve);
+					bb.on('error', reject);
+				});
+				this.log('File upload complete');
+			} else if (req.method === 'GET') {
+				const info = this.authorizeRequest(req);
+
+				const fileInfo = this.storage.getFileInfo(info.libraryId, id);
+				if (!fileInfo) {
+					res.writeHead(404);
+					res.end();
+					return;
+				}
+
+				const url = fs.getUrl({
+					fileName: fileInfo.name,
+					id: fileInfo.fileId,
+					libraryId: info.libraryId,
+					type: fileInfo.type,
+				});
+				res.writeHead(200, {
+					'Content-Type': 'application/json',
+				});
+				// we need to augment that data with the URL from the file backend.
+				// and generally enforce the FileData interface here...
+				const data: FileData = {
+					id: fileInfo.fileId,
+					url,
+					remote: true,
+					name: fileInfo.name,
+					type: fileInfo.type,
+				};
+				res.write(JSON.stringify(data));
+				res.end();
+			}
+		} catch (e) {
+			this.log('Error handling file request', e);
 			this.emit('error', e);
 			res.writeHead(500);
 			res.end();

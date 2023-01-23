@@ -10,15 +10,18 @@ export function createTestContext() {
 		clients: UnwrapPromise<ReturnType<typeof createTestClient>>[];
 		createTestClient: typeof createTestClient;
 	};
-	context.createTestClient = async (
-		...args: Parameters<typeof createTestClient>
-	) => {
-		const client = await createTestClient(...args);
-		context.clients.push(client);
-		return client;
-	};
 	beforeAll(async () => {
 		context.server = await startTestServer({ log: false });
+		context.createTestClient = async (
+			config: Parameters<typeof createTestClient>[0],
+		) => {
+			const client = await createTestClient({
+				server: context.server,
+				...config,
+			});
+			context.clients.push(client);
+			return client;
+		};
 	});
 	afterAll(async () => {
 		await context.server.cleanup();

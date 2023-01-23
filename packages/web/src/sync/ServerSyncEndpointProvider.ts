@@ -20,6 +20,8 @@ export class ServerSyncEndpointProvider {
 	private cached = null as {
 		http: string;
 		websocket: string;
+		files: string;
+		token: string;
 	} | null;
 	type: ReplicaType = ReplicaType.Realtime;
 
@@ -61,12 +63,23 @@ export class ServerSyncEndpointProvider {
 		);
 		this.type = parseInt(decoded.type + '');
 		const url = new URL(decoded.url);
-		url.searchParams.set('token', result.accessToken);
 		url.protocol = url.protocol.replace('ws', 'http');
 		const httpEndpoint = url.toString();
 		url.protocol = url.protocol.replace('http', 'ws');
 		const websocketEndpoint = url.toString();
-		this.cached = { http: httpEndpoint, websocket: websocketEndpoint };
+		let fileEndpoint: string = decoded.file;
+		if (!fileEndpoint) {
+			// default to http endpoint + '/files';
+			const fileUrl = new URL(httpEndpoint);
+			fileUrl.pathname = fileUrl.pathname + '/files';
+			fileEndpoint = fileUrl.toString();
+		}
+		this.cached = {
+			http: httpEndpoint,
+			websocket: websocketEndpoint,
+			files: fileEndpoint,
+			token: result.accessToken,
+		};
 		return this.cached;
 	};
 }

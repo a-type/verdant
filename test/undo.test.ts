@@ -13,7 +13,7 @@ const cleanupClients: Client[] = [];
 
 let server: { port: number; cleanup: () => Promise<void> };
 beforeAll(async () => {
-	server = await startTestServer();
+	server = await startTestServer({ log: false });
 });
 
 afterAll(async () => {

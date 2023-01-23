@@ -6,38 +6,58 @@ import EventEmitter from 'events';
  * clients
  */
 export class Presence extends EventEmitter {
-	private presences: Record<string, UserInfo<any, any>> = {};
-	// maps replicaId -> userId
-	private replicaToUser: Record<string, string> = {};
-	// there's definitely a more efficient way to do this, oh well
-	private userToReplica: Record<string, Set<string>> = {};
+	private presences: Map<
+		string,
+		{
+			presences: Record<string, UserInfo<any, any>>;
+			replicaToUser: Record<string, string>;
+			userToReplica: Record<string, Set<string>>;
+		}
+	> = new Map();
 
-	set = (userId: string, presence: UserInfo<any, any>) => {
-		this.presences[userId] = presence;
-		this.replicaToUser[presence.replicaId] = userId;
-		this.userToReplica[userId] =
-			this.userToReplica[userId] || new Set<string>();
-		this.userToReplica[userId].add(presence.replicaId);
+	private getLibrary = (libraryId: string) => {
+		let map = this.presences.get(libraryId);
+		if (!map) {
+			map = {
+				presences: {},
+				replicaToUser: {},
+				userToReplica: {},
+			};
+			this.presences.set(libraryId, map);
+		}
+		return map;
 	};
 
-	removeReplica = (replicaId: string) => {
-		const userId = this.replicaToUser[replicaId];
+	set = (libraryId: string, userId: string, presence: UserInfo<any, any>) => {
+		const lib = this.getLibrary(libraryId);
+		lib.presences[userId] = presence;
+		lib.replicaToUser[presence.replicaId] = userId;
+		lib.userToReplica[userId] = lib.userToReplica[userId] || new Set<string>();
+		lib.userToReplica[userId].add(presence.replicaId);
+	};
+
+	removeReplica = (libraryId: string, replicaId: string) => {
+		const lib = this.getLibrary(libraryId);
+		const userId = lib.replicaToUser[replicaId];
 		if (!userId) return;
 
-		this.userToReplica[userId].delete(replicaId);
-		if (this.userToReplica[userId].size === 0) {
-			delete this.presences[userId];
-			this.emit('lost', replicaId, userId);
+		lib.userToReplica[userId].delete(replicaId);
+		if (lib.userToReplica[userId].size === 0) {
+			delete lib.presences[userId];
+			this.emit('lost', libraryId, replicaId, userId);
+
+			// memory cleanup
+			if (Object.keys(lib.presences).length === 0) {
+				this.clear(libraryId);
+			}
 		}
 	};
 
-	all = () => {
-		return this.presences;
+	all = (libraryId: string) => {
+		return this.presences.get(libraryId)?.presences || {};
 	};
 
-	clear = () => {
-		this.presences = {};
-		this.replicaToUser = {};
-		this.userToReplica = {};
+	clear = (libraryId: string) => {
+		this.presences.delete(libraryId);
 	};
 }

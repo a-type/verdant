@@ -58,11 +58,12 @@ export class PushPullSync
 	private sendRequest = async (messages: ClientMessage[]) => {
 		this.log('Sending sync request');
 		try {
-			const { http: host } = await this.endpointProvider.getEndpoints();
+			const { http: host, token } = await this.endpointProvider.getEndpoints();
 			const response = await fetch(host, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
 					messages,

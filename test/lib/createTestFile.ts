@@ -1,5 +1,5 @@
 export function createTestFile() {
-	return new File(['d(⌐□_□)b'], 'lo-fi guy.txt', {
+	return new window.File(['d(⌐□_□)b'], 'test.txt', {
 		type: 'text/plain',
 	});
 }

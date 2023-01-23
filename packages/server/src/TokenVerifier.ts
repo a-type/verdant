@@ -15,6 +15,7 @@ export class TokenVerifier {
 			syncEndpoint: decoded.url,
 			role: decoded.role,
 			type: decoded.type,
+			token,
 		};
 	};
 }
@@ -25,4 +26,5 @@ export interface TokenInfo {
 	syncEndpoint: string;
 	role?: string;
 	type: ReplicaType;
+	token: string;
 }

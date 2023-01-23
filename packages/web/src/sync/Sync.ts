@@ -1,12 +1,16 @@
 import {
 	ClientMessage,
+	DocumentBaseline,
 	EventSubscriber,
+	FileData,
+	Operation,
 	ReplicaType,
 	ServerMessage,
 } from '@lo-fi/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from '../PresenceManager.js';
 import { EntityStore } from '../reactives/EntityStore.js';
+import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
 import { PushPullSync } from './PushPullSync.js';
 import {
 	ServerSyncEndpointProvider,
@@ -49,6 +53,8 @@ export interface Sync extends SyncTransport {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
+	uploadFile(file: Blob, data: FileData): Promise<FileUploadResult>;
+	getFile(fileId: string): Promise<FilePullResult>;
 }
 
 export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
@@ -75,6 +81,20 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 		initialPresence: {},
 		defaultProfile: {},
 	});
+
+	uploadFile = async () => {
+		return {
+			success: false,
+			retry: false,
+		};
+	};
+
+	getFile = async (): Promise<FilePullResult> => {
+		return {
+			success: false,
+			retry: false,
+		};
+	};
 }
 
 export type SyncTransportMode = 'realtime' | 'pull';
@@ -127,11 +147,16 @@ export class ServerSync<Profile = any, Presence = any>
 {
 	private webSocketSync: WebSocketSync;
 	private pushPullSync: PushPullSync;
+	private fileSync: FileSync;
 	private activeSync: SyncTransport;
 	private endpointProvider;
+	private onData: (data: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => Promise<void>;
 
 	private meta: Metadata;
-	private entities: EntityStore;
 
 	readonly presence;
 
@@ -151,17 +176,21 @@ export class ServerSync<Profile = any, Presence = any>
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
-			entities,
 			log,
+			onData,
 		}: {
 			meta: Metadata;
-			entities: EntityStore;
 			log?: (...args: any[]) => void;
+			onData: (data: {
+				operations: Operation[];
+				baselines: DocumentBaseline[];
+				reset?: boolean;
+			}) => Promise<void>;
 		},
 	) {
 		super();
 		this.meta = meta;
-		this.entities = entities;
+		this.onData = onData;
 		this.log = log || (() => {});
 		this.presence = new PresenceManager<Profile, Presence>({
 			initialPresence,
@@ -185,6 +214,10 @@ export class ServerSync<Profile = any, Presence = any>
 			presence: this.presence,
 			log: this.log,
 			interval: pullInterval,
+		});
+		this.fileSync = new FileSync({
+			endpointProvider: this.endpointProvider,
+			log: this.log,
 		});
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
@@ -252,7 +285,7 @@ export class ServerSync<Profile = any, Presence = any>
 		this.log('sync message', JSON.stringify(message, null, 2));
 		switch (message.type) {
 			case 'op-re':
-				await this.entities.addData({
+				await this.onData({
 					operations: message.operations,
 					baselines: message.baselines,
 				});
@@ -264,7 +297,7 @@ export class ServerSync<Profile = any, Presence = any>
 				await this.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
-				await this.entities.addData({
+				await this.onData({
 					operations: message.operations,
 					baselines: message.baselines,
 					reset: message.overwriteLocalData,
@@ -328,9 +361,29 @@ export class ServerSync<Profile = any, Presence = any>
 		return this.pushPullSync.interval;
 	}
 
-	public send = (message: ClientMessage) => {
+	send = (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
 			return this.activeSync.send(message);
+		}
+	};
+
+	uploadFile = async (file: File, info: FileData) => {
+		if (this.activeSync.status === 'active') {
+			return this.fileSync.uploadFile(file, info);
+		} else {
+			return {
+				success: false,
+				retry: false,
+			};
+		}
+	};
+
+	getFile = async (id: string) => {
+		// TODO: should this error? or just try anyway?
+		if (this.activeSync.status === 'active') {
+			return this.fileSync.getFile(id);
+		} else {
+			throw new Error('Offline, cannot retrieve remote file details');
 		}
 	};
 

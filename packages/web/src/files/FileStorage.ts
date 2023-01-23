@@ -29,6 +29,29 @@ export class FileStorage extends IDBService {
 		);
 	};
 
+	markUploaded = async (
+		id: string,
+		{ transaction }: { transaction?: IDBTransaction } = {},
+	) => {
+		const current = await this.getFile(id, { transaction });
+
+		if (!current) {
+			throw new Error('File is not in local database');
+		}
+
+		return this.run(
+			'files',
+			(store) => {
+				return store.put({
+					...current,
+					remote: true,
+				});
+			},
+			'readwrite',
+			transaction,
+		);
+	};
+
 	getFile = async (
 		id: string,
 		{ transaction }: { transaction?: IDBTransaction } = {},

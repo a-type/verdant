@@ -11,10 +11,12 @@ export class TokenProvider {
 		role,
 		type = ReplicaType.Realtime,
 		expiresIn = '1d',
+		fileEndpoint,
 	}: {
 		userId: string;
 		libraryId: string;
 		syncEndpoint: string;
+		fileEndpoint?: string;
 		role?: string;
 		type?: ReplicaType;
 		expiresIn?: string | number;
@@ -24,6 +26,7 @@ export class TokenProvider {
 				sub: userId,
 				lib: libraryId,
 				url: syncEndpoint,
+				file: fileEndpoint,
 				role,
 				type,
 			},

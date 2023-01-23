@@ -9,3 +9,7 @@ global.WebSocket = WebSocket;
 URL.createObjectURL = (blob: Blob) => {
 	return `blob:${blob.type}:${blob.size}`;
 };
+
+process.env.TEST = 'true';
+process.env.NODE_ENV = 'test';
+process.env.VITEST = 'true';

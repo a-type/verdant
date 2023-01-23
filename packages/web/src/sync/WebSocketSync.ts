@@ -143,7 +143,8 @@ export class WebSocketSync
 
 	private initializeSocket = async () => {
 		const endpoint = await this.endpointProvider.getEndpoints();
-		this.socket = new WebSocket(endpoint.websocket);
+		// abusing protocols to pass the auth token
+		this.socket = new WebSocket(endpoint.websocket, ['Bearer', endpoint.token]);
 		this.socket.addEventListener('message', this.onMessage);
 		this.socket.addEventListener('open', this.onOpen);
 		this.socket.addEventListener('error', this.onError);

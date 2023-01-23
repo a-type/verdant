@@ -5,6 +5,7 @@ export type EntityFileEvents = {
 };
 
 export const UPDATE = Symbol('entity-file-update');
+export const MARK_FAILED = Symbol('entity-file-mark-failed');
 
 /**
  * Provides a consistent interface for files used in an app via
@@ -14,12 +15,16 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	// cached object URL for a local blob file, if applicable
 	private _objectUrl: string | null = null;
 	private _fileData: FileData | null = null;
+	private _loading = true;
+	private _failed = false;
 
 	constructor(public readonly id: string) {
 		super();
 	}
 
 	[UPDATE] = (fileData: FileData) => {
+		this._loading = false;
+		this._failed = false;
 		this._fileData = fileData;
 		if (fileData.file) {
 			if (this._objectUrl) {
@@ -27,6 +32,12 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			}
 			this._objectUrl = URL.createObjectURL(fileData.file);
 		}
+		this.emit('change');
+	};
+
+	[MARK_FAILED] = () => {
+		this._failed = true;
+		this._loading = false;
 		this.emit('change');
 	};
 
@@ -45,7 +56,11 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	}
 
 	get loading() {
-		return !this._fileData;
+		return this._loading;
+	}
+
+	get failed() {
+		return this._failed;
 	}
 
 	dispose = () => {

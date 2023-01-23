@@ -1,14 +1,28 @@
 import { FileData } from '@lo-fi/common';
-import { EntityFile, UPDATE } from './EntityFile.js';
+import { Sync } from '../sync/Sync.js';
+import { LogFunction } from '../types.js';
+import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
 import { FileStorage } from './FileStorage.js';
 
 export class FileManager {
 	private storage;
+	private sync;
+	private log;
 
 	private files = new Map<string, EntityFile>();
 
-	constructor({ db }: { db: IDBDatabase }) {
+	constructor({
+		db,
+		sync,
+		log,
+	}: {
+		db: IDBDatabase;
+		sync: Sync;
+		log?: LogFunction;
+	}) {
 		this.storage = new FileStorage(db);
+		this.sync = sync;
+		this.log = log;
 	}
 
 	add = async (file: FileData) => {
@@ -22,7 +36,15 @@ export class FileManager {
 		}
 		// write to local storage and send to sync immediately
 		await this.storage.addFile(file);
-		// TODO: send to sync
+		// send to sync
+		if (file.file) {
+			const result = await this.sync.uploadFile(file.file, file);
+			if (result.success) {
+				await this.storage.markUploaded(file.id);
+			} else {
+				this.log?.('error', 'Failed to upload file');
+			}
+		}
 	};
 
 	/**
@@ -39,13 +61,35 @@ export class FileManager {
 		return file;
 	};
 
-	private load = async (file: EntityFile) => {
+	private load = async (file: EntityFile, retries = 0) => {
+		if (retries > 5) {
+			file[MARK_FAILED]();
+			return;
+		}
+
 		const fileData = await this.storage.getFile(file.id);
 		if (fileData) {
 			file[UPDATE](fileData);
 		} else {
 			// maybe we don't have it yet, it might be on the server still.
-			// TODO: fetch from server
+			try {
+				const result = await this.sync.getFile(file.id);
+				if (result.success) {
+					file[UPDATE](result.data);
+					await this.storage.addFile(result.data);
+				} else {
+					file[MARK_FAILED]();
+					if (result.retry) {
+						// schedule a retry
+						setTimeout(this.load, 1000, file, retries + 1);
+					}
+				}
+			} catch (err) {
+				this.log?.('error', 'Failed to load file', err);
+				file[MARK_FAILED]();
+				// schedule a retry
+				setTimeout(this.load, 1000, file, retries + 1);
+			}
 		}
 	};
 }

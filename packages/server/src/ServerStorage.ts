@@ -1,10 +1,12 @@
 import { Database } from 'better-sqlite3';
 import { ClientMessage } from '@lo-fi/common';
-import { ServerLibraryManager } from './ServerLibrary.js';
+import { ServerLibrary } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { migrations } from './migrations.js';
+import { FileInfo } from './files/FileStorage.js';
+import { FileMetadata } from './files/FileMetadata.js';
 
 interface ServerStorageOptions {
 	db: Database;
@@ -17,9 +19,10 @@ interface ServerStorageOptions {
 
 export class ServerStorage {
 	private profileLoader;
-	private libraries;
+	private library;
 	private db;
 	private sender;
+	private fileMetadata;
 
 	constructor({
 		db,
@@ -33,14 +36,15 @@ export class ServerStorage {
 		this.sender = sender;
 		this.createSchema();
 		this.profileLoader = new UserProfileLoader(profiles);
-		this.libraries = new ServerLibraryManager({
+		this.library = new ServerLibrary({
 			db: this.db,
 			sender: this.sender,
-			profileLoader: this.profileLoader,
+			profiles: this.profileLoader,
 			replicaTruancyMinutes,
 			log,
 			disableRebasing,
 		});
+		this.fileMetadata = new FileMetadata(this.db);
 	}
 
 	/**
@@ -52,26 +56,22 @@ export class ServerStorage {
 		message: ClientMessage,
 		info: TokenInfo,
 	) => {
-		const library = this.libraries.open(libraryId);
-		return library.receive(message, clientKey, info);
+		return this.library.receive(message, clientKey, info);
 	};
 
 	/**
 	 * Call when a replica disconnects from the server
 	 */
 	remove = (libraryId: string, replicaId: string) => {
-		const library = this.libraries.open(libraryId);
-		library.remove(replicaId);
+		this.library.remove(libraryId, replicaId);
 	};
 
 	evictLibrary = (libraryId: string) => {
-		const library = this.libraries.open(libraryId);
-		library.destroy();
+		this.library.destroy(libraryId);
 	};
 
 	evictUser = (libraryId: string, userId: string) => {
-		const library = this.libraries.open(libraryId);
-		library.evictUser(userId);
+		this.library.evictUser(libraryId, userId);
 	};
 
 	private createSchema = () => {
@@ -83,12 +83,18 @@ export class ServerStorage {
 	};
 
 	getLibraryPresence = (libraryId: string) => {
-		const library = this.libraries.open(libraryId);
-		return library.getPresence();
+		return this.library.getPresence(libraryId);
 	};
 
-	getDocumentSnapshot = (libraryId: string, documentId: string) => {
-		const library = this.libraries.open(libraryId);
-		return library.getDocumentSnapshot(documentId);
+	getDocumentSnapshot = (libraryId: string, oid: string) => {
+		return this.library.getDocumentSnapshot(libraryId, oid);
+	};
+
+	putFileInfo = (libraryId: string, fileInfo: FileInfo) => {
+		this.fileMetadata.put(libraryId, fileInfo);
+	};
+
+	getFileInfo = (libraryId: string, fileId: string) => {
+		return this.fileMetadata.get(libraryId, fileId);
 	};
 }

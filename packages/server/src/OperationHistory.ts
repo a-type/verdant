@@ -12,7 +12,7 @@ export type OperationHistoryItem = Operation & {
 };
 
 export class OperationHistory {
-	constructor(private db: Database, private libraryId: string) {}
+	constructor(private db: Database) {}
 
 	private hydratePatch = ({
 		libraryId: _,
@@ -25,7 +25,7 @@ export class OperationHistory {
 		};
 	};
 
-	getAllFor = (oid: string) => {
+	getAllFor = (libraryId: string, oid: string) => {
 		return this.db
 			.prepare(
 				`
@@ -34,11 +34,11 @@ export class OperationHistory {
       ORDER BY timestamp ASC
     `,
 			)
-			.all(this.libraryId, oid)
+			.all(libraryId, oid)
 			.map(this.hydratePatch);
 	};
 
-	getEarliest = (count: number) => {
+	getEarliest = (libraryId: string, count: number) => {
 		return this.db
 			.prepare(
 				`
@@ -48,11 +48,11 @@ export class OperationHistory {
       LIMIT ?
     `,
 			)
-			.all(this.libraryId, count)
+			.all(libraryId, count)
 			.map(this.hydratePatch);
 	};
 
-	getAfter = (timestamp: string | null = null) => {
+	getAfter = (libraryId: string, timestamp: string | null = null) => {
 		if (timestamp === null) {
 			return this.db
 				.prepare(
@@ -62,7 +62,7 @@ export class OperationHistory {
 					ORDER BY timestamp ASC
 				`,
 				)
-				.all(this.libraryId)
+				.all(libraryId)
 				.map(this.hydratePatch);
 		}
 		return this.db
@@ -73,7 +73,7 @@ export class OperationHistory {
       ORDER BY timestamp ASC
     `,
 			)
-			.all(this.libraryId, timestamp)
+			.all(libraryId, timestamp)
 			.map(this.hydratePatch);
 	};
 
@@ -81,7 +81,7 @@ export class OperationHistory {
 	 * Returns all operations before the given timestamp
 	 * in ascending chronological order
 	 */
-	getBefore = (before: string) => {
+	getBefore = (libraryId: string, before: string) => {
 		return this.db
 			.prepare(
 				`
@@ -90,11 +90,11 @@ export class OperationHistory {
 			ORDER BY timestamp ASC
 		`,
 			)
-			.all(this.libraryId, before)
+			.all(libraryId, before)
 			.map(this.hydratePatch);
 	};
 
-	insert = (replicaId: string, item: Operation) => {
+	insert = (libraryId: string, replicaId: string, item: Operation) => {
 		return this.db
 			.prepare(
 				`
@@ -103,7 +103,7 @@ export class OperationHistory {
     `,
 			)
 			.run(
-				this.libraryId,
+				libraryId,
 				item.oid,
 				JSON.stringify(item.data),
 				item.timestamp,
@@ -111,7 +111,11 @@ export class OperationHistory {
 			);
 	};
 
-	insertAll = async (replicaId: string, items: Operation[]) => {
+	insertAll = async (
+		libraryId: string,
+		replicaId: string,
+		items: Operation[],
+	) => {
 		const insertStatement = this.db.prepare(
 			`
 			INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId)
@@ -122,7 +126,7 @@ export class OperationHistory {
 		const tx = this.db.transaction(() => {
 			for (const item of items) {
 				insertStatement.run(
-					this.libraryId,
+					libraryId,
 					item.oid,
 					JSON.stringify(item.data),
 					item.timestamp,
@@ -134,7 +138,7 @@ export class OperationHistory {
 		tx();
 	};
 
-	dropAll = async (items: OperationHistoryItem[]) => {
+	dropAll = async (libraryId: string, items: OperationHistoryItem[]) => {
 		const deleteStatement = this.db.prepare(
 			`
 			DELETE FROM OperationHistory
@@ -145,7 +149,7 @@ export class OperationHistory {
 		this.db.transaction(() => {
 			for (const item of items) {
 				deleteStatement.run(
-					this.libraryId,
+					libraryId,
 					item.replicaId,
 					item.oid,
 					item.timestamp,
@@ -154,7 +158,7 @@ export class OperationHistory {
 		})();
 	};
 
-	deleteAll = () => {
+	deleteAll = (libraryId: string) => {
 		this.db
 			.prepare(
 				`
@@ -162,6 +166,6 @@ export class OperationHistory {
 			WHERE libraryId = ?
 			`,
 			)
-			.run(this.libraryId);
+			.run(libraryId);
 	};
 }
