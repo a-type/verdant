@@ -1,8 +1,10 @@
 import express from 'express';
 import { Server, TokenProvider } from '@lo-fi/server';
 import { createServer } from 'http';
+import * as path from 'path';
 // @ts-ignore
 import nonce from 'gfynonce';
+import { LocalFileStorage } from '@lo-fi/server/src/files/FileStorage.js';
 
 const PORT = 5050;
 
@@ -35,7 +37,11 @@ const users = {} as Record<string, { name: string }>;
 const server = new Server({
 	databaseFile: dbFileName,
 	tokenSecret: lofiSecret,
-	log: console.log,
+	// log: console.log,
+	fileStorage: new LocalFileStorage({
+		host: 'http://localhost:5050/files',
+		rootDirectory: 'files',
+	}),
 	profiles: {
 		get: async (userId: string) => {
 			if (!users[userId]) {
@@ -87,8 +93,7 @@ app.get('/lo-fi/files/:fileId', async (req, res) => {
 	await server.handleFileRequest(req, res);
 });
 
-// app.use(express.static('public'));
-// app.use(express.static('dist'));
+app.use('/files', express.static('files'));
 
 httpServer.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);

@@ -153,7 +153,7 @@ export class Server extends EventEmitter implements MessageSender {
 			// hack: read the token from the websocket protocol header
 			const [type, token] = req.headers['sec-websocket-protocol'].split(',');
 			if (type === 'Bearer') {
-				return token;
+				return token.trim();
 			}
 		}
 
@@ -182,7 +182,6 @@ export class Server extends EventEmitter implements MessageSender {
 	};
 
 	handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
-		console.log('HERE');
 		try {
 			if (req.method === 'POST') {
 				const info = this.authorizeRequest(req);
@@ -327,6 +326,9 @@ export class Server extends EventEmitter implements MessageSender {
 					bb.on('error', reject);
 				});
 				this.log('File upload complete');
+				res.writeHead(200);
+				res.write(JSON.stringify({ success: true }));
+				res.end();
 			} else if (req.method === 'GET') {
 				const info = this.authorizeRequest(req);
 

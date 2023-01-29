@@ -138,18 +138,18 @@ export function useMultiplayerState() {
 				}
 			});
 
-			// Object.entries(tAssets).forEach(([id, asset]) => {
-			// 	if (!asset) {
-			// 		assets.remove(id);
-			// 	} else {
-			// 		const syncAsset = assets.get(asset.id);
-			// 		if (!syncAsset) {
-			// 			assets.set(asset.id, asset);
-			// 		} else {
-			// 			syncAsset.update(asset);
-			// 		}
-			// 	}
-			// });
+			Object.entries(tAssets).forEach(([id, asset]) => {
+				if (!asset) {
+					assets.delete(id);
+				} else {
+					const syncAsset = assets.get(asset.id);
+					if (!syncAsset) {
+						assets.set(asset.id, asset);
+					} else {
+						syncAsset.update(asset);
+					}
+				}
+			});
 		},
 		[],
 	);
