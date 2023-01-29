@@ -36,6 +36,7 @@ export class ServerStorage {
 		this.sender = sender;
 		this.createSchema();
 		this.profileLoader = new UserProfileLoader(profiles);
+		this.fileMetadata = new FileMetadata(this.db);
 		this.library = new ServerLibrary({
 			db: this.db,
 			sender: this.sender,
@@ -43,8 +44,8 @@ export class ServerStorage {
 			replicaTruancyMinutes,
 			log,
 			disableRebasing,
+			fileMetadata: this.fileMetadata,
 		});
-		this.fileMetadata = new FileMetadata(this.db);
 	}
 
 	/**

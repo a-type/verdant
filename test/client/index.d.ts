@@ -51,6 +51,7 @@ export class Client<Presence = any, Profile = any> {
 
 	export: Storage['export'];
 	import: Storage['import'];
+	files: Storage['files'];
 
 	stats: () => Promise<any>;
 	/**

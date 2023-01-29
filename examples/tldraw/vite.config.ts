@@ -10,6 +10,7 @@ export default defineConfig({
 	},
 	server: {
 		port: 5051,
+		host: '0.0.0.0',
 	},
 	build: {
 		sourcemap: true,

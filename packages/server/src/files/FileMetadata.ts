@@ -2,7 +2,14 @@ import { Database } from 'better-sqlite3';
 import { FileInfo } from './FileStorage.js';
 
 export class FileMetadata {
-	constructor(private db: Database) {}
+	private deleteExpirationDays = 1;
+
+	constructor(
+		private db: Database,
+		{ deleteExpirationDays = 1 }: { deleteExpirationDays?: number } = {},
+	) {
+		this.deleteExpirationDays = deleteExpirationDays;
+	}
 
 	get = (
 		libraryId: string,
@@ -34,6 +41,18 @@ export class FileMetadata {
 			.run(libraryId, fileInfo.id, fileInfo.fileName, fileInfo.type);
 	};
 
+	markPendingDelete = (libraryId: string, fileId: string) => {
+		return this.db
+			.prepare(
+				`
+					UPDATE FileMetadata
+					SET pendingDeleteAt = ?
+					WHERE libraryId = ? AND fileId = ?
+				`,
+			)
+			.run(Date.now(), libraryId, fileId);
+	};
+
 	delete = (libraryId: string, fileId: string) => {
 		return this.db
 			.prepare(
@@ -43,5 +62,20 @@ export class FileMetadata {
     `,
 			)
 			.run(libraryId, fileId);
+	};
+
+	cleanupPendingDeletes = (libraryId: string) => {
+		// Delete files that have been marked for deletion for more than 1 day
+		return this.db
+			.prepare(
+				`
+					DELETE FROM FileMetadata
+					WHERE libraryId = ? AND pendingDeleteAt < ?
+				`,
+			)
+			.run(
+				libraryId,
+				Date.now() - 1000 * 60 * 60 * 24 * this.deleteExpirationDays,
+			);
 	};
 }

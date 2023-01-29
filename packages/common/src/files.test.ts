@@ -17,8 +17,8 @@ describe('processing files in a value', () => {
 		expect(list).toEqual([
 			{
 				id: expect.stringContaining(''),
-				blob: file,
-				url: null,
+				file,
+				url: undefined,
 				remote: false,
 				name: 'test.txt',
 				type: 'text/plain',
@@ -38,16 +38,16 @@ describe('processing files in a value', () => {
 		expect(list).toEqual([
 			{
 				id: expect.stringContaining(''),
-				blob: file1,
-				url: null,
+				file: file1,
+				url: undefined,
 				remote: false,
 				name: 'test.txt',
 				type: 'text/plain',
 			},
 			{
 				id: expect.stringContaining(''),
-				blob: file2,
-				url: null,
+				file: file2,
+				url: undefined,
 				remote: false,
 				name: 'test.txt',
 				type: 'text/plain',
@@ -71,8 +71,8 @@ describe('processing files in a value', () => {
 		expect(list).toEqual([
 			{
 				id: expect.stringContaining(''),
-				blob: file,
-				url: null,
+				file,
+				url: undefined,
 				remote: false,
 				name: 'test.txt',
 				type: 'text/plain',

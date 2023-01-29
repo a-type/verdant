@@ -17,6 +17,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _fileData: FileData | null = null;
 	private _loading = true;
 	private _failed = false;
+	private _disposed = false;
 
 	constructor(public readonly id: string) {
 		super();
@@ -25,6 +26,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	[UPDATE] = (fileData: FileData) => {
 		this._loading = false;
 		this._failed = false;
+		this._disposed = false;
 		this._fileData = fileData;
 		if (fileData.file) {
 			if (this._objectUrl) {
@@ -67,5 +69,6 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		if (this._objectUrl) {
 			URL.revokeObjectURL(this._objectUrl);
 		}
+		this._disposed = true;
 	};
 }

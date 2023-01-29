@@ -182,6 +182,7 @@ export class Server extends EventEmitter implements MessageSender {
 	};
 
 	handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
+		console.log('HERE');
 		try {
 			if (req.method === 'POST') {
 				const info = this.authorizeRequest(req);

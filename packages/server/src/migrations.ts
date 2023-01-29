@@ -28,13 +28,22 @@ export function migrations(db: Database) {
 
 	const sqlToRun = allMigrations.slice(version);
 
+	if (sqlToRun.length === 0) return;
+
+	console.info(
+		'Running migrations from ',
+		version,
+		'to',
+		allMigrations.length - 1,
+	);
+
 	const run = db.transaction(() => {
 		sqlToRun.forEach((sql) => db.exec(sql));
 		db.prepare(
 			`
 			INSERT INTO versions (version) VALUES (?);
 		`,
-		).run(allMigrations.length - 1);
+		).run(allMigrations.length);
 	});
 
 	run();

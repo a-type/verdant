@@ -31,10 +31,13 @@ export class FileSync {
 		this.log = log;
 	}
 
-	uploadFile = async (
-		file: File,
-		data: FileData,
-	): Promise<FileUploadResult> => {
+	uploadFile = async (data: FileData): Promise<FileUploadResult> => {
+		const file = data.file;
+
+		if (!file) {
+			throw new Error('Cannot upload a non-local file');
+		}
+
 		// multipart upload
 		const { files: fileEndpoint, token } =
 			await this.endpointProvider.getEndpoints();

@@ -53,7 +53,7 @@ export interface Sync extends SyncTransport {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
-	uploadFile(file: Blob, data: FileData): Promise<FileUploadResult>;
+	uploadFile(data: FileData): Promise<FileUploadResult>;
 	getFile(fileId: string): Promise<FilePullResult>;
 }
 
@@ -230,10 +230,10 @@ export class ServerSync<Profile = any, Presence = any>
 		this.meta.subscribe('message', this.send);
 
 		this.webSocketSync.subscribe('message', this.handleMessage);
-		this.webSocketSync.subscribe('onlineChange', this.echoOnlineChange);
+		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
 
 		this.pushPullSync.subscribe('message', this.handleMessage);
-		this.pushPullSync.subscribe('onlineChange', this.echoOnlineChange);
+		this.pushPullSync.subscribe('onlineChange', this.handleOnlineChange);
 
 		if (automaticTransportSelection) {
 			// automatically shift between transport modes depending
@@ -321,7 +321,7 @@ export class ServerSync<Profile = any, Presence = any>
 		// update presence if necessary
 		this.presence.__handleMessage(await this.meta.localReplica.get(), message);
 	};
-	private echoOnlineChange = (online: boolean) => {
+	private handleOnlineChange = (online: boolean) => {
 		this.emit('onlineChange', online);
 	};
 	private handlePresenceUpdate = async (presence: any) => {
@@ -367,9 +367,9 @@ export class ServerSync<Profile = any, Presence = any>
 		}
 	};
 
-	uploadFile = async (file: File, info: FileData) => {
+	uploadFile = async (info: FileData) => {
 		if (this.activeSync.status === 'active') {
-			return this.fileSync.uploadFile(file, info);
+			return this.fileSync.uploadFile(info);
 		} else {
 			return {
 				success: false,

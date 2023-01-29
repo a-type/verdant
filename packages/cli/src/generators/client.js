@@ -38,6 +38,7 @@ export class Client<Presence = any, Profile = any> {
   entities: Storage['entities'];
   queryStore: Storage['queryStore'];
   batch: Storage['batch'];
+  files: Storage['files'];
 
   close: Storage['close'];
 

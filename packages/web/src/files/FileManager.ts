@@ -1,31 +1,71 @@
-import { FileData } from '@lo-fi/common';
+import { FileData, FileRef } from '@lo-fi/common';
+import { Context } from '../context.js';
+import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
 import { LogFunction } from '../types.js';
 import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
-import { FileStorage } from './FileStorage.js';
+import { FileStorage, ReturnedFileData } from './FileStorage.js';
+
+/**
+ * Default: if file was deleted > 3 days ago
+ */
+function defaultCanCleanup(fileData: ReturnedFileData) {
+	return (
+		fileData.deletedAt !== null &&
+		fileData.deletedAt < Date.now() - 1000 * 60 * 24 * 3
+	);
+}
+
+export interface FileManagerConfig {
+	/**
+	 * Override the heuristic for deciding when a deleted file can be cleaned up.
+	 * By default this waits 3 days since deletion, then deletes the file data.
+	 * If the file has been synchronized to a server, it could still be restored
+	 * if the server has not yet deleted it.
+	 */
+	canCleanupDeletedFile?: (file: ReturnedFileData) => boolean;
+}
 
 export class FileManager {
 	private storage;
 	private sync;
-	private log;
+	private context;
 
 	private files = new Map<string, EntityFile>();
+	private config: Required<FileManagerConfig>;
+	private meta: Metadata;
 
 	constructor({
 		db,
 		sync,
-		log,
+		context,
+		meta,
+		config = {},
 	}: {
 		db: IDBDatabase;
 		sync: Sync;
-		log?: LogFunction;
+		context: Context;
+		config?: FileManagerConfig;
+		meta: Metadata;
 	}) {
 		this.storage = new FileStorage(db);
 		this.sync = sync;
-		this.log = log;
+		this.context = context;
+		this.meta = meta;
+		this.config = {
+			canCleanupDeletedFile: defaultCanCleanup,
+			...config,
+		};
+
+		this.sync.subscribe('onlineChange', this.onOnlineChange);
+		this.meta.subscribe('filesDeleted', this.handleFileRefsDeleted);
+		// check on startup to see if files can be cleaned up
+		this.tryCleanupDeletedFiles();
 	}
 
-	add = async (file: FileData) => {
+	add = async (fileInput: Omit<FileData, 'remote'>) => {
+		const file = fileInput as unknown as FileData;
+		file.remote = true;
 		// immediately cache the file
 		if (!this.files.has(file.id)) {
 			const entityFile = new EntityFile(file.id);
@@ -38,11 +78,29 @@ export class FileManager {
 		await this.storage.addFile(file);
 		// send to sync
 		if (file.file) {
-			const result = await this.sync.uploadFile(file.file, file);
+			const result = await this.sync.uploadFile(file);
 			if (result.success) {
 				await this.storage.markUploaded(file.id);
 			} else {
-				this.log?.('error', 'Failed to upload file');
+				this.context.log('error', 'Failed to upload file');
+			}
+		}
+	};
+
+	private uploadFile = async (file: FileData, retries = 0) => {
+		const result = await this.sync.uploadFile(file);
+		if (result.success) {
+			await this.storage.markUploaded(file.id);
+		} else {
+			if (result.retry && retries < 5) {
+				this.context.log('error', 'Error uploading file, retrying...');
+				// schedule a retry
+				setTimeout(this.uploadFile, 1000, file, retries + 1);
+			} else {
+				this.context.log(
+					'error',
+					'Failed to upload file. Not retrying until next sync.',
+				);
 			}
 		}
 	};
@@ -85,11 +143,54 @@ export class FileManager {
 					}
 				}
 			} catch (err) {
-				this.log?.('error', 'Failed to load file', err);
+				this.context.log('error', 'Failed to load file', err);
 				file[MARK_FAILED]();
 				// schedule a retry
 				setTimeout(this.load, 1000, file, retries + 1);
 			}
 		}
+	};
+
+	listUnsynced = async () => {
+		return this.storage.listUnsynced();
+	};
+
+	private onOnlineChange = async (online: boolean) => {
+		// if online, try to upload any unsynced files
+		if (online) {
+			const unsynced = await this.listUnsynced();
+			await Promise.all(unsynced.map(this.uploadFile));
+		}
+	};
+
+	private tryCleanupDeletedFiles = async () => {
+		let count = 0;
+		let skipCount = 0;
+		await this.storage.iterateOverPendingDelete((fileData, store) => {
+			if (this.config.canCleanupDeletedFile(fileData)) {
+				count++;
+				store.delete(fileData.id);
+			} else {
+				skipCount++;
+			}
+		});
+
+		this.context.log(
+			'info',
+			`Cleaned up ${count} files, skipped ${skipCount} files`,
+		);
+	};
+
+	private handleFileRefsDeleted = async (fileRefs: FileRef[]) => {
+		const tx = this.storage.createTransaction(['files'], 'readwrite');
+		await Promise.all(
+			fileRefs.map(async (fileRef) => {
+				await this.storage.markPendingDelete(fileRef.id, { transaction: tx });
+			}),
+		);
+		this.context.log(
+			'info',
+			`Marked ${fileRefs.length} files as pending delete`,
+		);
 	};
 }

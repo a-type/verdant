@@ -1,5 +1,5 @@
-import { isFileRef } from './files.js';
-import { isObjectRef } from './operation.js';
+import { FileRef, isFileRef } from './files.js';
+import { isObjectRef, ObjectRef } from './operation.js';
 
 export function isRef(obj: any) {
 	return isObjectRef(obj) || isFileRef(obj);
@@ -12,3 +12,5 @@ export function compareRefs(a: any, b: any) {
 	if (a.id !== b.id) return false;
 	return true;
 }
+
+export type Ref = ObjectRef | FileRef;

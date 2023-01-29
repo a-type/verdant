@@ -1,4 +1,5 @@
 import { DocumentBaseline } from './baseline.js';
+import { FileRef } from './files.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -515,10 +516,16 @@ function listCheck(obj: any): obj is Array<unknown> {
 
 /**
  * The incoming object should already be normalized!
+ * This function will mutate the base object.
  */
 export function applyPatch<T extends NormalizedObject>(
 	base: T | undefined,
 	patch: OperationPatch,
+	/**
+	 * Optionally supply a list to which any refs which
+	 * are removed during the patch will be appended.
+	 */
+	deletedRefs?: (FileRef | ObjectRef)[],
 ): T | undefined {
 	// deleted objects are represented by undefined
 	// and remain deleted unless re-initialized
@@ -530,11 +537,24 @@ export function applyPatch<T extends NormalizedObject>(
 	let index;
 	let spliceResult: any[];
 
+	// a helper, pass it a value which is about
+	// to be removed and it will append it to the list
+	// if it was a ref
+	function checkRef(field: any) {
+		// don't bother if not supplied
+		if (!deletedRefs) return;
+		if (isRef(field)) {
+			deletedRefs.push(field);
+		}
+	}
+
 	switch (patch.op) {
 		case 'set':
+			checkRef(baseAsAny[patch.name]);
 			baseAsAny[patch.name] = patch.value;
 			break;
 		case 'remove':
+			checkRef(baseAsAny[patch.name]);
 			delete baseAsAny[patch.name];
 			break;
 		case 'list-push':
@@ -544,6 +564,7 @@ export function applyPatch<T extends NormalizedObject>(
 			break;
 		case 'list-delete':
 			if (listCheck(base)) {
+				checkRef(base[patch.index]);
 				base.splice(patch.index, patch.count);
 			}
 			break;
@@ -576,6 +597,7 @@ export function applyPatch<T extends NormalizedObject>(
 						}
 					}
 					if (index !== -1) {
+						checkRef(base[index]);
 						base.splice(index, 1);
 					}
 				} while (!patch.only && index !== -1);
@@ -619,6 +641,12 @@ export function applyPatch<T extends NormalizedObject>(
 			}
 			break;
 		case 'delete':
+			// collect all refs that are deleted
+			if (Array.isArray(base)) {
+				base.forEach(checkRef);
+			} else if (isObject(base)) {
+				Object.values(base || {}).forEach(checkRef);
+			}
 			return undefined;
 		case 'initialize':
 			return cloneDeep(patch.value);
@@ -631,10 +659,11 @@ export function applyPatch<T extends NormalizedObject>(
 export function applyOperations<T extends NormalizedObject>(
 	base: T | undefined,
 	operations: Operation[],
+	deletedRefs?: (ObjectRef | FileRef)[],
 ): T | undefined {
 	let cur = base as T | undefined;
 	for (const op of operations) {
-		cur = applyPatch(base, op.data);
+		cur = applyPatch(base, op.data, deletedRefs);
 	}
 	return cur;
 }

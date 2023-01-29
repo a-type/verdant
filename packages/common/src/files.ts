@@ -40,19 +40,6 @@ export type FileData = {
 };
 
 /**
- * File information is stored with an ArrayBuffer instead of a
- * Blob/File since that's more widely supported, including in Node (test env)
- */
-export type StoredFileData = {
-	id: string;
-	remote: boolean;
-	name: string;
-	type: string;
-	buffer?: ArrayBuffer;
-	url?: string;
-};
-
-/**
  * Replaces File values with refs and returns the normalized value.
  * The list of files passed to the second argument will be populated with the files found in the value.
  */
@@ -94,6 +81,9 @@ export function fileToArrayBuffer(file: File | Blob) {
 	});
 }
 
-export function arrayBufferToBlob(buffer: ArrayBuffer, type: string) {
-	return new Blob([buffer], { type });
+export function getAllFileFields(snapshot: any): [string, FileRef][] {
+	return Object.entries(snapshot).filter((entry) => isFileRef(entry[1])) as [
+		string,
+		FileRef,
+	][];
 }

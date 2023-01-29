@@ -1,5 +1,7 @@
 import { Migration, StorageSchema } from '@lo-fi/common';
 import { Context } from '../context.js';
+import { FileManagerConfig } from '../files/FileManager.js';
+import { ReturnedFileData } from '../files/FileStorage.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { openMetadataDatabase } from '../metadata/openMetadataDatabase.js';
 import { openDocumentDatabase } from '../openDocumentDatabase.js';
@@ -37,6 +39,10 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * so that you don't leave this on accidentally for all new schemas.
 	 */
 	overrideSchemaConflict?: number;
+	/**
+	 * Configuration for file management
+	 */
+	files?: FileManagerConfig;
 }
 
 /**
@@ -118,6 +124,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 				{
 					syncConfig: init.sync,
 					migrations: init.migrations,
+					files: init.files,
 				},
 				fullContext,
 				{

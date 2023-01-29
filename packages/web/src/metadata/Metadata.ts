@@ -3,14 +3,16 @@ import {
 	assert,
 	assignOid,
 	ClientMessage,
-	diffToPatches,
 	DocumentBaseline,
 	EventSubscriber,
+	FileRef,
+	isFileRef,
 	getOidRoot,
 	HybridLogicalClockTimestampProvider,
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
+	Ref,
 	StorageSchema,
 	substituteRefsWithObjects,
 } from '@lo-fi/common';
@@ -37,6 +39,7 @@ export interface ExportData {
 export class Metadata extends EventSubscriber<{
 	message: (message: ClientMessage) => void;
 	rebase: (baselines: DocumentBaseline[]) => void;
+	filesDeleted: (files: FileRef[]) => void;
 }> {
 	readonly operations;
 	readonly baselines;
@@ -340,13 +343,14 @@ export class Metadata extends EventSubscriber<{
 		const baseline = await this.baselines.get(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;
+		const deletedRefs: Ref[] = [];
 		await this.operations.iterateOverAllOperationsForEntity(
 			oid,
 			(patch, store) => {
 				// FIXME: this seems like the wrong place to do this
 				// but it's here as a safety measure...
 				if (!baseline || patch.timestamp > baseline.timestamp) {
-					current = applyPatch(current, patch.data);
+					current = applyPatch(current, patch.data, deletedRefs);
 				}
 				// delete all prior operations to the baseline
 				operationsApplied++;
@@ -382,6 +386,14 @@ export class Metadata extends EventSubscriber<{
 			operationsApplied,
 			'operations',
 		);
+
+		// cleanup deleted refs
+		if (deletedRefs.length) {
+			const fileRefs = deletedRefs.filter(isFileRef);
+			if (fileRefs.length) {
+				this.emit('filesDeleted', fileRefs);
+			}
+		}
 
 		return newBaseline;
 	};

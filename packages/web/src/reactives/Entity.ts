@@ -24,7 +24,7 @@ export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
 export const REBASE = '@@rebase';
 const REFRESH = '@@refresh';
-const DEEP_CHANGE = '@@deepChange';
+export const DEEP_CHANGE = '@@deepChange';
 
 export interface CacheTools {
 	computeView(oid: ObjectIdentifier): { view: any; deleted: boolean };
@@ -51,7 +51,7 @@ export type AccessibleEntityProperty<T> = T extends Array<any>
 
 type DataFromInit<Init> = Init extends { [key: string]: any }
 	? {
-			[Key in keyof Init]-?: Init[Key];
+			[Key in keyof Init]: Init[Key];
 	  }
 	: Init extends Array<any>
 	? Init
@@ -62,6 +62,17 @@ export type EntityShape<E extends Entity<any, any>> = E extends Entity<
 	any
 >
 	? Value
+	: never;
+
+// reduces keys of an object to only ones with an optional
+// value
+type DeletableKeys<T> = keyof {
+	[Key in keyof T as IfNullableThen<T[Key], Key>]: Key;
+};
+type IfNullableThen<T, Out> = undefined extends T
+	? Out
+	: null extends T
+	? Out
 	: never;
 
 export function refreshEntity(
@@ -261,7 +272,15 @@ export class Entity<
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
 			);
 		} else if (isFileRef(value)) {
-			return this.store.getFile(value.id) as any;
+			const file = this.store.getFile(value.id);
+			if (file) {
+				file.subscribe('change', () => {
+					this[DEEP_CHANGE](this, {
+						isLocal: false,
+					});
+				});
+				return file as any;
+			}
 		}
 		return value;
 	};
@@ -350,6 +369,9 @@ export class Entity<
 	entries = () => {
 		return Object.entries(this.getAll());
 	};
+	values = () => {
+		return Object.values(this.getAll());
+	};
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
 		this.addPatches(
 			this.store.patchCreator.createSet(
@@ -366,8 +388,39 @@ export class Entity<
 				this.store.patchCreator.createListDelete(this.oid, key as number, 1),
 			);
 		} else {
-			this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
+			// the key must be deletable - i.e. optional in the schema
+			const deleteMode = this.getDeleteMode(key);
+			if (!deleteMode) {
+				throw new Error(
+					`Cannot delete key ${key} - the property is not marked as optional in the schema`,
+				);
+			}
+			if (deleteMode === 'delete') {
+				this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
+			} else {
+				this.addPatches(
+					this.store.patchCreator.createSet(this.oid, key, null, this.keyPath),
+				);
+			}
 		}
+	};
+	private getDeleteMode = (key: any) => {
+		// 'any' is always deletable, and map values can be removed completely
+		if (this.fieldSchema.type === 'any' || this.fieldSchema.type === 'map') {
+			return 'delete';
+		}
+
+		if (this.fieldSchema.type === 'object') {
+			const property = this.fieldSchema.properties[key];
+			if (property.type === 'any') return 'delete';
+			// map can't be nullable
+			// TODO: should it be?
+			if (property.type === 'map') return false;
+			// nullable properties can only be set null
+			if (property.nullable) return 'null';
+		}
+		// no other parent objects support deleting
+		return false;
 	};
 	/** @deprecated - renamed to delete */
 	remove = this.delete.bind(this);
@@ -592,9 +645,10 @@ export interface ObjectEntity<
 	Snapshot = DataFromInit<Init>,
 > extends BaseEntity<Init, Value, Snapshot> {
 	keys(): string[];
-	entries(): [string, Value[keyof Value]][];
+	entries(): [string, Exclude<Value[keyof Value], undefined>][];
+	values(): Exclude<Value[keyof Value], undefined>[];
 	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
-	delete(key: keyof Value): void;
+	delete(key: DeletableKeys<Value>): void;
 	update(
 		value: Partial<Snapshot>,
 		options?: { replaceSubObjects?: boolean; merge?: boolean },

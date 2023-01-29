@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createFileRef } from './files.js';
+import { createFileRef, FileRef } from './files.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -13,6 +13,7 @@ import {
 	diffToPatches,
 	initialToPatches,
 	substituteRefsWithObjects,
+	ObjectRef,
 } from './operation.js';
 
 function createClock(init = 0) {
@@ -864,5 +865,102 @@ describe('applying individual operations', () => {
 				value: 'b',
 			}),
 		).toEqual(['a', 'b', 'c']);
+	});
+});
+
+describe('collecting deleted refs during patch application', () => {
+	it('collects refs that are removed from a list', () => {
+		const refs: (ObjectRef | FileRef)[] = [];
+		expect(
+			applyPatch(
+				[
+					createRef('a'),
+					createRef('b'),
+					createRef('c'),
+					createRef('d'),
+					createRef('e'),
+				],
+				{
+					op: 'list-remove',
+					value: createRef('c'),
+				},
+				refs,
+			),
+		).toEqual([createRef('a'), createRef('b'), createRef('d'), createRef('e')]);
+		expect(refs).toEqual([createRef('c')]);
+	});
+	it('collects a deleted ref field from an object', () => {
+		const refs: (ObjectRef | FileRef)[] = [];
+		expect(
+			applyPatch(
+				{
+					a: createRef('a'),
+					b: createRef('b'),
+					c: createRef('c'),
+				},
+				{
+					op: 'remove',
+					name: 'b',
+				},
+				refs,
+			),
+		).toEqual({
+			a: createRef('a'),
+			c: createRef('c'),
+		});
+		expect(refs).toEqual([createRef('b')]);
+	});
+	it('collects all refs in a deleted object', () => {
+		const refs: (ObjectRef | FileRef)[] = [];
+		expect(
+			applyPatch(
+				{
+					a: createRef('a'),
+					b: createRef('b'),
+					c: createRef('c'),
+				},
+				{
+					op: 'delete',
+				},
+				refs,
+			),
+		).toEqual(undefined);
+		expect(refs).toEqual([createRef('a'), createRef('b'), createRef('c')]);
+	});
+	it('collects all refs in a deleted list', () => {
+		const refs: (ObjectRef | FileRef)[] = [];
+		expect(
+			applyPatch(
+				[createRef('a'), createRef('b'), createRef('c')],
+				{
+					op: 'delete',
+				},
+				refs,
+			),
+		).toEqual(undefined);
+		expect(refs).toEqual([createRef('a'), createRef('b'), createRef('c')]);
+	});
+	it('collects a ref in a replaced field', () => {
+		const refs: (ObjectRef | FileRef)[] = [];
+		expect(
+			applyPatch(
+				{
+					a: createRef('a'),
+					b: createRef('b'),
+					c: createRef('c'),
+				},
+				{
+					op: 'set',
+					name: 'b',
+					value: createRef('d'),
+				},
+				refs,
+			),
+		).toEqual({
+			a: createRef('a'),
+			b: createRef('d'),
+			c: createRef('c'),
+		});
+		expect(refs).toEqual([createRef('b')]);
 	});
 });

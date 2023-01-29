@@ -1,5 +1,5 @@
 import { schema, collection } from '@lo-fi/web';
-const page = collection({
+const pages = collection({
     name: 'page',
     primaryKey: 'id',
     fields: {
@@ -25,14 +25,38 @@ const page = collection({
         assets: {
             type: 'map',
             values: {
-                type: 'any'
+                type: 'object',
+                properties: {
+                    type: {
+                        type: 'string'
+                    },
+                    size: {
+                        type: 'array',
+                        items: {
+                            type: 'number'
+                        }
+                    }
+                }
             }
+        }
+    }
+});
+const assets = collection({
+    name: 'asset',
+    primaryKey: 'id',
+    fields: {
+        id: {
+            type: 'string'
+        },
+        file: {
+            type: 'file'
         }
     }
 });
 export default schema({
     version: 1,
     collections: {
-        page
+        pages,
+        assets
     }
 });

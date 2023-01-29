@@ -125,33 +125,33 @@ function getObjectTypings(field, name) {
 				content += `export type ${name}Init = ${getObjectInitTypings(
 					name,
 					fields,
-				)};`;
+				)};\n`;
 				content += `export type ${name}Destructured = ${getObjectDestructuredTypings(
 					name,
 					fields,
-				)};`;
+				)};\n`;
 				content += `export type ${name}Snapshot = ${getObjectSnapshotTypings(
 					name,
 					fields,
-				)};`;
+				)};\n`;
 				for (const [key, value] of fields) {
 					content += getObjectTypings(value, getSubObjectFieldName(name, key));
 				}
 			} else {
 				const valueFieldType = getObjectProperty(field, 'values');
 				const valueName = getSubObjectFieldName(name, 'Value');
-				content += `export type ${name}Init = Record<string, ${valueName}Init>;`;
-				content += `export type ${name}Destructured = Record<string, ${valueName}>;`;
-				content += `export type ${name}Snapshot = Record<string, ${valueName}Snapshot>;`;
+				content += `export type ${name}Init = Record<string, ${valueName}Init>;\n`;
+				content += `export type ${name}Destructured = { [key: string]: ${valueName} | undefined };\n`;
+				content += `export type ${name}Snapshot = Record<string, ${valueName}Snapshot>;\n`;
 				content += getObjectTypings(valueFieldType, valueName);
 			}
 		} else {
 			const itemFieldType = getObjectProperty(field, 'items');
 			const itemName = getSubObjectFieldName(name, 'Item');
-			content += `export type ${name} = ListEntity<${name}Init, ${name}Destructured>;`;
-			content += `export type ${name}Init = Array<${itemName}Init>;`;
-			content += `export type ${name}Destructured = Array<${itemName}>;`;
-			content += `export type ${name}Snapshot = Array<${itemName}Snapshot>;`;
+			content += `export type ${name} = ListEntity<${name}Init, ${name}Destructured>;\n`;
+			content += `export type ${name}Init = Array<${itemName}Init>;\n`;
+			content += `export type ${name}Destructured = Array<${itemName}>;\n`;
+			content += `export type ${name}Snapshot = Array<${itemName}Snapshot>;\n`;
 			content +=
 				getObjectTypings(itemFieldType, getSubObjectFieldName(name, 'Item')) +
 				';';

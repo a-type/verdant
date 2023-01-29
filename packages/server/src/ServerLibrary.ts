@@ -11,6 +11,10 @@ import {
 	ReplicaType,
 	SyncMessage,
 	isObjectRef,
+	FileRef,
+	ObjectIdentifier,
+	Ref,
+	isFileRef,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -20,6 +24,7 @@ import { Baselines } from './Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
+import { FileMetadata } from './files/FileMetadata.js';
 
 export class ServerLibrary {
 	private db;
@@ -30,6 +35,7 @@ export class ServerLibrary {
 	private baselines;
 	private presences = new Presence();
 	private disableRebasing: boolean;
+	private files;
 
 	private log: (...args: any[]) => void;
 	constructor({
@@ -39,6 +45,7 @@ export class ServerLibrary {
 		replicaTruancyMinutes,
 		log = () => {},
 		disableRebasing,
+		fileMetadata,
 	}: {
 		db: Database;
 		sender: MessageSender;
@@ -46,6 +53,7 @@ export class ServerLibrary {
 		replicaTruancyMinutes: number;
 		log?: (...args: any[]) => void;
 		disableRebasing?: boolean;
+		fileMetadata: FileMetadata;
 	}) {
 		this.db = db;
 		this.log = log;
@@ -55,6 +63,7 @@ export class ServerLibrary {
 		this.replicas = new ReplicaInfos(this.db, replicaTruancyMinutes);
 		this.operations = new OperationHistory(this.db);
 		this.baselines = new Baselines(this.db);
+		this.files = fileMetadata;
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
@@ -394,25 +403,24 @@ export class ServerLibrary {
 			}
 		}
 
+		const deletedRefs = new Array<Ref>();
 		for (const [documentId, ops] of Object.entries(opsToApply)) {
 			this.log('Rebasing', documentId);
-			this.baselines.applyOperations(libraryId, documentId, ops);
-			this.operations.dropAll(libraryId, ops);
+			this.baselines.applyOperations(libraryId, documentId, ops, deletedRefs),
+				this.operations.dropAll(libraryId, ops);
 		}
 
-		// now that we know exactly which operations can be squashed,
-		// we can summarize that for the clients so they don't have to
-		// do this work!
-		const rebases = Object.entries(opsToApply).map(([oid, ops]) => ({
-			oid,
-			upTo: ops[ops.length - 1].timestamp,
-		}));
-		if (rebases.length) {
-			// hint to clients they can rebase too
-			this.sender.broadcast(libraryId, {
-				type: 'global-ack',
-				timestamp: globalAck,
-			});
+		// hint to clients they can rebase too
+		this.sender.broadcast(libraryId, {
+			type: 'global-ack',
+			timestamp: globalAck,
+		});
+
+		// cleanup deleted files
+		for (const ref of deletedRefs) {
+			if (isFileRef(ref)) {
+				this.files.markPendingDelete(libraryId, ref.id);
+			}
 		}
 	};
 
@@ -465,6 +473,10 @@ export class ServerLibrary {
 			replicaId,
 			userId,
 		});
+		if (Object.keys(this.presences.all(libraryId)).length === 0) {
+			this.log(`All users have disconnected from ${libraryId}`);
+			this.files.cleanupPendingDeletes(libraryId);
+		}
 	};
 
 	destroy = (libraryId: string) => {

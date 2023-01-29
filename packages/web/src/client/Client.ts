@@ -7,7 +7,7 @@ import {
 } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
-import { FileManager } from '../files/FileManager.js';
+import { FileManager, FileManagerConfig } from '../files/FileManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
 import { Entity } from '../index.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
@@ -17,12 +17,11 @@ import { LiveQueryMaker } from '../queries/LiveQueryMaker.js';
 import { LiveQueryStore } from '../queries/LiveQueryStore.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
-import { LogFunction } from '../types.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
 	migrations: Migration[];
-	log?: LogFunction;
+	files?: FileManagerConfig;
 }
 
 export interface CollectionApi {
@@ -133,7 +132,9 @@ export class Client {
 		this._fileManager = new FileManager({
 			db: this.metaDb,
 			sync: this.sync,
-			log: this.context.log,
+			context: this.context,
+			config: this.config.files,
+			meta: this.meta,
 		});
 		this._entities = new EntityStore({
 			context: this.context,
@@ -149,7 +150,7 @@ export class Client {
 		);
 
 		this.documentDb.addEventListener('versionchange', () => {
-			this.config.log?.(
+			this.context.log?.(
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
 			this.documentDb.close();
@@ -159,7 +160,7 @@ export class Client {
 		});
 
 		this.metaDb.addEventListener('versionchange', () => {
-			this.config.log?.(
+			this.context.log?.(
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
 			this.metaDb.close();
@@ -262,7 +263,7 @@ export class Client {
 		await closeDatabase(this.documentDb);
 		await closeDatabase(this.metaDb);
 
-		this.config.log?.('Client closed');
+		this.context.log?.('Client closed');
 	};
 
 	__dangerous__resetLocal = async () => {

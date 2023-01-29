@@ -1,5 +1,6 @@
 import {
 	TDAsset,
+	TDAssetType,
 	TDBinding,
 	TDShape,
 	TDUser,
@@ -7,7 +8,8 @@ import {
 	TldrawApp,
 } from '@tldraw/tldraw';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { clientDescriptor, hooks } from './store.js';
+import { PageAssetsValue } from './client/index.js';
+import { clientDescriptor, hooks, Client } from './store.js';
 
 /*
 This example shows how to integrate TLDraw with a multiplayer room
@@ -35,25 +37,49 @@ function Editor() {
 
 	return (
 		<div className="tldraw">
-			<Tldraw
-				showPages={false}
-				{...events}
-				disableAssets={true}
-				// disableAssets={false}
-				// onAssetCreate={async (file: File, id: string) => {
-				//   const url = await uploadToStorage(file, id)
-				//   return url
-				// }}
-				// onAssetDelete={async (id: string) => {
-				//   await delteFromStorage(id)
-				//   return
-				// }}/>
-			/>
+			<Tldraw showPages={false} {...events} disableAssets={false} />
 		</div>
 	);
 }
 
 declare const window: Window & { app: TldrawApp };
+
+async function lofiAssetToTldrawAsset(
+	id: string,
+	asset: PageAssetsValue,
+	client: Client,
+): Promise<TDAsset> {
+	const type = asset.get('type') as TDAssetType;
+	const size = asset.get('size').getSnapshot();
+	const storedAsset = await client.assets.get(id).resolved;
+	const file = storedAsset.get('file');
+	if (file.url) {
+		return {
+			id,
+			type,
+			src: file.url,
+			fileName: file.name || '',
+			size,
+		};
+	} else {
+		await new Promise<void>((resolve) => {
+			file.subscribe('change', resolve);
+		});
+		if (file.failed) {
+			throw new Error('Cannot load asset');
+		} else if (file.url) {
+			return {
+				id,
+				type,
+				src: file.url,
+				fileName: file.name || '',
+				size,
+			};
+		} else {
+			throw new Error('Unknown asset error');
+		}
+	}
+}
 
 export function useMultiplayerState() {
 	const [app, setApp] = useState<TldrawApp>();
@@ -62,7 +88,7 @@ export function useMultiplayerState() {
 
 	const room = hooks.useClient();
 
-	const page = hooks.usePage('default');
+	const page = hooks.usePage('default')!;
 
 	const rIsPaused = useRef(false);
 
@@ -88,7 +114,7 @@ export function useMultiplayerState() {
 		) => {
 			Object.entries(tShapes).forEach(([id, shape]) => {
 				if (!shape) {
-					shapes.remove(id);
+					shapes.delete(id);
 				} else {
 					const syncShape = shapes.get(shape.id);
 					if (!syncShape) {
@@ -101,7 +127,7 @@ export function useMultiplayerState() {
 
 			Object.entries(tBindings).forEach(([id, binding]) => {
 				if (!binding) {
-					bindings.remove(id);
+					bindings.delete(id);
 				} else {
 					const syncBinding = bindings.get(binding.id);
 					if (!syncBinding) {
@@ -112,18 +138,18 @@ export function useMultiplayerState() {
 				}
 			});
 
-			Object.entries(tAssets).forEach(([id, asset]) => {
-				if (!asset) {
-					assets.remove(id);
-				} else {
-					const syncAsset = assets.get(asset.id);
-					if (!syncAsset) {
-						assets.set(asset.id, asset);
-					} else {
-						syncAsset.update(asset);
-					}
-				}
-			});
+			// Object.entries(tAssets).forEach(([id, asset]) => {
+			// 	if (!asset) {
+			// 		assets.remove(id);
+			// 	} else {
+			// 		const syncAsset = assets.get(asset.id);
+			// 		if (!syncAsset) {
+			// 			assets.set(asset.id, asset);
+			// 		} else {
+			// 			syncAsset.update(asset);
+			// 		}
+			// 	}
+			// });
 		},
 		[],
 	);
@@ -169,11 +195,26 @@ export function useMultiplayerState() {
 			const version = page.get('version');
 
 			// Subscribe to changes
-			const handleChanges = () => {
+			const handleChanges = async () => {
 				app?.replacePageContent(
 					shapes.getSnapshot() || {},
 					bindings.getSnapshot() || {},
-					assets.getSnapshot() || {},
+					(
+						await Promise.all(
+							assets
+								.entries()
+								.map(
+									async ([id, asset]) =>
+										[
+											id,
+											await lofiAssetToTldrawAsset(id, asset, room),
+										] as const,
+								),
+						)
+					).reduce((acc, [id, asset]) => {
+						acc[id] = asset;
+						return acc;
+					}, {} as Record<string, TDAsset>),
 				);
 			};
 
@@ -205,11 +246,28 @@ export function useMultiplayerState() {
 		};
 	}, [page, app]);
 
+	const onAssetCreate = useCallback(
+		async (app: TldrawApp, file: File, id: string) => {
+			const asset = await room.assets.put({
+				id,
+				file,
+			});
+			return asset.get('file').url || false;
+		},
+		[],
+	);
+
+	const onAssetDelete = useCallback((app: TldrawApp, assetId: string) => {
+		room.assets.delete(assetId);
+	}, []);
+
 	return {
 		onMount,
 		onChangePage,
 		onChangePresence,
 		error,
 		loading,
+		onAssetCreate,
+		onAssetDelete,
 	};
 }

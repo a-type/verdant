@@ -1,7 +1,7 @@
 import { TDUser, TDUserStatus } from '@tldraw/tldraw';
 import { ClientDescriptor, createDefaultMigration } from './client/index.js';
 import { createHooks } from './client/react.js';
-import schema from './schema.js';
+import migrations from './migrations/index.js';
 
 export interface Presence {
 	user: TDUser;
@@ -14,7 +14,7 @@ if (!userId) {
 }
 
 export const clientDescriptor = new ClientDescriptor<Presence>({
-	migrations: [createDefaultMigration(schema)],
+	migrations,
 	namespace: 'tldraw',
 	sync: {
 		initialPresence: {
@@ -33,15 +33,11 @@ export const clientDescriptor = new ClientDescriptor<Presence>({
 		presenceUpdateBatchTimeout: 100,
 		pullInterval: 5000,
 	},
-	loadInitialData: async (client) => {
-		await client.pages.put({
-			version: 1,
-			id: 'default',
-		});
-	},
 });
 clientDescriptor.open().then((client) => {
 	(window as any).client = client;
 });
 
 export const hooks = createHooks<Presence>();
+
+export type Client = ReturnType<typeof hooks.useClient>;

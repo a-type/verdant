@@ -1,4 +1,10 @@
-import { applyPatch, DocumentBaseline, Operation } from '@lo-fi/common';
+import {
+	applyPatch,
+	DocumentBaseline,
+	getAllFileFields,
+	Operation,
+	Ref,
+} from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { DocumentBaselineSpec } from './types.js';
 
@@ -116,8 +122,9 @@ export class Baselines {
 		libraryId: string,
 		oid: string,
 		operations: Operation[],
+		deletedRefs?: Ref[],
 	) => {
-		if (operations.length === 0) return;
+		if (operations.length === 0) return [];
 
 		let baseline = this.get(libraryId, oid);
 		if (!baseline) {
@@ -128,7 +135,11 @@ export class Baselines {
 			};
 		}
 		for (const operation of operations) {
-			baseline.snapshot = applyPatch(baseline.snapshot, operation.data);
+			baseline.snapshot = applyPatch(
+				baseline.snapshot,
+				operation.data,
+				deletedRefs,
+			);
 		}
 		baseline.timestamp = operations[operations.length - 1].timestamp;
 		this.set(libraryId, baseline);
