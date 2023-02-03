@@ -16,10 +16,10 @@ import {
 	groupPatchesByRootOid,
 	ObjectIdentifier,
 	Operation,
-	processValueFiles,
 } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
+import { processValueFiles } from '../files/utils.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';

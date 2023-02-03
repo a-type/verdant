@@ -2,7 +2,6 @@ import { FileData, FileRef } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
-import { LogFunction } from '../types.js';
 import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
 import { FileStorage, ReturnedFileData } from './FileStorage.js';
 

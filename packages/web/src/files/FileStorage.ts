@@ -1,5 +1,6 @@
-import { FileData, fileToArrayBuffer } from '@lo-fi/common';
+import { FileData } from '@lo-fi/common';
 import { IDBService } from '../IDBService.js';
+import { fileToArrayBuffer } from './utils.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
@@ -34,7 +35,7 @@ export class FileStorage extends IDBService {
 					type: file.type,
 					url: file.url,
 					buffer,
-				} satisfies StoredFileData);
+				} as StoredFileData);
 			},
 			'readwrite',
 			transaction,
@@ -67,7 +68,7 @@ export class FileStorage extends IDBService {
 				return store.put({
 					...current,
 					remote: 'true',
-				} satisfies StoredFileData);
+				} as StoredFileData);
 			},
 			'readwrite',
 			transaction,
@@ -133,7 +134,7 @@ export class FileStorage extends IDBService {
 				return store.put({
 					...current,
 					deletedAt: Date.now(),
-				} satisfies StoredFileData);
+				} as StoredFileData);
 			},
 			'readwrite',
 			transaction,
@@ -151,20 +152,23 @@ export class FileStorage extends IDBService {
 		return raw.map(this.hydrateFileData);
 	};
 
-	iterateOverPendingDelete = (iterator: (file: ReturnedFileData, store: IDBObjectStore) => void, transaction?: IDBTransaction) => {
+	iterateOverPendingDelete = (
+		iterator: (file: ReturnedFileData, store: IDBObjectStore) => void,
+		transaction?: IDBTransaction,
+	) => {
 		return this.iterate<StoredFileData>(
 			'files',
 			(store) => {
-				return store.index('deletedAt').openCursor(
-					IDBKeyRange.lowerBound(0, true),
-				);
+				return store
+					.index('deletedAt')
+					.openCursor(IDBKeyRange.lowerBound(0, true));
 			},
 			(value, store) => {
-				iterator(this.hydrateFileData(value), store)
+				iterator(this.hydrateFileData(value), store);
 			},
 			'readwrite',
-			transaction
-		)
+			transaction,
+		);
 	};
 }
 

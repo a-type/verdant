@@ -12,12 +12,12 @@ import {
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
-	processValueFiles,
 	StorageFieldSchema,
 	StorageFieldsSchema,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
 import { EntityFile } from '../files/EntityFile.js';
+import { processValueFiles } from '../files/utils.js';
 import { WeakRef } from './FakeWeakRef.js';
 
 export const ADD_OPERATIONS = '@@addOperations';

@@ -1,5 +1,6 @@
+import { FileData } from '@lo-fi/common';
 import { describe, expect, it } from 'vitest';
-import { processValueFiles, FileData } from './files.js';
+import { processValueFiles } from './utils.js';
 
 function makeFile() {
 	return new File([''], 'test.txt', { type: 'text/plain' });
