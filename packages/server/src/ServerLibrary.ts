@@ -480,6 +480,11 @@ export class ServerLibrary {
 		});
 		if (Object.keys(this.presences.all(libraryId)).length === 0) {
 			this.log(`All users have disconnected from ${libraryId}`);
+			// could happen - if the server is shutting down manually
+			if (!this.db.open) {
+				this.log('debug', 'Database not open, skipping cleanup');
+				return;
+			}
 			const pendingDelete = this.files.getPendingDeletes(libraryId);
 			if (pendingDelete.length > 0) {
 				if (!this.fileStorage) {
