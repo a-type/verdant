@@ -48,10 +48,14 @@ async function lofiAssetToTldrawAsset(
 	id: string,
 	asset: PageAssetsValue,
 	client: Client,
-): Promise<TDAsset> {
+): Promise<TDAsset | null> {
+	if (!asset) return null;
+
 	const type = asset.get('type') as TDAssetType;
 	const size = asset.get('size').getSnapshot();
 	const storedAsset = await client.assets.get(id).resolved;
+	if (!storedAsset) return null;
+
 	const file = storedAsset.get('file');
 	if (file.url) {
 		return {
@@ -212,7 +216,9 @@ export function useMultiplayerState() {
 								),
 						)
 					).reduce((acc, [id, asset]) => {
-						acc[id] = asset;
+						if (asset) {
+							acc[id] = asset;
+						}
 						return acc;
 					}, {} as Record<string, TDAsset>),
 				);
@@ -257,8 +263,16 @@ export function useMultiplayerState() {
 		[],
 	);
 
-	const onAssetDelete = useCallback((app: TldrawApp, assetId: string) => {
-		room.assets.delete(assetId);
+	const onAssetDelete = useCallback(async (app: TldrawApp, assetId: string) => {
+		try {
+			const existing = await room.assets.get(assetId).resolved;
+			if (!existing) {
+				throw new Error('Asset does not exist with ID ' + assetId);
+			}
+			await room.assets.delete(assetId);
+		} catch (err) {
+			console.error(err);
+		}
 	}, []);
 
 	return {

@@ -25,6 +25,7 @@ import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { FileMetadata } from './files/FileMetadata.js';
+import { FileStorage } from './files/FileStorage.js';
 
 export class ServerLibrary {
 	private db;
@@ -36,6 +37,7 @@ export class ServerLibrary {
 	private presences = new Presence();
 	private disableRebasing: boolean;
 	private files;
+	private fileStorage: FileStorage | undefined;
 
 	private log: (...args: any[]) => void;
 	constructor({
@@ -46,6 +48,7 @@ export class ServerLibrary {
 		log = () => {},
 		disableRebasing,
 		fileMetadata,
+		fileStorage,
 	}: {
 		db: Database;
 		sender: MessageSender;
@@ -54,6 +57,7 @@ export class ServerLibrary {
 		log?: (...args: any[]) => void;
 		disableRebasing?: boolean;
 		fileMetadata: FileMetadata;
+		fileStorage?: FileStorage;
 	}) {
 		this.db = db;
 		this.log = log;
@@ -64,6 +68,7 @@ export class ServerLibrary {
 		this.operations = new OperationHistory(this.db);
 		this.baselines = new Baselines(this.db);
 		this.files = fileMetadata;
+		this.fileStorage = fileStorage;
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
@@ -462,7 +467,7 @@ export class ServerLibrary {
 		);
 	};
 
-	private onPresenceLost = (
+	private onPresenceLost = async (
 		libraryId: string,
 		replicaId: string,
 		userId: string,
@@ -475,15 +480,60 @@ export class ServerLibrary {
 		});
 		if (Object.keys(this.presences.all(libraryId)).length === 0) {
 			this.log(`All users have disconnected from ${libraryId}`);
-			this.files.cleanupPendingDeletes(libraryId);
+			const pendingDelete = this.files.getPendingDeletes(libraryId);
+			if (pendingDelete.length > 0) {
+				if (!this.fileStorage) {
+					throw new Error('File storage not configured, cannot delete files');
+				}
+				this.log(
+					'Deleting files:',
+					pendingDelete.map((f) => f.fileId).join(', '),
+				);
+				await Promise.all(
+					pendingDelete.map(async (fileInfo) => {
+						try {
+							await this.fileStorage?.delete({
+								libraryId: fileInfo.libraryId,
+								fileName: fileInfo.name,
+								id: fileInfo.fileId,
+								type: fileInfo.type,
+							});
+							this.files.delete(libraryId, fileInfo.fileId);
+						} catch (e) {
+							this.log(
+								'Failed to delete file',
+								fileInfo.fileId,
+								' the file will remain in a pending delete state',
+								e,
+							);
+						}
+					}),
+				);
+			}
 		}
 	};
 
-	destroy = (libraryId: string) => {
+	destroy = async (libraryId: string) => {
 		this.presences.clear(libraryId);
 		this.replicas.deleteAll(libraryId);
 		this.operations.deleteAll(libraryId);
 		this.baselines.deleteAll(libraryId);
+		const allFiles = this.files.getAll(libraryId);
+		if (allFiles.length > 0) {
+			this.log(
+				`Deleting ${allFiles.length} files for library ${libraryId}`,
+				allFiles.map((f) => f.fileId).join(', '),
+			);
+			for (const fileInfo of allFiles) {
+				await this.fileStorage?.delete({
+					libraryId,
+					fileName: fileInfo.name,
+					id: fileInfo.fileId,
+					type: fileInfo.type,
+				});
+			}
+			this.files.deleteAll(libraryId);
+		}
 	};
 
 	getPresence = (libraryId: string) => {

@@ -20,6 +20,7 @@ import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
 import busboy from 'busboy';
 import { FileInfo, FileStorage } from './files/FileStorage.js';
 import { Readable } from 'stream';
+import { FileMetadataConfig } from './files/FileMetadata.js';
 
 export interface ServerOptions {
 	/**
@@ -65,6 +66,7 @@ export interface ServerOptions {
 	 * of this library.
 	 */
 	fileStorage?: FileStorage;
+	fileConfig?: FileMetadataConfig;
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
@@ -111,6 +113,8 @@ export class Server extends EventEmitter implements MessageSender {
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
 			log: this.log,
 			disableRebasing: options.disableRebasing,
+			fileConfig: options.fileConfig,
+			fileStorage: this.fileStorage,
 		});
 
 		this.wss = new WebSocketServer({
@@ -276,15 +280,6 @@ export class Server extends EventEmitter implements MessageSender {
 		try {
 			if (req.method === 'POST') {
 				const info = this.authorizeRequest(req);
-
-				let body = '';
-				req.on('data', (chunk) => {
-					body += chunk;
-				});
-				req.on('end', () => {
-					console.log(body);
-				});
-
 				await new Promise((resolve, reject) => {
 					const bb = busboy({ headers: req.headers });
 

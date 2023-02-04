@@ -33,6 +33,11 @@ export const clientDescriptor = new ClientDescriptor<Presence>({
 		presenceUpdateBatchTimeout: 100,
 		pullInterval: 5000,
 	},
+	files: {
+		// immediately delete deleted files from storage. this is not a good idea.
+		canCleanupDeletedFile: (file) => true,
+	},
+	log: console.debug,
 });
 clientDescriptor.open().then((client) => {
 	(window as any).client = client;

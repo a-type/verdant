@@ -5,8 +5,8 @@ import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { migrations } from './migrations.js';
-import { FileInfo } from './files/FileStorage.js';
-import { FileMetadata } from './files/FileMetadata.js';
+import { FileInfo, FileStorage } from './files/FileStorage.js';
+import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
 
 interface ServerStorageOptions {
 	db: Database;
@@ -15,6 +15,8 @@ interface ServerStorageOptions {
 	replicaTruancyMinutes: number;
 	log?: (...args: any[]) => void;
 	disableRebasing?: boolean;
+	fileConfig?: FileMetadataConfig;
+	fileStorage?: FileStorage;
 }
 
 export class ServerStorage {
@@ -23,6 +25,7 @@ export class ServerStorage {
 	private db;
 	private sender;
 	private fileMetadata;
+	private fileStorage: FileStorage | undefined;
 
 	constructor({
 		db,
@@ -31,12 +34,15 @@ export class ServerStorage {
 		replicaTruancyMinutes,
 		disableRebasing = false,
 		log = () => {},
+		fileConfig,
+		fileStorage,
 	}: ServerStorageOptions) {
 		this.db = db;
 		this.sender = sender;
 		this.createSchema();
 		this.profileLoader = new UserProfileLoader(profiles);
-		this.fileMetadata = new FileMetadata(this.db);
+		this.fileMetadata = new FileMetadata(this.db, fileConfig);
+		this.fileStorage = fileStorage;
 		this.library = new ServerLibrary({
 			db: this.db,
 			sender: this.sender,
@@ -45,6 +51,7 @@ export class ServerStorage {
 			log,
 			disableRebasing,
 			fileMetadata: this.fileMetadata,
+			fileStorage: this.fileStorage,
 		});
 	}
 
@@ -67,8 +74,8 @@ export class ServerStorage {
 		this.library.remove(libraryId, replicaId);
 	};
 
-	evictLibrary = (libraryId: string) => {
-		this.library.destroy(libraryId);
+	evictLibrary = async (libraryId: string) => {
+		await this.library.destroy(libraryId);
 	};
 
 	evictUser = (libraryId: string, userId: string) => {

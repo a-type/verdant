@@ -1,5 +1,5 @@
 import express from 'express';
-import { Server, TokenProvider } from '@lo-fi/server';
+import { ReplicaType, Server, TokenProvider } from '@lo-fi/server';
 import { createServer } from 'http';
 import * as path from 'path';
 // @ts-ignore
@@ -42,6 +42,13 @@ const server = new Server({
 		host: 'http://localhost:5050/files',
 		rootDirectory: 'files',
 	}),
+	fileConfig: {
+		// delete files immediately on all peers disconnecting.
+		// you may not want to do this in your app, it's a good idea to hold
+		// on to the file for a while in case someone reconnects and
+		// undoes the delete.
+		deleteExpirationDays: 0,
+	},
 	profiles: {
 		get: async (userId: string) => {
 			if (!users[userId]) {
@@ -56,6 +63,7 @@ const server = new Server({
 		},
 	},
 	httpServer,
+	log: console.debug,
 });
 server.on('error', console.error);
 
@@ -74,6 +82,9 @@ app.get('/auth', async (req, res) => {
 		libraryId: library,
 		userId: user,
 		syncEndpoint: `http://localhost:${PORT}/lo-fi`,
+		// for this example, we're making replicas passive - if someone disconnects and
+		// starts editing history offline, their changes will be dropped on reconnect.
+		type: ReplicaType.PassiveRealtime,
 	});
 	res.json({
 		accessToken: token,

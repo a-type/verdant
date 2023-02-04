@@ -53,7 +53,7 @@ export class LocalFileStorage implements FileStorage {
 		await fs.promises.mkdir(containingDirectory, {
 			recursive: true,
 		});
-		const dest = fs.createWriteStream(path.join(this.rootDirectory, filePath));
+		const dest = fs.createWriteStream(this.getStorageLocation(data));
 		fileStream.pipe(dest);
 	}
 
@@ -62,11 +62,26 @@ export class LocalFileStorage implements FileStorage {
 	}
 
 	async delete(data: FileInfo): Promise<void> {
-		await fs.promises.unlink(this.getPath(data));
+		await fs.promises.unlink(this.getStorageLocation(data));
+
+		const containingDirectory = path.dirname(
+			path.join(this.rootDirectory, this.getPath(data)),
+		);
+
+		// delete the containing folder if it's empty
+		try {
+			await fs.promises.rmdir(containingDirectory);
+		} catch (e) {
+			// ignore
+		}
 	}
 
 	private getPath(data: FileInfo): string {
 		// retain the file extension
 		return `${data.libraryId}/${data.id}/${data.fileName}`;
+	}
+
+	private getStorageLocation(data: FileInfo): string {
+		return path.join(this.rootDirectory, this.getPath(data));
 	}
 }
