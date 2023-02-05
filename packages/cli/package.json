@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/cli",
-	"version": "1.10.2",
+	"version": "1.11.0",
 	"description": "Schema management tools for lo-fi",
 	"type": "module",
 	"bin": {

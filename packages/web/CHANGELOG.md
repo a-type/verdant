@@ -1,5 +1,17 @@
 # @lo-fi/web
 
+## 1.11.0
+
+### Minor Changes
+
+- 6aae4d6: Support for file fields, file uploads and storage
+
+### Patch Changes
+
+- Updated dependencies [6aae4d6]
+- Updated dependencies [55ffd63]
+  - @lo-fi/common@1.9.0
+
 ## 1.10.11
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @lo-fi/common
 
+## 1.9.0
+
+### Minor Changes
+
+- 6aae4d6: Support for file fields, file uploads and storage
+- 55ffd63: Fix array synthetics index
+
 ## 1.8.4
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @lo-fi/server
 
+## 1.6.0
+
+### Minor Changes
+
+- 6aae4d6: Support for file fields, file uploads and storage
+
+### Patch Changes
+
+- Updated dependencies [6aae4d6]
+- Updated dependencies [55ffd63]
+  - @lo-fi/common@1.9.0
+
 ## 1.5.2
 
 ### Patch Changes
