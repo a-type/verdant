@@ -1,11 +1,17 @@
-import { applyPatch, DocumentBaseline, Operation } from '@lo-fi/common';
+import {
+	applyPatch,
+	DocumentBaseline,
+	getAllFileFields,
+	Operation,
+	Ref,
+} from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { DocumentBaselineSpec } from './types.js';
 
 export class Baselines {
-	constructor(private db: Database, private libraryId: string) {}
+	constructor(private db: Database) {}
 
-	get = (oid: string): DocumentBaseline<any> | null => {
+	get = (libraryId: string, oid: string): DocumentBaseline<any> | null => {
 		const row = this.db
 			.prepare(
 				`
@@ -13,7 +19,7 @@ export class Baselines {
       WHERE libraryId = ? AND oid = ?
     `,
 			)
-			.get(this.libraryId, oid);
+			.get(libraryId, oid);
 
 		if (!row) {
 			return null;
@@ -22,7 +28,10 @@ export class Baselines {
 		return this.hydrateSnapshot(row);
 	};
 
-	getAllWithSubObjects = (oid: string): DocumentBaseline<any>[] => {
+	getAllWithSubObjects = (
+		libraryId: string,
+		oid: string,
+	): DocumentBaseline<any>[] => {
 		const rows = this.db
 			.prepare(
 				`
@@ -30,12 +39,12 @@ export class Baselines {
 			WHERE libraryId = ? AND oid LIKE ?
 		`,
 			)
-			.all(this.libraryId, `${oid}%`);
+			.all(libraryId, `${oid}%`);
 
 		return rows.map(this.hydrateSnapshot);
 	};
 
-	set = (baseline: DocumentBaseline) => {
+	set = (libraryId: string, baseline: DocumentBaseline) => {
 		return this.db
 			.prepare(
 				`
@@ -44,14 +53,14 @@ export class Baselines {
     `,
 			)
 			.run(
-				this.libraryId,
+				libraryId,
 				baseline.oid,
 				JSON.stringify(baseline.snapshot),
 				baseline.timestamp,
 			);
 	};
 
-	insertAll = (baselines: DocumentBaseline[]) => {
+	insertAll = (libraryId: string, baselines: DocumentBaseline[]) => {
 		const tx = this.db.transaction(() => {
 			for (const baseline of baselines) {
 				this.db
@@ -62,7 +71,7 @@ export class Baselines {
 			`,
 					)
 					.run(
-						this.libraryId,
+						libraryId,
 						baseline.oid,
 						JSON.stringify(baseline.snapshot),
 						baseline.timestamp,
@@ -81,7 +90,10 @@ export class Baselines {
 		};
 	};
 
-	getAllAfter = (timestamp: string | null): DocumentBaseline<any>[] => {
+	getAllAfter = (
+		libraryId: string,
+		timestamp: string | null,
+	): DocumentBaseline<any>[] => {
 		if (!timestamp) {
 			return this.db
 				.prepare(
@@ -91,7 +103,7 @@ export class Baselines {
 					ORDER BY timestamp ASC
 				`,
 				)
-				.all(this.libraryId)
+				.all(libraryId)
 				.map(this.hydrateSnapshot);
 		}
 		return this.db
@@ -102,14 +114,19 @@ export class Baselines {
       ORDER BY timestamp ASC
     `,
 			)
-			.all(this.libraryId, timestamp)
+			.all(libraryId, timestamp)
 			.map(this.hydrateSnapshot);
 	};
 
-	applyOperations = (oid: string, operations: Operation[]) => {
-		if (operations.length === 0) return;
+	applyOperations = (
+		libraryId: string,
+		oid: string,
+		operations: Operation[],
+		deletedRefs?: Ref[],
+	) => {
+		if (operations.length === 0) return [];
 
-		let baseline = this.get(oid);
+		let baseline = this.get(libraryId, oid);
 		if (!baseline) {
 			baseline = {
 				oid,
@@ -118,13 +135,17 @@ export class Baselines {
 			};
 		}
 		for (const operation of operations) {
-			baseline.snapshot = applyPatch(baseline.snapshot, operation.data);
+			baseline.snapshot = applyPatch(
+				baseline.snapshot,
+				operation.data,
+				deletedRefs,
+			);
 		}
 		baseline.timestamp = operations[operations.length - 1].timestamp;
-		this.set(baseline);
+		this.set(libraryId, baseline);
 	};
 
-	deleteAll = () => {
+	deleteAll = (libraryId: string) => {
 		this.db
 			.prepare(
 				`
@@ -132,6 +153,6 @@ export class Baselines {
 			WHERE libraryId = ?
 		`,
 			)
-			.run(this.libraryId);
+			.run(libraryId);
 	};
 }

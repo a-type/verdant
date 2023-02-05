@@ -34,6 +34,8 @@ export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
 		? Record<string, ShapeFromProperty<T['values']>>
 		: T['type'] extends 'any'
 		? any
+		: T['type'] extends 'file'
+		? File
 		: never;
 
 export type ShapeFromProperty<T extends StoragePropertySchema<any>> =

@@ -1,8 +1,10 @@
 import express from 'express';
-import { Server, TokenProvider } from '@lo-fi/server';
+import { ReplicaType, Server, TokenProvider } from '@lo-fi/server';
 import { createServer } from 'http';
+import * as path from 'path';
 // @ts-ignore
 import nonce from 'gfynonce';
+import { LocalFileStorage } from '@lo-fi/server/src/files/FileStorage.js';
 
 const PORT = 5050;
 
@@ -14,11 +16,12 @@ app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', 'http://localhost:5051');
 	res.header(
 		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization',
 	);
 	res.header('Access-Control-Allow-Credentials', 'true');
 	next();
 });
+app.use(express.json());
 const httpServer = createServer(app);
 
 const dbFileName = `tldraw-storage.sqlite`;
@@ -34,6 +37,18 @@ const users = {} as Record<string, { name: string }>;
 const server = new Server({
 	databaseFile: dbFileName,
 	tokenSecret: lofiSecret,
+	// log: console.log,
+	fileStorage: new LocalFileStorage({
+		host: 'http://localhost:5050/files',
+		rootDirectory: 'files',
+	}),
+	fileConfig: {
+		// delete files immediately on all peers disconnecting.
+		// you may not want to do this in your app, it's a good idea to hold
+		// on to the file for a while in case someone reconnects and
+		// undoes the delete.
+		deleteExpirationDays: 0,
+	},
 	profiles: {
 		get: async (userId: string) => {
 			if (!users[userId]) {
@@ -48,7 +63,9 @@ const server = new Server({
 		},
 	},
 	httpServer,
+	log: console.debug,
 });
+server.on('error', console.error);
 
 const tokenProvider = new TokenProvider({
 	secret: lofiSecret,
@@ -64,18 +81,31 @@ app.get('/auth', async (req, res) => {
 	const token = tokenProvider.getToken({
 		libraryId: library,
 		userId: user,
-		syncEndpoint: `http://localhost:${PORT}/lofi`,
+		syncEndpoint: `http://localhost:${PORT}/lo-fi`,
+		// for this example, we're making replicas passive - if someone disconnects and
+		// starts editing history offline, their changes will be dropped on reconnect.
+		type: ReplicaType.PassiveRealtime,
 	});
 	res.json({
 		accessToken: token,
 	});
 });
 
-app.post('/lofi', server.handleRequest);
+app.post('/lo-fi', async (req, res) => {
+	await server.handleRequest(req, res);
+});
+app.get('/lo-fi', async (req, res) => {
+	await server.handleRequest(req, res);
+});
+app.post('/lo-fi/files/:fileId', async (req, res) => {
+	await server.handleFileRequest(req, res);
+});
+app.get('/lo-fi/files/:fileId', async (req, res) => {
+	await server.handleFileRequest(req, res);
+});
 
-app.use(express.static('public'));
-app.use(express.static('dist'));
+app.use('/files', express.static('files'));
 
 httpServer.listen(PORT, () => {
-	console.log(`Server listening on port ${PORT}`);
+	console.log(`Server listening on http://localhost:${PORT}`);
 });

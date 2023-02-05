@@ -19,3 +19,11 @@ export interface ReplicaInfoSpec extends ReplicaInfo {
 	lastSeenWallClockTime: number | null;
 	type: ReplicaType;
 }
+
+// patch File
+declare global {
+	interface File {
+		readonly lastModified: number;
+		readonly name: string;
+	}
+}

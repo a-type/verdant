@@ -3,6 +3,13 @@ import { storeRequestPromise } from './idb.js';
 export class IDBService {
 	constructor(protected readonly db: IDBDatabase) {}
 
+	createTransaction = (
+		storeNames: string[],
+		mode: 'readonly' | 'readwrite',
+	) => {
+		return this.db.transaction(storeNames, mode);
+	};
+
 	run = async <T>(
 		storeName: string,
 		getRequest: (store: IDBObjectStore) => IDBRequest<T>,

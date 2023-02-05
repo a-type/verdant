@@ -22,3 +22,5 @@ export * from './oids.js';
 export * from './EventSubscriber.js';
 export * from './undo.js';
 export * from './batching.js';
+export * from './files.js';
+export type { Ref } from './refs.js';

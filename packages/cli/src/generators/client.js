@@ -12,7 +12,7 @@ export function getClientTypings({ collections, schemaPath }) {
 	return `
   import type schema from '${schemaPath}';
   import type { StorageSchema } from '@lo-fi/common';
-  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync } from '@lo-fi/web';
+  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile } from '@lo-fi/web';
   export * from '@lo-fi/web';
   export type Schema = typeof schema;
 
@@ -38,6 +38,7 @@ export class Client<Presence = any, Profile = any> {
   entities: Storage['entities'];
   queryStore: Storage['queryStore'];
   batch: Storage['batch'];
+  files: Storage['files'];
 
   close: Storage['close'];
 

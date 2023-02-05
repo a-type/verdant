@@ -2,6 +2,8 @@ import { Server, TokenProvider, ReplicaType } from '@lo-fi/server';
 import express from 'express';
 import { createServer } from 'http';
 import * as fs from 'fs/promises';
+import { LocalFileStorage } from '@lo-fi/server/src/files/FileStorage.js';
+import * as path from 'path';
 
 const SECRET = 'notsecret';
 
@@ -35,6 +37,10 @@ export async function startTestServer({
 						...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
 					)
 			: undefined,
+		fileStorage: new LocalFileStorage({
+			rootDirectory: './test-files',
+			host: `http://localhost:${port}/files`,
+		}),
 	});
 
 	const tokenProvider = new TokenProvider({
@@ -56,7 +62,10 @@ export async function startTestServer({
 		});
 	});
 
-	app.post('/lofi', server.handleRequest);
+	app.use('/lofi/files/:id', server.handleFileRequest);
+	app.use('/lofi', server.handleRequest);
+
+	app.use('/files', express.static('./test-files'));
 
 	await new Promise<void>((resolve, reject) => {
 		httpServer.listen(port, () => {

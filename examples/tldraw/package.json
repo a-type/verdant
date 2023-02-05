@@ -8,7 +8,7 @@
 		"generate": "lo-fi generate --schema ./src/schema.ts --output ./src/client --react",
 		"dev": "concurrently \"pnpm run dev:app\" \"pnpm run dev:server\"",
 		"dev:app": "vite",
-		"dev:server": "tsx server.ts"
+		"dev:server": "tsx watch server.ts"
 	},
 	"dependencies": {
 		"@lo-fi/cli": "workspace:*",

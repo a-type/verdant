@@ -10,6 +10,7 @@ import {
 	Operation,
 	PropertyName,
 } from './operation.js';
+import { isRef } from './refs.js';
 import { isObject } from './utils.js';
 
 export class PatchCreator {
@@ -47,7 +48,7 @@ export class PatchCreator {
 	): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
-		if (!isObject(value)) {
+		if (!isObject(value) || isRef(value)) {
 			return [
 				{
 					oid,

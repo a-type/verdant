@@ -1,12 +1,16 @@
 import {
 	ClientMessage,
+	DocumentBaseline,
 	EventSubscriber,
+	FileData,
+	Operation,
 	ReplicaType,
 	ServerMessage,
 } from '@lo-fi/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from '../PresenceManager.js';
 import { EntityStore } from '../reactives/EntityStore.js';
+import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
 import { PushPullSync } from './PushPullSync.js';
 import {
 	ServerSyncEndpointProvider,
@@ -49,6 +53,8 @@ export interface Sync extends SyncTransport {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
+	uploadFile(data: FileData): Promise<FileUploadResult>;
+	getFile(fileId: string): Promise<FilePullResult>;
 }
 
 export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
@@ -75,6 +81,20 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 		initialPresence: {},
 		defaultProfile: {},
 	});
+
+	uploadFile = async () => {
+		return {
+			success: false,
+			retry: false,
+		};
+	};
+
+	getFile = async (): Promise<FilePullResult> => {
+		return {
+			success: false,
+			retry: false,
+		};
+	};
 }
 
 export type SyncTransportMode = 'realtime' | 'pull';
@@ -127,11 +147,16 @@ export class ServerSync<Profile = any, Presence = any>
 {
 	private webSocketSync: WebSocketSync;
 	private pushPullSync: PushPullSync;
+	private fileSync: FileSync;
 	private activeSync: SyncTransport;
 	private endpointProvider;
+	private onData: (data: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => Promise<void>;
 
 	private meta: Metadata;
-	private entities: EntityStore;
 
 	readonly presence;
 
@@ -151,17 +176,21 @@ export class ServerSync<Profile = any, Presence = any>
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
-			entities,
 			log,
+			onData,
 		}: {
 			meta: Metadata;
-			entities: EntityStore;
 			log?: (...args: any[]) => void;
+			onData: (data: {
+				operations: Operation[];
+				baselines: DocumentBaseline[];
+				reset?: boolean;
+			}) => Promise<void>;
 		},
 	) {
 		super();
 		this.meta = meta;
-		this.entities = entities;
+		this.onData = onData;
 		this.log = log || (() => {});
 		this.presence = new PresenceManager<Profile, Presence>({
 			initialPresence,
@@ -186,6 +215,10 @@ export class ServerSync<Profile = any, Presence = any>
 			log: this.log,
 			interval: pullInterval,
 		});
+		this.fileSync = new FileSync({
+			endpointProvider: this.endpointProvider,
+			log: this.log,
+		});
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
 		} else {
@@ -197,10 +230,10 @@ export class ServerSync<Profile = any, Presence = any>
 		this.meta.subscribe('message', this.send);
 
 		this.webSocketSync.subscribe('message', this.handleMessage);
-		this.webSocketSync.subscribe('onlineChange', this.echoOnlineChange);
+		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
 
 		this.pushPullSync.subscribe('message', this.handleMessage);
-		this.pushPullSync.subscribe('onlineChange', this.echoOnlineChange);
+		this.pushPullSync.subscribe('onlineChange', this.handleOnlineChange);
 
 		if (automaticTransportSelection) {
 			// automatically shift between transport modes depending
@@ -252,7 +285,7 @@ export class ServerSync<Profile = any, Presence = any>
 		this.log('sync message', JSON.stringify(message, null, 2));
 		switch (message.type) {
 			case 'op-re':
-				await this.entities.addData({
+				await this.onData({
 					operations: message.operations,
 					baselines: message.baselines,
 				});
@@ -264,7 +297,7 @@ export class ServerSync<Profile = any, Presence = any>
 				await this.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
-				await this.entities.addData({
+				await this.onData({
 					operations: message.operations,
 					baselines: message.baselines,
 					reset: message.overwriteLocalData,
@@ -288,7 +321,7 @@ export class ServerSync<Profile = any, Presence = any>
 		// update presence if necessary
 		this.presence.__handleMessage(await this.meta.localReplica.get(), message);
 	};
-	private echoOnlineChange = (online: boolean) => {
+	private handleOnlineChange = (online: boolean) => {
 		this.emit('onlineChange', online);
 	};
 	private handlePresenceUpdate = async (presence: any) => {
@@ -328,9 +361,29 @@ export class ServerSync<Profile = any, Presence = any>
 		return this.pushPullSync.interval;
 	}
 
-	public send = (message: ClientMessage) => {
+	send = (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
 			return this.activeSync.send(message);
+		}
+	};
+
+	uploadFile = async (info: FileData) => {
+		if (this.activeSync.status === 'active') {
+			return this.fileSync.uploadFile(info);
+		} else {
+			return {
+				success: false,
+				retry: false,
+			};
+		}
+	};
+
+	getFile = async (id: string) => {
+		// TODO: should this error? or just try anyway?
+		if (this.activeSync.status === 'active') {
+			return this.fileSync.getFile(id);
+		} else {
+			throw new Error('Offline, cannot retrieve remote file details');
 		}
 	};
 

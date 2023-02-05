@@ -1,5 +1,10 @@
 import { ReplicaType } from '@lo-fi/server';
-import { Client, ClientDescriptor, Migration } from '../client/index.js';
+import {
+	Client,
+	ClientDescriptor,
+	ClientDescriptorOptions,
+	Migration,
+} from '../client/index.js';
 import defaultMigrations from '../migrations/migrations.js';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
@@ -12,6 +17,7 @@ export async function createTestClient({
 	logId,
 	indexedDb = new IDBFactory(),
 	migrations = defaultMigrations,
+	files,
 }: {
 	server?: { port: number };
 	library: string;
@@ -20,6 +26,7 @@ export async function createTestClient({
 	logId?: string;
 	indexedDb?: IDBFactory;
 	migrations?: Migration<any>[];
+	files?: ClientDescriptorOptions['files'];
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
@@ -39,6 +46,7 @@ export async function createTestClient({
 		log: logId
 			? (...args: any[]) => console.log(`[${logId}]`, ...args)
 			: undefined,
+		files,
 	});
 	const client = await desc.open();
 	return client;

@@ -5,7 +5,6 @@ import { ReplicaInfoSpec } from './types.js';
 export class ReplicaInfos {
 	constructor(
 		private db: Database,
-		private libraryId: string,
 		private readonly replicaTruancyMinutes: number,
 	) {}
 
@@ -13,7 +12,7 @@ export class ReplicaInfos {
 		return Date.now() - this.replicaTruancyMinutes * 60 * 1000;
 	}
 
-	get = (replicaId: string): ReplicaInfoSpec | null => {
+	get = (libraryId: string, replicaId: string): ReplicaInfoSpec | null => {
 		const row = this.db
 			.prepare(
 				`
@@ -21,7 +20,7 @@ export class ReplicaInfos {
 					WHERE id = ? AND libraryId = ?
 				`,
 			)
-			.get(replicaId, this.libraryId);
+			.get(replicaId, libraryId);
 		if (!row) {
 			return null;
 		}
@@ -36,6 +35,7 @@ export class ReplicaInfos {
 	};
 
 	getOrCreate = (
+		libraryId: string,
 		replicaId: string,
 		info: TokenInfo,
 	): {
@@ -49,7 +49,7 @@ export class ReplicaInfos {
 			WHERE id = ? AND libraryId = ?
 			`,
 			)
-			.get(replicaId, this.libraryId);
+			.get(replicaId, libraryId);
 
 		if (!replicaInfo) {
 			this.db
@@ -59,7 +59,7 @@ export class ReplicaInfos {
 			VALUES (?, ?, ?, ?)
 			`,
 				)
-				.run(replicaId, info.userId, this.libraryId, info.type);
+				.run(replicaId, info.userId, libraryId, info.type);
 
 			return {
 				status: 'new',
@@ -68,7 +68,7 @@ export class ReplicaInfos {
 					clientId: info.userId,
 					ackedLogicalTime: null,
 					lastSeenWallClockTime: null,
-					libraryId: this.libraryId,
+					libraryId: libraryId,
 					type: info.type,
 				},
 			};
@@ -84,7 +84,7 @@ export class ReplicaInfos {
 					WHERE id = ? AND libraryId = ?
 					`,
 				)
-				.run(info.type, replicaId, this.libraryId);
+				.run(info.type, replicaId, libraryId);
 		}
 
 		if (replicaInfo.clientId !== info.userId) {
@@ -109,7 +109,7 @@ export class ReplicaInfos {
 		};
 	};
 
-	getAllNonTruant = (): ReplicaInfoSpec[] => {
+	getAllNonTruant = (libraryId: string): ReplicaInfoSpec[] => {
 		return this.db
 			.prepare(
 				`
@@ -117,10 +117,10 @@ export class ReplicaInfos {
 			WHERE libraryId = ? AND lastSeenWallClockTime > ?
 		`,
 			)
-			.all(this.libraryId, this.truantCutoff);
+			.all(libraryId, this.truantCutoff);
 	};
 
-	updateLastSeen = (replicaId: string) => {
+	updateLastSeen = (libraryId: string, replicaId: string) => {
 		const clockTime = new Date().getTime();
 		return this.db
 			.prepare(
@@ -130,10 +130,14 @@ export class ReplicaInfos {
       WHERE id = ? AND libraryId = ?
     `,
 			)
-			.run(clockTime, replicaId, this.libraryId);
+			.run(clockTime, replicaId, libraryId);
 	};
 
-	updateAcknowledged = (replicaId: string, timestamp: string) => {
+	updateAcknowledged = (
+		libraryId: string,
+		replicaId: string,
+		timestamp: string,
+	) => {
 		return this.db
 			.prepare(
 				`
@@ -142,11 +146,11 @@ export class ReplicaInfos {
 			WHERE id = ? AND libraryId = ?
 		`,
 			)
-			.run(timestamp, replicaId, this.libraryId);
+			.run(timestamp, replicaId, libraryId);
 	};
 
-	getGlobalAck = (onlineReplicaIds?: string[]) => {
-		const nonTruant = this.getAllNonTruant();
+	getGlobalAck = (libraryId: string, onlineReplicaIds?: string[]) => {
+		const nonTruant = this.getAllNonTruant(libraryId);
 		const globalAckEligible = nonTruant.filter(
 			(replica) => replica.type < 2 || onlineReplicaIds?.includes(replica.id),
 		);
@@ -162,7 +166,7 @@ export class ReplicaInfos {
 		}, undefined as string | undefined);
 	};
 
-	delete = (replicaId: string) => {
+	delete = (libraryId: string, replicaId: string) => {
 		return this.db
 			.prepare(
 				`
@@ -170,10 +174,10 @@ export class ReplicaInfos {
 			WHERE id = ? AND libraryId = ?
 		`,
 			)
-			.run(replicaId, this.libraryId);
+			.run(replicaId, libraryId);
 	};
 
-	deleteAll = () => {
+	deleteAll = (libraryId: string) => {
 		return this.db
 			.prepare(
 				`
@@ -181,12 +185,12 @@ export class ReplicaInfos {
 			WHERE libraryId = ?
 		`,
 			)
-			.run(this.libraryId);
+			.run(libraryId);
 	};
 
-	deleteAllForUser = (userId: string) => {
+	deleteAllForUser = (libraryId: string, userId: string) => {
 		return this.db
-			.prepare(`DELETE FROM ReplicaInfo WHERE clientId = ?`)
-			.run(userId);
+			.prepare(`DELETE FROM ReplicaInfo WHERE libraryId = ? AND clientId = ?`)
+			.run(libraryId, userId);
 	};
 }

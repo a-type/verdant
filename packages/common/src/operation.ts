@@ -1,4 +1,5 @@
 import { DocumentBaseline } from './baseline.js';
+import { FileRef } from './files.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
@@ -15,6 +16,7 @@ import {
 	OID_KEY,
 	removeOid,
 } from './oids.js';
+import { compareRefs, isRef } from './refs.js';
 import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';
 
 // export type ObjectIdentifier<
@@ -145,6 +147,16 @@ export type Operation = {
 	data: OperationPatch;
 };
 
+function isDiffableObject(val: any) {
+	return isObject(val) && !isRef(val);
+}
+
+function compareNonDiffable(a: any, b: any) {
+	if (a === b) return true;
+	if (isRef(a) && isRef(b)) return compareRefs(a, b);
+	return false;
+}
+
 export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	from: T,
 	to: T,
@@ -168,10 +180,10 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	const oid = getOid(from);
 
 	function diffItems(key: string | number, value: any, oldValue: any) {
-		if (!isObject(value)) {
+		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
-			if (value !== oldValue) {
+			if (!compareNonDiffable(value, oldValue)) {
 				patches.push({
 					oid,
 					timestamp: getNow(),
@@ -279,7 +291,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
-	} else if (isObject(from) && isObject(to)) {
+	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
 			if (value === undefined && options.defaultUndefined) continue;
@@ -322,10 +334,10 @@ export function shallowDiffToPatches(
 	const oid = getOid(from);
 
 	function diffItems(key: string | number, value: any, oldValue: any) {
-		if (!isObject(value) || isObjectRef(value)) {
+		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
-			if (value !== oldValue) {
+			if (!compareNonDiffable(value, oldValue)) {
 				patches.push({
 					oid,
 					timestamp: getNow(),
@@ -368,7 +380,7 @@ export function shallowDiffToPatches(
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
-	} else if (isObject(from) && isObject(to)) {
+	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
 			oldKeys.delete(key);
@@ -504,10 +516,16 @@ function listCheck(obj: any): obj is Array<unknown> {
 
 /**
  * The incoming object should already be normalized!
+ * This function will mutate the base object.
  */
 export function applyPatch<T extends NormalizedObject>(
 	base: T | undefined,
 	patch: OperationPatch,
+	/**
+	 * Optionally supply a list to which any refs which
+	 * are removed during the patch will be appended.
+	 */
+	deletedRefs?: (FileRef | ObjectRef)[],
 ): T | undefined {
 	// deleted objects are represented by undefined
 	// and remain deleted unless re-initialized
@@ -519,11 +537,24 @@ export function applyPatch<T extends NormalizedObject>(
 	let index;
 	let spliceResult: any[];
 
+	// a helper, pass it a value which is about
+	// to be removed and it will append it to the list
+	// if it was a ref
+	function checkRef(field: any) {
+		// don't bother if not supplied
+		if (!deletedRefs) return;
+		if (isRef(field)) {
+			deletedRefs.push(field);
+		}
+	}
+
 	switch (patch.op) {
 		case 'set':
+			checkRef(baseAsAny[patch.name]);
 			baseAsAny[patch.name] = patch.value;
 			break;
 		case 'remove':
+			checkRef(baseAsAny[patch.name]);
 			delete baseAsAny[patch.name];
 			break;
 		case 'list-push':
@@ -533,6 +564,7 @@ export function applyPatch<T extends NormalizedObject>(
 			break;
 		case 'list-delete':
 			if (listCheck(base)) {
+				checkRef(base[patch.index]);
 				base.splice(patch.index, patch.count);
 			}
 			break;
@@ -565,6 +597,7 @@ export function applyPatch<T extends NormalizedObject>(
 						}
 					}
 					if (index !== -1) {
+						checkRef(base[index]);
 						base.splice(index, 1);
 					}
 				} while (!patch.only && index !== -1);
@@ -608,6 +641,12 @@ export function applyPatch<T extends NormalizedObject>(
 			}
 			break;
 		case 'delete':
+			// collect all refs that are deleted
+			if (Array.isArray(base)) {
+				base.forEach(checkRef);
+			} else if (isObject(base)) {
+				Object.values(base || {}).forEach(checkRef);
+			}
 			return undefined;
 		case 'initialize':
 			return cloneDeep(patch.value);
@@ -620,10 +659,11 @@ export function applyPatch<T extends NormalizedObject>(
 export function applyOperations<T extends NormalizedObject>(
 	base: T | undefined,
 	operations: Operation[],
+	deletedRefs?: (ObjectRef | FileRef)[],
 ): T | undefined {
 	let cur = base as T | undefined;
 	for (const op of operations) {
-		cur = applyPatch(base, op.data);
+		cur = applyPatch(base, op.data, deletedRefs);
 	}
 	return cur;
 }

@@ -30,7 +30,7 @@ export function createMigration({
 
 	return `import v${version - 1}Schema from '${relativePathToHistory}/v${
 		version - 1
-	}${fileEnd};
+	}${fileEnd}';
   import v${version}Schema from '${relativePathToHistory}/v${version}${fileEnd}';
   import { migrate } from '@lo-fi/web';
 

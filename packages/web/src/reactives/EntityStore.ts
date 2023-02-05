@@ -18,6 +18,8 @@ import {
 	Operation,
 } from '@lo-fi/common';
 import { Context } from '../context.js';
+import { FileManager } from '../files/FileManager.js';
+import { processValueFiles } from '../files/utils.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
@@ -37,6 +39,7 @@ export class EntityStore extends EventSubscriber<{
 
 	public meta;
 	private operationBatcher;
+	public files;
 
 	private context: Context;
 
@@ -64,9 +67,11 @@ export class EntityStore extends EventSubscriber<{
 		context,
 		meta,
 		batchTimeout = 200,
+		files,
 	}: {
 		context: Context;
 		meta: Metadata;
+		files: FileManager;
 		batchTimeout?: number;
 	}) {
 		super();
@@ -75,6 +80,7 @@ export class EntityStore extends EventSubscriber<{
 
 		this.defaultBatchTimeout = batchTimeout;
 		this.meta = meta;
+		this.files = files;
 		this.operationBatcher = new Batcher<Operation, { undoable?: boolean }>(
 			this.flushOperations,
 		);
@@ -226,8 +232,11 @@ export class EntityStore extends EventSubscriber<{
 	 * document is submitted to storage and sync.
 	 */
 	create = async (initial: any, oid: ObjectIdentifier) => {
-		assignOid(initial, oid);
-		const operations = this.meta.patchCreator.createInitialize(initial, oid);
+		// first grab any file and replace them with refs
+		const processed = processValueFiles(initial, this.files.add);
+
+		assignOid(processed, oid);
+		const operations = this.meta.patchCreator.createInitialize(processed, oid);
 		const familyCache = await this.openFamilyCache(oid);
 		familyCache.insertUnconfirmedOperations(operations);
 		// don't enqueue these, submit as distinct operation

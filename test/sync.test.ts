@@ -1,7 +1,6 @@
 import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
 import { Client, Item, Query } from './client/index.js';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForCondition,
 	waitForMockCall,
@@ -9,19 +8,10 @@ import {
 	waitForQueryResult,
 } from './lib/waits.js';
 
-const cleanupClients: Client[] = [];
-
-let server: { port: number; cleanup: () => Promise<void> };
-beforeAll(async () => {
-	server = await startTestServer({ log: false });
-});
-
-afterAll(async () => {
-	cleanupClients.forEach((c) => c.sync.stop());
-	await server.cleanup();
-}, 30 * 1000);
+const context = createTestContext();
 
 it('can sync multiple clients even if they go offline', async () => {
+	const { server, createTestClient } = context;
 	const clientA = await createTestClient({
 		server,
 		library: 'sync-1',
@@ -40,7 +30,6 @@ it('can sync multiple clients even if they go offline', async () => {
 		user: 'User C',
 		// logId: 'C',
 	});
-	cleanupClients.push(clientA, clientB, clientC);
 
 	// seed data offline with A
 	console.info('🔺 --- Client A offline seed ---');

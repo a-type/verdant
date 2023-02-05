@@ -46,6 +46,10 @@ const items = collection({
 				},
 			},
 		},
+		image: {
+			type: 'file',
+			nullable: true,
+		},
 	},
 });
 

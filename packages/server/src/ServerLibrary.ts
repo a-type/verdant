@@ -1,6 +1,5 @@
 import {
 	AckMessage,
-	applyPatch,
 	applyOperations,
 	ClientMessage,
 	DocumentBaseline,
@@ -9,10 +8,13 @@ import {
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
-	ReplicaInfo,
 	ReplicaType,
 	SyncMessage,
 	isObjectRef,
+	FileRef,
+	ObjectIdentifier,
+	Ref,
+	isFileRef,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -22,46 +24,51 @@ import { Baselines } from './Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
-import AsyncLock from 'async-lock';
+import { FileMetadata } from './files/FileMetadata.js';
+import { FileStorage } from './files/FileStorage.js';
 
 export class ServerLibrary {
 	private db;
 	private sender;
 	private profiles;
-	private id;
 	private replicas;
 	private operations;
 	private baselines;
 	private presences = new Presence();
 	private disableRebasing: boolean;
+	private files;
+	private fileStorage: FileStorage | undefined;
 
 	private log: (...args: any[]) => void;
 	constructor({
 		db,
 		sender,
 		profiles,
-		id,
 		replicaTruancyMinutes,
 		log = () => {},
 		disableRebasing,
+		fileMetadata,
+		fileStorage,
 	}: {
 		db: Database;
 		sender: MessageSender;
 		profiles: UserProfileLoader<any>;
-		id: string;
 		replicaTruancyMinutes: number;
 		log?: (...args: any[]) => void;
 		disableRebasing?: boolean;
+		fileMetadata: FileMetadata;
+		fileStorage?: FileStorage;
 	}) {
 		this.db = db;
 		this.log = log;
 		this.disableRebasing = !!disableRebasing;
 		this.sender = sender;
 		this.profiles = profiles;
-		this.id = id;
-		this.replicas = new ReplicaInfos(this.db, this.id, replicaTruancyMinutes);
-		this.operations = new OperationHistory(this.db, this.id);
-		this.baselines = new Baselines(this.db, this.id);
+		this.replicas = new ReplicaInfos(this.db, replicaTruancyMinutes);
+		this.operations = new OperationHistory(this.db);
+		this.baselines = new Baselines(this.db);
+		this.files = fileMetadata;
+		this.fileStorage = fileStorage;
 		this.presences.on('lost', this.onPresenceLost);
 	}
 
@@ -71,7 +78,7 @@ export class ServerLibrary {
 	 * must match the user making the request.
 	 */
 	private validateReplicaAccess = (replicaId: string, info: TokenInfo) => {
-		const replica = this.replicas.get(replicaId);
+		const replica = this.replicas.get(info.libraryId, replicaId);
 		if (replica && replica.clientId !== info.userId) {
 			throw new Error(
 				`Replica ${replicaId} does not belong to client ${info.userId}`,
@@ -104,7 +111,7 @@ export class ServerLibrary {
 				this.handleAck(message, clientKey, info);
 				break;
 			case 'heartbeat':
-				this.handleHeartbeat(message, clientKey);
+				this.handleHeartbeat(message, clientKey, info);
 				break;
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
@@ -113,11 +120,11 @@ export class ServerLibrary {
 				this.log('Unknown message type', (message as any).type);
 				break;
 		}
-		this.replicas.updateLastSeen(message.replicaId);
+		this.replicas.updateLastSeen(info.libraryId, message.replicaId);
 	};
 
-	remove = (replicaId: string) => {
-		this.presences.removeReplica(replicaId);
+	remove = (libraryId: string, replicaId: string) => {
+		this.presences.removeReplica(libraryId, replicaId);
 	};
 
 	private handleOperation = (
@@ -128,7 +135,7 @@ export class ServerLibrary {
 		if (!message.operations.length) return;
 
 		if (!this.hasWriteAccess(info)) {
-			this.sender.send(this.id, clientKey, {
+			this.sender.send(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
 			return;
@@ -136,15 +143,20 @@ export class ServerLibrary {
 
 		const run = this.db.transaction(() => {
 			// insert patches into history
-			this.operations.insertAll(message.replicaId, message.operations);
+			this.operations.insertAll(
+				info.libraryId,
+				message.replicaId,
+				message.operations,
+			);
 		});
 
 		run();
 
-		this.enqueueRebase();
+		this.enqueueRebase(info.libraryId);
 
 		// rebroadcast to whole library except the sender
 		this.rebroadcastOperations(
+			info.libraryId,
 			clientKey,
 			message.replicaId,
 			message.operations,
@@ -152,7 +164,7 @@ export class ServerLibrary {
 		);
 
 		// tell sender we got and processed their operation
-		this.sender.send(this.id, clientKey, {
+		this.sender.send(info.libraryId, clientKey, {
 			type: 'server-ack',
 			timestamp: message.timestamp,
 		});
@@ -172,6 +184,7 @@ export class ServerLibrary {
 	};
 
 	private rebroadcastOperations = (
+		libraryId: string,
 		clientKey: string,
 		replicaId: string,
 		ops: Operation[],
@@ -180,13 +193,13 @@ export class ServerLibrary {
 		if (ops.length === 0 && baselines.length === 0) return;
 
 		this.sender.broadcast(
-			this.id,
+			libraryId,
 			{
 				type: 'op-re',
 				operations: ops,
 				baselines,
 				replicaId,
-				globalAckTimestamp: this.replicas.getGlobalAck(),
+				globalAckTimestamp: this.replicas.getGlobalAck(libraryId),
 			},
 			[clientKey],
 		);
@@ -200,7 +213,7 @@ export class ServerLibrary {
 		const replicaId = message.replicaId;
 
 		if (!this.hasWriteAccess(info)) {
-			this.sender.send(this.id, clientKey, {
+			this.sender.send(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
 			return;
@@ -208,18 +221,18 @@ export class ServerLibrary {
 
 		if (message.resyncAll) {
 			// forget our local understanding of the replica and reset it
-			this.replicas.delete(replicaId);
+			this.replicas.delete(info.libraryId, replicaId);
 		}
 
 		const { status, replicaInfo: clientReplicaInfo } =
-			this.replicas.getOrCreate(replicaId, info);
+			this.replicas.getOrCreate(info.libraryId, replicaId, info);
 
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
 
 		// lookup operations after the last ack the client gave us
-		const ops = this.operations.getAfter(changesSince);
-		const baselines = this.baselines.getAllAfter(changesSince);
+		const ops = this.operations.getAfter(info.libraryId, changesSince);
+		const baselines = this.baselines.getAllAfter(info.libraryId, changesSince);
 
 		// new, unseen replicas should reset their existing storage
 		// to that of the server when joining a library.
@@ -245,7 +258,7 @@ export class ServerLibrary {
 				'Detected local data is incomplete, requesting full history from replica',
 				replicaId,
 			);
-			this.sender.send(this.id, clientKey, {
+			this.sender.send(info.libraryId, clientKey, {
 				type: 'need-since',
 				since: null,
 			});
@@ -269,7 +282,7 @@ export class ServerLibrary {
 		// we are not overwriting the replica's data
 		if (!overwriteLocalData) {
 			// store all incoming operations and baselines
-			this.baselines.insertAll(message.baselines);
+			this.baselines.insertAll(info.libraryId, message.baselines);
 
 			this.log(
 				'Storing',
@@ -278,8 +291,9 @@ export class ServerLibrary {
 				message.operations.length,
 				'operations',
 			);
-			this.operations.insertAll(replicaId, message.operations);
+			this.operations.insertAll(info.libraryId, replicaId, message.operations);
 			this.rebroadcastOperations(
+				info.libraryId,
 				clientKey,
 				message.replicaId,
 				message.operations,
@@ -293,7 +307,7 @@ export class ServerLibrary {
 
 		// respond to client
 
-		this.sender.send(this.id, clientKey, {
+		this.sender.send(info.libraryId, clientKey, {
 			type: 'sync-resp',
 			operations: ops.map(this.removeExtraOperationData),
 			baselines: baselines.map((baseline) => ({
@@ -301,8 +315,8 @@ export class ServerLibrary {
 				snapshot: baseline.snapshot,
 				timestamp: baseline.timestamp,
 			})),
-			globalAckTimestamp: this.replicas.getGlobalAck(),
-			peerPresence: this.presences.all(),
+			globalAckTimestamp: this.replicas.getGlobalAck(info.libraryId),
+			peerPresence: this.presences.all(info.libraryId),
 			// only request the client to overwrite local data if a reset is requested
 			// and there is data to overwrite it. otherwise the client may still
 			// send its own history to us.
@@ -316,11 +330,11 @@ export class ServerLibrary {
 		timestamp: string,
 		info: TokenInfo,
 	) => {
-		const priorGlobalAck = this.replicas.getGlobalAck();
-		this.replicas.updateAcknowledged(replicaId, timestamp);
-		const newGlobalAck = this.replicas.getGlobalAck();
+		const priorGlobalAck = this.replicas.getGlobalAck(info.libraryId);
+		this.replicas.updateAcknowledged(info.libraryId, replicaId, timestamp);
+		const newGlobalAck = this.replicas.getGlobalAck(info.libraryId);
 		if (newGlobalAck && priorGlobalAck !== newGlobalAck) {
-			this.sender.broadcast(this.id, {
+			this.sender.broadcast(info.libraryId, {
 				type: 'global-ack',
 				timestamp: newGlobalAck,
 			});
@@ -336,15 +350,15 @@ export class ServerLibrary {
 	};
 
 	private pendingRebaseTimeout: NodeJS.Timeout | null = null;
-	private enqueueRebase = () => {
+	private enqueueRebase = (libraryId: string) => {
 		if (this.disableRebasing) return;
 
 		if (!this.pendingRebaseTimeout) {
-			setTimeout(this.rebase, 0);
+			setTimeout(() => this.rebase(libraryId), 0);
 		}
 	};
 
-	private rebase = () => {
+	private rebase = (libraryId: string) => {
 		if (this.disableRebasing) return;
 
 		this.log('Performing rebase check');
@@ -365,10 +379,10 @@ export class ServerLibrary {
 		// for global ack, to determine consensus, also allow
 		// for all actively connected replicas to ack regardless of their
 		// type.
-		const activeReplicaIds = Object.values(this.presences.all()).map(
+		const activeReplicaIds = Object.values(this.presences.all(libraryId)).map(
 			(p) => p.replicaId,
 		);
-		const globalAck = this.replicas.getGlobalAck(activeReplicaIds);
+		const globalAck = this.replicas.getGlobalAck(libraryId, activeReplicaIds);
 
 		if (!globalAck) {
 			this.log('No global ack, skipping rebase');
@@ -376,7 +390,7 @@ export class ServerLibrary {
 		}
 
 		// these are in forward chronological order
-		const ops = this.operations.getBefore(globalAck);
+		const ops = this.operations.getBefore(libraryId, globalAck);
 
 		const opsToApply: Record<string, OperationHistoryItem[]> = {};
 		// if we encounter a sequential operation in history which does
@@ -394,30 +408,33 @@ export class ServerLibrary {
 			}
 		}
 
+		const deletedRefs = new Array<Ref>();
 		for (const [documentId, ops] of Object.entries(opsToApply)) {
 			this.log('Rebasing', documentId);
-			this.baselines.applyOperations(documentId, ops);
-			this.operations.dropAll(ops);
+			this.baselines.applyOperations(libraryId, documentId, ops, deletedRefs),
+				this.operations.dropAll(libraryId, ops);
 		}
 
-		// now that we know exactly which operations can be squashed,
-		// we can summarize that for the clients so they don't have to
-		// do this work!
-		const rebases = Object.entries(opsToApply).map(([oid, ops]) => ({
-			oid,
-			upTo: ops[ops.length - 1].timestamp,
-		}));
-		if (rebases.length) {
-			// hint to clients they can rebase too
-			this.sender.broadcast(this.id, {
-				type: 'global-ack',
-				timestamp: globalAck,
-			});
+		// hint to clients they can rebase too
+		this.sender.broadcast(libraryId, {
+			type: 'global-ack',
+			timestamp: globalAck,
+		});
+
+		// cleanup deleted files
+		for (const ref of deletedRefs) {
+			if (isFileRef(ref)) {
+				this.files.markPendingDelete(libraryId, ref.id);
+			}
 		}
 	};
 
-	private handleHeartbeat = (_: HeartbeatMessage, clientKey: string) => {
-		this.sender.send(this.id, clientKey, {
+	private handleHeartbeat = (
+		_: HeartbeatMessage,
+		clientKey: string,
+		info: TokenInfo,
+	) => {
+		this.sender.send(info.libraryId, clientKey, {
 			type: 'heartbeat-response',
 		});
 	};
@@ -427,14 +444,14 @@ export class ServerLibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		this.presences.set(info.userId, {
+		this.presences.set(info.libraryId, info.userId, {
 			presence: message.presence,
 			replicaId: message.replicaId,
 			profile: await this.profiles.get(info.userId),
 			id: info.userId,
 		});
 		this.sender.broadcast(
-			this.id,
+			info.libraryId,
 			{
 				type: 'presence-changed',
 				replicaId: message.replicaId,
@@ -450,47 +467,105 @@ export class ServerLibrary {
 		);
 	};
 
-	private onPresenceLost = (replicaId: string, userId: string) => {
+	private onPresenceLost = async (
+		libraryId: string,
+		replicaId: string,
+		userId: string,
+	) => {
 		this.log('User disconnected from all replicas:', userId);
-		this.sender.broadcast(this.id, {
+		this.sender.broadcast(libraryId, {
 			type: 'presence-offline',
 			replicaId,
 			userId,
 		});
+		if (Object.keys(this.presences.all(libraryId)).length === 0) {
+			this.log(`All users have disconnected from ${libraryId}`);
+			// could happen - if the server is shutting down manually
+			if (!this.db.open) {
+				this.log('debug', 'Database not open, skipping cleanup');
+				return;
+			}
+			const pendingDelete = this.files.getPendingDeletes(libraryId);
+			if (pendingDelete.length > 0) {
+				if (!this.fileStorage) {
+					throw new Error('File storage not configured, cannot delete files');
+				}
+				this.log(
+					'Deleting files:',
+					pendingDelete.map((f) => f.fileId).join(', '),
+				);
+				await Promise.all(
+					pendingDelete.map(async (fileInfo) => {
+						try {
+							await this.fileStorage?.delete({
+								libraryId: fileInfo.libraryId,
+								fileName: fileInfo.name,
+								id: fileInfo.fileId,
+								type: fileInfo.type,
+							});
+							this.files.delete(libraryId, fileInfo.fileId);
+						} catch (e) {
+							this.log(
+								'Failed to delete file',
+								fileInfo.fileId,
+								' the file will remain in a pending delete state',
+								e,
+							);
+						}
+					}),
+				);
+			}
+		}
 	};
 
-	destroy = () => {
-		this.presences.clear();
-		this.replicas.deleteAll();
-		this.operations.deleteAll();
-		this.baselines.deleteAll();
+	destroy = async (libraryId: string) => {
+		this.presences.clear(libraryId);
+		this.replicas.deleteAll(libraryId);
+		this.operations.deleteAll(libraryId);
+		this.baselines.deleteAll(libraryId);
+		const allFiles = this.files.getAll(libraryId);
+		if (allFiles.length > 0) {
+			this.log(
+				`Deleting ${allFiles.length} files for library ${libraryId}`,
+				allFiles.map((f) => f.fileId).join(', '),
+			);
+			for (const fileInfo of allFiles) {
+				await this.fileStorage?.delete({
+					libraryId,
+					fileName: fileInfo.name,
+					id: fileInfo.fileId,
+					type: fileInfo.type,
+				});
+			}
+			this.files.deleteAll(libraryId);
+		}
 	};
 
-	getPresence = () => {
-		return this.presences.all();
+	getPresence = (libraryId: string) => {
+		return this.presences.all(libraryId);
 	};
 
-	evictUser = (userId: string) => {
-		this.replicas.deleteAllForUser(userId);
+	evictUser = (libraryId: string, userId: string) => {
+		this.replicas.deleteAllForUser(libraryId, userId);
 	};
 
-	getDocumentSnapshot = (documentId: string) => {
-		return this.hydrateObject(documentId);
+	getDocumentSnapshot = (libraryId: string, oid: string) => {
+		return this.hydrateObject(libraryId, oid);
 	};
 
-	private getObjectSnapshot = (oid: string) => {
-		const baseline = this.baselines.get(oid);
-		const ops = this.operations.getAllFor(oid);
+	private getObjectSnapshot = (libraryId: string, oid: string) => {
+		const baseline = this.baselines.get(libraryId, oid);
+		const ops = this.operations.getAllFor(libraryId, oid);
 		const snapshot = applyOperations(baseline?.snapshot ?? undefined, ops);
 		return snapshot;
 	};
 
-	private hydrateObject = (oid: string): any => {
-		const snapshot = this.getObjectSnapshot(oid);
+	private hydrateObject = (libraryId: string, oid: string): any => {
+		const snapshot = this.getObjectSnapshot(libraryId, oid);
 		if (Array.isArray(snapshot)) {
 			return snapshot.map((item, index) => {
 				if (isObjectRef(item)) {
-					return this.hydrateObject(item.id);
+					return this.hydrateObject(libraryId, item.id);
 				} else {
 					return item;
 				}
@@ -499,68 +574,12 @@ export class ServerLibrary {
 			const hydrated = { ...snapshot };
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
-					hydrated[key] = this.hydrateObject(value.id);
+					hydrated[key] = this.hydrateObject(libraryId, value.id);
 				}
 			}
 			return hydrated;
 		} else {
 			return snapshot;
 		}
-	};
-}
-
-export class ServerLibraryManager {
-	private db;
-	private sender;
-	private profileLoader;
-	private replicaTruancyMinutes;
-	private cache = new Map<string, ServerLibrary>();
-	private log: (...args: any[]) => void;
-	private disableRebasing: boolean;
-
-	constructor({
-		db,
-		sender,
-		profileLoader,
-		replicaTruancyMinutes,
-		log,
-		disableRebasing = false,
-	}: {
-		db: Database;
-		sender: MessageSender;
-		profileLoader: UserProfileLoader<any>;
-		replicaTruancyMinutes: number;
-		log: (...args: any[]) => void;
-		disableRebasing?: boolean;
-	}) {
-		this.db = db;
-		this.log = log;
-		this.sender = sender;
-		this.profileLoader = profileLoader;
-		this.replicaTruancyMinutes = replicaTruancyMinutes;
-		this.disableRebasing = disableRebasing;
-	}
-
-	open = (id: string) => {
-		if (!this.cache.has(id)) {
-			this.cache.set(
-				id,
-				new ServerLibrary({
-					db: this.db,
-					sender: this.sender,
-					profiles: this.profileLoader,
-					id,
-					replicaTruancyMinutes: this.replicaTruancyMinutes,
-					log: this.log,
-					disableRebasing: this.disableRebasing,
-				}),
-			);
-		}
-
-		return this.cache.get(id)!;
-	};
-
-	close = (id: string) => {
-		this.cache.delete(id);
 	};
 }

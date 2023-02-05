@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"composite": true,
 		"outDir": "./dist/esm",
-		"rootDir": "./src"
+		"rootDir": "./src",
+		"lib": ["esnext"]
 	},
 	"include": [
 		"src/**/*.ts",

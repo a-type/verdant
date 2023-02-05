@@ -1,3 +1,4 @@
+import { LEGACY_OID_KEY, OID_KEY } from '../oids.js';
 import type { StorageFieldSchema, StorageCollectionSchema } from './types.js';
 
 export function addFieldDefaults(
@@ -37,6 +38,8 @@ export function traverseCollectionFieldsAndApplyDefaults(
 		}
 	} else if (field.type === 'map') {
 		for (const [key, item] of Object.entries(value)) {
+			// santiy check to weed out any id field
+			if (key === OID_KEY || key === LEGACY_OID_KEY) continue;
 			traverseCollectionFieldsAndApplyDefaults(item, field.values);
 		}
 	}
