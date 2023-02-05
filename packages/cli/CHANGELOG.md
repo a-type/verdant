@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.11.0
+
+### Minor Changes
+
+- 6aae4d6: Support for file fields, file uploads and storage
+
 ## 1.10.2
 
 ### Patch Changes
