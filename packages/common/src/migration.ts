@@ -340,7 +340,9 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 		...fields,
 		...Object.keys(collection.synthetics || {}).map((key) => ({
 			name: key,
-			multiEntry: collection.synthetics[key].type === 'array',
+			multiEntry: ['array', 'string[]', 'number[]', 'boolean[]'].includes(
+				collection.synthetics[key].type,
+			),
 			synthetic: true,
 			compound: false,
 		})),
