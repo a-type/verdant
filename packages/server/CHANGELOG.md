@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.6.2
+
+### Patch Changes
+
+- 5a5c2d5: Support async file url source
+
 ## 1.6.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.11.1
+
+### Patch Changes
+
+- 8f61139: Fix filter typings
+
 ## 1.11.0
 
 ### Minor Changes
