@@ -334,7 +334,7 @@ export class Server extends EventEmitter implements MessageSender {
 					return;
 				}
 
-				const url = fs.getUrl({
+				const url = await fs.getUrl({
 					fileName: fileInfo.name,
 					id: fileInfo.fileId,
 					libraryId: info.libraryId,

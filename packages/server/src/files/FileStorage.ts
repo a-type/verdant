@@ -19,7 +19,7 @@ export interface FileInfo {
  */
 export interface FileStorage {
 	put(fileStream: Readable, data: FileInfo): Promise<void>;
-	getUrl(data: FileInfo): string;
+	getUrl(data: FileInfo): string | Promise<string>;
 	delete(data: FileInfo): Promise<void>;
 }
 
