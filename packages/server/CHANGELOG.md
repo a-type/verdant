@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.6.1
+
+### Patch Changes
+
+- 378fcd9: Export file stuff
+
 ## 1.6.0
 
 ### Minor Changes
