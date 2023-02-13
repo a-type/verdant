@@ -40,6 +40,14 @@ export function getFieldSnapshotTyping(field, { flattenArrays = false } = {}) {
 		baseType = 'any';
 	} else if (type === 'file') {
 		baseType = 'string';
+
+		// these are index types and flatten when used
+	} else if (type === 'string[]') {
+		baseType = 'string';
+	} else if (type === 'number[]') {
+		baseType = 'number';
+	} else if (type === 'boolean[]') {
+		baseType = 'boolean';
 	} else {
 		throw new Error(`Unknown field type: ${type}`);
 	}
