@@ -35,7 +35,6 @@ it('can load initial data before the client opens', async () => {
 		library: 'test',
 		user: 'a',
 		migrations,
-		logId: 'initialData',
 	});
 
 	expect(migrationsInvokedCount).toBe(1);

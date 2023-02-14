@@ -292,8 +292,12 @@ export class Server extends EventEmitter implements MessageSender {
 							type: fileInfo.mimeType,
 						};
 						// write metadata to storage
-						this.storage.putFileInfo(info.libraryId, lofiFileInfo);
-						fs.put(stream, lofiFileInfo);
+						try {
+							this.storage.putFileInfo(info.libraryId, lofiFileInfo);
+							fs.put(stream, lofiFileInfo);
+						} catch (e) {
+							reject(e);
+						}
 					});
 					bb.on('field', (fieldName, value) => {
 						if (fieldName === 'file') {

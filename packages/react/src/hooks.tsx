@@ -6,6 +6,7 @@ import {
 	UserInfo,
 	Entity,
 	ClientWithCollections,
+	EntityFile,
 } from '@lo-fi/web';
 import {
 	createContext,
@@ -56,21 +57,25 @@ export function createHooks<Presence = any, Profile = any>(
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]) as any;
 	}
 
-	function useWatch(liveObject: Entity | null, prop?: any) {
+	function useWatch(liveObject: Entity | EntityFile | null, prop?: any) {
 		return useSyncExternalStore(
 			(handler) => {
 				if (liveObject) {
-					return liveObject.subscribe('change', handler);
+					return (liveObject as any).subscribe('change', handler);
 				}
 				return () => {};
 			},
 			() => {
 				if (liveObject) {
-					if (prop) {
-						return liveObject.get(prop);
-					}
+					if (liveObject instanceof EntityFile) {
+						return liveObject.url;
+					} else {
+						if (prop) {
+							return liveObject.get(prop);
+						}
 
-					return liveObject.getAll();
+						return liveObject.getAll();
+					}
 				}
 
 				return undefined;

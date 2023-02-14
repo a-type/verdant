@@ -64,7 +64,7 @@ export class FileManager {
 
 	add = async (fileInput: Omit<FileData, 'remote'>) => {
 		const file = fileInput as unknown as FileData;
-		file.remote = true;
+		file.remote = false;
 		// immediately cache the file
 		if (!this.files.has(file.id)) {
 			const entityFile = new EntityFile(file.id);

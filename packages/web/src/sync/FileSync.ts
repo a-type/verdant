@@ -45,30 +45,38 @@ export class FileSync {
 		const formData = new window.FormData();
 		formData.append('file', file);
 
-		const response = await fetch(fileEndpoint + `/${data.id}`, {
-			method: 'POST',
-			body: formData,
-			credentials: 'include',
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
+		try {
+			const response = await fetch(fileEndpoint + `/${data.id}`, {
+				method: 'POST',
+				body: formData,
+				credentials: 'include',
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
 
-		if (response.ok) {
-			return {
-				success: true,
-				retry: false,
-			};
-		} else {
-			this.log(
-				'error',
-				'File upload failed',
-				response.status,
-				await response.text(),
-			);
+			if (response.ok) {
+				return {
+					success: true,
+					retry: false,
+				};
+			} else {
+				this.log(
+					'error',
+					'File upload failed',
+					response.status,
+					await response.text(),
+				);
+				return {
+					success: false,
+					retry: response.status >= 500,
+				};
+			}
+		} catch (e) {
+			this.log('error', 'File upload failed', e);
 			return {
 				success: false,
-				retry: response.status >= 500,
+				retry: true,
 			};
 		}
 	};

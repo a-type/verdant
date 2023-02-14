@@ -19,6 +19,7 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			EntityShape,
 			AnyEntity,
 			EntityDestructured,
+			EntityFile,
 		} from '@lo-fi/web';
 
 		type SkippableFilterConfig<F> = {
@@ -56,6 +57,9 @@ export interface GeneratedHooks<Presence, Profile> {
     entity: T,
     prop: P
   ): EntityDestructured<T>[P];
+	useWatch<T extends EntityFile | null>(
+		file: T
+	): string | null;
 	useCanUndo(): boolean;
 	useCanRedo(): boolean;
 	/**
