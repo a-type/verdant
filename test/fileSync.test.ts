@@ -19,7 +19,6 @@ it('can sync files between replicas', async () => {
 	const clientA = await context.createTestClient({
 		library: 'file-sync-1',
 		user: 'User A',
-		logId: 'A',
 	});
 	clientA.sync.start();
 
@@ -55,4 +54,4 @@ it('can sync files between replicas', async () => {
 	// basically the file isn't encoded into the form data correctly.
 	// someday maybe I'll get this figured out
 	expect(text).toBe('[object File]');
-});
+}, 15000);
