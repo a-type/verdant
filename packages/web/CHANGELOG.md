@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 1.11.1
+
+### Patch Changes
+
+- bc7b6ad: Several fixes for file behaviors
+- bc0d96f: Allow clearing undo history
+
 ## 1.11.0
 
 ### Minor Changes

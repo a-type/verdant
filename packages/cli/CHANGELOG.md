@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.11.2
+
+### Patch Changes
+
+- bc7b6ad: Several fixes for file behaviors
+
 ## 1.11.1
 
 ### Patch Changes

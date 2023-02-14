@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.6.3
+
+### Patch Changes
+
+- bc7b6ad: Several fixes for file behaviors
+
 ## 1.6.2
 
 ### Patch Changes
