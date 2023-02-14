@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 12.0.1
+
+### Patch Changes
+
+- bc7b6ad: Several fixes for file behaviors
+- Updated dependencies [bc7b6ad]
+- Updated dependencies [bc0d96f]
+  - @lo-fi/web@1.11.1
+
 ## 12.0.0
 
 ### Patch Changes
