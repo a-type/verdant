@@ -43,4 +43,10 @@ export class UndoHistory extends EventSubscriber<{ change: () => void }> {
 		this._undone.push(redoPoint);
 		this.emit('change');
 	};
+
+	clear = () => {
+		this._undoable = [];
+		this._undone = [];
+		this.emit('change');
+	};
 }
