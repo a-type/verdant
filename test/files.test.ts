@@ -40,7 +40,6 @@ it('can store and cleanup local files', async () => {
 		server,
 		library: 'files-1',
 		user: 'User A',
-		logId: 'A',
 		indexedDb,
 	});
 
@@ -73,7 +72,6 @@ it('can store and cleanup local files', async () => {
 		library: 'files-1',
 		user: 'User A',
 		indexedDb,
-		logId: 'A',
 		files: {
 			// immediately delete files
 			canCleanupDeletedFile: () => true,
