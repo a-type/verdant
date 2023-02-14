@@ -19,12 +19,14 @@ it('can sync files between replicas', async () => {
 	const clientA = await context.createTestClient({
 		library: 'file-sync-1',
 		user: 'User A',
+		logId: 'A',
 	});
 	clientA.sync.start();
 
 	const clientB = await context.createTestClient({
 		library: 'file-sync-1',
 		user: 'User B',
+		logId: 'B',
 	});
 	clientB.sync.start();
 
