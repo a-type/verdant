@@ -231,7 +231,11 @@ export class EntityStore extends EventSubscriber<{
 	 * Creates a new document and returns an Entity for it. The created
 	 * document is submitted to storage and sync.
 	 */
-	create = async (initial: any, oid: ObjectIdentifier) => {
+	create = async (
+		initial: any,
+		oid: ObjectIdentifier,
+		options: { undoable?: boolean },
+	) => {
 		// first grab any file and replace them with refs
 		const processed = processValueFiles(initial, this.files.add);
 
@@ -239,8 +243,11 @@ export class EntityStore extends EventSubscriber<{
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
 		const familyCache = await this.openFamilyCache(oid);
 		familyCache.insertUnconfirmedOperations(operations);
-		// don't enqueue these, submit as distinct operation
-		await this.submitOperations(operations);
+		// don't enqueue these, submit as distinct operation.
+		// we do this so it can be immediately queryable from storage...
+		// only holding it in memory would introduce lag before it shows up
+		// in other queries.
+		await this.submitOperations(operations, options);
 		return familyCache.getEntity(oid, this.getDocumentSchema(oid));
 	};
 
@@ -512,7 +519,7 @@ export class EntityStore extends EventSubscriber<{
 		};
 	};
 
-	delete = async (oid: ObjectIdentifier) => {
+	delete = async (oid: ObjectIdentifier, options?: { undoable?: boolean }) => {
 		assert(
 			oid === getOidRoot(oid),
 			'Only root documents may be deleted via client methods',
@@ -521,16 +528,19 @@ export class EntityStore extends EventSubscriber<{
 		const allOids = await this.meta.getAllDocumentRelatedOids(oid);
 		const patches = this.meta.patchCreator.createDeleteAll(allOids);
 		// don't enqueue these, submit as distinct operation
-		await this.submitOperations(patches);
+		await this.submitOperations(patches, options);
 	};
 
-	deleteAll = async (oids: ObjectIdentifier[]) => {
+	deleteAll = async (
+		oids: ObjectIdentifier[],
+		options?: { undoable?: boolean },
+	) => {
 		const allOids = await Promise.all(
 			oids.map((oid) => this.meta.getAllDocumentRelatedOids(oid)),
 		);
 		const patches = this.meta.patchCreator.createDeleteAll(allOids.flat());
 		// don't enqueue these, submit as distinct operation
-		await this.submitOperations(patches);
+		await this.submitOperations(patches, options);
 	};
 
 	reset = async () => {

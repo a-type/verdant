@@ -20,10 +20,10 @@ export function getClientTypings({ collections, schemaPath }) {
     /**
      * @deprecated use put
      */
-    create: (init: Init) => Promise<Document>;
-    put: (init: Init) => Promise<Document>;
-    delete: (id: string) => Promise<void>;
-    deleteAll: (ids: string[]) => Promise<void>;
+    create: (init: Init, options?: { undoable?: boolean }) => Promise<Document>;
+    put: (init: Init, options?: { undoable?: boolean }) => Promise<Document>;
+    delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
+    deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
     get: (id: string) => Query<Document>;
     findOne: (filter: Filter) => Query<Document>;
     findAll: (filter?: Filter) => Query<Document[]>;

@@ -50,26 +50,39 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return addFieldDefaults(collection, init);
 	};
 
-	create = async (collection: string, init: any) => {
+	create = async (
+		collection: string,
+		init: any,
+		options: { undoable?: boolean } = {},
+	) => {
 		const defaulted = this.addDefaults(collection, init);
 		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
-		return this.entities.create(defaulted, oid) as unknown as ObjectEntity<
-			any,
-			any
-		>;
+		return this.entities.create(
+			defaulted,
+			oid,
+			options,
+		) as unknown as ObjectEntity<any, any>;
 	};
 
-	delete = async (collection: string, primaryKey: string) => {
+	delete = async (
+		collection: string,
+		primaryKey: string,
+		options: { undoable?: boolean } = {},
+	) => {
 		const oid = createOid(collection, primaryKey, []);
-		return this.entities.delete(oid);
+		return this.entities.delete(oid, options);
 	};
 
-	deleteAll = async (ids: [string, string][]) => {
+	deleteAll = async (
+		ids: [string, string][],
+		options: { undoable?: boolean } = {},
+	) => {
 		return this.entities.deleteAll(
 			ids.map(([collection, primaryKey]) =>
 				createOid(collection, primaryKey, []),
 			),
+			options,
 		);
 	};
 }
