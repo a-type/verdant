@@ -422,16 +422,18 @@ function getMigrationEngine({
 			await Promise.all(
 				docs.map(async (doc) => {
 					const original = cloneDeep(doc);
+					// remove any indexes before computing the diff
+					const collectionSpec = migration.oldSchema.collections[collection];
+					const indexKeys = [
+						...Object.keys(collectionSpec.synthetics || {}),
+						...Object.keys(collectionSpec.compounds || {}),
+					];
+					indexKeys.forEach((key) => {
+						delete doc[key];
+					});
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
 					if (newValue) {
-						// remove any removed indexes
-						for (const removedIndex of migration.removedIndexes[collection] ||
-							[]) {
-							if (removedIndex.compound || removedIndex.synthetic) {
-								delete (newValue as any)[removedIndex.name];
-							}
-						}
 						// the migration has altered the shape of our document. we need
 						// to create the operation from the diff and write it to meta as
 						// a migration patch

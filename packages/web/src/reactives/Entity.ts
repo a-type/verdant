@@ -257,7 +257,7 @@ export class Entity<
 		const fieldSchema = this.getChildFieldSchema(key);
 		// this is a failure case, but trying to be graceful about it...
 		// @ts-ignore
-		if (!fieldSchema) return null;
+		// if (!fieldSchema) return null;
 		return this.cache.getEntity(oid, fieldSchema, this);
 	};
 

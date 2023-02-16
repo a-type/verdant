@@ -404,7 +404,84 @@ it(
 		console.debug('📈 Version 4 client created');
 
 		// check our test items
-		const defaultList = await client.lists.get('uncategorized').resolved;
+		let defaultList = await client.lists.get('uncategorized').resolved;
+		expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "id": "uncategorized",
+			  "items": [],
+			  "name": "Uncategorized",
+			}
+		`);
+		list1 = await client.lists.get('list1').resolved;
+		expect(list1.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "id": "list1",
+			  "items": [
+			    {
+			      "contents": "empty",
+			      "id": "default",
+			      "listId": "list1",
+			      "tags": [],
+			    },
+			  ],
+			  "name": "list 1",
+			}
+		`);
+
+		await client.close();
+
+		const v5List = collection({
+			name: 'list',
+			primaryKey: 'id',
+			fields: {
+				id: { type: 'string', default: () => 'default' },
+				name: { type: 'string', default: 'empty' },
+				items: {
+					type: 'array',
+					items: {
+						type: 'object',
+						properties: {
+							...v3Item.fields,
+						},
+					},
+				},
+			},
+			synthetics: {
+				hasItems: {
+					type: 'boolean',
+					compute: (list) => list.items.length > 0,
+				},
+				itemTags: {
+					type: 'string[]',
+					compute: (list) =>
+						list.items.flatMap((item) => item.tags.map((tag) => tag.name)),
+				},
+			},
+		});
+
+		const v5Schema = schema({
+			version: 5,
+			collections: {
+				lists: v5List,
+			},
+		});
+
+		migrations.push(
+			migrate(
+				v4Schema,
+				v5Schema,
+				async ({ migrate, queries, mutations, withDefaults }) => {
+					await migrate('lists', (old) => withDefaults('lists', old));
+				},
+			),
+		);
+
+		client = await createTestClient({
+			schema: v5Schema,
+			...clientInit,
+		});
+
+		defaultList = await client.lists.get('uncategorized').resolved;
 		expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
 			{
 			  "id": "uncategorized",
