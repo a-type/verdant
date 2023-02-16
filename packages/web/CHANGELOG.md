@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.1
+
+### Patch Changes
+
+- 2b16623: Attempted bugfix for gnocchi.club
+
 ## 1.12.0
 
 ### Minor Changes
