@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.10.0
+
+### Minor Changes
+
+- 0c5dc4c: Big update to increase consistency of sync and patch up some faulty assumptions in the protocol. NOTE: clients may re-sync the whole library upon connection after upgrade, but this should only happen once.
+
 ## 1.9.0
 
 ### Minor Changes
