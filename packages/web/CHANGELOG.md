@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 1.12.0
+
+### Minor Changes
+
+- 0c5dc4c: Big update to increase consistency of sync and patch up some faulty assumptions in the protocol. NOTE: clients may re-sync the whole library upon connection after upgrade, but this should only happen once.
+
+### Patch Changes
+
+- Updated dependencies [0c5dc4c]
+  - @lo-fi/common@1.10.0
+
 ## 1.11.1
 
 ### Patch Changes
