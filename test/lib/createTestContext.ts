@@ -2,7 +2,10 @@ import { afterAll, beforeAll } from 'vitest';
 import { createTestClient } from './testClient.js';
 import { startTestServer } from './testServer.js';
 
-export function createTestContext() {
+export function createTestContext({
+	serverLog,
+	keepDb,
+}: { serverLog?: boolean; keepDb?: boolean } = {}) {
 	const context = {
 		clients: [],
 	} as unknown as {
@@ -11,7 +14,7 @@ export function createTestContext() {
 		createTestClient: typeof createTestClient;
 	};
 	beforeAll(async () => {
-		context.server = await startTestServer({ log: false });
+		context.server = await startTestServer({ log: serverLog, keepDb });
 		context.createTestClient = async (
 			config: Parameters<typeof createTestClient>[0],
 		) => {

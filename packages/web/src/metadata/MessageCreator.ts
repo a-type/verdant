@@ -6,6 +6,7 @@ import {
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
+	SyncAckMessage,
 	SyncMessage,
 } from '@lo-fi/common';
 
@@ -113,6 +114,16 @@ export class MessageCreator {
 			type: 'heartbeat',
 			timestamp: this.meta.now,
 			replicaId: localReplicaInfo.id,
+		};
+	};
+
+	createSyncAck = async (nonce: string): Promise<SyncAckMessage> => {
+		const localReplicaInfo = await this.meta.localReplica.get();
+		return {
+			type: 'sync-ack',
+			timestamp: this.meta.now,
+			replicaId: localReplicaInfo.id,
+			nonce,
 		};
 	};
 }

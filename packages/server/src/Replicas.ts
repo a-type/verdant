@@ -31,6 +31,7 @@ export class ReplicaInfos {
 			lastSeenWallClockTime: row.lastSeenWallClockTime,
 			ackedLogicalTime: row.ackedLogicalTime,
 			type: row.type,
+			ackedServerOrder: row.ackedServerOrder,
 		};
 	};
 
@@ -70,6 +71,7 @@ export class ReplicaInfos {
 					lastSeenWallClockTime: null,
 					libraryId: libraryId,
 					type: info.type,
+					ackedServerOrder: 0,
 				},
 			};
 		}
@@ -138,7 +140,7 @@ export class ReplicaInfos {
 		replicaId: string,
 		timestamp: string,
 	) => {
-		return this.db
+		this.db
 			.prepare(
 				`
 			UPDATE ReplicaInfo
@@ -147,6 +149,23 @@ export class ReplicaInfos {
 		`,
 			)
 			.run(timestamp, replicaId, libraryId);
+	};
+
+	updateServerOrder = (
+		libraryId: string,
+		replicaId: string,
+		serverOrder: number,
+	) => {
+		// only increment the server order, never set it to lower than before
+		this.db
+			.prepare(
+				`
+			UPDATE ReplicaInfo
+			SET ackedServerOrder = MAX(ackedServerOrder, ?)
+			WHERE id = ? AND libraryId = ?
+		`,
+			)
+			.run(serverOrder, replicaId, libraryId);
 	};
 
 	getGlobalAck = (libraryId: string, onlineReplicaIds?: string[]) => {

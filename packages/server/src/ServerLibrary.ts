@@ -15,17 +15,19 @@ import {
 	ObjectIdentifier,
 	Ref,
 	isFileRef,
+	SyncAckMessage,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
 import { MessageSender } from './MessageSender.js';
-import { OperationHistory, OperationHistoryItem } from './OperationHistory.js';
+import { OperationHistory } from './OperationHistory.js';
 import { Baselines } from './Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
+import { OperationSpec } from './types.js';
 
 export class ServerLibrary {
 	private db;
@@ -107,6 +109,9 @@ export class ServerLibrary {
 			case 'sync':
 				this.handleSync(message, clientKey, info);
 				break;
+			case 'sync-ack':
+				this.handleSyncAck(message, clientKey, info);
+				break;
 			case 'ack':
 				this.handleAck(message, clientKey, info);
 				break;
@@ -177,10 +182,8 @@ export class ServerLibrary {
 		);
 	};
 
-	private removeExtraOperationData = (
-		operation: OperationHistoryItem,
-	): Operation => {
-		return omit(operation, ['replicaId']);
+	private removeExtraOperationData = (operation: OperationSpec): Operation => {
+		return omit(operation, ['replicaId', 'serverOrder']);
 	};
 
 	private rebroadcastOperations = (
@@ -191,6 +194,15 @@ export class ServerLibrary {
 		baselines: DocumentBaseline[],
 	) => {
 		if (ops.length === 0 && baselines.length === 0) return;
+
+		this.log(
+			'info',
+			'Rebroadcasting',
+			ops.length,
+			'operations and',
+			baselines.length,
+			'baselines',
+		);
 
 		this.sender.broadcast(
 			libraryId,
@@ -212,10 +224,13 @@ export class ServerLibrary {
 	) => {
 		const replicaId = message.replicaId;
 
+		// TODO: is this right? shouldn't read-only replicas still be able to sync,
+		// just not send ops?
 		if (!this.hasWriteAccess(info)) {
 			this.sender.send(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
+			this.log('warning', 'sync from read-only replica', replicaId);
 			return;
 		}
 
@@ -229,15 +244,27 @@ export class ServerLibrary {
 
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
+		this.log(
+			`Sync from ${replicaId} (user: ${info.userId}) [ackedLogicalTime: ${changesSince}, ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}]`,
+		);
 
 		// lookup operations after the last ack the client gave us
-		const ops = this.operations.getAfter(info.libraryId, changesSince);
-		const baselines = this.baselines.getAllAfter(info.libraryId, changesSince);
+		const ops = this.operations.getFromServerOrder(
+			info.libraryId,
+			clientReplicaInfo.ackedServerOrder,
+		);
 
 		// new, unseen replicas should reset their existing storage
 		// to that of the server when joining a library.
 		// truant replicas should also reset their storage.
 		const replicaShouldReset = !!message.resyncAll || status !== 'existing';
+
+		// TODO: assumption: only new replicas need baselines
+		// const baselines = replicaShouldReset
+		// 	? []
+		// 	: this.baselines.getAllAfter(info.libraryId, changesSince);
+		const baselines = this.baselines.getAllAfter(info.libraryId, changesSince);
+
 		// We detect that a library is new by checking if it has any history.
 		// If there are no existing operations or baselines (and the requested
 		// history timerange was "everything", i.e. "from null"), then this is
@@ -305,8 +332,22 @@ export class ServerLibrary {
 			this.log('A truant replica has reconnected', replicaId);
 		}
 
+		// create the nonce by encoding the server order of the last operation
+		const ackThisNonce = ops.length
+			? Buffer.from(JSON.stringify(ops[ops.length - 1].serverOrder)).toString(
+					'base64',
+			  )
+			: undefined;
+
 		// respond to client
 
+		this.log(
+			'Sending sync response with',
+			ops.length,
+			'operations and',
+			baselines.length,
+			'baselines',
+		);
 		this.sender.send(info.libraryId, clientKey, {
 			type: 'sync-resp',
 			operations: ops.map(this.removeExtraOperationData),
@@ -322,7 +363,38 @@ export class ServerLibrary {
 			// send its own history to us.
 			overwriteLocalData,
 			ackedTimestamp: message.timestamp,
+			ackThisNonce,
 		});
+	};
+
+	private handleSyncAck = (
+		message: SyncAckMessage,
+		clientKey: string,
+		info: TokenInfo,
+	) => {
+		if (!message.nonce) {
+			return;
+		}
+
+		const decodedNonce = JSON.parse(
+			Buffer.from(message.nonce, 'base64').toString('utf8'),
+		);
+		this.log(
+			'Sync ack from',
+			message.replicaId,
+			'(user',
+			info.userId,
+			')',
+			'with order',
+			decodedNonce,
+		);
+		if (typeof decodedNonce !== 'number') {
+			this.log('error', 'Invalid nonce', message.nonce);
+			return;
+		}
+
+		const replicaId = message.replicaId;
+		this.replicas.updateServerOrder(info.libraryId, replicaId, decodedNonce);
 	};
 
 	private updateAcknowledged = (
@@ -392,7 +464,7 @@ export class ServerLibrary {
 		// these are in forward chronological order
 		const ops = this.operations.getBefore(libraryId, globalAck);
 
-		const opsToApply: Record<string, OperationHistoryItem[]> = {};
+		const opsToApply: Record<string, OperationSpec[]> = {};
 		// if we encounter a sequential operation in history which does
 		// not meet our conditions, we must ignore subsequent operations
 		// applied to that document.

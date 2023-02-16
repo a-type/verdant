@@ -1,14 +1,12 @@
 import { Operation } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
+import { OperationSpec } from './types.js';
 
 type StoredOperationHistoryItem = Omit<Operation, 'data'> & {
 	data: string;
 	libraryId: string;
 	replicaId: string;
-};
-
-export type OperationHistoryItem = Operation & {
-	replicaId: string;
+	serverOrder: number;
 };
 
 export class OperationHistory {
@@ -18,7 +16,7 @@ export class OperationHistory {
 		libraryId: _,
 		data,
 		...rest
-	}: StoredOperationHistoryItem): OperationHistoryItem => {
+	}: StoredOperationHistoryItem): OperationSpec => {
 		return {
 			...rest,
 			data: JSON.parse(data),
@@ -94,12 +92,34 @@ export class OperationHistory {
 			.map(this.hydratePatch);
 	};
 
+	/**
+	 * Returns all operations after a given server order. Useful
+	 * for retrieving operations that were created after a client
+	 * last synced.
+	 */
+	getFromServerOrder = (libraryId: string, serverOrder: number) => {
+		const result = this.db
+			.prepare(
+				`
+			SELECT * FROM OperationHistory
+			WHERE libraryId = ? AND serverOrder > ?
+		`,
+			)
+			.all(libraryId, serverOrder);
+
+		return (result || []).map(this.hydratePatch);
+	};
+
+	/**
+	 * Adds a new operation or replaces an existing one.
+	 * The server order will be set to the current max + 1
+	 */
 	insert = (libraryId: string, replicaId: string, item: Operation) => {
 		return this.db
 			.prepare(
 				`
-      INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId, serverOrder)
+      VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(serverOrder), 0) FROM OperationHistory WHERE libraryId = ?) + 1)
     `,
 			)
 			.run(
@@ -111,19 +131,30 @@ export class OperationHistory {
 			);
 	};
 
+	/**
+	 * Inserts all operations and updates the server
+	 * order for this library
+	 */
 	insertAll = async (
 		libraryId: string,
 		replicaId: string,
 		items: Operation[],
 	) => {
-		const insertStatement = this.db.prepare(
-			`
-			INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId)
-			VALUES (?, ?, ?, ?, ?)
-			`,
-		);
-
 		const tx = this.db.transaction(() => {
+			let orderResult = this.db
+				.prepare(
+					`
+					SELECT COALESCE(MAX(serverOrder), 0) AS serverOrder FROM OperationHistory WHERE libraryId = ?
+				`,
+				)
+				.get(libraryId);
+			let currentServerOrder = orderResult.serverOrder || 0;
+			const insertStatement = this.db.prepare(
+				`
+				INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId, serverOrder)
+				VALUES (?, ?, ?, ?, ?, ?)
+				`,
+			);
 			for (const item of items) {
 				insertStatement.run(
 					libraryId,
@@ -131,6 +162,7 @@ export class OperationHistory {
 					JSON.stringify(item.data),
 					item.timestamp,
 					replicaId,
+					++currentServerOrder,
 				);
 			}
 		});
@@ -138,7 +170,10 @@ export class OperationHistory {
 		tx();
 	};
 
-	dropAll = async (libraryId: string, items: OperationHistoryItem[]) => {
+	dropAll = async (
+		libraryId: string,
+		items: Pick<OperationSpec, 'replicaId' | 'oid' | 'timestamp'>[],
+	) => {
 		const deleteStatement = this.db.prepare(
 			`
 			DELETE FROM OperationHistory

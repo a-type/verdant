@@ -7,7 +7,7 @@ let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
 	: never;
 beforeAll(async () => {
-	server = await startTestServer({ log: true });
+	server = await startTestServer({ log: false });
 });
 
 afterAll(async () => {
@@ -27,7 +27,7 @@ describe('the server', () => {
 			server,
 			library,
 			user: 'User B',
-			logId: 'B',
+			// logId: 'B',
 		});
 
 		// seed data into library
@@ -78,7 +78,6 @@ describe('the server', () => {
 
 		// wait for B to get changes, which means they're on the server too
 		await waitForQueryResult(clientB.items.get(a_apples.get('id')), (doc) => {
-			console.log(doc?.getSnapshot());
 			return (
 				doc?.get('content') === 'Apples 2' &&
 				doc?.get('purchased') === true &&

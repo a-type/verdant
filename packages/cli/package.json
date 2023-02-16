@@ -21,8 +21,8 @@
 		"test/"
 	],
 	"scripts": {
-		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d",
-		"pretest:cjs": "node ./bin/generate.js -s test/schema.ts -o test/.generated-cjs -r -d -c -m test/migrations-cjs",
+		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d -f",
+		"pretest:cjs": "node ./bin/generate.js -s test/schema.ts -o test/.generated-cjs -r -d -f -c -m test/migrations-cjs",
 		"test": "pnpm run pretest && vitest",
 		"ci:test:unit": "pnpm run pretest && vitest run",
 		"link": "pnpm link --global"

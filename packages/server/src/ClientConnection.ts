@@ -1,6 +1,7 @@
 import { ServerMessage } from '@lo-fi/common';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WebSocket } from 'ws';
+import { TokenInfo } from './TokenVerifier.js';
 
 abstract class ClientConnection {
 	constructor(readonly key: string) {}
@@ -17,6 +18,7 @@ class RequestClientConnection extends ClientConnection {
 		key: string,
 		private readonly req: IncomingMessage,
 		private readonly res: ServerResponse,
+		readonly info: TokenInfo,
 	) {
 		super(key);
 	}
@@ -41,7 +43,7 @@ class RequestClientConnection extends ClientConnection {
 class WebSocketClientConnection extends ClientConnection {
 	readonly type = 'websocket';
 
-	constructor(key: string, readonly ws: WebSocket) {
+	constructor(key: string, readonly ws: WebSocket, readonly info: TokenInfo) {
 		super(key);
 	}
 
@@ -61,10 +63,15 @@ export class ClientConnectionManager {
 		return this.connections[libraryId]!;
 	};
 
-	addSocket = (libraryId: string, key: string, socket: WebSocket) => {
+	addSocket = (
+		libraryId: string,
+		key: string,
+		socket: WebSocket,
+		info: TokenInfo,
+	) => {
 		const lib = this.getLibraryConnections(libraryId);
 
-		const connection = new WebSocketClientConnection(key, socket);
+		const connection = new WebSocketClientConnection(key, socket, info);
 
 		lib.set(key, connection);
 
@@ -78,10 +85,16 @@ export class ClientConnectionManager {
 		key: string,
 		request: IncomingMessage,
 		response: ServerResponse,
+		info: TokenInfo,
 	) => {
 		const lib = this.getLibraryConnections(libraryId);
 
-		const connection = new RequestClientConnection(key, request, response);
+		const connection = new RequestClientConnection(
+			key,
+			request,
+			response,
+			info,
+		);
 
 		lib.set(key, connection);
 

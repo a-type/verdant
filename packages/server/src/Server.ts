@@ -197,6 +197,7 @@ export class Server extends EventEmitter implements MessageSender {
 					key,
 					req,
 					res,
+					info,
 				);
 
 				// FIXME: extremely naive compatibility with connect-like
@@ -401,7 +402,7 @@ export class Server extends EventEmitter implements MessageSender {
 	) => {
 		const key = generateId();
 
-		this.clientConnections.addSocket(info.libraryId, key, ws);
+		this.clientConnections.addSocket(info.libraryId, key, ws, info);
 
 		ws.on('message', async (message: any) => {
 			const data = JSON.parse(message.toString()) as ClientMessage;

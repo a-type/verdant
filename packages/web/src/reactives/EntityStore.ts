@@ -402,7 +402,18 @@ export class EntityStore extends EventSubscriber<{
 				this.currentBatchKey = DEFAULT_BATCH_KEY;
 				return externalApi;
 			},
-			flush: () => internalBatch.flush(),
+			flush: async () => {
+				// before running a batch, the default operations must be flushed
+				// this better preserves undo history behavior...
+				// if we left the default batch open while flushing a named batch,
+				// then the default batch would be flushed after the named batch,
+				// and the default batch could contain operations both prior and
+				// after the named batch. this would result in a confusing undo
+				// history where the first undo might reverse changes before and
+				// after a set of other changes.
+				await this.operationBatcher.flush(DEFAULT_BATCH_KEY);
+				return internalBatch.flush();
+			},
 			discard: () => {
 				this.operationBatcher.discard(batchName);
 			},
@@ -410,6 +421,9 @@ export class EntityStore extends EventSubscriber<{
 		return externalApi;
 	};
 
+	/**
+	 * @deprecated use `batch` instead
+	 */
 	flushPatches = async () => {
 		await this.operationBatcher.flush(this.currentBatchKey);
 	};
@@ -419,7 +433,22 @@ export class EntityStore extends EventSubscriber<{
 		batchKey: string,
 		meta: { undoable?: boolean },
 	) => {
+		if (!operations.length) return;
+
 		this.log('Flushing operations', operations.length, 'to storage / sync');
+		// rewrite timestamps of all operations to now - this preserves
+		// the linear history of operations which are sent to the server.
+		// even if multiple batches are spun up in parallel and flushed
+		// after delay, the final operations in each one should reflect
+		// when the batch flushed, not when the changes were made.
+		// This also corresponds to user-observed behavior, since unconfirmed
+		// operations are applied universally after confirmed operations locally,
+		// so even operations which were made before a remote operation but
+		// have not been confirmed yet will appear to come after the remote one
+		// despite the provisional timestamp being earlier (see DocumentFamilyCache#computeView)
+		for (const op of operations) {
+			op.timestamp = this.meta.now;
+		}
 		await this.submitOperations(operations, meta);
 	};
 

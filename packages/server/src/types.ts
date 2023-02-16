@@ -5,6 +5,11 @@ import {
 	ReplicaType,
 } from '@lo-fi/common';
 
+export interface OperationSpec extends Operation {
+	serverOrder: number;
+	replicaId: string;
+}
+
 export interface DocumentBaselineSpec
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {
 	snapshot: string;
@@ -18,6 +23,7 @@ export interface ReplicaInfoSpec extends ReplicaInfo {
 	clientId: string;
 	lastSeenWallClockTime: number | null;
 	type: ReplicaType;
+	ackedServerOrder: number;
 }
 
 // patch File

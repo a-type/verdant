@@ -10,15 +10,18 @@ const SECRET = 'notsecret';
 export async function startTestServer({
 	log = false,
 	disableRebasing = false,
+	keepDb = false,
 }: {
 	log?: boolean;
 	disableRebasing?: boolean;
+	keepDb?: boolean;
 } = {}) {
 	const port = Math.floor(Math.random() * 4000) + 4000;
 	const app = express();
 	const httpServer = createServer(app);
 
 	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
+	console.log(`Using database file ${dbFileName}`);
 
 	const server = new Server({
 		disableRebasing,
@@ -79,7 +82,9 @@ export async function startTestServer({
 		server,
 		cleanup: async () => {
 			await server.close();
-			await fs.unlink(dbFileName);
+			if (!keepDb) {
+				await fs.unlink(dbFileName);
+			}
 		},
 	};
 }

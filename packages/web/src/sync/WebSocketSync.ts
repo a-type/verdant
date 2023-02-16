@@ -88,21 +88,27 @@ export class WebSocketSync
 			this.log('Starting sync');
 			this.hasStartedSync = true;
 			this.synced = false;
-			this.send(await this.meta.messageCreator.createSyncStep1());
 			this.send(
 				await this.meta.messageCreator.createPresenceUpdate(
 					this.presence.self.presence,
 				),
 			);
+			this.send(await this.meta.messageCreator.createSyncStep1());
 			this.heartbeat.start();
 		}
 		this.emit('onlineChange', online);
 	};
 
-	private onMessage = (event: MessageEvent) => {
+	private onMessage = async (event: MessageEvent) => {
 		const message = JSON.parse(event.data) as ServerMessage;
 		switch (message.type) {
 			case 'sync-resp':
+				if (message.ackThisNonce) {
+					// we need to send the ack to confirm we got the response
+					this.send(
+						await this.meta.messageCreator.createSyncAck(message.ackThisNonce),
+					);
+				}
 				this.hasStartedSync = true;
 				this.synced = true;
 				if (this.syncQueue.length) {
@@ -114,6 +120,7 @@ export class WebSocketSync
 			case 'need-since':
 			case 'presence-changed':
 			case 'presence-offline':
+			case 'op-re':
 				this.emit('message', message);
 				break;
 			case 'heartbeat-response':
@@ -162,7 +169,12 @@ export class WebSocketSync
 	};
 
 	private canSkipSyncWait = (message: ClientMessage) => {
-		return message.type === 'sync' || message.type === 'presence-update';
+		return (
+			message.type === 'sync' ||
+			message.type === 'presence-update' ||
+			message.type === 'sync-ack' ||
+			message.type === 'heartbeat'
+		);
 	};
 
 	send = (message: ClientMessage) => {

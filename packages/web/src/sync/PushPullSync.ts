@@ -56,7 +56,7 @@ export class PushPullSync
 	}
 
 	private sendRequest = async (messages: ClientMessage[]) => {
-		this.log('Sending sync request');
+		this.log('Sending sync request', messages);
 		try {
 			const { http: host, token } = await this.endpointProvider.getEndpoints();
 			const response = await fetch(host, {
@@ -106,8 +106,16 @@ export class PushPullSync
 		}
 	};
 
-	private handleServerMessage = (message: ServerMessage) => {
+	private handleServerMessage = async (message: ServerMessage) => {
 		if (message.type === 'sync-resp') {
+			if (message.ackThisNonce) {
+				// we need to ack the nonce to confirm that we received the sync-resp
+				this.log('Sending sync ack', message.ackThisNonce);
+				this.sendRequest([
+					await this.meta.messageCreator.createSyncAck(message.ackThisNonce),
+				]);
+			}
+			// but we can go ahead and preemptively allow ops to be sent
 			this._hasSynced = true;
 		}
 		this.emit('message', message);
@@ -118,11 +126,11 @@ export class PushPullSync
 		switch (message.type) {
 			case 'presence-update':
 			case 'sync':
-				this.sendRequest([message]);
-				break;
+			case 'heartbeat':
+				return this.sendRequest([message]);
 			case 'op':
 				if (this._hasSynced) {
-					this.sendRequest([message]);
+					return this.sendRequest([message]);
 				}
 				break;
 		}

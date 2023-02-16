@@ -3,8 +3,9 @@ import v0Sql from './migrations/v0.sql.js';
 import v1Sql from './migrations/v1.sql.js';
 import v2Sql from './migrations/v2.sql.js';
 import v3Sql from './migrations/v3.sql.js';
+import v4Sql from './migrations/v4.sql.js';
 
-const allMigrations = [v0Sql, v1Sql, v2Sql, v3Sql];
+const allMigrations = [v0Sql, v1Sql, v2Sql, v3Sql, v4Sql];
 
 export function migrations(db: Database) {
 	// create the versions table if it doesn't exist

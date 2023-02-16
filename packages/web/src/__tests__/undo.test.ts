@@ -71,8 +71,12 @@ describe('undoing operations', () => {
 			],
 		});
 
-		item.set('content', 'hello world');
-		await storage.entities.flushPatches();
+		await storage
+			.batch()
+			.run(() => {
+				item.set('content', 'hello world');
+			})
+			.flush();
 
 		await storage
 			.batch({

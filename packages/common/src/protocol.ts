@@ -96,6 +96,23 @@ export type SyncResponseMessage = {
 	 * include operations or baselines older than this timestamp.
 	 */
 	ackedTimestamp: string;
+
+	/**
+	 * The client should respond with a sync-ack containing
+	 * this nonce to confirm it has received this message if
+	 * it is not undefined
+	 */
+	ackThisNonce?: string;
+};
+
+export type SyncAckMessage = {
+	type: 'sync-ack';
+	/** The client's replica ID */
+	replicaId: string;
+	/** the logical time this message was sent */
+	timestamp: string;
+	/** the nonce sent in the sync-resp message */
+	nonce: string;
 };
 
 export type PresenceUpdateMessage = {
@@ -144,6 +161,7 @@ export type ClientMessage =
 	| SyncMessage
 	| OperationMessage
 	| AckMessage
+	| SyncAckMessage
 	| PresenceUpdateMessage;
 export type ServerMessage =
 	| HeartbeatResponseMessage

@@ -1,40 +1,29 @@
-import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
-import { Client } from './client/index.js';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { expect, it } from 'vitest';
+import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForCondition,
-	waitForMockCall,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
 
-const cleanupClients: Client[] = [];
-
-let server: { port: number; cleanup: () => Promise<void> };
-beforeAll(async () => {
-	server = await startTestServer({ log: false });
+const context = createTestContext({
+	// serverLog: true,
+	// keepDb: true,
 });
-
-afterAll(async () => {
-	cleanupClients.forEach((c) => c.sync.stop());
-	await server.cleanup();
-}, 30 * 1000);
 
 it(
 	'can undo a push of an object even if another push has happened since',
 	async () => {
-		const clientA = await createTestClient({
-			server,
+		const clientA = await context.createTestClient({
 			library: 'sync-1',
 			user: 'User A',
+			// logId: 'A',
 		});
-		const clientB = await createTestClient({
-			server,
+		const clientB = await context.createTestClient({
 			library: 'sync-1',
 			user: 'User B',
+			// logId: 'B',
 		});
-		cleanupClients.push(clientA, clientB);
 
 		clientA.sync.start();
 		clientB.sync.start();
@@ -60,22 +49,29 @@ it(
 		console.log('🔺 --- Offline ---');
 
 		console.log('🔺 --- Client B push ---');
-		b_itemA.get('comments').push({
-			authorId: 'user-b',
-			content: 'Goodbye world',
-		});
-		// advanced behavior - manually flushing patch queue so these are
-		// committed offline
-		clientB.entities.flushPatches();
+
+		clientB
+			.batch()
+			.run(() => {
+				b_itemA.get('comments').push({
+					authorId: 'user-b',
+					content: 'Goodbye world',
+				});
+			})
+			.flush();
+
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		console.log('🔺 --- Client A push ---');
-		a_itemA.get('comments').push({
-			authorId: 'user-a',
-			content: 'Hello world',
-		});
-		// advanced behavior - manually flushing patch queue so these are
-		// committed offline
-		clientA.entities.flushPatches();
+
+		clientA
+			.batch()
+			.run(() => {
+				a_itemA.get('comments').push({
+					authorId: 'user-a',
+					content: 'Hello world',
+				});
+			})
+			.flush();
 
 		clientA.sync.start();
 		clientB.sync.start();

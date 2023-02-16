@@ -18,6 +18,8 @@ export async function createTestClient({
 	indexedDb = new IDBFactory(),
 	migrations = defaultMigrations,
 	files,
+	transport = 'realtime',
+	onLog,
 }: {
 	server?: { port: number };
 	library: string;
@@ -27,6 +29,8 @@ export async function createTestClient({
 	indexedDb?: IDBFactory;
 	migrations?: Migration<any>[];
 	files?: ClientDescriptorOptions['files'];
+	transport?: 'realtime' | 'pull';
+	onLog?: (messages: string) => void;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
@@ -37,14 +41,20 @@ export async function createTestClient({
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
 					initialPresence: {},
 					defaultProfile: {},
-					initialTransport: 'realtime',
+					initialTransport: transport,
 					// don't allow clients to downgrade to polling!
 					// polling sucks for testing lol
 					automaticTransportSelection: false,
+					pullInterval: 300,
 			  }
 			: undefined,
 		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
+			? (...args: any[]) => {
+					console.log(`[${logId}]`, ...args);
+					onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
+			  }
+			: onLog
+			? (...args: any[]) => onLog(args.map((a) => JSON.stringify(a)).join('\n'))
 			: undefined,
 		files,
 	});
