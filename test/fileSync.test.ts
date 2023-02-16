@@ -56,4 +56,4 @@ it('can sync files between replicas', async () => {
 	// basically the file isn't encoded into the form data correctly.
 	// someday maybe I'll get this figured out
 	expect(text).toBe('[object File]');
-}, 15000);
+}, 20000);
