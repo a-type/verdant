@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.2
+
+### Patch Changes
+
+- 70e5790: Bugfix for index values being diffed during a migration
+
 ## 1.12.1
 
 ### Patch Changes
