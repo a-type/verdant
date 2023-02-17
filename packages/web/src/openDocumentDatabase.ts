@@ -161,21 +161,36 @@ export async function openDocumentDatabase({
 
 					const snapshots = await Promise.all(
 						oids.map(async (oid) => {
-							const snap = await meta.getDocumentSnapshot(oid);
-							return [oid, snap];
+							try {
+								const snap = await meta.getDocumentSnapshot(oid);
+								return [oid, snap];
+							} catch (e) {
+								// this seems to happen with baselines/ops which are not fully
+								// cleaned up after deletion?
+								context.log(
+									'error',
+									'Could not regenerate snapshot during migration for oid',
+									oid,
+									'this document will not be preserved',
+									e,
+								);
+								return null;
+							}
 						}),
 					);
 
-					const views = snapshots.map(([oid, snapshot]) => {
-						if (!snapshot) return [oid, undefined];
-						const view = assignIndexValues(
-							migration.newSchema.collections[collection],
-							snapshot,
-						);
-						// TODO: remove the need for this by only storing index values!
-						assignOidPropertiesToAllSubObjects(view);
-						return [oid, view];
-					});
+					const views = snapshots
+						.filter((s): s is [string, any] => !!s)
+						.map(([oid, snapshot]) => {
+							if (!snapshot) return [oid, undefined];
+							const view = assignIndexValues(
+								migration.newSchema.collections[collection],
+								snapshot,
+							);
+							// TODO: remove the need for this by only storing index values!
+							assignOidPropertiesToAllSubObjects(view);
+							return [oid, view];
+						});
 
 					// now we can write the documents back
 					const documentWriteTransaction = upgradedDatabase.transaction(
