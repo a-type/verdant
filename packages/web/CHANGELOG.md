@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.4
+
+### Patch Changes
+
+- 06c2bd2: Resilience against data inconsistency during migration
+
 ## 1.12.3
 
 ### Patch Changes
