@@ -1,6 +1,6 @@
 {
 	"name": "@lo-fi/web",
-	"version": "1.12.2",
+	"version": "1.12.3",
 	"access": "public",
 	"type": "module",
 	"main": "dist/cjs/index.js",

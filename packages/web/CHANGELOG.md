@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.3
+
+### Patch Changes
+
+- c3bf6b4: More resiliency for bad data states
+
 ## 1.12.2
 
 ### Patch Changes
