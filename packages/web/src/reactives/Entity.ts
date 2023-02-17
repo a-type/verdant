@@ -415,6 +415,11 @@ export class Entity<
 
 		if (this.fieldSchema.type === 'object') {
 			const property = this.fieldSchema.properties[key];
+			if (!property) {
+				// huh, trying to delete a field that isn't specified
+				// in the schema. we should use 'delete' mode.
+				return 'delete';
+			}
 			if (property.type === 'any') return 'delete';
 			// map can't be nullable
 			// TODO: should it be?
