@@ -5,7 +5,9 @@ import { createTestFile } from './lib/createTestFile.js';
 import { waitForCondition, waitForQueryResult } from './lib/waits.js';
 import * as fs from 'fs';
 
-const context = createTestContext();
+const context = createTestContext({
+	serverLog: true,
+});
 
 afterAll(() => {
 	// delete the ./test-files directory
@@ -19,14 +21,14 @@ it('can sync files between replicas', async () => {
 	const clientA = await context.createTestClient({
 		library: 'file-sync-1',
 		user: 'User A',
-		// logId: 'A',
+		logId: 'A',
 	});
 	clientA.sync.start();
 
 	const clientB = await context.createTestClient({
 		library: 'file-sync-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	clientB.sync.start();
 
@@ -36,19 +38,24 @@ it('can sync files between replicas', async () => {
 	a_item.set('image', createTestFile());
 
 	await waitForQueryResult(clientB.items.get(a_item.get('id')));
+	console.log('⭐️ item synced to B');
 	const b_item = await clientB.items.get(a_item.get('id')).resolved;
 
 	expect(b_item).toBeTruthy();
 	assert(!!b_item);
 	await waitForCondition(() => !!b_item.get('image'));
+	console.log('⭐️ image synced to B');
 	const file = b_item.get('image')!;
-	await waitForCondition(() => !file.loading && !file.failed);
+	await waitForCondition(() => !file.loading);
+	console.log('⭐️ image loaded');
+	expect(file.failed).toBe(false);
 	expect(file.url).toBeTruthy();
 
 	// load the file from the URL and see if it matches.
 	// this isn't the same as the original file, but it's good enough to know
 	// something was delivered...
 	const response = await fetch(file.url!);
+	console.log('⭐️ image fetched');
 	const blob = await response.blob();
 	expect(blob.size).toBe(13);
 	expect(blob.type).toBe('text/plain;charset=utf-8');
