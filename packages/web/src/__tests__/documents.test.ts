@@ -1,6 +1,6 @@
 import { assert } from '@lo-fi/common';
 import cuid from 'cuid';
-import { describe, it, expect, vi, MockedFunction } from 'vitest';
+import { describe, it, expect, vi, MockedFunction, vitest } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 
 async function waitForStoragePropagation(mock: MockedFunction<any>) {
@@ -408,5 +408,31 @@ describe('storage documents', () => {
 		expect(item2.get('weird').length).toBe(2);
 		expect(item2.get('weird').get(0)).toBe('foo');
 		expect(item2.get('weird').get(1)).toBe('baz');
+	});
+
+	it('should expose updatedAt', async () => {
+		const storage = await createTestStorage();
+
+		let time = new Date();
+		vitest.setSystemTime(time);
+
+		const item1 = await storage.todos.put({
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		expect(item1.updatedAt?.getTime()).toBe(time.getTime());
+
+		time = new Date(time.getTime() + 1000);
+		vitest.setSystemTime(time);
+
+		item1.update({
+			content: 'item 1 updated',
+		});
+
+		expect(item1.updatedAt?.getTime()).toBe(time.getTime());
 	});
 });

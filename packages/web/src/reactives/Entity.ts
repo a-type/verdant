@@ -14,6 +14,7 @@ import {
 	PatchCreator,
 	StorageFieldSchema,
 	StorageFieldsSchema,
+	TimestampProvider,
 	traverseCollectionFieldsAndApplyDefaults,
 } from '@lo-fi/common';
 import { EntityFile } from '../files/EntityFile.js';
@@ -27,7 +28,11 @@ const REFRESH = '@@refresh';
 export const DEEP_CHANGE = '@@deepChange';
 
 export interface CacheTools {
-	computeView(oid: ObjectIdentifier): { view: any; deleted: boolean };
+	computeView(oid: ObjectIdentifier): {
+		view: any;
+		deleted: boolean;
+		lastTimestamp: number | null;
+	};
 	getEntity(
 		oid: ObjectIdentifier,
 		schema: StorageFieldSchema,
@@ -41,6 +46,7 @@ export interface StoreTools {
 	patchCreator: PatchCreator;
 	addFile: (file: FileData) => void;
 	getFile: (id: string) => EntityFile;
+	time: TimestampProvider;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -117,6 +123,8 @@ export class Entity<
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
 
+	private _updatedAt: Date | null = null;
+
 	protected events = new EventSubscriber<EntityEvents>();
 
 	protected hasSubscribersToDeepChanges() {
@@ -153,6 +161,10 @@ export class Entity<
 		return Array.isArray(this._current) as any;
 	}
 
+	get updatedAt() {
+		return this._updatedAt;
+	}
+
 	constructor({
 		oid,
 		store,
@@ -172,9 +184,10 @@ export class Entity<
 		this.fieldSchema = fieldSchema;
 		this.keyPath = decomposeOid(oid).keyPath;
 		this.cache = cache;
-		const { view, deleted } = this.cache.computeView(oid);
+		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
 		this._deleted = deleted;
+		this._updatedAt = lastTimestamp ? new Date(lastTimestamp) : null;
 
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');
@@ -183,11 +196,12 @@ export class Entity<
 	}
 
 	private [REFRESH] = (info: EntityChangeInfo) => {
-		const { view, deleted } = this.cache.computeView(this.oid);
+		const { view, deleted, lastTimestamp } = this.cache.computeView(this.oid);
 		this._current = view;
 		const restored = this._deleted && !deleted;
 		this._deleted = deleted;
 		this.cachedDestructure = null;
+		this._updatedAt = lastTimestamp ? new Date(lastTimestamp) : null;
 
 		if (this._deleted) {
 			this.events.emit('delete', info);

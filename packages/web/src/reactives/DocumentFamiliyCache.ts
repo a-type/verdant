@@ -37,6 +37,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			patchCreator: store.meta.patchCreator,
 			addFile: store.files.add,
 			getFile: store.files.get,
+			time: store.meta.time,
 		};
 	}
 
@@ -187,7 +188,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 		if (view) {
 			assignOid(view, oid);
 		}
-		return { view, deleted };
+		return { view, deleted, lastTimestamp: this.getLastTimestamp(oid) };
 	};
 
 	computeConfirmedView = (oid: ObjectIdentifier) => {
@@ -199,6 +200,21 @@ export class DocumentFamilyCache extends EventSubscriber<
 			assignOid(view, oid);
 		}
 		return view;
+	};
+
+	getLastTimestamp = (oid: ObjectIdentifier) => {
+		let operations = this.unconfirmedOperationsMap.get(oid);
+		if (!operations?.length) {
+			operations = this.operationsMap.get(oid) || [];
+		}
+		let logicalTimestamp: string | null = null;
+		if (operations.length) {
+			logicalTimestamp = operations[operations.length - 1]?.timestamp;
+		} else {
+			logicalTimestamp = this.baselinesMap.get(oid)?.timestamp ?? null;
+		}
+		if (!logicalTimestamp) return null;
+		return this.storeTools.time.getWallClockTime(logicalTimestamp);
 	};
 
 	getEntity = (

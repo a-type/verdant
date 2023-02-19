@@ -1,6 +1,7 @@
 import { describe, expect, it, vitest } from 'vitest';
 import {
 	convertOldHlcTimestamp,
+	deserializeHlcTimestamp,
 	HybridLogicalClockTimestampProvider,
 	OLD_encodeVersion,
 	OLD_serializeHlcTimestamp,
@@ -99,5 +100,14 @@ describe('the hybrid logical clock', () => {
 			time: new Date(3000, 1, 1).getTime(),
 		});
 		expect(OLD_encodeVersion(1) + oldFormat2 < newFormat).toBe(true);
+	});
+
+	it('decodes timestamps', () => {
+		const time = new Date();
+		vitest.setSystemTime(time);
+
+		const clock = new HybridLogicalClockTimestampProvider();
+		const now = clock.now(1);
+		expect(clock.getWallClockTime(now)).toEqual(time.getTime());
 	});
 });

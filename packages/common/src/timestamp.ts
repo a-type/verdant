@@ -5,6 +5,7 @@ export interface TimestampProvider {
 	now(version: number): string;
 	update(remoteTimestamp: string): void;
 	zero(version: number): string;
+	getWallClockTime(timestamp: string): number;
 }
 
 const VERSION_BLOCK_LENGTH = 4;
@@ -23,13 +24,18 @@ export function OLD_encodeVersion(version: number | string): string {
 export class NaiveTimestampProvider implements TimestampProvider {
 	counter = 0;
 	now = (version: number | string) => {
-		return encodeVersion(version) + Date.now().toString() + this.counter++;
+		return (
+			encodeVersion(version) + Date.now().toString() + '-' + this.counter++
+		);
 	};
 	update = () => {
 		this.counter = 0;
 	};
 	zero = (version: number | string) => {
-		return encodeVersion(version) + '0' + this.counter++;
+		return encodeVersion(version) + '0' + '-' + this.counter++;
+	};
+	getWallClockTime = (timestamp: string) => {
+		return parseInt(timestamp.slice(VERSION_BLOCK_LENGTH).split('-')[0], 10);
 	};
 }
 
@@ -77,6 +83,9 @@ export class HybridLogicalClockTimestampProvider implements TimestampProvider {
 				node: this.latest.node,
 			})
 		);
+	};
+	getWallClockTime = (timestamp: string): number => {
+		return deserializeHlcTimestamp(timestamp.slice(VERSION_BLOCK_LENGTH)).time;
 	};
 }
 
@@ -206,8 +215,8 @@ export function deserializeHlcTimestamp(clock: string): HLCTimestamp {
 		TIME_BLOCK_LENGTH + COUNTER_BLOCK_LENGTH,
 	);
 	const node = clock.slice(TIME_BLOCK_LENGTH + COUNTER_BLOCK_LENGTH);
-	const time = parseInt(dateString, 16);
-	const counterNum = parseInt(counter, 16);
+	const time = parseInt(dateString, ENCODING_NUMBER_RADIX);
+	const counterNum = parseInt(counter, ENCODING_NUMBER_RADIX);
 
 	if (isNaN(time) || isNaN(counterNum)) {
 		throw new Error('invalid clock format');
@@ -218,6 +227,10 @@ export function deserializeHlcTimestamp(clock: string): HLCTimestamp {
 		counter: counterNum,
 		node,
 	};
+}
+
+function removeLeadingZeroes(str: string): string {
+	return str.replace(/^0+/, '');
 }
 
 /**
