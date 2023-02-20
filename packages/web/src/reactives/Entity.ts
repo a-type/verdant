@@ -122,8 +122,9 @@ export class Entity<
 
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
+	private cachedDeepUpdatedAt: number | null = null;
 
-	private _updatedAt: Date | null = null;
+	private _updatedAt: number | null = null;
 
 	protected events = new EventSubscriber<EntityEvents>();
 
@@ -165,6 +166,33 @@ export class Entity<
 		return this._updatedAt;
 	}
 
+	get deepUpdatedAt() {
+		if (this.cachedDeepUpdatedAt) return this.cachedDeepUpdatedAt;
+		// iterate over all children and take the latest timestamp
+		let latest: number | null = this._updatedAt;
+		if (this.isList) {
+			this.forEach((child) => {
+				if ((child as any) instanceof Entity) {
+					const childTimestamp = child.deepUpdatedAt;
+					if (childTimestamp && (!latest || childTimestamp > latest)) {
+						latest = childTimestamp;
+					}
+				}
+			});
+		} else {
+			this.values().forEach((child) => {
+				if ((child as any) instanceof Entity) {
+					const childTimestamp = child.deepUpdatedAt;
+					if (childTimestamp && (!latest || childTimestamp > latest)) {
+						latest = childTimestamp;
+					}
+				}
+			});
+		}
+		this.cachedDeepUpdatedAt = latest;
+		return latest;
+	}
+
 	constructor({
 		oid,
 		store,
@@ -187,7 +215,8 @@ export class Entity<
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
 		this._deleted = deleted;
-		this._updatedAt = lastTimestamp ? new Date(lastTimestamp) : null;
+		this._updatedAt = lastTimestamp ? lastTimestamp : null;
+		this.cachedDeepUpdatedAt = null;
 
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');
@@ -201,7 +230,8 @@ export class Entity<
 		const restored = this._deleted && !deleted;
 		this._deleted = deleted;
 		this.cachedDestructure = null;
-		this._updatedAt = lastTimestamp ? new Date(lastTimestamp) : null;
+		this._updatedAt = lastTimestamp ? lastTimestamp : null;
+		this.cachedDeepUpdatedAt = null;
 
 		if (this._deleted) {
 			this.events.emit('delete', info);
@@ -220,6 +250,7 @@ export class Entity<
 		info: EntityChangeInfo,
 	) => {
 		this.cachedSnapshot = null;
+		this.cachedDeepUpdatedAt = null;
 		this.events.emit('changeDeep', source, info);
 		const parent = this.parent?.deref();
 		if (parent) {
@@ -628,6 +659,7 @@ export class Entity<
 	// additional access methods
 
 	private getAsWrapped = (): ListItemValue<KeyValue>[] => {
+		if (!this.isList) throw new Error('Cannot map items of a non-list');
 		return this.value.map(this.wrapValue);
 	};
 
@@ -641,6 +673,12 @@ export class Entity<
 		return this.getAsWrapped().filter((val, index) => {
 			return callback(val, index);
 		});
+	};
+
+	forEach = (
+		callback: (value: ListItemValue<KeyValue>, index: number) => void,
+	) => {
+		this.getAsWrapped().forEach(callback);
 	};
 }
 
@@ -704,6 +742,7 @@ export interface ListEntity<
 	): ListItemValue<Value>[];
 	delete(index: number): void;
 	has(value: ListItemValue<Value>): boolean;
+	forEach(callback: (value: ListItemValue<Value>, index: number) => void): void;
 }
 
 export type AnyEntity<

@@ -424,7 +424,7 @@ describe('storage documents', () => {
 			attachments: [],
 		});
 
-		expect(item1.updatedAt?.getTime()).toBe(time.getTime());
+		expect(item1.updatedAt).toEqual(time.getTime());
 
 		time = new Date(time.getTime() + 1000);
 		vitest.setSystemTime(time);
@@ -433,6 +433,26 @@ describe('storage documents', () => {
 			content: 'item 1 updated',
 		});
 
-		expect(item1.updatedAt?.getTime()).toBe(time.getTime());
+		expect(item1.updatedAt).toEqual(time.getTime());
+
+		// works on nested fields
+		time = new Date(time.getTime() + 1000);
+		vitest.setSystemTime(time);
+
+		item1.get('attachments').push({
+			name: 'attachment 1',
+		});
+
+		expect(item1.deepUpdatedAt).toEqual(time.getTime());
+
+		time = new Date(time.getTime() + 1000);
+		vitest.setSystemTime(time);
+
+		item1.get('attachments').get(0).set('name', 'attachment 1 updated');
+
+		expect(item1.deepUpdatedAt).toEqual(time.getTime());
+
+		// but other items have their own updatedAt
+		expect(item1.get('tags').deepUpdatedAt).not.toEqual(time.getTime());
 	});
 });
