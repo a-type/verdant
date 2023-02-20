@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.10.2
+
+### Patch Changes
+
+- 4af8cc0: Fix bug in server snapshot which was returning undefined for non-rebased docs
+
 ## 1.10.1
 
 ### Patch Changes
