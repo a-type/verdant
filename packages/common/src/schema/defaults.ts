@@ -55,7 +55,8 @@ export function getFieldDefault(field: StorageFieldSchema) {
 		if (field.default && typeof field.default === 'function') {
 			return field.default();
 		} else if (field.default !== undefined) {
-			return field.default;
+			// TODO: structuredClone?
+			return JSON.parse(JSON.stringify(field.default));
 		}
 	}
 	if (field.type === 'array') {
