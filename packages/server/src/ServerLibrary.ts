@@ -638,6 +638,8 @@ export class ServerLibrary {
 			return snapshot.map((item, index) => {
 				if (isObjectRef(item)) {
 					return this.hydrateObject(libraryId, item.id);
+				} else if (isFileRef(item)) {
+					return this.hydrateFile(libraryId, item.id);
 				} else {
 					return item;
 				}
@@ -647,11 +649,35 @@ export class ServerLibrary {
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
 					hydrated[key] = this.hydrateObject(libraryId, value.id);
+				} else if (isFileRef(value)) {
+					hydrated[key] = this.hydrateFile(libraryId, value.id);
 				}
 			}
 			return hydrated;
 		} else {
 			return snapshot;
+		}
+	};
+
+	private hydrateFile = (libraryId: string, fileId: string) => {
+		const data = this.files.get(libraryId, fileId);
+		if (data) {
+			const url =
+				this.fileStorage?.getUrl({
+					fileName: data.name,
+					id: data.fileId,
+					libraryId,
+					type: data.type,
+				}) ?? null;
+
+			return {
+				url,
+				id: data.fileId,
+				name: data.name,
+				type: data.type,
+			};
+		} else {
+			return null;
 		}
 	};
 }

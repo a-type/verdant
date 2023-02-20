@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestClient } from './lib/testClient.js';
 import { startTestServer } from './lib/testServer.js';
 import { waitForPeerCount, waitForQueryResult } from './lib/waits.js';
+import * as fs from 'fs';
+import { createTestFile } from './lib/createTestFile.js';
 
 let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
@@ -10,12 +12,21 @@ beforeAll(async () => {
 	server = await startTestServer({ log: false, disableRebasing: true });
 });
 
+afterAll(() => {
+	// delete the ./test-files directory
+	fs.rmdirSync('./test-files', { recursive: true });
+});
+
 afterAll(async () => {
 	await server.cleanup();
 }, 30 * 1000);
 
 describe('the server', () => {
 	it('allows retrieving a document snapshot', async () => {
+		FileReader.prototype.readAsDataURL = () => {
+			return 'test';
+		};
+
 		const library = 'snapshot-1';
 
 		const clientA = await createTestClient({
@@ -41,6 +52,7 @@ describe('the server', () => {
 		const a_apples = await clientA.items.put({
 			categoryId: a_produceCategory.get('id'),
 			content: 'Apples',
+			image: createTestFile(),
 		});
 		const b_oranges = await clientB.items.put({
 			categoryId: a_produceCategory.get('id'),
@@ -81,7 +93,8 @@ describe('the server', () => {
 			return (
 				doc?.get('content') === 'Apples 2' &&
 				doc?.get('purchased') === true &&
-				doc?.get('comments').length === 1
+				doc?.get('comments').length === 1 &&
+				!!doc?.get('image')
 			);
 		});
 
@@ -92,7 +105,15 @@ describe('the server', () => {
 			a_apples.get('id'),
 		);
 		expect(snapshot).toBeDefined();
-		// should match client-side snapshot of the same data
-		expect(snapshot).toEqual(a_apples.getSnapshot());
+		// should mostly match client-side snapshot of the same data,
+		// except the file has more data.
+		const match = a_apples.getSnapshot() as any;
+		match.image = {
+			id: match.image.id,
+			name: 'test.txt',
+			type: 'text/plain',
+			url: expect.any(String),
+		};
+		expect(snapshot).toEqual(match);
 	});
 });
