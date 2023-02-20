@@ -1,5 +1,12 @@
 # @lo-fi/server
 
+## 1.7.1
+
+### Patch Changes
+
+- Updated dependencies [4548567]
+  - @lo-fi/common@1.10.1
+
 ## 1.7.0
 
 ### Minor Changes

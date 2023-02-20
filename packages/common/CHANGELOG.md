@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.10.1
+
+### Patch Changes
+
+- 4548567: Add an 'updatedAt' timestamp to Entity which reflects the wall time of the last applied operation
+
 ## 1.10.0
 
 ### Minor Changes
