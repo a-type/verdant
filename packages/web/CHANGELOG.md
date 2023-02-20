@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 1.12.6
+
+### Patch Changes
+
+- 0eeb006: Make updatedAt a number, add deepUpdatedAt
+- Updated dependencies [4af8cc0]
+  - @lo-fi/common@1.10.2
+
 ## 1.12.5
 
 ### Patch Changes
