@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.7.3
+
+### Patch Changes
+
+- 9c1d282: Support files in snapshots
+
 ## 1.7.2
 
 ### Patch Changes
