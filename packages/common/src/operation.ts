@@ -663,7 +663,7 @@ export function applyOperations<T extends NormalizedObject>(
 ): T | undefined {
 	let cur = base as T | undefined;
 	for (const op of operations) {
-		cur = applyPatch(base, op.data, deletedRefs);
+		cur = applyPatch(cur, op.data, deletedRefs);
 	}
 	return cur;
 }

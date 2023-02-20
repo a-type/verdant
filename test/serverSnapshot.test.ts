@@ -7,7 +7,7 @@ let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
 	: never;
 beforeAll(async () => {
-	server = await startTestServer({ log: false });
+	server = await startTestServer({ log: false, disableRebasing: true });
 });
 
 afterAll(async () => {
