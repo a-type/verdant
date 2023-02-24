@@ -156,13 +156,30 @@ export type ServerNeedSinceMessage = {
 	since: string | null;
 };
 
+export type SendMessageMessage = {
+	type: 'send-message';
+	message: string;
+	replicaId: string;
+	timestamp: string;
+	toUserId?: string;
+};
+
+export type MessageReceivedMessage = {
+	type: 'message-received';
+	message: string;
+	fromReplicaId: string;
+	fromUserId: string;
+	timestamp: string;
+};
+
 export type ClientMessage =
 	| HeartbeatMessage
 	| SyncMessage
 	| OperationMessage
 	| AckMessage
 	| SyncAckMessage
-	| PresenceUpdateMessage;
+	| PresenceUpdateMessage
+	| SendMessageMessage;
 export type ServerMessage =
 	| HeartbeatResponseMessage
 	| SyncResponseMessage
@@ -172,4 +189,5 @@ export type ServerMessage =
 	| GlobalAckMessage
 	| ForbiddenMessage
 	| ServerAckMessage
-	| ServerNeedSinceMessage;
+	| ServerNeedSinceMessage
+	| MessageReceivedMessage;

@@ -4,9 +4,9 @@ import { WebSocket } from 'ws';
 import { TokenInfo } from './TokenVerifier.js';
 
 abstract class ClientConnection {
-	constructor(readonly key: string) {}
+	constructor(readonly key: string, readonly info: TokenInfo) {}
 
-	abstract respond(message: ServerMessage): void;
+	abstract respond(...messages: ServerMessage[]): void;
 }
 
 class RequestClientConnection extends ClientConnection {
@@ -18,13 +18,13 @@ class RequestClientConnection extends ClientConnection {
 		key: string,
 		private readonly req: IncomingMessage,
 		private readonly res: ServerResponse,
-		readonly info: TokenInfo,
+		info: TokenInfo,
 	) {
-		super(key);
+		super(key, info);
 	}
 
-	respond = (message: ServerMessage) => {
-		this.responses.push(message);
+	respond = (...messages: ServerMessage[]) => {
+		this.responses.push(...messages);
 	};
 
 	end = () => {
@@ -43,12 +43,14 @@ class RequestClientConnection extends ClientConnection {
 class WebSocketClientConnection extends ClientConnection {
 	readonly type = 'websocket';
 
-	constructor(key: string, readonly ws: WebSocket, readonly info: TokenInfo) {
-		super(key);
+	constructor(key: string, readonly ws: WebSocket, info: TokenInfo) {
+		super(key, info);
 	}
 
-	respond = (message: ServerMessage) => {
-		this.ws.send(JSON.stringify(message));
+	respond = (...messages: ServerMessage[]) => {
+		for (const message of messages) {
+			this.ws.send(JSON.stringify(message));
+		}
 	};
 }
 
@@ -56,11 +58,29 @@ export class ClientConnectionManager {
 	private readonly connections: Record<string, Map<string, ClientConnection>> =
 		{};
 
+	private readonly userQueues: Record<string, ServerMessage[]> = {};
+	private readonly userQueueLimit = 100;
+
 	private getLibraryConnections = (libraryId: string) => {
 		if (!this.connections[libraryId]) {
 			this.connections[libraryId] = new Map();
 		}
 		return this.connections[libraryId]!;
+	};
+
+	private addConnection = (
+		lib: Map<string, ClientConnection>,
+		key: string,
+		connection: ClientConnection,
+	) => {
+		// if there's a buffer of outgoing messages for this user,
+		// supply it
+		if (this.userQueues[connection.info.userId]) {
+			connection.respond(...this.userQueues[connection.info.userId]);
+			delete this.userQueues[connection.info.userId];
+		}
+
+		lib.set(key, connection);
 	};
 
 	addSocket = (
@@ -73,7 +93,7 @@ export class ClientConnectionManager {
 
 		const connection = new WebSocketClientConnection(key, socket, info);
 
-		lib.set(key, connection);
+		this.addConnection(lib, key, connection);
 
 		socket.on('close', () => {
 			lib.delete(key);
@@ -96,7 +116,7 @@ export class ClientConnectionManager {
 			info,
 		);
 
-		lib.set(key, connection);
+		this.addConnection(lib, key, connection);
 
 		return () => {
 			connection.end();
@@ -138,6 +158,28 @@ export class ClientConnectionManager {
 		}
 	};
 
+	sendToUser = (libraryId: string, userId: string, message: ServerMessage) => {
+		const lib = this.getLibraryConnections(libraryId);
+		let delivered = false;
+		for (const [key, connection] of lib) {
+			if (connection.info.userId === userId) {
+				connection.respond(message);
+				delivered = true;
+			}
+		}
+		// sending to one user attempts to guarantee delivery to at least one
+		// of their devices. if we didn't deliver, we'll enqueue the message
+		if (this.isEnqueueable(message) && !delivered) {
+			if (!this.userQueues[userId]) {
+				this.userQueues[userId] = [];
+			}
+			this.userQueues[userId].push(message);
+			if (this.userQueues[userId].length > this.userQueueLimit) {
+				this.userQueues[userId].shift();
+			}
+		}
+	};
+
 	disconnectAll = (libraryId: string) => {
 		const lib = this.getLibraryConnections(libraryId);
 		for (const connection of lib.values()) {
@@ -146,5 +188,11 @@ export class ClientConnectionManager {
 			}
 		}
 		lib.clear();
+	};
+
+	private isEnqueueable = (message: ServerMessage) => {
+		// for now only messages are enqueued. other stuff
+		// is all handled by sync.
+		return message.type === 'message-received';
 	};
 }

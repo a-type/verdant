@@ -3,6 +3,7 @@ import {
 	DocumentBaseline,
 	EventSubscriber,
 	FileData,
+	MessageReceivedMessage,
 	Operation,
 	ReplicaType,
 	ServerMessage,
@@ -20,10 +21,12 @@ import { WebSocketSync } from './WebSocketSync.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
+	message: (message: Omit<MessageReceivedMessage, 'type'>) => void;
 };
 
-export type SyncTransportEvents = SyncEvents & {
-	message: (message: ServerMessage) => void;
+export type SyncTransportEvents = {
+	onlineChange: (isOnline: boolean) => void;
+	incomingMessage: (message: ServerMessage) => void;
 };
 
 export interface SyncTransport {
@@ -49,7 +52,7 @@ export interface SyncTransport {
 	readonly status: 'active' | 'paused';
 }
 
-export interface Sync extends SyncTransport {
+export interface Sync extends Omit<SyncTransport, 'send'> {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
@@ -229,10 +232,10 @@ export class ServerSync<Profile = any, Presence = any>
 
 		this.meta.subscribe('message', this.send);
 
-		this.webSocketSync.subscribe('message', this.handleMessage);
+		this.webSocketSync.subscribe('incomingMessage', this.handleMessage);
 		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
 
-		this.pushPullSync.subscribe('message', this.handleMessage);
+		this.pushPullSync.subscribe('incomingMessage', this.handleMessage);
 		this.pushPullSync.subscribe('onlineChange', this.handleOnlineChange);
 
 		if (automaticTransportSelection) {
@@ -314,6 +317,9 @@ export class ServerSync<Profile = any, Presence = any>
 					await this.meta.messageCreator.createSyncStep1(message.since),
 				);
 				break;
+			case 'message-received':
+				this.emit('message', message);
+				break;
 			case 'server-ack':
 				await this.meta.updateLastSynced(message.timestamp);
 		}
@@ -361,7 +367,7 @@ export class ServerSync<Profile = any, Presence = any>
 		return this.pushPullSync.interval;
 	}
 
-	send = (message: ClientMessage) => {
+	private send = (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
 			return this.activeSync.send(message);
 		}
@@ -415,4 +421,10 @@ export class ServerSync<Profile = any, Presence = any>
 	public get mode() {
 		return this.activeSync.mode;
 	}
+
+	public sendMessage = async (message: string, toUserId?: string) => {
+		this.send(
+			await this.meta.messageCreator.createSendMessage(message, toUserId),
+		);
+	};
 }

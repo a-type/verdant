@@ -6,5 +6,6 @@ export interface MessageSender {
 		message: ServerMessage,
 		omitKeys?: string[],
 	): void;
-	send(libraryId: string, clientKey: string, message: ServerMessage): void;
+	respond(libraryId: string, clientKey: string, message: ServerMessage): void;
+	sendToUser(libraryId: string, userId: string, message: ServerMessage): void;
 }

@@ -75,7 +75,7 @@ class DefaultProfiles implements UserProfiles<{ id: string }> {
 	};
 }
 
-export class Server extends EventEmitter implements MessageSender {
+export class Server extends EventEmitter {
 	readonly httpServer: HttpServer;
 	private wss: WebSocketServer;
 	private storage: ServerStorage;
@@ -108,7 +108,7 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.storage = new ServerStorage({
 			db: create(options.databaseFile),
-			sender: this,
+			sender: this.clientConnections,
 			profiles: options.profiles || new DefaultProfiles(),
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
 			log: this.log,
@@ -366,18 +366,6 @@ export class Server extends EventEmitter implements MessageSender {
 			res.writeHead(500);
 			res.end();
 		}
-	};
-
-	broadcast = (
-		libraryId: string,
-		message: ServerMessage,
-		omitKeys: string[] = [],
-	) => {
-		this.clientConnections.broadcast(libraryId, message, omitKeys);
-	};
-
-	send = (libraryId: string, key: string, message: ServerMessage) => {
-		this.clientConnections.respond(libraryId, key, message);
 	};
 
 	private handleMessage = (

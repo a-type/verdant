@@ -118,7 +118,7 @@ export class PushPullSync
 			// but we can go ahead and preemptively allow ops to be sent
 			this._hasSynced = true;
 		}
-		this.emit('message', message);
+		this.emit('incomingMessage', message);
 	};
 
 	send = (message: ClientMessage) => {

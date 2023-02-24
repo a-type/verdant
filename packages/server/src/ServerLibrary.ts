@@ -16,6 +16,7 @@ import {
 	Ref,
 	isFileRef,
 	SyncAckMessage,
+	SendMessageMessage,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -78,13 +79,29 @@ export class ServerLibrary {
 	 * Validates a user's access to a replica. If the replica does not
 	 * exist, a user may create it. But if it does exist, its user (clientId)
 	 * must match the user making the request.
+	 *
+	 * This is a hot path so results are cached. They never
+	 * change for a given replicaId and userId.
 	 */
+	private writeAccessCache = new Map<string, boolean>();
 	private validateReplicaAccess = (replicaId: string, info: TokenInfo) => {
-		const replica = this.replicas.get(info.libraryId, replicaId);
-		if (replica && replica.clientId !== info.userId) {
+		const cached = this.writeAccessCache.get(`${info.userId}:${replicaId}`);
+		if (cached === false) {
 			throw new Error(
 				`Replica ${replicaId} does not belong to client ${info.userId}`,
 			);
+		} else if (cached === true) {
+			return;
+		}
+
+		const replica = this.replicas.get(info.libraryId, replicaId);
+		if (replica && replica.clientId !== info.userId) {
+			this.writeAccessCache.set(`${info.userId}:${replicaId}`, false);
+			throw new Error(
+				`Replica ${replicaId} does not belong to client ${info.userId}`,
+			);
+		} else {
+			this.writeAccessCache.set(`${info.userId}:${replicaId}`, true);
 		}
 	};
 
@@ -121,6 +138,8 @@ export class ServerLibrary {
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
 				break;
+			case 'send-message':
+				await this.handleSendMessage(message, clientKey, info);
 			default:
 				this.log('Unknown message type', (message as any).type);
 				break;
@@ -140,7 +159,7 @@ export class ServerLibrary {
 		if (!message.operations.length) return;
 
 		if (!this.hasWriteAccess(info)) {
-			this.sender.send(info.libraryId, clientKey, {
+			this.sender.respond(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
 			return;
@@ -169,7 +188,7 @@ export class ServerLibrary {
 		);
 
 		// tell sender we got and processed their operation
-		this.sender.send(info.libraryId, clientKey, {
+		this.sender.respond(info.libraryId, clientKey, {
 			type: 'server-ack',
 			timestamp: message.timestamp,
 		});
@@ -227,7 +246,7 @@ export class ServerLibrary {
 		// TODO: is this right? shouldn't read-only replicas still be able to sync,
 		// just not send ops?
 		if (!this.hasWriteAccess(info)) {
-			this.sender.send(info.libraryId, clientKey, {
+			this.sender.respond(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
 			this.log('warning', 'sync from read-only replica', replicaId);
@@ -285,7 +304,7 @@ export class ServerLibrary {
 				'Detected local data is incomplete, requesting full history from replica',
 				replicaId,
 			);
-			this.sender.send(info.libraryId, clientKey, {
+			this.sender.respond(info.libraryId, clientKey, {
 				type: 'need-since',
 				since: null,
 			});
@@ -348,7 +367,7 @@ export class ServerLibrary {
 			baselines.length,
 			'baselines',
 		);
-		this.sender.send(info.libraryId, clientKey, {
+		this.sender.respond(info.libraryId, clientKey, {
 			type: 'sync-resp',
 			operations: ops.map(this.removeExtraOperationData),
 			baselines: baselines.map((baseline) => ({
@@ -419,6 +438,34 @@ export class ServerLibrary {
 		info: TokenInfo,
 	) => {
 		this.updateAcknowledged(message.replicaId, message.timestamp, info);
+	};
+
+	private handleSendMessage = (
+		message: SendMessageMessage,
+		clientKey: string,
+		info: TokenInfo,
+	) => {
+		if (message.toUserId) {
+			this.sender.sendToUser(info.libraryId, message.toUserId, {
+				type: 'message-received',
+				message: message.message,
+				fromReplicaId: message.replicaId,
+				fromUserId: info.userId,
+				timestamp: message.timestamp,
+			});
+		} else {
+			this.sender.broadcast(
+				info.libraryId,
+				{
+					type: 'message-received',
+					message: message.message,
+					fromReplicaId: message.replicaId,
+					fromUserId: info.userId,
+					timestamp: message.timestamp,
+				},
+				[clientKey],
+			);
+		}
 	};
 
 	private pendingRebaseTimeout: NodeJS.Timeout | null = null;
@@ -506,7 +553,7 @@ export class ServerLibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		this.sender.send(info.libraryId, clientKey, {
+		this.sender.respond(info.libraryId, clientKey, {
 			type: 'heartbeat-response',
 		});
 	};

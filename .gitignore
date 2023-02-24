@@ -108,3 +108,5 @@ dist
 .turbo
 
 test-files
+
+.DS_Store

@@ -6,6 +6,7 @@ import {
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
+	SendMessageMessage,
 	SyncAckMessage,
 	SyncMessage,
 } from '@lo-fi/common';
@@ -124,6 +125,21 @@ export class MessageCreator {
 			timestamp: this.meta.now,
 			replicaId: localReplicaInfo.id,
 			nonce,
+		};
+	};
+
+	createSendMessage = async (
+		message: string,
+		toUserId?: string,
+	): Promise<SendMessageMessage> => {
+		const localReplicaInfo = await this.meta.localReplica.get();
+
+		return {
+			type: 'send-message',
+			message,
+			toUserId,
+			replicaId: localReplicaInfo.id,
+			timestamp: this.meta.now,
 		};
 	};
 }

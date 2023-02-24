@@ -121,15 +121,15 @@ export class WebSocketSync
 			case 'presence-changed':
 			case 'presence-offline':
 			case 'op-re':
-				this.emit('message', message);
+				this.emit('incomingMessage', message);
 				break;
 			case 'heartbeat-response':
 				this.heartbeat.keepAlive();
-				this.emit('message', message);
+				this.emit('incomingMessage', message);
 				break;
 			default:
 				if (this.synced) {
-					this.emit('message', message);
+					this.emit('incomingMessage', message);
 				}
 				break;
 		}
