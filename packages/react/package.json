@@ -29,7 +29,7 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"@lo-fi/web": "^1.12.6",
+		"@lo-fi/web": "^1.12.7",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
