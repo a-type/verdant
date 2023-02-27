@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.7
+
+### Patch Changes
+
+- 8b6e652: Bugfix: old operations which reference deleted collections should hopefully not fail on initial sync now
+
 ## 1.12.6
 
 ### Patch Changes
