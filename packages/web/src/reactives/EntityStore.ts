@@ -101,10 +101,10 @@ export class EntityStore extends EventSubscriber<{
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
 		const { collection } = decomposeOid(oid);
-		assert(
-			this.schema.collections[collection],
-			`Missing schema collection: ${collection}`,
-		);
+		if (!this.schema.collections[collection]) {
+			this.log('warn', `Missing schema for collection: ${collection}`);
+			return null;
+		}
 		return {
 			type: 'object',
 			properties: this.schema.collections[collection].fields as any,
@@ -210,8 +210,11 @@ export class EntityStore extends EventSubscriber<{
 
 	get = async (oid: ObjectIdentifier) => {
 		const familyCache = await this.openFamilyCache(oid);
-
-		return familyCache.getEntity(oid, this.getDocumentSchema(oid));
+		const schema = this.getDocumentSchema(oid);
+		if (!schema) {
+			return null;
+		}
+		return familyCache.getEntity(oid, schema);
 	};
 
 	/**
@@ -222,7 +225,11 @@ export class EntityStore extends EventSubscriber<{
 	getCached = (oid: ObjectIdentifier) => {
 		const cache = this.documentFamilyCaches.get(oid);
 		if (cache) {
-			return cache.getEntity(oid, this.getDocumentSchema(oid));
+			const schema = this.getDocumentSchema(oid);
+			if (!schema) {
+				return null;
+			}
+			return cache.getEntity(oid, schema);
 		}
 		return null;
 	};
@@ -248,7 +255,15 @@ export class EntityStore extends EventSubscriber<{
 		// only holding it in memory would introduce lag before it shows up
 		// in other queries.
 		await this.submitOperations(operations, options);
-		return familyCache.getEntity(oid, this.getDocumentSchema(oid));
+		const schema = this.getDocumentSchema(oid);
+		if (!schema) {
+			throw new Error(
+				`Cannot create a document in the ${
+					decomposeOid(oid).collection
+				} collection; it is not defined in the current schema version.`,
+			);
+		}
+		return familyCache.getEntity(oid, schema);
 	};
 
 	private addOperationsToOpenCaches = async (

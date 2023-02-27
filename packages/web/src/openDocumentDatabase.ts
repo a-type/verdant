@@ -131,7 +131,10 @@ export async function openDocumentDatabase({
 							}
 						}
 						for (const removedCollection of migration.removedCollections) {
-							db.deleteObjectStore(removedCollection);
+							// !! can't delete the store, because old operations that relate to
+							// this store may still exist in history. instead, we can clear it out
+							// and leave it in place
+							transaction.objectStore(removedCollection).clear();
 						}
 					},
 					context.log,
