@@ -455,4 +455,29 @@ describe('storage documents', () => {
 		// but other items have their own updatedAt
 		expect(item1.get('tags').deepUpdatedAt).not.toEqual(time.getTime());
 	});
+
+	it('should allow creating a new document from another document snapshot', async () => {
+		const storage = await createTestStorage();
+		const item1 = await storage.todos.put({
+			content: 'item 1',
+			done: false,
+			tags: ['tag 1'],
+			category: 'general',
+			attachments: [
+				{
+					name: 'attachment 1',
+				},
+			],
+		});
+
+		const { id, ...snapshot } = item1.getSnapshot();
+		const item2 = await storage.todos.put(snapshot);
+
+		expect(item2.get('tags').length).toBe(1);
+		expect(item2.get('attachments').length).toBe(1);
+
+		item2.get('attachments').get(0).set('name', 'attachment 2');
+
+		expect(item1.get('attachments').get(0).get('name')).toBe('attachment 1');
+	});
 });

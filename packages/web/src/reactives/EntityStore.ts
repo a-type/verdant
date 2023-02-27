@@ -16,6 +16,7 @@ import {
 	groupPatchesByRootOid,
 	ObjectIdentifier,
 	Operation,
+	removeOidsFromAllSubObjects,
 } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
@@ -243,6 +244,8 @@ export class EntityStore extends EventSubscriber<{
 		oid: ObjectIdentifier,
 		options: { undoable?: boolean },
 	) => {
+		// remove all OID associations from initial data
+		removeOidsFromAllSubObjects(initial);
 		// first grab any file and replace them with refs
 		const processed = processValueFiles(initial, this.files.add);
 
