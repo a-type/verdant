@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.8
+
+### Patch Changes
+
+- 11d9df8: Bugfix for initializing a new entity from the snapshot of an old one
+
 ## 1.12.7
 
 ### Patch Changes
