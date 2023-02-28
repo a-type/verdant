@@ -93,7 +93,7 @@ function compareSortContent(a: any, b: any) {
 	return a.content.localeCompare(b.content);
 }
 
-it.only('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
+it('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData();
 
