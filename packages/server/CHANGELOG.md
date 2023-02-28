@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 1.7.4
+
+### Patch Changes
+
+- bf566ef: Fix big inefficiencies in synced baselines, overhaul highwater/ack system
+- Updated dependencies [bf566ef]
+  - @lo-fi/common@1.10.3
+
 ## 1.7.3
 
 ### Patch Changes

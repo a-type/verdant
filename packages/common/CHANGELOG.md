@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.10.3
+
+### Patch Changes
+
+- bf566ef: Fix big inefficiencies in synced baselines, overhaul highwater/ack system
+
 ## 1.10.2
 
 ### Patch Changes
