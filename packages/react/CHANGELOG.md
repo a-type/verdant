@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 13.0.3
+
+### Patch Changes
+
+- Updated dependencies [bf566ef]
+  - @lo-fi/common@1.10.3
+  - @lo-fi/web@1.12.10
+
 ## 13.0.2
 
 ### Patch Changes
