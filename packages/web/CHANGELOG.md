@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 1.12.9
+
+### Patch Changes
+
+- 363dccb: Increase query cache time to enable easier preloading
+
 ## 1.12.8
 
 ### Patch Changes
