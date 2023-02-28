@@ -80,7 +80,7 @@ export class LiveQueryStore<
 					this.cache.delete(query.key);
 				}
 			}
-		}, 100);
+		}, 3000);
 	};
 
 	update = (key: string) => {
