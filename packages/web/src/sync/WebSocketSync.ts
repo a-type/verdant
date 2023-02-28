@@ -106,7 +106,7 @@ export class WebSocketSync
 				if (message.ackThisNonce) {
 					// we need to send the ack to confirm we got the response
 					this.send(
-						await this.meta.messageCreator.createSyncAck(message.ackThisNonce),
+						await this.meta.messageCreator.createAck(message.ackThisNonce),
 					);
 				}
 				this.hasStartedSync = true;

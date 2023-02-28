@@ -168,6 +168,29 @@ export class ReplicaInfos {
 			.run(serverOrder, replicaId, libraryId);
 	};
 
+	acknowledgeOperation = (
+		libraryId: string,
+		replicaId: string,
+		timestamp: string,
+	) => {
+		if (!timestamp) return;
+
+		// get the server order from the operation with the timestamp and update the replica's server order
+		// to the max of the current server order and the server order of the operation
+		this.db
+			.prepare(
+				`
+			UPDATE ReplicaInfo
+			SET ackedLogicalTime = ?, ackedServerOrder = MAX(ackedServerOrder, COALESCE((
+				SELECT serverOrder FROM OperationHistory
+				WHERE libraryId = ? AND timestamp = ?
+			), 0))
+			WHERE id = ? AND libraryId = ?
+			`,
+			)
+			.run(timestamp, libraryId, timestamp, replicaId, libraryId);
+	};
+
 	getGlobalAck = (libraryId: string, onlineReplicaIds?: string[]) => {
 		const nonTruant = this.getAllNonTruant(libraryId);
 		const globalAckEligible = nonTruant.filter(

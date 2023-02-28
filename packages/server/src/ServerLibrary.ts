@@ -109,9 +109,6 @@ export class ServerLibrary {
 			case 'sync':
 				this.handleSync(message, clientKey, info);
 				break;
-			case 'sync-ack':
-				this.handleSyncAck(message, clientKey, info);
-				break;
 			case 'ack':
 				this.handleAck(message, clientKey, info);
 				break;
@@ -174,8 +171,7 @@ export class ServerLibrary {
 			timestamp: message.timestamp,
 		});
 
-		// TODO: evaluate if this is correct!!!
-		this.updateAcknowledged(
+		this.updateHighwater(
 			message.replicaId,
 			message.operations[message.operations.length - 1].timestamp,
 			info,
@@ -245,7 +241,7 @@ export class ServerLibrary {
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
 		this.log(
-			`Sync from ${replicaId} (user: ${info.userId}) [ackedLogicalTime: ${changesSince}, ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}]`,
+			`Sync from ${replicaId} (user: ${info.userId}) [ackedLogicalTime: ${changesSince}, ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}, status: ${status}}]`,
 		);
 
 		// lookup operations after the last ack the client gave us
@@ -276,6 +272,8 @@ export class ServerLibrary {
 		const isEmptyLibrary =
 			changesSince === null && ops.length === 0 && baselines.length === 0;
 
+		let overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
+
 		// if the local library is empty and the replica is new to us,
 		// but the replica is providing a "since" timestamp, this
 		// suggests the local data is incomplete or gone. we request
@@ -290,9 +288,18 @@ export class ServerLibrary {
 				since: null,
 			});
 			return;
+		} else if (!isEmptyLibrary && message.since === null) {
+			// this would mean the replica is providing a full history
+			// but the library already has data. the replica should
+			// reset to the server version
+			this.log(
+				'Detected replica',
+				replicaId,
+				'is providing a full history but the library already has data. Requesting replica reset.',
+			);
+			overwriteLocalData = true;
 		}
 
-		const overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
 		if (overwriteLocalData) {
 			this.log(
 				'Overwriting local data for replica',
@@ -319,6 +326,12 @@ export class ServerLibrary {
 				'operations',
 			);
 			this.operations.insertAll(info.libraryId, replicaId, message.operations);
+			this.replicas.updateAcknowledged(
+				info.libraryId,
+				replicaId,
+				message.timestamp,
+			);
+			// will include the new global ack
 			this.rebroadcastOperations(
 				info.libraryId,
 				clientKey,
@@ -333,11 +346,7 @@ export class ServerLibrary {
 		}
 
 		// create the nonce by encoding the server order of the last operation
-		const ackThisNonce = ops.length
-			? Buffer.from(JSON.stringify(ops[ops.length - 1].serverOrder)).toString(
-					'base64',
-			  )
-			: undefined;
+		const ackThisNonce = this.createAckNonce(ops);
 
 		// respond to client
 
@@ -367,50 +376,12 @@ export class ServerLibrary {
 		});
 	};
 
-	private handleSyncAck = (
-		message: SyncAckMessage,
-		clientKey: string,
-		info: TokenInfo,
-	) => {
-		if (!message.nonce) {
-			return;
-		}
-
-		const decodedNonce = JSON.parse(
-			Buffer.from(message.nonce, 'base64').toString('utf8'),
-		);
-		this.log(
-			'Sync ack from',
-			message.replicaId,
-			'(user',
-			info.userId,
-			')',
-			'with order',
-			decodedNonce,
-		);
-		if (typeof decodedNonce !== 'number') {
-			this.log('error', 'Invalid nonce', message.nonce);
-			return;
-		}
-
-		const replicaId = message.replicaId;
-		this.replicas.updateServerOrder(info.libraryId, replicaId, decodedNonce);
-	};
-
-	private updateAcknowledged = (
-		replicaId: string,
-		timestamp: string,
-		info: TokenInfo,
-	) => {
-		const priorGlobalAck = this.replicas.getGlobalAck(info.libraryId);
-		this.replicas.updateAcknowledged(info.libraryId, replicaId, timestamp);
-		const newGlobalAck = this.replicas.getGlobalAck(info.libraryId);
-		if (newGlobalAck && priorGlobalAck !== newGlobalAck) {
-			this.sender.broadcast(info.libraryId, {
-				type: 'global-ack',
-				timestamp: newGlobalAck,
-			});
-		}
+	private createAckNonce = (ops: OperationSpec[]): string | undefined => {
+		return ops.length
+			? Buffer.from(JSON.stringify(ops[ops.length - 1].serverOrder)).toString(
+					'base64',
+			  )
+			: undefined;
 	};
 
 	private handleAck = (
@@ -418,7 +389,60 @@ export class ServerLibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		this.updateAcknowledged(message.replicaId, message.timestamp, info);
+		if (message.nonce) {
+			const decodedNonce = JSON.parse(
+				Buffer.from(message.nonce, 'base64').toString('utf8'),
+			);
+			this.log(
+				'Ack from',
+				message.replicaId,
+				'(user',
+				info.userId,
+				')',
+				'with order',
+				decodedNonce,
+			);
+			if (typeof decodedNonce !== 'number') {
+				this.log('error', 'Invalid nonce', message.nonce);
+				return;
+			}
+
+			const replicaId = message.replicaId;
+			this.replicas.updateServerOrder(info.libraryId, replicaId, decodedNonce);
+		} else if (message.timestamp) {
+			this.replicas.acknowledgeOperation(
+				info.libraryId,
+				message.replicaId,
+				message.timestamp,
+			);
+			const globalAck = this.replicas.getGlobalAck(info.libraryId);
+			if (globalAck) {
+				this.sender.broadcast(info.libraryId, {
+					type: 'global-ack',
+					timestamp: globalAck,
+				});
+			}
+		}
+	};
+
+	private updateHighwater = (
+		replicaId: string,
+		timestamp: string,
+		info: TokenInfo,
+		ignoreClientKeys: string[] = [],
+	) => {
+		this.replicas.updateAcknowledged(info.libraryId, replicaId, timestamp);
+		const newGlobalAck = this.replicas.getGlobalAck(info.libraryId);
+		if (newGlobalAck) {
+			this.sender.broadcast(
+				info.libraryId,
+				{
+					type: 'global-ack',
+					timestamp: newGlobalAck,
+				},
+				ignoreClientKeys,
+			);
+		}
 	};
 
 	private pendingRebaseTimeout: NodeJS.Timeout | null = null;

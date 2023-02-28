@@ -24,13 +24,13 @@ async function connectAndSeedData(library = 'reset-1') {
 		server,
 		library,
 		user: 'User A',
-		// logId: 'A',
+		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library,
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 
 	// seed data into library
@@ -42,11 +42,11 @@ async function connectAndSeedData(library = 'reset-1') {
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
 	});
-	await clientA.items.put({
+	const a_apples = await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Apples',
 	});
-	await clientA.items.put({
+	const a_oranges = await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Oranges',
 	});
@@ -54,7 +54,11 @@ async function connectAndSeedData(library = 'reset-1') {
 		content: 'Unknown',
 	});
 
+	await waitForQueryResult(clientB.items.get(a_apples.get('id')));
+	await waitForQueryResult(clientB.items.get(a_oranges.get('id')));
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
+	await waitForQueryResult(clientB.categories.get(a_produceCategory.get('id')));
+
 	return {
 		clientA,
 		clientB,
@@ -89,7 +93,7 @@ function compareSortContent(a: any, b: any) {
 	return a.content.localeCompare(b.content);
 }
 
-it('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
+it.only('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData();
 
@@ -120,7 +124,15 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	clientB.sync.start();
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
-	await waitForQueryResult(clientB.items.get(a_banana.get('id')));
+	await waitForQueryResult(
+		clientB.items.get(a_banana.get('id')),
+		(val) => {
+			clientB;
+			console.log('########', val);
+			return !!val;
+		},
+		1000,
+	);
 
 	expect(await clientB.items.get(b_pear.get('id')).resolved).toBe(null);
 

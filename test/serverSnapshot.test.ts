@@ -14,7 +14,11 @@ beforeAll(async () => {
 
 afterAll(() => {
 	// delete the ./test-files directory
-	fs.rmdirSync('./test-files', { recursive: true });
+	try {
+		fs.rmdirSync('./test-files', { recursive: true });
+	} catch (e) {
+		// ignore
+	}
 });
 
 afterAll(async () => {

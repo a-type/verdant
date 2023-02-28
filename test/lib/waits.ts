@@ -53,6 +53,7 @@ export async function waitForQueryResult(
 	predicate: (value: any) => boolean = (value) => {
 		return !!value && (Array.isArray(value) ? value.length > 0 : true);
 	},
+	timeoutMs = 15000,
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (predicate(query.current)) {
@@ -62,7 +63,7 @@ export async function waitForQueryResult(
 
 		const timeout = setTimeout(() => {
 			reject(new Error('Timed out waiting for query ' + query.key));
-		}, 15000);
+		}, timeoutMs);
 		const unsubscribe = query.subscribe((result) => {
 			if (predicate(query.current)) {
 				unsubscribe();

@@ -1,4 +1,5 @@
 import {
+	AckMessage,
 	DocumentBaseline,
 	getOidRoot,
 	HeartbeatMessage,
@@ -64,21 +65,44 @@ export class MessageCreator {
 		// if server replica isn't stored, we're syncing for the first time.
 		const operations: Operation[] = [];
 		const affectedDocs = new Set<ObjectIdentifier>();
-		await this.meta.operations.iterateOverAllLocalOperations(
-			(patch) => {
-				operations.push({
-					data: patch.data,
-					oid: patch.oid,
-					timestamp: patch.timestamp,
-				});
-				affectedDocs.add(getOidRoot(patch.oid));
-			},
-			{
-				after: provideChangesSince,
-				// block on writes to prevent race conditions
-				mode: 'readwrite',
-			},
-		);
+
+		// FIXME: this branch gives bad vibes. should we always
+		// send all operations from other replicas too? is there
+		// ever a case where we have a "since" timestamp and there
+		// are foreign ops that match it?
+		if (provideChangesSince) {
+			await this.meta.operations.iterateOverAllLocalOperations(
+				(patch) => {
+					operations.push({
+						data: patch.data,
+						oid: patch.oid,
+						timestamp: patch.timestamp,
+					});
+					affectedDocs.add(getOidRoot(patch.oid));
+				},
+				{
+					after: provideChangesSince,
+					// block on writes to prevent race conditions
+					mode: 'readwrite',
+				},
+			);
+		} else {
+			// if providing the whole history, don't limit to only local
+			// operations
+			await this.meta.operations.iterateOverAllOperations(
+				(patch) => {
+					operations.push({
+						data: patch.data,
+						oid: patch.oid,
+						timestamp: patch.timestamp,
+					});
+					affectedDocs.add(getOidRoot(patch.oid));
+				},
+				{
+					mode: 'readwrite',
+				},
+			);
+		}
 		// we only need to send baselines if we've never synced before
 		let baselines: DocumentBaseline[] = [];
 		if (!provideChangesSince) {
@@ -117,10 +141,10 @@ export class MessageCreator {
 		};
 	};
 
-	createSyncAck = async (nonce: string): Promise<SyncAckMessage> => {
+	createAck = async (nonce: string): Promise<AckMessage> => {
 		const localReplicaInfo = await this.meta.localReplica.get();
 		return {
-			type: 'sync-ack',
+			type: 'ack',
 			timestamp: this.meta.now,
 			replicaId: localReplicaInfo.id,
 			nonce,

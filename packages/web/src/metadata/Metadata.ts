@@ -246,7 +246,7 @@ export class Metadata extends EventSubscriber<{
 
 		await this.baselines.setAll(baselines);
 
-		this.ack(baselines[baselines.length - 1].timestamp);
+		// this.ack(baselines[baselines.length - 1].timestamp);
 
 		const affectedOidSet = new Set<ObjectIdentifier>();
 		baselines.forEach((baseline) => {

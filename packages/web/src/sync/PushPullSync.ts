@@ -112,7 +112,7 @@ export class PushPullSync
 				// we need to ack the nonce to confirm that we received the sync-resp
 				this.log('Sending sync ack', message.ackThisNonce);
 				this.sendRequest([
-					await this.meta.messageCreator.createSyncAck(message.ackThisNonce),
+					await this.meta.messageCreator.createAck(message.ackThisNonce),
 				]);
 			}
 			// but we can go ahead and preemptively allow ops to be sent

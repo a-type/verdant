@@ -17,12 +17,14 @@ export type HeartbeatResponseMessage = {
 /**
  * Used by clients to indicate they have
  * successfully applied all operations from the
- * server up to this logical timestamp.
+ * server up to this one. Uses the nonce from the
+ * operation rebroadcast message as the ack.
  */
 export type AckMessage = {
 	type: 'ack';
 	replicaId: string;
-	timestamp: string;
+	timestamp?: string;
+	nonce?: string;
 };
 
 export type OperationMessage = {
@@ -38,6 +40,7 @@ export type OperationRebroadcastMessage = {
 	baselines: DocumentBaseline[];
 	replicaId: string;
 	globalAckTimestamp: string | undefined;
+	ackThisNonce?: string;
 };
 
 export type SyncMessage = {
@@ -105,6 +108,7 @@ export type SyncResponseMessage = {
 	ackThisNonce?: string;
 };
 
+/** @deprecated use ack */
 export type SyncAckMessage = {
 	type: 'sync-ack';
 	/** The client's replica ID */

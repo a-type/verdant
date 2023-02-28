@@ -66,22 +66,22 @@ it('an offline client rebases everything', async () => {
 it('passive clients do not interfere with rebasing when offline', async () => {
 	const clientA = await createTestClient({
 		server,
-		library: 'sync-1',
+		library: 'rebase-passive-1',
 		user: 'User A',
-		// logId: 'A',
+		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
-		library: 'sync-1',
+		library: 'rebase-passive-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
-		library: 'sync-1',
+		library: 'rebase-passive-1',
 		user: 'User C',
 		type: ReplicaType.PassiveRealtime,
-		// logId: 'C',
+		logId: 'C',
 	});
 
 	clientA.sync.start();
@@ -90,13 +90,13 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 
 	await waitForPeerCount(clientA, 2);
 
-	clientA.categories.create({
+	clientA.categories.put({
 		name: 'Produce',
 	});
-	clientA.items.create({
+	clientA.items.put({
 		content: 'Apples',
 	});
-	clientC.items.create({
+	clientC.items.put({
 		content: 'Oranges',
 	});
 
@@ -108,11 +108,11 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	console.info('🔺 --- Disconnecting passive replica ---');
 	clientC.sync.stop();
 
-	const oranges = await clientA.items.create({
+	const oranges = await clientA.items.put({
 		content: 'Oranges',
 	});
 	oranges.set('purchased', true);
-	await clientB.items.create({
+	await clientB.items.put({
 		content: 'Bananas',
 	});
 
