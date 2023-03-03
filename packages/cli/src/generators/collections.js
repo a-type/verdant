@@ -163,10 +163,12 @@ function getObjectTypings(field, name) {
 		content += `export type ${name}Destructured = EntityFile;\n`;
 		content += `export type ${name}Snapshot = string;\n`;
 	} else {
-		content += `type ${name} = ${type}${nullable ? ' | null' : ''};\n`;
-		content += `type ${name}Init = ${name}${optional ? ' | undefined' : ''};\n`;
-		content += `type ${name}Snapshot = ${name};\n`;
-		content += `type ${name}Destructured = ${name};\n`;
+		content += `export type ${name} = ${type}${nullable ? ' | null' : ''};\n`;
+		content += `export type ${name}Init = ${name}${
+			optional ? ' | undefined' : ''
+		};\n`;
+		content += `export type ${name}Snapshot = ${name};\n`;
+		content += `export type ${name}Destructured = ${name};\n`;
 	}
 
 	return content;
