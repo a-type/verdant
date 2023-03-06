@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.7.5
+
+### Patch Changes
+
+- 32dcc88: Subscribe to changes server-side
+
 ## 1.7.4
 
 ### Patch Changes

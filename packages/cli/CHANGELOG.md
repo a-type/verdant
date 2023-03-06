@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.12.1
+
+### Patch Changes
+
+- 689b803: Export primitive field types
+
 ## 1.12.0
 
 ### Minor Changes
