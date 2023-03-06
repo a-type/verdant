@@ -2,17 +2,14 @@ import {
 	assert,
 	ClientMessage,
 	createOid,
-	DocumentBaseline,
 	FileData,
 	generateId,
-	Operation,
 	ServerMessage,
 } from '@lo-fi/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { UserProfileLoader, UserProfiles } from './Profiles.js';
-import { ServerStorage } from './ServerStorage.js';
 import create from 'better-sqlite3';
 import { MessageSender } from './MessageSender.js';
 import { URL } from 'url';
@@ -24,6 +21,7 @@ import { FileInfo, FileStorage } from './files/FileStorage.js';
 import { Readable } from 'stream';
 import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
 import { ServerLibrary } from './ServerLibrary.js';
+import { migrations } from './migrations.js';
 
 export interface ServerOptions {
 	/**
@@ -112,6 +110,7 @@ export class Server extends EventEmitter implements MessageSender {
 		this.fileStorage = options.fileStorage;
 
 		const db = create(options.databaseFile);
+		migrations(db);
 
 		this.fileMetadata = new FileMetadata(db, options.fileConfig);
 
