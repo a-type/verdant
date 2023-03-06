@@ -2,14 +2,16 @@ import {
 	assert,
 	ClientMessage,
 	createOid,
+	DocumentBaseline,
 	FileData,
 	generateId,
+	Operation,
 	ServerMessage,
 } from '@lo-fi/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { UserProfiles } from './Profiles.js';
+import { UserProfileLoader, UserProfiles } from './Profiles.js';
 import { ServerStorage } from './ServerStorage.js';
 import create from 'better-sqlite3';
 import { MessageSender } from './MessageSender.js';
@@ -20,7 +22,8 @@ import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
 import busboy from 'busboy';
 import { FileInfo, FileStorage } from './files/FileStorage.js';
 import { Readable } from 'stream';
-import { FileMetadataConfig } from './files/FileMetadata.js';
+import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
+import { ServerLibrary } from './ServerLibrary.js';
 
 export interface ServerOptions {
 	/**
@@ -78,8 +81,10 @@ class DefaultProfiles implements UserProfiles<{ id: string }> {
 export class Server extends EventEmitter implements MessageSender {
 	readonly httpServer: HttpServer;
 	private wss: WebSocketServer;
-	private storage: ServerStorage;
 	private fileStorage?: FileStorage;
+	private fileMetadata;
+	private library;
+	readonly subscribe;
 
 	private clientConnections = new ClientConnectionManager();
 	private keepalives = new ReplicaKeepaliveTimers();
@@ -106,16 +111,24 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.fileStorage = options.fileStorage;
 
-		this.storage = new ServerStorage({
-			db: create(options.databaseFile),
+		const db = create(options.databaseFile);
+
+		this.fileMetadata = new FileMetadata(db, options.fileConfig);
+
+		this.library = new ServerLibrary({
+			db,
 			sender: this,
-			profiles: options.profiles || new DefaultProfiles(),
-			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 30,
+			profiles: new UserProfileLoader(
+				options.profiles || new DefaultProfiles(),
+			),
 			log: this.log,
 			disableRebasing: options.disableRebasing,
-			fileConfig: options.fileConfig,
+			fileMetadata: this.fileMetadata,
 			fileStorage: this.fileStorage,
+			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 14,
 		});
+
+		this.subscribe = this.library.subscribe.bind(this.library);
 
 		this.wss = new WebSocketServer({
 			noServer: true,
@@ -138,7 +151,7 @@ export class Server extends EventEmitter implements MessageSender {
 			}
 		});
 
-		this.keepalives.subscribe('lost', this.storage.remove);
+		this.keepalives.subscribe('lost', this.library.remove);
 	}
 
 	private authorizeRequest = (req: IncomingMessage) => {
@@ -294,7 +307,7 @@ export class Server extends EventEmitter implements MessageSender {
 						};
 						// write metadata to storage
 						try {
-							this.storage.putFileInfo(info.libraryId, lofiFileInfo);
+							this.fileMetadata.put(info.libraryId, lofiFileInfo);
 							fs.put(stream, lofiFileInfo);
 						} catch (e) {
 							reject(e);
@@ -332,7 +345,7 @@ export class Server extends EventEmitter implements MessageSender {
 			} else if (req.method === 'GET') {
 				const info = this.authorizeRequest(req);
 
-				const fileInfo = this.storage.getFileInfo(info.libraryId, id);
+				const fileInfo = this.fileMetadata.get(info.libraryId, id);
 				if (!fileInfo) {
 					res.writeHead(404);
 					res.end();
@@ -392,7 +405,7 @@ export class Server extends EventEmitter implements MessageSender {
 			info.libraryId,
 			JSON.stringify(message),
 		);
-		return this.storage.receive(info.libraryId, clientKey, message, info);
+		return this.library.receive(message, clientKey, info);
 	};
 
 	private handleConnection = (
@@ -422,7 +435,7 @@ export class Server extends EventEmitter implements MessageSender {
 				return;
 			}
 
-			this.storage.remove(info.libraryId, replicaId);
+			this.library.remove(info.libraryId, replicaId);
 
 			this.emit('socket-close', info);
 		});
@@ -457,7 +470,7 @@ export class Server extends EventEmitter implements MessageSender {
 				});
 			}),
 		]);
-		await this.storage.close();
+		this.library.close();
 	};
 
 	/**
@@ -471,12 +484,12 @@ export class Server extends EventEmitter implements MessageSender {
 	evictLibrary = (libraryId: string) => {
 		// disconnect all clients
 		this.clientConnections.disconnectAll(libraryId);
-		this.storage.evictLibrary(libraryId);
+		this.library.destroy(libraryId);
 		this.log('Evicted library', libraryId);
 	};
 
 	getLibraryPresence = (libraryId: string) => {
-		return this.storage.getLibraryPresence(libraryId);
+		return this.library.getPresence(libraryId);
 	};
 
 	/**
@@ -485,7 +498,7 @@ export class Server extends EventEmitter implements MessageSender {
 	 * replicas before confirming and squashing changes.
 	 */
 	evictUser = (libraryId: string, userId: string) => {
-		this.storage.evictUser(libraryId, userId);
+		this.library.evictUser(libraryId, userId);
 		this.log('Evicted user', userId, 'from library', libraryId);
 	};
 
@@ -499,7 +512,7 @@ export class Server extends EventEmitter implements MessageSender {
 		collection: string,
 		documentId: string,
 	) => {
-		return this.storage.getDocumentSnapshot(
+		return this.library.getDocumentSnapshot(
 			libraryId,
 			createOid(collection, documentId, []),
 		);

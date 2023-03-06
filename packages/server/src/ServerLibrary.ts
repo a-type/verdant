@@ -16,6 +16,7 @@ import {
 	Ref,
 	isFileRef,
 	SyncAckMessage,
+	EventSubscriber,
 } from '@lo-fi/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
@@ -29,7 +30,15 @@ import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
 import { OperationSpec } from './types.js';
 
-export class ServerLibrary {
+export type ServerLibraryEvents = {
+	changes: (
+		info: TokenInfo,
+		operations: Operation[],
+		baselines: DocumentBaseline[],
+	) => void;
+};
+
+export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	private db;
 	private sender;
 	private profiles;
@@ -61,6 +70,8 @@ export class ServerLibrary {
 		fileMetadata: FileMetadata;
 		fileStorage?: FileStorage;
 	}) {
+		super();
+
 		this.db = db;
 		this.log = log;
 		this.disableRebasing = !!disableRebasing;
@@ -176,6 +187,8 @@ export class ServerLibrary {
 			message.operations[message.operations.length - 1].timestamp,
 			info,
 		);
+
+		this.emit(`changes`, info, message.operations, []);
 	};
 
 	private removeExtraOperationData = (operation: OperationSpec): Operation => {
@@ -339,6 +352,7 @@ export class ServerLibrary {
 				message.operations,
 				message.baselines,
 			);
+			this.emit(`changes`, info, message.operations, message.baselines);
 		}
 
 		if (status === 'truant') {
@@ -703,5 +717,9 @@ export class ServerLibrary {
 		} else {
 			return null;
 		}
+	};
+
+	close = () => {
+		this.db.close();
 	};
 }

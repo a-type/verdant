@@ -1,6 +1,6 @@
 import { Database } from 'better-sqlite3';
-import { ClientMessage } from '@lo-fi/common';
-import { ServerLibrary } from './ServerLibrary.js';
+import { ClientMessage, EventSubscriber } from '@lo-fi/common';
+import { ServerLibrary, ServerLibraryEvents } from './ServerLibrary.js';
 import { MessageSender } from './MessageSender.js';
 import { UserProfiles, UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
