@@ -32,7 +32,7 @@ import {
 	ChromaticAberration,
 	HueSaturation,
 } from '@react-three/postprocessing';
-import { Vector2 } from 'three';
+import { Group, Vector2 } from 'three';
 
 const CAR_COUNT = 5;
 
@@ -71,7 +71,7 @@ export function SubwayScene() {
 					<Scene />
 					{/* </Select> */}
 					{/* <OrbitControls /> */}
-					<color attach="background" args={[0xffffff]} />
+					<color attach="background" args={[0x202020]} />
 					{/* <PerformanceMonitor /> */}
 					<AdaptiveDpr pixelated />
 				</Selection>
@@ -118,20 +118,6 @@ function Scene() {
 			<Environment preset="city" />
 			<RunnerLights />
 			{/* walls */}
-			<Plane
-				args={[100, 100]}
-				rotation={[0, Math.PI / 2, 0]}
-				position={[-2, 0, 0]}
-			>
-				<meshBasicMaterial color={0xeeb030} attach="material" />
-			</Plane>
-			<Plane
-				args={[100, 100]}
-				rotation={[0, -Math.PI / 2, 0]}
-				position={[2, 0, 0]}
-			>
-				<meshBasicMaterial color={0xeeb030} attach="material" />
-			</Plane>
 		</>
 	);
 }
@@ -159,9 +145,9 @@ function Car({ index }: { index: number }) {
 
 const runnerLightIntensity = 0.25;
 const runnerLightColor = 0xfff3af;
-const runnerPosition = 4;
+const runnerPosition = 8;
 function RunnerLights() {
-	const ref = useRef<any>(null);
+	const ref = useRef<Group>(null);
 	const modeRef = useRef(1);
 	const lightRef1 = useRef<any>(null);
 	const lightRef2 = useRef<any>(null);
@@ -179,8 +165,8 @@ function RunnerLights() {
 
 	useFrame(() => {
 		if (modeRef.current === 1) {
-			ref.current.position.z += 0.5;
-			if (ref.current.position.z > 50) modeRef.current = 2;
+			ref.current.position.z += 1;
+			if (ref.current.position.z > 100) modeRef.current = 2;
 		}
 		if (modeRef.current === 2) {
 			ref.current.position.y += 1;
@@ -191,8 +177,8 @@ function RunnerLights() {
 			if (lightIntensityRef.current <= 0) modeRef.current = 4;
 		}
 		if (modeRef.current === 4) {
-			ref.current.position.z -= 0.5;
-			if (ref.current.position.z < -50) modeRef.current = 5;
+			ref.current.position.z -= 1;
+			if (ref.current.position.z < -100) modeRef.current = 5;
 		}
 		if (modeRef.current === 5) {
 			ref.current.position.y -= 1;
@@ -237,6 +223,20 @@ function RunnerLights() {
 				intensity={runnerLightIntensity}
 				color={runnerLightColor}
 			/>
+			<Plane
+				args={[50, 10]}
+				rotation={[0, Math.PI / 2, 0]}
+				position={[-10, 4, 25]}
+			>
+				<meshBasicMaterial color={'#fe03'} attach="material" />
+			</Plane>
+			<Plane
+				args={[50, 10]}
+				rotation={[0, -Math.PI / 2, 0]}
+				position={[10, 4, 25]}
+			>
+				<meshBasicMaterial color={'#fe03'} attach="material" />
+			</Plane>
 		</group>
 	);
 }
