@@ -9,11 +9,13 @@ import { SubwayScene } from '@site/src/components/SubwayScene';
 import CodeBlock from '@theme/CodeBlock';
 import Layout from '@theme/Layout';
 import { Tagline } from '@site/src/components/Tagline';
+import { MusicPlayer } from '@site/src/components/MusicPlayer';
 
 function HomepageHeader() {
 	const { siteConfig } = useDocusaurusContext();
 	return (
 		<main className={styles.main}>
+			<MusicPlayer />
 			<header className={clsx('hero', styles.heroBanner)}>
 				<div className={styles.scene}>
 					<SubwayScene />
@@ -236,6 +238,16 @@ server.listen(3000);
 `}
 						</CodeBlock>
 					</div>
+				</div>
+			</section>
+			<section style={{ marginBottom: '80px' }}>
+				<div className={styles.buttons}>
+					<Link
+						className="button button--secondary button--lg"
+						to="/docs/intro"
+					>
+						Get Started
+					</Link>
 				</div>
 			</section>
 		</main>

@@ -28,7 +28,11 @@ import {
 	Select,
 	Grid,
 	Pixelation,
+	Scanline,
+	ChromaticAberration,
+	HueSaturation,
 } from '@react-three/postprocessing';
+import { Vector2 } from 'three';
 
 const CAR_COUNT = 5;
 
@@ -53,15 +57,14 @@ export function SubwayScene() {
 							bokehScale={2}
 							height={480}
 						/> */}
-						<Bloom
-							luminanceThreshold={0.5}
-							luminanceSmoothing={0.9}
-							height={100}
-						/>
+						{/* <HueSaturation hue={Math.random() * 255} /> */}
+						<Bloom luminanceThreshold={0} luminanceSmoothing={3} height={800} />
 						{/* <Noise opacity={0.02} /> */}
-						<Vignette eskil={false} offset={0.001} darkness={1} />
 						{/* <Pixelation granularity={8} /> */}
-						<DotScreen scale={2} />
+						{/* <DotScreen scale={4} /> */}
+						<Aberration />
+						{/* <Scanline density={2} /> */}
+						{/* <Vignette eskil={false} offset={0.1} darkness={0.6} /> */}
 						{/* <Grid /> */}
 					</EffectComposer>
 					{/* <Select enabled> */}
@@ -77,11 +80,27 @@ export function SubwayScene() {
 	);
 }
 
+function Aberration() {
+	const ref = useRef();
+	useFrame(() => {
+		const ab = ref.current!;
+		ab.offset.x = Math.sin(Date.now() / 5000) / 500;
+	});
+	return (
+		<ChromaticAberration
+			ref={ref}
+			// offset={new Vector2(Math.random(), 0)}
+			// radialModulation
+			modulationOffset={0.1}
+		/>
+	);
+}
+
 function Scene() {
 	return (
 		<>
 			{/* <pointLight position={[0, 2, 0]} castShadow intensity={0.5} /> */}
-			<ambientLight intensity={0.35} color={0xffe0b2} />
+			<ambientLight intensity={0.45} color={0xffe0b2} />
 			<directionalLight
 				position={[0, 2, 0]}
 				castShadow
@@ -104,14 +123,14 @@ function Scene() {
 				rotation={[0, Math.PI / 2, 0]}
 				position={[-2, 0, 0]}
 			>
-				<meshBasicMaterial color={0x000000} attach="material" />
+				<meshBasicMaterial color={0xeeb030} attach="material" />
 			</Plane>
 			<Plane
 				args={[100, 100]}
 				rotation={[0, -Math.PI / 2, 0]}
 				position={[2, 0, 0]}
 			>
-				<meshBasicMaterial color={0x000000} attach="material" />
+				<meshBasicMaterial color={0xeeb030} attach="material" />
 			</Plane>
 		</>
 	);
@@ -168,24 +187,29 @@ function RunnerLights() {
 			if (ref.current.position.y > 30) modeRef.current = 3;
 		}
 		if (modeRef.current === 3) {
-			ref.current.position.z -= 0.5;
-			if (ref.current.position.z < -50) modeRef.current = 4;
+			setLightIntensity(lightIntensityRef.current - 0.001);
+			if (lightIntensityRef.current <= 0) modeRef.current = 4;
 		}
 		if (modeRef.current === 4) {
-			ref.current.position.y -= 1;
-			if (ref.current.position.y < 0) modeRef.current = 5;
+			ref.current.position.z -= 0.5;
+			if (ref.current.position.z < -50) modeRef.current = 5;
 		}
 		if (modeRef.current === 5) {
+			ref.current.position.y -= 1;
+			if (ref.current.position.y < 0) modeRef.current = 6;
+		} else if (modeRef.current === 6) {
 			setLightIntensity(lightIntensityRef.current + 0.001);
 			if (lightIntensityRef.current >= runnerLightIntensity)
 				modeRef.current = 1;
 		}
 
-		if (modeRef.current === 2 || modeRef.current === 3) {
-			if (lightIntensityRef.current > 0) {
-				setLightIntensity(lightIntensityRef.current - 0.005);
-			}
-		}
+		// if (
+		// 	modeRef.current > 1 && modeRef.current < 6
+		// ) {
+		// 	if (lightIntensityRef.current > 0) {
+		// 		setLightIntensity(lightIntensityRef.current - 0.005);
+		// 	}
+		// }
 	});
 	return (
 		<group ref={ref}>

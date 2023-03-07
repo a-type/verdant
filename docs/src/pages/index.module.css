@@ -42,14 +42,15 @@
 }
 
 .title {
-	font-size: 3rem;
+	font-size: 6rem;
 	font-weight: 700;
 	margin: 0;
+	font-family: 'Rampart One', sans-serif;
 }
 
 .subtitle {
-	font-size: 1.5rem;
-	font-weight: 400;
+	font-size: 2rem;
+	font-weight: 600;
 	margin: 0;
 	margin-bottom: 8rem;
 }
@@ -90,7 +91,8 @@
 	gap: 4rem;
 	background: radial-gradient(
 		ellipse at center,
-		rgba(0, 0, 0, 0.4) 0%,
+		rgba(0, 0, 0, 0.6) 0%,
+		rgba(0, 0, 0, 0.4) 25%,
 		rgba(0, 0, 0, 0) 50%,
 		rgba(0, 0, 0, 0) 100%
 	);
@@ -103,6 +105,7 @@
 	align-items: flex-start;
 	text-align: left;
 	position: relative;
+	margin-bottom: 8rem;
 }
 .featureStepReverse {
 	flex-direction: row-reverse;
@@ -113,7 +116,7 @@
 	flex-direction: column;
 	gap: 1rem;
 	position: sticky;
-	top: 4rem;
+	top: 6rem;
 	flex: 1 0 0;
 	min-width: 0;
 }
