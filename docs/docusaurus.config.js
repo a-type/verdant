@@ -54,6 +54,28 @@ const config = {
 	themeConfig:
 		/** @type {import('@docusaurus/preset-classic').ThemeConfig} */
 		({
+			metadata: [
+				{
+					name: 'twitter:card',
+					content: 'summary_large_image',
+				},
+				{
+					name: 'twitter:title',
+					content: 'lo-fi',
+				},
+				{
+					name: 'twitter:description',
+					content: 'a holistic local-first toolkit',
+				},
+				{
+					name: 'twitter:image',
+					content: 'https://lo-fi.gfor.rest/opengraph.png',
+				},
+				{
+					name: 'og:image',
+					content: 'https://lo-fi.gfor.rest/opengraph.png',
+				},
+			],
 			colorMode: {
 				defaultMode: 'dark',
 			},
