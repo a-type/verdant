@@ -29,6 +29,7 @@
 	max-height: none;
 	max-width: none;
 	color: white;
+	pointer-events: none;
 }
 
 .features {
@@ -65,6 +66,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	pointer-events: initial;
 }
 
 .scene {

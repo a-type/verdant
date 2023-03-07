@@ -1,6 +1,7 @@
 import {
 	AdaptiveDpr,
 	BakeShadows,
+	CameraShake,
 	Environment,
 	OrbitControls,
 	PerformanceMonitor,
@@ -117,9 +118,23 @@ function Scene() {
 			{/* <BakeShadows /> */}
 			<Environment preset="city" />
 			<RunnerLights />
+			<CameraMouseMove />
 			{/* walls */}
 		</>
 	);
+}
+
+function CameraMouseMove() {
+	const ref = useRef<any>(null);
+	useFrame(({ camera, mouse }) => {
+		const x = mouse.x;
+		const y = mouse.y;
+		const sinShake = Math.sin(Date.now() / 1000) * 0.03;
+		camera.position.x = x / 4 + sinShake;
+		camera.position.y = y / 4 + sinShake;
+		camera.lookAt(0, 0, 0);
+	});
+	return null;
 }
 
 function Car({ index }: { index: number }) {
