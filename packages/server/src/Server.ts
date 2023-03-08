@@ -2,8 +2,10 @@ import {
 	assert,
 	ClientMessage,
 	createOid,
+	DocumentBaseline,
 	FileData,
 	generateId,
+	Operation,
 	ServerMessage,
 } from '@lo-fi/common';
 import EventEmitter from 'events';
@@ -76,13 +78,40 @@ class DefaultProfiles implements UserProfiles<{ id: string }> {
 	};
 }
 
+export interface ServerEvents {
+	error: (err: any) => void;
+	warning: (msg: string, ...args: any[]) => void;
+	changes: (
+		info: Omit<TokenInfo, 'token'>,
+		operations: Operation[],
+		baselines: DocumentBaseline[],
+	) => void;
+	request: (info: TokenInfo) => void;
+	'socket-close': (info: TokenInfo) => void;
+	'socket-connection': (info: TokenInfo) => void;
+}
+
+export declare interface Server {
+	on<Event extends keyof ServerEvents>(
+		ev: Event,
+		cb: ServerEvents[Event],
+	): this;
+	off<Event extends keyof ServerEvents>(
+		ev: Event,
+		cb: ServerEvents[Event],
+	): this;
+	emit<Event extends keyof ServerEvents>(
+		ev: Event,
+		...args: Parameters<ServerEvents[Event]>
+	): boolean;
+}
+
 export class Server extends EventEmitter implements MessageSender {
 	readonly httpServer: HttpServer;
 	private wss: WebSocketServer;
 	private fileStorage?: FileStorage;
 	private fileMetadata;
 	private library;
-	readonly subscribe;
 
 	private clientConnections = new ClientConnectionManager();
 	private keepalives = new ReplicaKeepaliveTimers();
@@ -127,7 +156,12 @@ export class Server extends EventEmitter implements MessageSender {
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 14,
 		});
 
-		this.subscribe = this.library.subscribe.bind(this.library);
+		this.library.subscribe(
+			'changes',
+			({ token, ...info }, operations, baselines) => {
+				this.emit('changes', info, operations, baselines);
+			},
+		);
 
 		this.wss = new WebSocketServer({
 			noServer: true,

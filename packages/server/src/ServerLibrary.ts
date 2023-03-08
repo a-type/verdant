@@ -352,7 +352,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				message.operations,
 				message.baselines,
 			);
-			this.emit(`changes`, info, message.operations, message.baselines);
+			if (message.operations.length || message.baselines.length) {
+				this.emit(`changes`, info, message.operations, message.baselines);
+			}
 		}
 
 		if (status === 'truant') {
