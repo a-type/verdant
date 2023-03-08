@@ -79,7 +79,7 @@ export function SubwayScene() {
 		<Suspense>
 			<Canvas
 				camera={{
-					position: [0, 0, 2],
+					position: [0, 0, 4],
 				}}
 				shadows={false}
 				dpr={dpr}
@@ -88,7 +88,7 @@ export function SubwayScene() {
 					<EffectComposer autoClear={false} multisampling={0}>
 						{perfLevel === 4 && (
 							<DepthOfField
-								focusDistance={0}
+								focusDistance={1}
 								focalLength={0.02}
 								bokehScale={2}
 								height={480}
@@ -102,9 +102,8 @@ export function SubwayScene() {
 								height={800}
 							/>
 						)}
-						{/* <Noise opacity={0.02} /> */}
+						<Noise opacity={0.2} />
 						{/* <DotScreen scale={4} /> */}
-						{perfLevel > 2 && <Aberration />}
 					</EffectComposer>
 					{/* <Select enabled> */}
 					<Scene />
@@ -123,33 +122,17 @@ export function SubwayScene() {
 	);
 }
 
-function Aberration() {
-	const ref = useRef();
-	useFrame(() => {
-		const ab = ref.current!;
-		ab.offset.x = Math.sin(Date.now() / 5000) / 500;
-	});
-	return (
-		<ChromaticAberration
-			ref={ref}
-			// offset={new Vector2(Math.random(), 0)}
-			// radialModulation
-			modulationOffset={0.1}
-		/>
-	);
-}
-
 function Scene() {
 	return (
 		<>
 			{/* <pointLight position={[0, 2, 0]} castShadow intensity={0.5} /> */}
-			<ambientLight intensity={0.45} color={0xffe0b2} />
-			<directionalLight
+			<ambientLight intensity={0.1} color={0xffe0b2} />
+			{/* <directionalLight
 				position={[0, 2, 0]}
 				castShadow
 				intensity={0.15}
 				color={0xffb300}
-			/>
+			/> */}
 			<Select enabled>
 				<SubwayInstances>
 					{new Array(CAR_COUNT).fill(null).map((_, i) => (
@@ -283,14 +266,14 @@ function RunnerLights() {
 			<Plane
 				args={[50, 10]}
 				rotation={[0, Math.PI / 2, 0]}
-				position={[-10, 4, 25]}
+				position={[-10, 2, 25]}
 			>
 				<meshBasicMaterial color={'#f9f5ba'} attach="material" />
 			</Plane>
 			<Plane
 				args={[50, 10]}
 				rotation={[0, -Math.PI / 2, 0]}
-				position={[10, 4, 25]}
+				position={[10, 2, 25]}
 			>
 				<meshBasicMaterial color={'#f9f5ba'} attach="material" />
 			</Plane>
