@@ -114,26 +114,12 @@
 	flex-direction: row-reverse;
 }
 
-@media (max-width: 900px) {
-	.featureStep {
-		flex-direction: column;
-		width: 100%;
-	}
-	.featureStepInfo {
-		width: 100%;
-		padding: 2rem;
-	}
-	.featureStepCode {
-		width: 100%;
-	}
-}
-
 .featureStepInfo {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 	position: sticky;
-	top: 6rem;
+	top: 60px;
 	flex: 1 0 0;
 	min-width: 0;
 	z-index: 1;
@@ -150,4 +136,22 @@
 	tab-size: 2ch;
 	flex: 1 0 0;
 	min-width: 400px;
+}
+
+@media (max-width: 900px) {
+	.featureStep {
+		flex-direction: column;
+		width: 100%;
+	}
+	.featureStepInfo {
+		width: 100%;
+		padding: 2rem;
+	}
+	.featureStepCode {
+		width: 100%;
+		min-width: 0;
+	}
+	.features {
+		padding: 8px;
+	}
 }
