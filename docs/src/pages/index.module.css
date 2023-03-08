@@ -114,6 +114,20 @@
 	flex-direction: row-reverse;
 }
 
+@media (max-width: 900px) {
+	.featureStep {
+		flex-direction: column;
+		width: 100%;
+	}
+	.featureStepInfo {
+		width: 100%;
+		padding: 2rem;
+	}
+	.featureStepCode {
+		width: 100%;
+	}
+}
+
 .featureStepInfo {
 	display: flex;
 	flex-direction: column;
@@ -122,6 +136,8 @@
 	top: 6rem;
 	flex: 1 0 0;
 	min-width: 0;
+	z-index: 1;
+	background-color: var(--ifm-background-color);
 }
 .featureStepInfo > ul {
 	text-align: left;

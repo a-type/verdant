@@ -13,7 +13,13 @@ import {
 	Instances as SubwayInstances,
 	Model as SubwayModel,
 } from '@site/src/components/Subway-bake';
-import React, { Suspense, useCallback, useRef } from 'react';
+import React, {
+	Suspense,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from 'react';
 import { animated, useSpring } from '@react-spring/three';
 import { Lightmap } from '@react-three/lightmap';
 import { useControls } from 'leva';
@@ -42,6 +48,33 @@ const onComplete = () => {
 };
 
 export function SubwayScene() {
+	const [perfLevel, setPerfLevel] = useState(3);
+	const incrementPerf = useCallback(
+		() => setPerfLevel((p) => Math.min(4, p + 1)),
+		[],
+	);
+	const decrementPerf = useCallback(
+		() => setPerfLevel((p) => Math.max(0, p - 1)),
+		[],
+	);
+
+	let dpr = 1;
+	if (perfLevel === 0) {
+		dpr = 0.25;
+	} else if (perfLevel === 1) {
+		dpr = 0.5;
+	} else if (perfLevel === 2) {
+		dpr = 1;
+	} else if (perfLevel === 3) {
+		dpr = 1;
+	} else if (perfLevel === 4) {
+		dpr = 2;
+	}
+
+	useEffect(() => {
+		console.log(perfLevel);
+	}, [perfLevel]);
+
 	return (
 		<Suspense>
 			<Canvas
@@ -49,32 +82,41 @@ export function SubwayScene() {
 					position: [0, 0, 2],
 				}}
 				shadows={false}
+				dpr={dpr}
 			>
 				<Selection>
 					<EffectComposer autoClear={false} multisampling={0}>
-						{/* <DepthOfField
-							focusDistance={0}
-							focalLength={0.02}
-							bokehScale={2}
-							height={480}
-						/> */}
+						{perfLevel === 4 && (
+							<DepthOfField
+								focusDistance={0}
+								focalLength={0.02}
+								bokehScale={2}
+								height={480}
+							/>
+						)}
 						{/* <HueSaturation hue={Math.random() * 255} /> */}
-						<Bloom luminanceThreshold={0} luminanceSmoothing={3} height={800} />
+						{perfLevel > 2 && (
+							<Bloom
+								luminanceThreshold={0}
+								luminanceSmoothing={3}
+								height={800}
+							/>
+						)}
 						{/* <Noise opacity={0.02} /> */}
-						{/* <Pixelation granularity={8} /> */}
 						{/* <DotScreen scale={4} /> */}
-						<Aberration />
-						{/* <Scanline density={2} /> */}
-						{/* <Vignette eskil={false} offset={0.1} darkness={0.6} /> */}
-						{/* <Grid /> */}
+						{perfLevel > 2 && <Aberration />}
 					</EffectComposer>
 					{/* <Select enabled> */}
 					<Scene />
 					{/* </Select> */}
 					{/* <OrbitControls /> */}
 					<color attach="background" args={[0x202020]} />
-					{/* <PerformanceMonitor /> */}
-					<AdaptiveDpr pixelated />
+					<PerformanceMonitor
+						onIncline={incrementPerf}
+						onDecline={decrementPerf}
+						flipflops={3}
+						onFallback={() => setPerfLevel(1)}
+					/>
 				</Selection>
 			</Canvas>
 		</Suspense>
@@ -243,14 +285,14 @@ function RunnerLights() {
 				rotation={[0, Math.PI / 2, 0]}
 				position={[-10, 4, 25]}
 			>
-				<meshBasicMaterial color={'#fe03'} attach="material" />
+				<meshBasicMaterial color={'#f9f5ba'} attach="material" />
 			</Plane>
 			<Plane
 				args={[50, 10]}
 				rotation={[0, -Math.PI / 2, 0]}
 				position={[10, 4, 25]}
 			>
-				<meshBasicMaterial color={'#fe03'} attach="material" />
+				<meshBasicMaterial color={'#f9f5ba'} attach="material" />
 			</Plane>
 		</group>
 	);
