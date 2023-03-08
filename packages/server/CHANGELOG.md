@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.7.6
+
+### Patch Changes
+
+- b292b71: Update usage of server change event
+
 ## 1.7.5
 
 ### Patch Changes
