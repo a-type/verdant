@@ -1,5 +1,16 @@
 # @lo-fi/react
 
+## 14.0.0
+
+### Minor Changes
+
+- c02e4ce: Allow adding custom mutation hooks to createHooks
+
+### Patch Changes
+
+- Updated dependencies [c02e4ce]
+  - @lo-fi/web@1.13.0
+
 ## 13.0.3
 
 ### Patch Changes
