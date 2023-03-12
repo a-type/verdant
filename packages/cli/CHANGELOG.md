@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.13.0
+
+### Minor Changes
+
+- c02e4ce: Allow adding custom mutation hooks to createHooks
+
 ## 1.12.1
 
 ### Patch Changes
