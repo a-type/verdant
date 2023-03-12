@@ -89,7 +89,7 @@ useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter
 		.join('\n')}
 }
 
-type HookName = `use${string}`;
+type HookName = \`use\${string}\`;
 type HookWithoutClient<Hook extends <TArgs extends any[], TRet>(client: Client, ...args: Targs) => TRet> =
   (...args: TArgs) => TRet;
 export function createHooks<Presence = any, Profile = any, Mutations extends {[N: HookName]: (client: Client, ...args: any[]) => any } = never>(mutations?: Mutations): GeneratedHooks<
@@ -99,7 +99,7 @@ export function createHooks<Presence = any, Profile = any, Mutations extends {[N
   withMutations: <Mutations extends { [Name: HookName]: (client: Client, ...args: any[]) => unknown }> (mutations: Mutations) => GeneratedHooks<Presence, Profile> & {
     [MutHook in keyof Mutations]: HookWithoutClient<Mutations[MutHook]>;
   };
-};
+};`;
 }
 
 export function getReactImplementation(schemaPath) {
