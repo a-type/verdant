@@ -49,6 +49,8 @@ The hooks use Suspense so that you don't have to write loading state conditional
 
 Wrap your app in a `<Suspense>` to handle this. You can create multiple layers of Suspense to handle loading more granularly.
 
+The `hooks.Provider` component has a Suspense boundary built-in as a final fallback, to prevent state loss further up the tree when loading. You can customize the fallback rendering by passing a `suspenseFallback` prop to `hooks.Provider`.
+
 ## Typing of presence
 
 By default, create hooks have `any` types for all presence values. To synchronize presence typings with your main client, provide the same Presence and Profile typings for both:
@@ -68,6 +70,29 @@ const clientDesc = new ClientDescriptor<Presence, Profile>({
 
 // for React support, also pass the typing arguments to createHooks
 export const hooks = createHooks<Presence, Profile>();
+```
+
+## Custom mutation hooks
+
+To create reusable hooks which utilize the client, you can chain `.withMutations` from the created hooks object and add your own custom hooks which take `client` as a first parameter.
+
+This can help encapsulate custom behaviors, instead of ad-hoc calling `useClient()` and re-implementing them in multiple components.
+
+Of course, you could do this in your own code; this is purely for convenience.
+
+```ts
+const hooks = createHooks<Presence, Profile>().withMutations({
+	useAddItem: (client) => {
+		return useCallback(
+			async (init: ItemInit) => {
+				const item = await client.items.put(init, { undoable: false });
+				analytics.reportItemCreated(item);
+				return item;
+			},
+			[client],
+		);
+	},
+});
 ```
 
 ## Usage examples
@@ -128,31 +153,28 @@ function App({ libraryId }: { libraryId: string }) {
 	 * here would need to read that query parameter and create
 	 * a token for the client to access the library.
 	 */
-	const [clientDescriptor, setClientDescriptor] =
-		useState<ClientDescriptor>(null);
+	const descriptor = useMemo(
+		() =>
+			new ClientDescriptor({
+				namespace: libraryId,
+				migrations,
+				sync: {
+					authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
+					initialPresence: {},
+					// start sync when ready - useful if you want to sync
+					// in this setup. if you don't want to sync, that's fine too!
+					autoStart: true,
+				},
+			}),
+		[libraryId],
+	);
+
 	useEffect(() => {
-		const descriptor = new ClientDescriptor({
-			namespace: libraryId,
-			migrations,
-			sync: {
-				authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
-				initialPresence: {},
-				// start sync when ready - useful if you want to sync
-				// in this setup. if you don't want to sync, that's fine too!
-				autoStart: true,
-			},
-		});
-		// set our state
-		setClientDescriptor(descriptor);
 		// when the client changes, shut it down.
 		return () => {
 			descriptor.close();
 		};
-	}, [libraryId]);
-
-	if (!clientDescriptor) {
-		return null;
-	}
+	}, [descriptor]);
 
 	return (
 		<hooks.Provider value={clientDescriptor}>

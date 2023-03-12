@@ -7,10 +7,13 @@ import {
 	Entity,
 	ClientWithCollections,
 	EntityFile,
+	Client,
 } from '@lo-fi/web';
 import {
 	createContext,
 	ReactNode,
+	Suspense,
+	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
@@ -41,6 +44,8 @@ function useLiveQuery(liveQuery: Query<any> | null) {
 function capitalize<T extends string>(str: T) {
 	return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>;
 }
+
+type HookName = `use${string}`;
 
 export function createHooks<Presence = any, Profile = any>(
 	schema: StorageSchema<any>,
@@ -230,6 +235,18 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
+	function useUndo() {
+		const storage = useStorage();
+
+		return useCallback(() => storage.undoHistory.undo(), [storage]);
+	}
+
+	function useRedo() {
+		const storage = useStorage();
+
+		return useCallback(() => storage.undoHistory.redo(), [storage]);
+	}
+
 	function useCanUndo() {
 		const storage = useStorage();
 
@@ -315,6 +332,8 @@ export function createHooks<Presence = any, Profile = any>(
 		useFindPeer,
 		useFindPeers,
 		useSyncStatus,
+		useUndo,
+		useRedo,
 		useCanUndo,
 		useCanRedo,
 		useSync,
@@ -323,11 +342,13 @@ export function createHooks<Presence = any, Profile = any>(
 			value,
 			children,
 			sync,
+			suspenseFallback,
 			...rest
 		}: {
 			children?: ReactNode;
 			value: StorageDescriptor;
 			sync?: boolean;
+			suspenseFallback?: ReactNode;
 		}) => {
 			// auto-open storage when used in provider
 			useMemo(() => {
@@ -335,8 +356,10 @@ export function createHooks<Presence = any, Profile = any>(
 			}, [value]);
 			return (
 				<Context.Provider value={value} {...rest}>
-					{children}
-					{sync !== undefined && <SyncController isOn={sync} />}
+					<Suspense fallback={suspenseFallback || null}>
+						{children}
+						{sync !== undefined && <SyncController isOn={sync} />}
+					</Suspense>
 				</Context.Provider>
 			);
 		},
@@ -396,5 +419,25 @@ export function createHooks<Presence = any, Profile = any>(
 			return data || [];
 		};
 	}
+
+	hooks.withMutations = <
+		Mutations extends {
+			[key: HookName]: (client: Client, ...args: any[]) => any;
+		},
+	>(
+		mutations: Mutations,
+	) => {
+		const augmentedHooks = {
+			...hooks,
+		};
+		for (const [name, subHook] of Object.entries(mutations)) {
+			augmentedHooks[name] = (...args: any[]) => {
+				const client = hooks.useClient();
+				return subHook(client, ...args);
+			};
+		}
+		return augmentedHooks;
+	};
+
 	return hooks as any;
 }

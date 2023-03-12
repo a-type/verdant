@@ -76,6 +76,10 @@ export class PresenceManager<
 				this.emit('peerChanged', message.userInfo.id, message.userInfo);
 			}
 		} else if (message.type === 'sync-resp') {
+			// reset to provided presence data, which includes all peers.
+			this._peers = {};
+			peerIdsSet.clear();
+
 			for (const [id, presence] of Object.entries(message.peerPresence)) {
 				if (presence.replicaId === localReplicaInfo.id) {
 					this._self = presence;
