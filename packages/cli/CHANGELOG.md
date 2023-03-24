@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.13.1
+
+### Patch Changes
+
+- f8c39b3: Add shebang to CLI script
+
 ## 1.13.0
 
 ### Minor Changes
