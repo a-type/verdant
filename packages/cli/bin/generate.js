@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import swc from '@swc/core';
 import * as path from 'path';
 import * as fs from 'fs/promises';
