@@ -1,5 +1,11 @@
 # @lo-fi/common
 
+## 1.10.4
+
+### Patch Changes
+
+- d0e546d: Fix your own replica's presence showing up as a peer on a different device
+
 ## 1.10.3
 
 ### Patch Changes
