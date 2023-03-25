@@ -1,9 +1,9 @@
 import { CollectionIndexFilter, StorageSchema } from '@lo-fi/common';
 import { Requeryable } from './Requeryable.js';
 import { getRange } from './ranges.js';
+import { ObjectEntity } from '../index.js';
 
 interface BaseListParams {
-	limit?: number;
 	offset?: number;
 }
 
@@ -14,6 +14,7 @@ interface BaseListQueryInit<T> {
 	index?: CollectionIndexFilter;
 	hydrator: (oid: string) => Promise<T>;
 	apply: (val: T, previous: T) => T;
+	pageSize: number;
 }
 
 class BaseListQuery<T> extends Requeryable<T[], BaseListParams> {
@@ -22,6 +23,7 @@ class BaseListQuery<T> extends Requeryable<T[], BaseListParams> {
 		collection,
 		index,
 		schema,
+		pageSize,
 		hydrator,
 	}: BaseListQueryInit<T>) {
 		super({
@@ -47,7 +49,7 @@ class BaseListQuery<T> extends Requeryable<T[], BaseListParams> {
 								hasOffset = true;
 							} else {
 								result.push(cursor.primaryKey.toString());
-								if (params.limit && result.length >= params.limit) {
+								if (pageSize && result.length >= pageSize) {
 									resolve(result);
 								} else {
 									cursor.continue();
@@ -70,8 +72,8 @@ class BaseListQuery<T> extends Requeryable<T[], BaseListParams> {
 	}
 }
 
-export class PaginatedListQuery<T> {
-	private query;
+class ListQueryWrapper<T> {
+	protected query;
 
 	get result() {
 		return this.query.result;
@@ -81,10 +83,41 @@ export class PaginatedListQuery<T> {
 		return this.query.resolved;
 	}
 
+	constructor(init: BaseListQueryInit<T>) {
+		this.query = new BaseListQuery(init);
+	}
+}
+
+export class PaginatedListQuery<
+	T extends ObjectEntity<any, any>[],
+> extends ListQueryWrapper<T> {
 	constructor(init: Omit<BaseListQueryInit<T>, 'apply'>) {
-		this.query = new BaseListQuery({
+		super({
 			...init,
 			apply: (v) => v,
+		});
+	}
+}
+
+export class InfiniteListQuery<
+	T extends ObjectEntity<any, any>[],
+> extends ListQueryWrapper<T> {
+	constructor(init: Omit<BaseListQueryInit<T>, 'apply'>) {
+		super({
+			...init,
+			apply: (val, previous) => previous.concat(val) as T,
+		});
+	}
+}
+
+export class CompleteListQuery<
+	T extends ObjectEntity<any, any>[],
+> extends ListQueryWrapper<T> {
+	constructor(init: Omit<BaseListQueryInit<T>, 'apply' | 'pageSize'>) {
+		super({
+			...init,
+			pageSize: 0,
+			apply: (val) => val,
 		});
 	}
 }
