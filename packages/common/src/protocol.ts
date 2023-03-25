@@ -135,9 +135,14 @@ export type PresenceChangedMessage = {
 	userInfo: UserInfo<any, any>;
 };
 
+/**
+ * This is only emitted when all of a user's replicas
+ * go offline.
+ */
 export type PresenceOfflineMessage = {
 	type: 'presence-offline';
 	userId: string;
+	/** The last replicaID seen by the server before the user was offline */
 	replicaId: string;
 };
 

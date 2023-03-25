@@ -10,7 +10,7 @@ import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { PresenceManager } from '../PresenceManager.js';
+import { PresenceManager } from './PresenceManager.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
 import { Heartbeat } from './Heartbeat.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';

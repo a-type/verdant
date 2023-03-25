@@ -8,7 +8,7 @@ import {
 	ServerMessage,
 } from '@lo-fi/common';
 import { Metadata } from '../metadata/Metadata.js';
-import { PresenceManager } from '../PresenceManager.js';
+import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
 import { PushPullSync } from './PushPullSync.js';
@@ -319,7 +319,7 @@ export class ServerSync<Profile = any, Presence = any>
 		}
 
 		// update presence if necessary
-		this.presence.__handleMessage(await this.meta.localReplica.get(), message);
+		this.presence[HANDLE_MESSAGE](await this.meta.localReplica.get(), message);
 	};
 	private handleOnlineChange = (online: boolean) => {
 		this.emit('onlineChange', online);

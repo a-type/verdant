@@ -1,6 +1,8 @@
 import { ServerMessage, EventSubscriber, Batcher, Batch } from '@lo-fi/common';
-import type { UserInfo } from './index.js';
-import { LocalReplicaInfo } from './metadata/LocalReplicaStore.js';
+import type { UserInfo } from '../index.js';
+import { LocalReplicaInfo } from '../metadata/LocalReplicaStore.js';
+
+export const HANDLE_MESSAGE = Symbol('handleMessage');
 
 export class PresenceManager<
 	Profile = any,
@@ -58,7 +60,26 @@ export class PresenceManager<
 		});
 	}
 
-	__handleMessage = async (
+	/**
+	 * Decides if an update is for the local user or not. Even if it's a different replica
+	 * than the local one.
+	 *
+	 * If the replicaId matches, we use that first - we may not know the local replica's User ID yet,
+	 * e.g. on the first presence update.
+	 *
+	 * Otherwise, match the user ID to our local copy.
+	 */
+	private isSelf = (
+		localReplicaInfo: LocalReplicaInfo,
+		userInfo: UserInfo<Profile, Presence>,
+	) => {
+		return (
+			localReplicaInfo.id === userInfo.replicaId ||
+			this._self.id === userInfo.id
+		);
+	};
+
+	[HANDLE_MESSAGE] = async (
 		localReplicaInfo: LocalReplicaInfo,
 		message: ServerMessage,
 	) => {
@@ -66,7 +87,7 @@ export class PresenceManager<
 		const peerIdsSet = new Set<string>(this.peerIds);
 
 		if (message.type === 'presence-changed') {
-			if (message.userInfo.replicaId === localReplicaInfo.id) {
+			if (this.isSelf(localReplicaInfo, message.userInfo)) {
 				this._self = message.userInfo;
 				this.emit('selfChanged', message.userInfo);
 			} else {
@@ -80,15 +101,15 @@ export class PresenceManager<
 			this._peers = {};
 			peerIdsSet.clear();
 
-			for (const [id, presence] of Object.entries(message.peerPresence)) {
-				if (presence.replicaId === localReplicaInfo.id) {
-					this._self = presence;
-					this.emit('selfChanged', presence);
+			for (const [id, userInfo] of Object.entries(message.peerPresence)) {
+				if (this.isSelf(localReplicaInfo, userInfo)) {
+					this._self = userInfo;
+					this.emit('selfChanged', userInfo);
 				} else {
 					peersChanged = true;
 					peerIdsSet.add(id);
-					this._peers[id] = presence;
-					this.emit('peerChanged', id, presence);
+					this._peers[id] = userInfo;
+					this.emit('peerChanged', id, userInfo);
 				}
 			}
 		} else if (message.type === 'presence-offline') {

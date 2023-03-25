@@ -1,6 +1,6 @@
 import { ClientMessage, EventSubscriber, ServerMessage } from '@lo-fi/common';
 import { Metadata } from '../metadata/Metadata.js';
-import { PresenceManager } from '../PresenceManager.js';
+import { PresenceManager } from './PresenceManager.js';
 import { Heartbeat } from './Heartbeat.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
