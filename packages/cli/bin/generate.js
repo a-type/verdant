@@ -100,7 +100,9 @@ async function run({
 	const outputDirectory = path.resolve(process.cwd(), output);
 	await createDirectory(outputDirectory);
 
-	const result = await swc.parseFile(schemaInputFilePath, {});
+	const result = await swc.parseFile(schemaInputFilePath, {
+		syntax: 'typescript',
+	});
 
 	// dropping this in a temp file is useful for debugging
 	if (debug) {
