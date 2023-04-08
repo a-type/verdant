@@ -1,5 +1,11 @@
 # @lo-fi/cli
 
+## 1.13.2
+
+### Patch Changes
+
+- d88ab64: Specify TS as schema parse language
+
 ## 1.13.1
 
 ### Patch Changes
