@@ -1,6 +1,8 @@
-import { ReactNode, useEffect, useState, useTransition } from 'react';
+import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { RouterLevel } from './RouterLevel.js';
 import { RouteConfig } from './types.js';
+import { flattenRoutes } from './utils.js';
+import { RouteGlobalContext, RouteGlobalProvider } from './context.js';
 
 export interface RouterProps {
 	children: ReactNode;
@@ -10,11 +12,22 @@ export interface RouterProps {
 
 export function Router({ children, routes }: RouterProps) {
 	// cannot be changed at runtime
-	const [rootRoute] = useState(() => ({
+	const [rootRoute] = useState<RouteConfig>(() => ({
 		path: '',
 		children: routes,
 		component: () => null,
 	}));
+	const flatRoutes = useMemo(() => {
+		return flattenRoutes(rootRoute);
+	}, [rootRoute]);
+	const root = useMemo(
+		() => ({
+			path: '',
+			params: {},
+			route: rootRoute,
+		}),
+		[rootRoute],
+	);
 	const [path, setPath] = useState(() => window.location.pathname);
 	const [transitioning, startTransition] = useTransition();
 
@@ -29,8 +42,10 @@ export function Router({ children, routes }: RouterProps) {
 	}, []);
 
 	return (
-		<RouterLevel rootPath={path} rootRoute={rootRoute}>
-			{children}
-		</RouterLevel>
+		<RouteGlobalProvider flatRoutes={flatRoutes}>
+			<RouterLevel rootPath={path} parent={root} transitioning={transitioning}>
+				{children}
+			</RouterLevel>
+		</RouteGlobalProvider>
 	);
 }

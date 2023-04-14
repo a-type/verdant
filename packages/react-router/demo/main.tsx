@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Router, Outlet, Link } from '../src/index.js';
+import { Router, Outlet, Link, TransitionIndicator } from '../src/index.js';
 import { createRoot } from 'react-dom/client';
 import { Home } from './routes/Home.js';
 
@@ -34,6 +34,9 @@ function App() {
 					<Link to="/">Home</Link>
 					<Link to="/posts">Posts</Link>
 				</div>
+				<TransitionIndicator delay={1000}>
+					<div>Loading next page...</div>
+				</TransitionIndicator>
 				<div>
 					<Suspense fallback={<div>Loading...</div>}>
 						<Outlet />

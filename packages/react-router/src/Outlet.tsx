@@ -1,14 +1,19 @@
 import { useContext } from 'react';
-import { RouterContext, RouterLevel } from './RouterLevel.js';
+import { RouterLevel } from './RouterLevel.js';
+import { RouteLevelContext } from './context.js';
 
 export function Outlet() {
-	const { matchingRoute, path } = useContext(RouterContext);
+	const { match, subpath, transitioning } = useContext(RouteLevelContext);
 
-	const Component = matchingRoute?.component ?? null;
+	const Component = match?.route?.component ?? null;
 
 	if (Component) {
 		return (
-			<RouterLevel rootRoute={matchingRoute} rootPath={path}>
+			<RouterLevel
+				parent={match}
+				rootPath={subpath}
+				transitioning={transitioning}
+			>
 				<Component />
 			</RouterLevel>
 		);

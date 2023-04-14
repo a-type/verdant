@@ -1,39 +1,29 @@
-import { ReactNode, createContext, useContext } from 'react';
-import { RouteConfig } from './types.js';
+import { ReactNode } from 'react';
+import { RouteLevelProvider } from './context.js';
 import { useMatchingRoute } from './hooks.js';
-
-type RouterContextValue = {
-	matchingRoute: RouteConfig | null;
-	path: string;
-};
-
-export const RouterContext = createContext<RouterContextValue>({
-	matchingRoute: null,
-	path: '',
-});
+import { RouteMatch } from './types.js';
 
 export function RouterLevel({
 	children,
 	rootPath,
-	rootRoute,
+	parent,
+	transitioning,
 }: {
 	children: ReactNode;
 	rootPath: string;
-	rootRoute: RouteConfig | null;
+	parent: RouteMatch | null;
+	transitioning?: boolean;
 }) {
-	const [matchingRoute, remainingPath] = useMatchingRoute(
-		rootRoute?.children ?? [],
-		rootPath,
-	);
-
-	const contextValue = {
-		matchingRoute,
-		path: remainingPath,
-	};
+	const [match, remainingPath] = useMatchingRoute(parent, rootPath);
 
 	return (
-		<RouterContext.Provider value={contextValue}>
+		<RouteLevelProvider
+			match={match}
+			parent={parent}
+			subpath={remainingPath}
+			transitioning={!!transitioning}
+		>
 			{children}
-		</RouterContext.Provider>
+		</RouteLevelProvider>
 	);
 }

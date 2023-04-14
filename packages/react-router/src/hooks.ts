@@ -1,12 +1,15 @@
 import {
 	useCallback,
+	useContext,
 	useEffect,
 	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 } from 'react';
-import { RouteConfig } from './types.js';
+import { RouteConfig, RouteMatch } from './types.js';
 import { pathToRegexp, Key } from 'path-to-regexp';
+import { RouteGlobalContext } from './context.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -29,57 +32,39 @@ export function useLocationPath() {
 	return path;
 }
 
-function matchPath(path: string, route: RouteConfig) {
+function matchPath(path: string, route: RouteConfig): RouteMatch | null {
 	const keys: Key[] = [];
 	const re = pathToRegexp(route.path, keys, { end: !!route.exact });
-	console.log('Matching', path, 'against', route.path, 'with', re);
 	const match = re.exec(path);
 	if (!match) {
-		console.log('No match for', path, 'and', route.path);
 		return null;
 	}
 	const params = keys.reduce((params, key, index) => {
 		params[key.name] = match[index + 1];
 		return params;
 	}, {} as Record<string, string>);
-	return { path: match[0], params };
+	return { path: match[0], params, route };
 }
 
-export function useMatchingRoute(routes: RouteConfig[], basePath: string) {
-	const getMatchingRoute = useCallback(() => {
-		const matchingRoute = routes.find((route) => matchPath(basePath, route));
-		return matchingRoute || null;
-	}, [routes, basePath]);
+function existsFilter<T>(value: T | null | undefined): value is T {
+	return value !== null && value !== undefined;
+}
 
-	const [route, setRoute] = useState<RouteConfig | null>(() => {
-		return getMatchingRoute();
-	});
+export function useMatchingRoute(parent: RouteMatch | null, basePath: string) {
+	const getMatches = useCallback(() => {
+		return (
+			parent?.route?.children
+				?.map((route) => matchPath(basePath, route))
+				.filter(existsFilter) ?? []
+		);
+	}, [parent, basePath]);
 
-	const path = useLocationPath();
+	const matches = useMemo(() => getMatches(), [getMatches]);
+	const match = matches[0] || null;
 
-	useEffect(() => {
-		setRoute(getMatchingRoute());
-	}, [path, getMatchingRoute]);
+	const remainingPath = removeRoutePath(basePath, match?.route);
 
-	const remainingPath = removeRoutePath(path, route);
-
-	console.log(
-		'From',
-		routes,
-		'and',
-		'"',
-		basePath,
-		'"',
-		'(',
-		path,
-		')',
-		'we got',
-		route,
-		'and',
-		remainingPath,
-	);
-
-	return [route, remainingPath] as const;
+	return [match, remainingPath] as const;
 }
 
 function removeRoutePath(path: string, route: RouteConfig | null) {
@@ -89,4 +74,14 @@ function removeRoutePath(path: string, route: RouteConfig | null) {
 	const segments = route.path.split('/');
 	const pathSegments = path.split('/');
 	return pathSegments.slice(segments.length).join('/');
+}
+
+export function useRouteForPath(path: string) {
+	const { flatRoutes } = useContext(RouteGlobalContext);
+	const matches = useMemo(
+		() =>
+			flatRoutes.map((route) => matchPath(path, route)).filter(existsFilter),
+		[flatRoutes, path],
+	);
+	return matches[0] || null;
 }
