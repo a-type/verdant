@@ -21,9 +21,6 @@ export function Link({ to, onClick, ...rest }: LinkProps) {
 			window.history.pushState(null, '', to);
 			window.dispatchEvent(new PopStateEvent('popstate'));
 			onClick?.(event);
-			for (const match of matches) {
-				match.route.onVisited?.(match.params);
-			}
 		},
 		[onClick, matches],
 	);

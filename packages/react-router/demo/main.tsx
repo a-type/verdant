@@ -25,30 +25,39 @@ function App() {
 				},
 				{
 					path: '/posts',
-					component: lazy(() =>
+					component: lazy(async () => {
 						// fake slow loading
-						fakeComponentLatency().then(() => import('./routes/Posts.jsx')),
-					),
+						await fakeComponentLatency();
+						return import('./routes/Posts.jsx');
+					}),
 					children: [
 						{
 							path: ':id',
-							component: lazy(() =>
+							component: lazy(async () => {
+								console.log('Loading Post component');
 								// always takes 5 seconds to load the Post page
-								delay(5000).then(() => import('./routes/Post.jsx')),
-							),
-							onVisited: ({ id }) => {
+								await delay(5000);
+								console.log('Done loading Post component');
+								return import('./routes/Post.jsx');
+							}),
+							onVisited: async ({ id }) => {
+								console.log(`Loading post ${id}`);
 								// preload the post data when the link is clicked.
 								// this data takes 3 seconds to load, but you'll
-								// never see it load unless you refresh the page
-								// because this preload runs in parallel with the
-								// 5-second lazy component load above.
-								loadPost(id);
+								// never see it load because this preload runs in
+								// parallel with the  5-second lazy component load above.
+								// Even when you DO see a loading state for a Post,
+								// it's because the component is loading, not this
+								// data, which finishes first!
+								await loadPost(id);
+								console.log(`Done loading post ${id}`);
 							},
 						},
 					],
 					// preloads the Posts page component when
 					// a link to it is mounted
 					onAccessible: () => {
+						console.log('Preloading Posts component');
 						fakeComponentLatency();
 					},
 				},
