@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Link } from '../../src/Link.js';
 import { Outlet } from '../../src/Outlet.js';
 
@@ -14,7 +15,9 @@ export function Posts() {
 				</li>
 			</ul>
 			<div>
-				<Outlet />
+				<Suspense fallback={<div>Loading post...</div>}>
+					<Outlet />
+				</Suspense>
 			</div>
 		</div>
 	);

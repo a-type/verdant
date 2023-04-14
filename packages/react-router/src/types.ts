@@ -5,8 +5,8 @@ export type RouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
 	exact?: boolean;
-	onAccessible?: () => void;
-	onVisited?: () => void;
+	onAccessible?: (params: any) => void;
+	onVisited?: (params: any) => void;
 };
 
 export type RouterConfig = Array<RouteConfig>;

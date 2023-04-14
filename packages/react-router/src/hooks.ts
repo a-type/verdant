@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { RouteConfig, RouteMatch } from './types.js';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { RouteGlobalContext } from './context.js';
+import { RouteGlobalContext, useRootMatch } from './context.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -50,19 +50,36 @@ function existsFilter<T>(value: T | null | undefined): value is T {
 	return value !== null && value !== undefined;
 }
 
+function getRouteMatches(
+	parent: RouteMatch | null,
+	basePath: string,
+): RouteMatch[] {
+	const matches =
+		parent?.route?.children
+			?.map((route) => matchPath(basePath, route))
+			.filter(existsFilter) ?? [];
+	return matches;
+}
+
+function selectBestMatch(matches: RouteMatch[]): RouteMatch | null {
+	return matches[0] || null;
+}
+
+function getBestRouteMatch(
+	parent: RouteMatch | null,
+	basePath: string,
+): RouteMatch | null {
+	const matches = getRouteMatches(parent, basePath);
+	return selectBestMatch(matches);
+}
+
 export function useMatchingRoute(parent: RouteMatch | null, basePath: string) {
-	const getMatches = useCallback(() => {
-		return (
-			parent?.route?.children
-				?.map((route) => matchPath(basePath, route))
-				.filter(existsFilter) ?? []
-		);
-	}, [parent, basePath]);
+	const match = useMemo(
+		() => getBestRouteMatch(parent, basePath),
+		[parent, basePath],
+	);
 
-	const matches = useMemo(() => getMatches(), [getMatches]);
-	const match = matches[0] || null;
-
-	const remainingPath = removeRoutePath(basePath, match?.route);
+	const remainingPath = removeRoutePath(basePath, match?.route ?? null);
 
 	return [match, remainingPath] as const;
 }
@@ -76,12 +93,31 @@ function removeRoutePath(path: string, route: RouteConfig | null) {
 	return pathSegments.slice(segments.length).join('/');
 }
 
-export function useRouteForPath(path: string) {
-	const { flatRoutes } = useContext(RouteGlobalContext);
-	const matches = useMemo(
-		() =>
-			flatRoutes.map((route) => matchPath(path, route)).filter(existsFilter),
-		[flatRoutes, path],
-	);
-	return matches[0] || null;
+function getAllMatchingRoutes(
+	root: RouteMatch | null,
+	path: string,
+): RouteMatch[] {
+	const match = getBestRouteMatch(root, path);
+	if (!match) {
+		return [];
+	}
+
+	const remainingPath = removeRoutePath(path, match?.route ?? null);
+	if (remainingPath === '') {
+		return [match];
+	}
+
+	return [match].concat(getAllMatchingRoutes(match, remainingPath));
+}
+
+/**
+ * Returns the full list of matching routes for the given path.
+ * A path will match exactly one leaf route; this is the traversal
+ * from the root to that leaf.
+ */
+export function useRouteMatchesForPath(path: string): RouteMatch[] {
+	const root = useRootMatch();
+
+	const matches = useMemo(() => getAllMatchingRoutes(root, path), [root, path]);
+	return matches;
 }

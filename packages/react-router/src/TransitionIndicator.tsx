@@ -25,7 +25,13 @@ export function useRouteTransitioning(delay?: number) {
 
 	const delayedTransitioning = useDelayedValue(transitioning, delay ?? 0);
 
-	return delay ? delayedTransitioning : transitioning;
+	// if transitioning is false, show false immediately regardless.
+	// otherwise wait (delay) before showing true.
+	return delay
+		? !transitioning
+			? false
+			: delayedTransitioning
+		: transitioning;
 }
 
 /**

@@ -17,9 +17,6 @@ export function Router({ children, routes }: RouterProps) {
 		children: routes,
 		component: () => null,
 	}));
-	const flatRoutes = useMemo(() => {
-		return flattenRoutes(rootRoute);
-	}, [rootRoute]);
 	const root = useMemo(
 		() => ({
 			path: '',
@@ -42,7 +39,7 @@ export function Router({ children, routes }: RouterProps) {
 	}, []);
 
 	return (
-		<RouteGlobalProvider flatRoutes={flatRoutes}>
+		<RouteGlobalProvider rootMatch={root}>
 			<RouterLevel rootPath={path} parent={root} transitioning={transitioning}>
 				{children}
 			</RouterLevel>
