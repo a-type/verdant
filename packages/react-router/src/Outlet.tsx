@@ -1,13 +1,17 @@
 import { useContext } from 'react';
-import { RouterContext } from './RouterLevel.js';
+import { RouterContext, RouterLevel } from './RouterLevel.js';
 
 export function Outlet() {
-	const { matchingRoute } = useContext(RouterContext);
+	const { matchingRoute, path } = useContext(RouterContext);
 
 	const Component = matchingRoute?.component ?? null;
 
 	if (Component) {
-		return <Component />;
+		return (
+			<RouterLevel rootRoute={matchingRoute} rootPath={path}>
+				<Component />
+			</RouterLevel>
+		);
 	}
 
 	return null;

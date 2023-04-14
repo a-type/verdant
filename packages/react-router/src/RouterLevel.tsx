@@ -18,21 +18,13 @@ export function RouterLevel({
 	rootRoute,
 }: {
 	children: ReactNode;
-	rootPath?: string;
-	rootRoute?: RouteConfig;
+	rootPath: string;
+	rootRoute: RouteConfig | null;
 }) {
-	const { matchingRoute: contextParentRoute, path: contextParentPath } =
-		useContext(RouterContext);
-
-	const parentRoute = rootRoute ?? contextParentRoute;
-	const parentPath = rootPath ?? contextParentPath;
-
-	const matchingRoute = useMatchingRoute(
-		parentRoute?.children ?? [],
-		parentPath,
+	const [matchingRoute, remainingPath] = useMatchingRoute(
+		rootRoute?.children ?? [],
+		rootPath,
 	);
-
-	const remainingPath = matchingRoute?.path ?? '';
 
 	const contextValue = {
 		matchingRoute,

@@ -4,7 +4,7 @@
 		"composite": true,
 		"outDir": "./dist/esm",
 		"rootDir": "./src",
-		"jsx": "preserve"
+		"jsx": "react-jsx"
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts", "./typings"]
 }

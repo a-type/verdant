@@ -1,27 +1,43 @@
-import { Router, Outlet, RouteConfig } from '../src/index.js';
+import { Suspense, lazy } from 'react';
+import { Router, Outlet, Link } from '../src/index.js';
 import { createRoot } from 'react-dom/client';
-
-const route: RouteConfig = {
-	path: '/',
-	component: () => <div>Home</div>,
-	children: [
-		{
-			path: 'about',
-			component: () => <div>About</div>,
-		},
-	],
-};
+import { Home } from './routes/Home.js';
 
 function App() {
 	return (
-		<Router rootRoute={route}>
+		<Router
+			routes={[
+				{
+					path: '/',
+					exact: true,
+					component: Home,
+				},
+				{
+					path: '/posts',
+					// fake slow loading
+					component: lazy(() =>
+						new Promise((resolve) => setTimeout(resolve, 3 * 1000)).then(
+							() => import('./routes/Posts.jsx'),
+						),
+					),
+					children: [
+						{
+							path: ':id',
+							component: lazy(() => import('./routes/Post.jsx')),
+						},
+					],
+				},
+			]}
+		>
 			<main>
 				<div>
-					<a href="/">Home</a>
-					<a href="/about">About</a>
+					<Link to="/">Home</Link>
+					<Link to="/posts">Posts</Link>
 				</div>
 				<div>
-					<Outlet />
+					<Suspense fallback={<div>Loading...</div>}>
+						<Outlet />
+					</Suspense>
 				</div>
 			</main>
 		</Router>

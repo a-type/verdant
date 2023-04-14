@@ -233,6 +233,10 @@ importers:
         version: 0.22.1(jsdom@20.0.0)
 
   packages/react-router:
+    dependencies:
+      path-to-regexp:
+        specifier: ^6.2.1
+        version: 6.2.1
     devDependencies:
       '@types/react':
         specifier: ^18.0.17
@@ -10514,6 +10518,10 @@ packages:
 
   /path-to-regexp@2.2.1:
     resolution: {integrity: sha512-gu9bD6Ta5bwGrrU8muHzVOBFFREpp2iRkVfhBJahwJ6p6Xw20SjT0MxLnwkjOibQmGSYhiUnf2FLe7k+jcFmGQ==}
+    dev: false
+
+  /path-to-regexp@6.2.1:
+    resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
     dev: false
 
   /path-type@4.0.0:

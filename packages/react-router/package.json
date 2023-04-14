@@ -32,17 +32,19 @@
 	"peerDependencies": {
 		"react": "^18.2.0"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"path-to-regexp": "^6.2.1"
+	},
 	"devDependencies": {
 		"@types/react": "^18.0.17",
 		"@types/react-dom": "^18.0.11",
 		"@types/use-sync-external-store": "^0.0.3",
+		"@vitejs/plugin-react-swc": "^3.3.0",
 		"jsdom": "^20.0.0",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
 		"typescript": "^4.7.4",
 		"vite": "^4.2.1",
-		"@vitejs/plugin-react-swc": "^3.3.0",
 		"vitest": "^0.22.1"
 	}
 }
