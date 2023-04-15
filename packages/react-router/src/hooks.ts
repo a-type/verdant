@@ -143,12 +143,16 @@ export function useSearchParams() {
 		internalSetParams(new URLSearchParams(location.search)),
 	);
 	const setParams = useCallback(
-		(params: URLSearchParams) => {
-			const newParams = new URLSearchParams(params);
+		(params: URLSearchParams | ((old: URLSearchParams) => URLSearchParams)) => {
+			const newParams =
+				typeof params === 'function'
+					? params(new URLSearchParams(location.search))
+					: new URLSearchParams(params);
 			const newSearch = newParams.toString();
 			if (newSearch !== location.search) {
 				window.history.pushState(null, '', `?${newSearch}`);
 				window.dispatchEvent(new PopStateEvent('popstate'));
+				internalSetParams(newParams);
 			}
 		},
 		[internalSetParams],

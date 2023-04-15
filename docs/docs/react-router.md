@@ -143,6 +143,28 @@ const isNavigating = useIsRouteTransitioning(300);
 
 Additionally, the Link component receives a `data-transitioning` attribute when it's clicked, until the navigation is complete. You can use this to immediately provide styling feedback when the user clicks a link.
 
+### Other basic tools
+
+#### `useNavigate()`
+
+For programmatic navigation without `Link`. Returns a callback you can use to manually navigate to a path. Pass `{ replace: true }` to the second parameter to replace instead of pushing state.
+
+#### `useMatch({ path, end })`
+
+Determine if the current route matches a path you provide. For example, you might want to know if the app is on the `/pages/1` page. You could pass `useMatch({ path: '/pages/1' })`. Or perhaps you want to know if it's on `/pages`, but not `/pages/1`. In that case, pass `end: true` to indicate it should not match sub-routes.
+
+#### `useSearchParams()`
+
+Although search params aren't included in routing logic, React Router set the standard for including them as part of a router's toolkit, so I've likewise exported a `useSearchParams` which acts like a `useState` for `URLSearchParams`, writing to and reading from the query string.
+
+```ts
+const [params, setParams] = useSearchParams();
+setParams((old) => {
+	old.delete('foo');
+	return old;
+});
+```
+
 ## Advanced Usage: Preloading
 
 ### Preloading and parallel loading
