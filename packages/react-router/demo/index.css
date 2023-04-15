@@ -1,0 +1,14 @@
+a {
+	font-weight: bold;
+}
+
+a[data-transitioning='true'] {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+nav {
+	display: flex;
+	flex-direction: row;
+	gap: 1rem;
+}
