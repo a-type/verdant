@@ -7,7 +7,7 @@ export type RouteConfig = {
 	exact?: boolean;
 	onAccessible?: (params: {
 		[key: string]: string;
-	}) => Promise<void> | (() => void) | void;
+	}) => Promise<any> | (() => void) | void;
 	onVisited?: (params: { [key: string]: string }) => void;
 };
 

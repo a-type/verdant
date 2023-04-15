@@ -1,11 +1,12 @@
 import {
 	HTMLAttributes,
 	MouseEvent,
+	forwardRef,
 	useCallback,
 	useEffect,
 	useRef,
 } from 'react';
-import { useRouteMatchesForPath } from './hooks.js';
+import { useNavigate, useRouteMatchesForPath } from './hooks.js';
 import { useIsRouteTransitioning } from './TransitionIndicator.js';
 
 export interface LinkProps
@@ -13,15 +14,13 @@ export interface LinkProps
 	to: string;
 	external?: boolean;
 	newTab?: boolean;
+	replace?: boolean;
 }
 
-export function Link({
-	to,
-	onClick,
-	external: forceExternal,
-	newTab,
-	...rest
-}: LinkProps) {
+export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
+	{ to, onClick, external: forceExternal, newTab, replace, ...rest },
+	ref,
+) {
 	const external = forceExternal ?? isExternal(to);
 	const matches = useRouteMatchesForPath(to);
 	const transitioning = useIsRouteTransitioning();
@@ -53,29 +52,38 @@ export function Link({
 		};
 	}, [matches, notRouterCompatible]);
 
+	const navigate = useNavigate();
 	const handleClick = useCallback(
 		function handleClick(event: MouseEvent<HTMLAnchorElement>) {
 			event.preventDefault();
 			wasClickedRef.current = true;
-			window.history.pushState(null, '', to);
-			window.dispatchEvent(new PopStateEvent('popstate'));
+			navigate(to, { replace });
 			onClick?.(event);
 		},
-		[onClick, matches],
+		[onClick, matches, replace],
 	);
 
 	const pathAtRenderTime =
 		typeof window !== 'undefined' ? window.location.pathname : '';
 
+	const newTabProps = newTab
+		? {
+				target: '_blank',
+				rel: 'noopener noreferrer',
+		  }
+		: {};
+
 	return (
 		<a
+			ref={ref}
 			href={to}
 			onClick={notRouterCompatible ? onClick : handleClick}
 			data-transitioning={pathAtRenderTime === to && transitioning}
+			{...newTabProps}
 			{...rest}
 		/>
 	);
-}
+});
 
 function isExternal(url: string) {
 	return /^(\w+):\/\//.test(url);

@@ -121,3 +121,45 @@ export function useRouteMatchesForPath(path: string): RouteMatch[] {
 	const matches = useMemo(() => getAllMatchingRoutes(root, path), [root, path]);
 	return matches;
 }
+
+export function useNavigate() {
+	return useCallback((to: string, { replace }: { replace?: boolean } = {}) => {
+		if (replace) {
+			window.history.replaceState(null, '', to);
+		} else {
+			window.history.pushState(null, '', to);
+		}
+		window.dispatchEvent(new PopStateEvent('popstate'));
+	}, []);
+}
+
+export function useMatch({ path, end }: { path: string; end?: boolean }) {
+	const locationPath = useLocationPath();
+	return useMemo(
+		() => matchPath(locationPath, { path, exact: end, component: Null }),
+		[locationPath, path, end],
+	);
+}
+
+const Null = () => null;
+
+export function useSearchParams() {
+	const [params, internalSetParams] = useState(
+		new URLSearchParams(location.search),
+	);
+	useLocationChange(() =>
+		internalSetParams(new URLSearchParams(location.search)),
+	);
+	const setParams = useCallback(
+		(params: URLSearchParams) => {
+			const newParams = new URLSearchParams(params);
+			const newSearch = newParams.toString();
+			if (newSearch !== location.search) {
+				window.history.pushState(null, '', `?${newSearch}`);
+				window.dispatchEvent(new PopStateEvent('popstate'));
+			}
+		},
+		[internalSetParams],
+	);
+	return [params, setParams] as const;
+}
