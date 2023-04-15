@@ -15,12 +15,12 @@ export function TransitionIndicator({
 	children,
 	delay,
 }: TransitionIndicatorProps) {
-	const show = useRouteTransitioning(delay);
+	const show = useIsRouteTransitioning(delay);
 	if (show) return <>{children}</>;
 	return null;
 }
 
-export function useRouteTransitioning(delay?: number) {
+export function useIsRouteTransitioning(delay?: number) {
 	const { transitioning } = useContext(RouteLevelContext);
 
 	const delayedTransitioning = useDelayedValue(transitioning, delay ?? 0);

@@ -6,7 +6,7 @@ export function Post() {
 
 	const post = getPost(id);
 	if (!post) {
-		throw loadPost(id);
+		throw loadPost(id, 'component');
 	}
 
 	return (

@@ -1,13 +1,11 @@
 import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { RouterLevel } from './RouterLevel.js';
 import { RouteConfig } from './types.js';
-import { flattenRoutes } from './utils.js';
-import { RouteGlobalContext, RouteGlobalProvider } from './context.js';
+import { RouteGlobalProvider } from './context.js';
 
 export interface RouterProps {
 	children: ReactNode;
 	routes: RouteConfig[];
-	rootPath?: string;
 }
 
 export function Router({ children, routes }: RouterProps) {

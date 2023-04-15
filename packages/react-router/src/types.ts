@@ -5,7 +5,7 @@ export type RouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
 	exact?: boolean;
-	onAccessible?: (params: any) => void;
+	onAccessible?: (params: any) => Promise<void> | (() => void) | void;
 	onVisited?: (params: any) => void;
 };
 

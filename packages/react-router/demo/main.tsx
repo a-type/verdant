@@ -1,9 +1,9 @@
 import { Suspense, lazy } from 'react';
-import { Router, Outlet, Link, TransitionIndicator } from '../src/index.js';
 import { createRoot } from 'react-dom/client';
-import { Home } from './routes/Home.js';
-import { delay } from './data/utils.js';
+import { Link, Outlet, Router, TransitionIndicator } from '../src/index.js';
 import { loadPost } from './data/fakePosts.js';
+import { delay } from './data/utils.js';
+import { Home } from './routes/Home.js';
 
 // this fake loading can be "preloaded" by calling early,
 // and will return immediately if already loaded
@@ -49,7 +49,7 @@ function App() {
 								// Even when you DO see a loading state for a Post,
 								// it's because the component is loading, not this
 								// data, which finishes first!
-								await loadPost(id);
+								await loadPost(id, 'onVisited');
 								console.log(`Done loading post ${id}`);
 							},
 						},
@@ -64,10 +64,10 @@ function App() {
 			]}
 		>
 			<main>
-				<div>
+				<nav>
 					<Link to="/">Home</Link>
 					<Link to="/posts">Posts</Link>
-				</div>
+				</nav>
 				<TransitionIndicator delay={1000}>
 					<div>Loading next page...</div>
 				</TransitionIndicator>
