@@ -1,5 +1,11 @@
 # @lo-fi/react-router
 
+## 0.1.3
+
+### Patch Changes
+
+- 5aefdbe: Support modifying old search params
+
 ## 0.1.2
 
 ### Patch Changes
