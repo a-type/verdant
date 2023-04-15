@@ -234,6 +234,9 @@ importers:
 
   packages/react-router:
     dependencies:
+      '@lo-fi/react-router':
+        specifier: ^0.1.1
+        version: 'link:'
       path-to-regexp:
         specifier: ^6.2.1
         version: 6.2.1
