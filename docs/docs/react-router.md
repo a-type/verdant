@@ -165,6 +165,12 @@ setParams((old) => {
 });
 ```
 
+### Scrolling to top
+
+Yeah, so, I'll get to this eventually?
+
+For now, you can call `window.scrollTo(0, 0)` in all the `onVisited` callbacks you want this for. I know. I'll look into making this a default behavior.
+
 ## Advanced Usage: Preloading
 
 ### Preloading and parallel loading
