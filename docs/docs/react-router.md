@@ -39,6 +39,8 @@ You pass your routes to the `Router` component (inline if you like). Inside `Rou
 </Router>
 ```
 
+If you define your routes outside the `routes` prop, you may want to wrap them in `makeRoutes` to cast to the right typing.
+
 ### Suspense support
 
 You'll probably want a top-level Suspense boundary. This will make it easy to utilize `lazy` components (code splitting) for routes.

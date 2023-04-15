@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { RouterLevel } from './RouterLevel.js';
-import { RouteConfig } from './types.js';
+import { RouteConfig, RouteMatch } from './types.js';
 import { RouteGlobalProvider } from './context.js';
 
 export interface RouterProps {
@@ -15,7 +15,7 @@ export function Router({ children, routes }: RouterProps) {
 		children: routes,
 		component: () => null,
 	}));
-	const root = useMemo(
+	const root: RouteMatch = useMemo(
 		() => ({
 			path: '',
 			params: {},

@@ -5,11 +5,11 @@ export type RouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
 	exact?: boolean;
-	onAccessible?: (params: any) => Promise<void> | (() => void) | void;
-	onVisited?: (params: any) => void;
+	onAccessible?: (params: {
+		[key: string]: string;
+	}) => Promise<void> | (() => void) | void;
+	onVisited?: (params: { [key: string]: string }) => void;
 };
-
-export type RouterConfig = Array<RouteConfig>;
 
 export type RouteMatch = {
 	route: RouteConfig;
