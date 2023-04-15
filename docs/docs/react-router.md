@@ -151,6 +151,24 @@ Additionally, the Link component receives a `data-transitioning` attribute when 
 
 `onVisited` is called as soon as a route is matched after a path change. This also **includes nested routes**.
 
+#### Preloading lazy components
+
+One big boost you can get from `onAccessible` is preloading the route components needed to render the pages the user might go to next.
+
+To do this we need something a bit more than React's built-in `lazy`, because we want to pre-fetch the component code before rendering. I recommend [react-lazy-with-preload](https://github.com/ianschmitz/react-lazy-with-preload).
+
+```tsx
+const LazyPostsPage = lazyWithPreload(() => import('./PostsPage.jsx'));
+
+const routes = [
+	{
+		path: '/posts',
+		component: LazyPostsPage,
+		onAccessible: LazyPostsPage.preload,
+	},
+];
+```
+
 #### Preloading with lo-fi queries
 
 This is `@lo-fi/react-router`, after all, so you'd expect that preloading lo-fi data should be easy.
@@ -230,21 +248,3 @@ function PostPage() {
 With Suspense, our component can `throw` a promise if the data isn't loaded yet. React will wait for the promise to resolve, then try re-rendering the component again. **You must make sure the component doesn't throw again after the preload completes.** That's why `preload` returns early if the cached data is found.
 
 Of course, you may never need to use this low-level Suspense functionality, but that's how you do it, if you're curious!
-
-#### Preloading lazy components
-
-One big boost you can get from `onAccessible` is preloading the route components needed to render the pages the user might go to next.
-
-To do this we need something a bit more than React's built-in `lazy`, because we want to pre-fetch the component code before rendering. I recommend [react-lazy-with-preload](https://github.com/ianschmitz/react-lazy-with-preload).
-
-```tsx
-const LazyPostsPage = lazyWithPreload(() => import('./PostsPage.jsx'));
-
-const routes = [
-	{
-		path: '/posts',
-		component: LazyPostsPage,
-		onAccessible: LazyPostsPage.preload,
-	},
-];
-```
