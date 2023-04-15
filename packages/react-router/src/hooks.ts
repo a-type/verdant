@@ -1,15 +1,7 @@
-import {
-	useCallback,
-	useContext,
-	useEffect,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { RouteConfig, RouteMatch } from './types.js';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { RouteGlobalContext, useRootMatch } from './context.js';
+import { useRootMatch } from './context.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);

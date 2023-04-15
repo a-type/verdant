@@ -52,6 +52,12 @@ function App() {
 								await loadPost(id, 'onVisited');
 								console.log(`Done loading post ${id}`);
 							},
+							children: [
+								{
+									path: ':test',
+									component: lazy(() => import('./routes/Test.jsx')),
+								},
+							],
 						},
 					],
 					// preloads the Posts page component when

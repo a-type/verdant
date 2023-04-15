@@ -3,7 +3,8 @@ import { RouterLevel } from './RouterLevel.js';
 import { RouteLevelContext } from './context.js';
 
 export function Outlet() {
-	const { match, subpath, transitioning } = useContext(RouteLevelContext);
+	const { parent, match, subpath, transitioning } =
+		useContext(RouteLevelContext);
 
 	const Component = match?.route?.component ?? null;
 
@@ -13,6 +14,7 @@ export function Outlet() {
 				parent={match}
 				rootPath={subpath}
 				transitioning={transitioning}
+				params={parent?.params}
 			>
 				<Component />
 			</RouterLevel>

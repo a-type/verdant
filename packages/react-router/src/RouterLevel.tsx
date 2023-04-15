@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useMemo } from 'react';
 import { RouteLevelProvider } from './context.js';
 import { useMatchingRoute } from './hooks.js';
 import { RouteMatch } from './types.js';
@@ -8,11 +8,13 @@ export function RouterLevel({
 	rootPath,
 	parent,
 	transitioning,
+	params: parentParams,
 }: {
 	children: ReactNode;
 	rootPath: string;
 	parent: RouteMatch | null;
 	transitioning?: boolean;
+	params?: Record<string, string>;
 }) {
 	const [match, remainingPath] = useMatchingRoute(parent, rootPath);
 
@@ -22,12 +24,21 @@ export function RouterLevel({
 		}
 	}, [match]);
 
+	const params = useMemo(
+		() => ({
+			...parentParams,
+			...parent?.params,
+		}),
+		[parentParams, parent?.params],
+	);
+
 	return (
 		<RouteLevelProvider
 			match={match}
 			parent={parent}
 			subpath={remainingPath}
 			transitioning={!!transitioning}
+			params={params}
 		>
 			{children}
 		</RouteLevelProvider>

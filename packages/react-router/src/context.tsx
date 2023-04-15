@@ -6,6 +6,8 @@ type RouteLevelContextValue = {
 	match: RouteMatch | null;
 	subpath: string;
 	transitioning: boolean;
+	// these accumulate for each level
+	params: Record<string, string>;
 };
 
 export const RouteLevelContext = createContext<RouteLevelContextValue>({
@@ -13,6 +15,7 @@ export const RouteLevelContext = createContext<RouteLevelContextValue>({
 	match: null,
 	subpath: '',
 	transitioning: false,
+	params: {},
 });
 
 export const RouteLevelProvider = ({
@@ -27,9 +30,9 @@ export const RouteLevelProvider = ({
 };
 
 export function useParams<Shape extends Record<string, string>>(): Shape {
-	const { parent } = useContext(RouteLevelContext);
+	const { params } = useContext(RouteLevelContext);
 
-	return (parent?.params || {}) as any;
+	return (params || {}) as any;
 }
 
 type RouteGlobalContextValue = {

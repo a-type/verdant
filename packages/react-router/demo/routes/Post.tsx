@@ -1,4 +1,4 @@
-import { useParams } from '../../src/index.js';
+import { Link, Outlet, useParams } from '../../src/index.js';
 import { getPost, loadPost } from '../data/fakePosts.js';
 
 export function Post() {
@@ -13,6 +13,8 @@ export function Post() {
 		<div>
 			<h1>{post.title}</h1>
 			<p>{post.content}</p>
+			<Link to={`/posts/${id}/testable`}>Test</Link>
+			<Outlet />
 		</div>
 	);
 }

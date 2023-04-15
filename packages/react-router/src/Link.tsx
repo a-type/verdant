@@ -18,9 +18,10 @@ export interface LinkProps
 }
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
-	{ to, onClick, external: forceExternal, newTab, replace, ...rest },
+	{ to: rawTo, onClick, external: forceExternal, newTab, replace, ...rest },
 	ref,
 ) {
+	const to = resolve(rawTo);
 	const external = forceExternal ?? isExternal(to);
 	const matches = useRouteMatchesForPath(to);
 	const transitioning = useIsRouteTransitioning();
@@ -87,4 +88,11 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 
 function isExternal(url: string) {
 	return /^(\w+):\/\//.test(url);
+}
+
+function resolve(path: string) {
+	if (path.startsWith('.')) {
+		return new URL(path, window.location.href).pathname;
+	}
+	return path;
 }
