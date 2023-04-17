@@ -38,12 +38,12 @@ export function Router({ children, routes }: RouterProps) {
 	});
 
 	return (
-		<RouteGlobalProvider rootMatch={root} path={path}>
-			<RouteLevelProvider
-				subpath={''}
-				match={root}
-				transitioning={transitioning}
-			>
+		<RouteGlobalProvider
+			rootMatch={root}
+			path={path}
+			transitioning={transitioning}
+		>
+			<RouteLevelProvider subpath={''} match={root}>
 				{children}
 			</RouteLevelProvider>
 		</RouteGlobalProvider>

@@ -4,7 +4,6 @@ import { RouteMatch } from './types.js';
 type RouteLevelContextValue = {
 	match: RouteMatch | null;
 	subpath: string;
-	transitioning: boolean;
 	// these accumulate for each level
 	params?: Record<string, string>;
 };
@@ -12,7 +11,6 @@ type RouteLevelContextValue = {
 export const RouteLevelContext = createContext<RouteLevelContextValue>({
 	match: null,
 	subpath: '',
-	transitioning: false,
 	params: {},
 });
 
@@ -36,11 +34,13 @@ export function useParams<Shape extends Record<string, string>>(): Shape {
 type RouteGlobalContextValue = {
 	rootMatch: RouteMatch | null;
 	path: string;
+	transitioning: boolean;
 };
 
 export const RouteGlobalContext = createContext<RouteGlobalContextValue>({
 	rootMatch: null,
 	path: '',
+	transitioning: false,
 });
 
 export const RouteGlobalProvider = ({

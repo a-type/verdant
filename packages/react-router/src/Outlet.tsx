@@ -6,7 +6,6 @@ export function Outlet() {
 	const {
 		match: parent,
 		subpath,
-		transitioning,
 		params: upstreamParams,
 	} = useContext(RouteLevelContext);
 
@@ -33,7 +32,6 @@ export function Outlet() {
 			<RouteLevelProvider
 				match={match}
 				subpath={match?.path ?? subpath}
-				transitioning={transitioning}
 				params={params}
 			>
 				<Component />

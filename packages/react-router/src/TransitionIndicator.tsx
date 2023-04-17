@@ -1,5 +1,5 @@
 import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { RouteLevelContext } from './context.js';
+import { RouteGlobalContext, RouteLevelContext } from './context.js';
 
 export interface TransitionIndicatorProps {
 	children: ReactNode;
@@ -21,7 +21,7 @@ export function TransitionIndicator({
 }
 
 export function useIsRouteTransitioning(delay?: number) {
-	const { transitioning } = useContext(RouteLevelContext);
+	const { transitioning } = useContext(RouteGlobalContext);
 
 	const delayedTransitioning = useDelayedValue(transitioning, delay ?? 0);
 
