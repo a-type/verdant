@@ -1,17 +1,15 @@
 import { ReactNode, createContext, useContext } from 'react';
-import { RouteConfig, RouteMatch } from './types.js';
+import { RouteMatch } from './types.js';
 
 type RouteLevelContextValue = {
-	parent: RouteMatch | null;
 	match: RouteMatch | null;
 	subpath: string;
 	transitioning: boolean;
 	// these accumulate for each level
-	params: Record<string, string>;
+	params?: Record<string, string>;
 };
 
 export const RouteLevelContext = createContext<RouteLevelContextValue>({
-	parent: null,
 	match: null,
 	subpath: '',
 	transitioning: false,

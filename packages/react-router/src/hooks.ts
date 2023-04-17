@@ -43,13 +43,12 @@ function existsFilter<T>(value: T | null | undefined): value is T {
 }
 
 function getRouteMatches(
-	parent: RouteMatch | null,
+	routes: RouteConfig[],
 	basePath: string,
 ): RouteMatch[] {
 	const matches =
-		parent?.route?.children
-			?.map((route) => matchPath(basePath, route))
-			.filter(existsFilter) ?? [];
+		routes?.map((route) => matchPath(basePath, route)).filter(existsFilter) ??
+		[];
 	return matches;
 }
 
@@ -58,17 +57,22 @@ function selectBestMatch(matches: RouteMatch[]): RouteMatch | null {
 }
 
 function getBestRouteMatch(
-	parent: RouteMatch | null,
+	routes: RouteConfig[],
 	basePath: string,
 ): RouteMatch | null {
-	const matches = getRouteMatches(parent, basePath);
+	const matches = getRouteMatches(routes, basePath);
 	return selectBestMatch(matches);
 }
 
-export function useMatchingRoute(parent: RouteMatch | null, basePath: string) {
+const EMPTY_ROUTES: RouteConfig[] = [];
+
+export function useMatchingRoute(
+	routes: RouteConfig[] | null,
+	basePath: string,
+) {
 	const match = useMemo(
-		() => getBestRouteMatch(parent, basePath),
-		[parent, basePath],
+		() => getBestRouteMatch(routes || EMPTY_ROUTES, basePath),
+		[routes, basePath],
 	);
 
 	const remainingPath = removeRoutePath(basePath, match?.route ?? null);
@@ -86,20 +90,21 @@ function removeRoutePath(path: string, route: RouteConfig | null) {
 }
 
 function getAllMatchingRoutes(
-	root: RouteMatch | null,
+	routes: RouteConfig[],
 	path: string,
 ): RouteMatch[] {
-	const match = getBestRouteMatch(root, path);
+	const match = getBestRouteMatch(routes, path);
 	if (!match) {
 		return [];
 	}
 
 	const remainingPath = removeRoutePath(path, match?.route ?? null);
-	if (remainingPath === '') {
+	const childRoutes = match.route.children;
+	if (remainingPath === '' || !childRoutes) {
 		return [match];
 	}
 
-	return [match].concat(getAllMatchingRoutes(match, remainingPath));
+	return [match].concat(getAllMatchingRoutes(childRoutes, remainingPath));
 }
 
 /**
@@ -110,7 +115,10 @@ function getAllMatchingRoutes(
 export function useRouteMatchesForPath(path: string): RouteMatch[] {
 	const root = useRootMatch();
 
-	const matches = useMemo(() => getAllMatchingRoutes(root, path), [root, path]);
+	const matches = useMemo(
+		() => getAllMatchingRoutes(root?.route.children || [], path),
+		[root, path],
+	);
 	return matches;
 }
 

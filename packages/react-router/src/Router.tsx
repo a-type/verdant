@@ -1,19 +1,21 @@
 import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
-import { RouterLevel } from './RouterLevel.js';
 import { RouteConfig, RouteMatch } from './types.js';
-import { RouteGlobalProvider } from './context.js';
+import { RouteGlobalProvider, RouteLevelProvider } from './context.js';
+import { Outlet } from './Outlet.js';
 
 export interface RouterProps {
 	children: ReactNode;
 	routes: RouteConfig[];
 }
 
+const Root = () => <Outlet />;
+
 export function Router({ children, routes }: RouterProps) {
 	// cannot be changed at runtime
 	const [rootRoute] = useState<RouteConfig>(() => ({
 		path: '',
 		children: routes,
-		component: () => null,
+		component: Root,
 	}));
 	const root: RouteMatch = useMemo(
 		() => ({
@@ -38,9 +40,13 @@ export function Router({ children, routes }: RouterProps) {
 
 	return (
 		<RouteGlobalProvider rootMatch={root}>
-			<RouterLevel rootPath={path} parent={root} transitioning={transitioning}>
+			<RouteLevelProvider
+				subpath={path}
+				match={root}
+				transitioning={transitioning}
+			>
 				{children}
-			</RouterLevel>
+			</RouteLevelProvider>
 		</RouteGlobalProvider>
 	);
 }

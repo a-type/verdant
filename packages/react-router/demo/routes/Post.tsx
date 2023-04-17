@@ -13,7 +13,7 @@ export function Post() {
 		<div>
 			<h1>{post.title}</h1>
 			<p>{post.content}</p>
-			<Link to={`/posts/${id}/testable`}>Test</Link>
+			<Link to={`/posts/${id}/passthrough/testable`}>Test</Link>
 			<Outlet />
 		</div>
 	);

@@ -14,6 +14,8 @@ function fakeComponentLatency() {
 	return fakeLoadPromise;
 }
 
+const Passthrough = () => <Outlet />;
+
 function App() {
 	return (
 		<Router
@@ -54,8 +56,14 @@ function App() {
 							},
 							children: [
 								{
-									path: ':test',
-									component: lazy(() => import('./routes/Test.jsx')),
+									path: 'passthrough',
+									component: Passthrough,
+									children: [
+										{
+											path: ':test',
+											component: lazy(() => import('./routes/Test.jsx')),
+										},
+									],
 								},
 							],
 						},

@@ -1,23 +1,46 @@
-import { useContext, useEffect } from 'react';
-import { RouterLevel } from './RouterLevel.js';
-import { RouteLevelContext } from './context.js';
+import { useContext, useEffect, useMemo } from 'react';
+import { RouteLevelContext, RouteLevelProvider } from './context.js';
+import { useMatchingRoute } from './hooks.js';
 
 export function Outlet() {
-	const { parent, match, subpath, transitioning } =
-		useContext(RouteLevelContext);
+	const {
+		match: parent,
+		subpath,
+		transitioning,
+		params: upstreamParams,
+	} = useContext(RouteLevelContext);
 
-	const Component = match?.route?.component ?? null;
+	const [match, remainingPath] = useMatchingRoute(
+		parent?.route.children ?? null,
+		subpath,
+	);
+
+	const Component = parent?.route?.component ?? null;
+
+	useEffect(() => {
+		if (match?.route?.onVisited) {
+			match.route.onVisited(match.params);
+		}
+	}, [match]);
+
+	const params = useMemo(
+		() => ({
+			...upstreamParams,
+			...parent?.params,
+		}),
+		[upstreamParams, parent?.params],
+	);
 
 	if (Component) {
 		return (
-			<RouterLevel
-				parent={match}
-				rootPath={subpath}
+			<RouteLevelProvider
+				match={match}
+				subpath={remainingPath}
 				transitioning={transitioning}
-				params={parent?.params}
+				params={params}
 			>
 				<Component />
-			</RouterLevel>
+			</RouteLevelProvider>
 		);
 	}
 
