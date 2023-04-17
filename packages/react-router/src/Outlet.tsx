@@ -10,10 +10,7 @@ export function Outlet() {
 		params: upstreamParams,
 	} = useContext(RouteLevelContext);
 
-	const [match, remainingPath] = useMatchingRoute(
-		parent?.route.children ?? null,
-		subpath,
-	);
+	const match = useMatchingRoute(subpath, parent?.route.children ?? null);
 
 	const Component = parent?.route?.component ?? null;
 
@@ -35,7 +32,7 @@ export function Outlet() {
 		return (
 			<RouteLevelProvider
 				match={match}
-				subpath={remainingPath}
+				subpath={match?.path ?? subpath}
 				transitioning={transitioning}
 				params={params}
 			>

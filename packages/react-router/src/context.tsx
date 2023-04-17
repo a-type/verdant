@@ -35,10 +35,12 @@ export function useParams<Shape extends Record<string, string>>(): Shape {
 
 type RouteGlobalContextValue = {
 	rootMatch: RouteMatch | null;
+	path: string;
 };
 
 export const RouteGlobalContext = createContext<RouteGlobalContextValue>({
 	rootMatch: null,
+	path: '',
 });
 
 export const RouteGlobalProvider = ({
@@ -56,4 +58,10 @@ export function useRootMatch(): RouteMatch | null {
 	const { rootMatch } = useContext(RouteGlobalContext);
 
 	return rootMatch;
+}
+
+export function useLocationPath(): string {
+	const { path } = useContext(RouteGlobalContext);
+
+	return path;
 }

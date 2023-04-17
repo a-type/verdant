@@ -1,15 +1,24 @@
 import { ComponentType } from 'react';
 
-export type RouteConfig = {
-	path: string;
+type CommonRouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
-	exact?: boolean;
 	onAccessible?: (params: {
 		[key: string]: string;
 	}) => Promise<any> | (() => void) | void;
 	onVisited?: (params: { [key: string]: string }) => void;
 };
+
+export type PathRouteConfig = CommonRouteConfig & {
+	path: string;
+	exact?: boolean;
+};
+
+export type IndexRouteConfig = CommonRouteConfig & {
+	index: true;
+};
+
+export type RouteConfig = PathRouteConfig | IndexRouteConfig;
 
 export type RouteMatch = {
 	route: RouteConfig;

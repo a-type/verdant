@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { RouteConfig, RouteMatch } from './types.js';
 import { RouteGlobalProvider, RouteLevelProvider } from './context.js';
 import { Outlet } from './Outlet.js';
+import { useLocationChange } from './hooks.js';
 
 export interface RouterProps {
 	children: ReactNode;
@@ -30,20 +31,16 @@ export function Router({ children, routes }: RouterProps) {
 	const [path, setPath] = useState(() => window.location.pathname);
 	const [transitioning, startTransition] = useTransition();
 
-	useEffect(() => {
-		const listener = () => {
-			startTransition(() => {
-				setPath(window.location.pathname);
-			});
-		};
-		window.addEventListener('popstate', listener);
-		return () => window.removeEventListener('popstate', listener);
-	}, []);
+	useLocationChange((location) => {
+		startTransition(() => {
+			setPath(location.pathname);
+		});
+	});
 
 	return (
-		<RouteGlobalProvider rootMatch={root}>
+		<RouteGlobalProvider rootMatch={root} path={path}>
 			<RouteLevelProvider
-				subpath={path}
+				subpath={''}
 				match={root}
 				transitioning={transitioning}
 			>
