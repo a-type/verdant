@@ -12,22 +12,24 @@ This router is stand-alone and doesn't rely on any other lo-fi packages. Feel fr
 
 Routes are defined in a tree data structure, not React components. This was done because, while declarative components for routes are fun, they'd require extra, complicated plumbing to integrate well with the other key features.
 
-You pass your routes to the `Router` component (inline if you like). Inside `Router`, you can continue building up your global app UI structure. Render an `Outlet` wherever you want to show your route content.
+Create your routes by calling `makeRoutes`, which provides typechecking for route contents.
+
+You pass your routes to the `Router` component. Inside `Router`, you can continue building up your global app UI structure. Render an `Outlet` wherever you want to show your route content.
 
 ```tsx
-<Router
-	routes={[
-		{
-			path: '/',
-			exact: true,
-			component: HomePage,
-		},
-		{
-			path: '/posts',
-			component: lazy(() => import('./PostsPage.tsx')),
-		},
-	]}
->
+const routes = makeRoutes([
+	{
+		path: '/',
+		exact: true,
+		component: HomePage,
+	},
+	{
+		path: '/posts',
+		component: lazy(() => import('./PostsPage.tsx')),
+	},
+]);
+
+<Router routes={routes}>
 	<main>
 		<nav>...</nav>
 		<div>
@@ -36,7 +38,7 @@ You pass your routes to the `Router` component (inline if you like). Inside `Rou
 			</Suspense>
 		</div>
 	</main>
-</Router>
+</Router>;
 ```
 
 If you define your routes outside the `routes` prop, you may want to wrap them in `makeRoutes` to cast to the right typing.

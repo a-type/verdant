@@ -11,12 +11,14 @@ export interface RouterProps {
 const Root = () => <Outlet />;
 
 export function Router({ children, routes }: RouterProps) {
-	// cannot be changed at runtime
-	const [rootRoute] = useState<RouteConfig>(() => ({
-		path: '',
-		children: routes,
-		component: Root,
-	}));
+	const rootRoute = useMemo<RouteConfig>(
+		() => ({
+			path: '',
+			children: routes,
+			component: Root,
+		}),
+		[routes],
+	);
 	const root: RouteMatch = useMemo(
 		() => ({
 			path: '',
