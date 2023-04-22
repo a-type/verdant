@@ -1,5 +1,11 @@
 # @lo-fi/react-router
 
+## 0.1.4
+
+### Patch Changes
+
+- a5409a9: Fix some structural mistakes
+
 ## 0.1.3
 
 ### Patch Changes
