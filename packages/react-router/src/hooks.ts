@@ -17,10 +17,18 @@ function useStableCallback<T extends Function>(cb: T): T {
 	return useCallback((...args: any[]) => ref.current(...args), []) as any as T;
 }
 
-export function useLocationChange(callback: (location: Location) => void) {
+export function useOnLocationChange(
+	callback: (
+		location: Location,
+		state: {
+			state?: any;
+			skipTransition?: boolean;
+		},
+	) => void,
+) {
 	const cb = useStableCallback(callback);
 	useLayoutEffect(() => {
-		const handler = () => cb(location);
+		const handler = (ev: PopStateEvent) => cb(location, ev.state || {});
 		window.addEventListener('popstate', handler);
 		return () => window.removeEventListener('popstate', handler);
 	}, [cb]);
@@ -129,14 +137,45 @@ export function useRouteMatchesForPath(fullPath: string): RouteMatch[] {
 }
 
 export function useNavigate() {
-	return useCallback((to: string, { replace }: { replace?: boolean } = {}) => {
-		if (replace) {
-			window.history.replaceState(null, '', to);
-		} else {
-			window.history.pushState(null, '', to);
-		}
-		window.dispatchEvent(new PopStateEvent('popstate'));
-	}, []);
+	return useCallback(
+		(
+			to: string,
+			{
+				replace,
+				skipTransition,
+				state = null,
+			}: { replace?: boolean; skipTransition?: boolean; state?: any } = {},
+		) => {
+			if (replace) {
+				window.history.replaceState(
+					{
+						state,
+						skipTransition,
+					},
+					'',
+					to,
+				);
+			} else {
+				window.history.pushState(
+					{
+						state,
+						skipTransition,
+					},
+					'',
+					to,
+				);
+			}
+			window.dispatchEvent(
+				new PopStateEvent('popstate', {
+					state: {
+						state,
+						skipTransition,
+					},
+				}),
+			);
+		},
+		[],
+	);
 }
 
 export function useMatch({ path, end }: { path: string; end?: boolean }) {
@@ -155,7 +194,7 @@ export function useSearchParams() {
 	const [params, internalSetParams] = useState(
 		new URLSearchParams(location.search),
 	);
-	useLocationChange(() =>
+	useOnLocationChange(() =>
 		internalSetParams(new URLSearchParams(location.search)),
 	);
 	const setParams = useCallback(

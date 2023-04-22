@@ -15,10 +15,21 @@ export interface LinkProps
 	external?: boolean;
 	newTab?: boolean;
 	replace?: boolean;
+	skipTransition?: boolean;
+	state?: any;
 }
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
-	{ to: rawTo, onClick, external: forceExternal, newTab, replace, ...rest },
+	{
+		to: rawTo,
+		onClick,
+		external: forceExternal,
+		newTab,
+		replace,
+		skipTransition = false,
+		state,
+		...rest
+	},
 	ref,
 ) {
 	const to = resolve(rawTo);
@@ -58,10 +69,14 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 		function handleClick(event: MouseEvent<HTMLAnchorElement>) {
 			event.preventDefault();
 			wasClickedRef.current = true;
-			navigate(to, { replace });
+			navigate(to, {
+				replace,
+				skipTransition,
+				state,
+			});
 			onClick?.(event);
 		},
-		[onClick, matches, replace],
+		[onClick, matches, replace, state],
 	);
 
 	const pathAtRenderTime =
@@ -86,11 +101,11 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 	);
 });
 
-function isExternal(url: string) {
+function isExternal(url: string = '') {
 	return /^(\w+):\/\//.test(url);
 }
 
-function resolve(path: string) {
+function resolve(path: string = '') {
 	if (path.startsWith('.')) {
 		return new URL(path, window.location.href).pathname;
 	}

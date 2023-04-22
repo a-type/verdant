@@ -5,4 +5,9 @@ export * from './Link.js';
 export * from './TransitionIndicator.js';
 export { useParams } from './context.js';
 export { makeRoutes } from './routes.js';
-export { useNavigate, useMatch, useSearchParams } from './hooks.js';
+export {
+	useNavigate,
+	useMatch,
+	useSearchParams,
+	useOnLocationChange,
+} from './hooks.js';

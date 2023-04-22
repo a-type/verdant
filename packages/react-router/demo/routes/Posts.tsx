@@ -11,7 +11,14 @@ export function Posts() {
 					<Link to="/posts/1">Post 1</Link>
 				</li>
 				<li>
-					<Link to="/posts/2">Post 2</Link>
+					<Link to="/posts/2" skipTransition>
+						Post 2 (no transition)
+					</Link>
+				</li>
+				<li>
+					<Link to="/home" state={{ cancel: true }}>
+						Home (cancel navigation)
+					</Link>
 				</li>
 			</ul>
 			<div>

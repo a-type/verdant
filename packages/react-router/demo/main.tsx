@@ -87,9 +87,16 @@ const routes = makeRoutes([
 	},
 ]);
 
+function handleNavigate(path: string, { state }: { state?: any }) {
+	if (state?.cancel) {
+		console.log('Navigation cancelled!');
+		return false;
+	}
+}
+
 function App() {
 	return (
-		<Router routes={routes}>
+		<Router routes={routes} onNavigate={handleNavigate}>
 			<main>
 				<nav>
 					<Link to="/">Home</Link>

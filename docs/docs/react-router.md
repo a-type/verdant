@@ -278,3 +278,19 @@ function PostPage() {
 With Suspense, our component can `throw` a promise if the data isn't loaded yet. React will wait for the promise to resolve, then try re-rendering the component again. **You must make sure the component doesn't throw again after the preload completes.** That's why `preload` returns early if the cached data is found.
 
 Of course, you may never need to use this low-level Suspense functionality, but that's how you do it, if you're curious!
+
+#### Skipping transitions
+
+Sometimes you do want to show a skeleton of the next page instead of waiting for everything to load. For example, if you create a new resource and immediately navigate to the editor screen, you don't want to instead sit on the list page and wait for the editor page to load, which would be a confusing UX.
+
+Pass `skipTransition` to `Link`, or to the second parameter of the `navigate` callback you get from `useNavigate`, to skip the concurrent mode transitioning and instead immediately navigate and await loading states on the new page.
+
+#### Using navigation state
+
+Pass `state` to a `Link` and this state will be added to the route state during navigation. You can also pass `state` to the `navigate` callback you get from `useNavigate`, in the second parameter.
+
+This can be utilized in the `onNavigation` prop in `Router`, or the callback passed to `useOnLocationChange`.
+
+#### Intercepting navigation
+
+Provide an `onNavigation` prop to `Router` to globally intercept navigation. You can return `false` from this callback to cancel a navigation, while the path will still update to the new location. This probably has limited uses, but I'm considering using it to do transparent PWA updates during navigation when a new version of the service worker is available, by canceling navigation and reloading the page instead.
