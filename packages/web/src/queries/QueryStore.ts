@@ -57,7 +57,8 @@ export class QueryStore {
 
 		if (single) {
 			if (!range) throw new Error('Single object query requires a range value');
-			const run = async () => {
+			const run = async (_: any, out: { hasNext: boolean }) => {
+				out.hasNext = false;
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
 				const request = source.getKey(range);
@@ -81,7 +82,11 @@ export class QueryStore {
 			};
 			return new Query(key, collection, run);
 		} else {
-			const run = async ({ offset }: { offset?: number }) => {
+			const run = async (
+				{ offset }: { offset?: number },
+				out: { hasNext: boolean },
+			) => {
+				out.hasNext = false;
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
 				const request = source.openCursor(range, direction);
@@ -90,6 +95,7 @@ export class QueryStore {
 					const oids = await new Promise<ObjectIdentifier[]>(
 						(resolve, reject) => {
 							const result: any[] = [];
+							let totalVisited = 0;
 							request.onsuccess = async () => {
 								const cursor = request.result;
 								if (!hasDoneOffset && cursor && offset && limit) {
@@ -97,15 +103,23 @@ export class QueryStore {
 									hasDoneOffset = true;
 								} else {
 									if (cursor?.primaryKey) {
-										result.push(
-											createOid(collection, cursor.primaryKey.toString(), []),
-										);
-										if (limit && result.length >= limit) {
+										totalVisited++;
+										// only push if below limit
+										if (!limit || result.length < limit) {
+											result.push(
+												createOid(collection, cursor.primaryKey.toString(), []),
+											);
+										}
+										// wait until limit + 1 before resolving to see if
+										// hasNext is true
+										if (limit && totalVisited > limit) {
+											out.hasNext = true;
 											resolve(result);
 										} else {
 											cursor.continue();
 										}
 									} else {
+										out.hasNext = false;
 										resolve(result);
 									}
 								}

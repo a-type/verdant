@@ -27,6 +27,8 @@ export function getClientTypings({ collections, schemaPath }) {
     get: (id: string) => Query<Document>;
     findOne: (filter: Filter) => Query<Document>;
     findAll: (filter?: Filter) => Query<Document[]>;
+    findAllPaginated: (filter?: Filter, pageSize?: number) => Query<Document[], { offset?: number }>;
+    findAllInfinite: (filter?: Filter, pageSize?: number) => Query<Document[], { offset?: number }>;
   }
 
 export class Client<Presence = any, Profile = any> {

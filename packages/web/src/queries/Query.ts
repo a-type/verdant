@@ -18,7 +18,10 @@ export class Query<Result = any, Params = undefined>
 	constructor(
 		public readonly key: string,
 		public readonly collection: string,
-		private readonly run: (params: Params) => Promise<Result>,
+		private readonly run: (
+			params: Params,
+			out: { hasNext: boolean },
+		) => Promise<Result>,
 	) {
 		this.id = key + '_' + generateId();
 		this.resolved = new Promise((resolve, reject) => {
@@ -27,12 +30,15 @@ export class Query<Result = any, Params = undefined>
 		});
 	}
 
-	execute = async (params: Params): Promise<Result> => {
+	execute = async (
+		params: Params,
+		out: { hasNext: boolean } = neverOut,
+	): Promise<Result> => {
 		if (this._disposed) {
 			throw new Error('Query has been disposed');
 		}
 		try {
-			const value = await this.run(params);
+			const value = await this.run(params, out);
 			this.resolve(value);
 			return value;
 		} catch (error) {
@@ -45,3 +51,5 @@ export class Query<Result = any, Params = undefined>
 		this._disposed = true;
 	};
 }
+
+const neverOut = { hasNext: false };

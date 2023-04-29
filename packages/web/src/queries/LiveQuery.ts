@@ -12,6 +12,8 @@ export class LiveQuery<T = any, Params = undefined> implements BaseQuery<T> {
 	private _internalUnsubscribes: (() => void)[] = [];
 	private _disposed = false;
 
+	private executeInfo = { hasNext: false };
+
 	get id() {
 		return this.query.id;
 	}
@@ -22,6 +24,14 @@ export class LiveQuery<T = any, Params = undefined> implements BaseQuery<T> {
 
 	get key() {
 		return this.query.key;
+	}
+
+	get params() {
+		return this._params;
+	}
+
+	get hasNext() {
+		return this.executeInfo.hasNext;
 	}
 
 	constructor(
@@ -50,7 +60,7 @@ export class LiveQuery<T = any, Params = undefined> implements BaseQuery<T> {
 		this._params = params;
 		this._rawValue = this._updater(
 			this._value,
-			await this.query.execute(params),
+			await this.query.execute(params, this.executeInfo),
 		);
 		this.subscribeToDeleteAndRestore(this._rawValue);
 		this._value = this.filterDeleted(this._rawValue);

@@ -23,7 +23,7 @@ import {
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
-function useLiveQuery(liveQuery: Query<any> | null) {
+function useLiveQuery(liveQuery: Query<any, any> | null) {
 	if (liveQuery) {
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
@@ -417,6 +417,94 @@ export function createHooks<Presence = any, Profile = any>(
 			);
 			const data = useLiveQuery(liveQuery);
 			return data || [];
+		};
+		const getAllPaginatedHookName = `useAll${capitalize(
+			collection.pluralName || collection.name + 's',
+		)}Paginated`;
+		hooks[getAllPaginatedHookName] = function useAllPaginated({
+			index,
+			skip,
+			pageSize,
+		}: {
+			index?: CollectionIndexFilter;
+			skip?: boolean;
+			pageSize?: number;
+		} = {}) {
+			const storage = useStorage();
+			// assumptions: this query getter is fast and returns the same
+			// query identity for subsequent calls.
+			const liveQuery = useMemo(
+				() => (skip ? null : storage[name].findAllPaginated(index, pageSize)),
+				[index, skip, pageSize],
+			);
+			const data = useLiveQuery(liveQuery);
+
+			const tools = useMemo(
+				() => ({
+					next: () =>
+						liveQuery?.update({
+							offset: liveQuery ? liveQuery.params.offset ?? 0 + 1 : 0,
+						}),
+					previous: () =>
+						liveQuery?.update({
+							offset: liveQuery
+								? Math.max(0, liveQuery.params.offset ?? 0 - 1)
+								: 0,
+						}),
+					setPage: (page: number) =>
+						liveQuery?.update({
+							offset: page,
+						}),
+
+					get hasPrevious() {
+						return liveQuery?.params.offset ?? 0 > 0;
+					},
+
+					get hasNext() {
+						return liveQuery?.hasNext;
+					},
+				}),
+				[liveQuery],
+			);
+
+			return [data, tools] as const;
+		};
+		const getAllInfiniteHookName = `useAll${capitalize(
+			collection.pluralName || collection.name + 's',
+		)}Infinite`;
+		hooks[getAllInfiniteHookName] = function useAllInfinite({
+			index,
+			skip,
+			pageSize,
+		}: {
+			index?: CollectionIndexFilter;
+			skip?: boolean;
+			pageSize?: number;
+		} = {}) {
+			const storage = useStorage();
+			// assumptions: this query getter is fast and returns the same
+			// query identity for subsequent calls.
+			const liveQuery = useMemo(
+				() => (skip ? null : storage[name].findAllInfinite(index, pageSize)),
+				[index, skip, pageSize],
+			);
+			const data = useLiveQuery(liveQuery);
+
+			const tools = useMemo(
+				() => ({
+					fetchMore: () =>
+						liveQuery?.update({
+							offset: liveQuery ? liveQuery.params.offset ?? 0 + 1 : 0,
+						}),
+
+					get hasMore() {
+						return liveQuery?.hasNext;
+					},
+				}),
+				[liveQuery],
+			);
+
+			return [data, tools] as const;
 		};
 	}
 

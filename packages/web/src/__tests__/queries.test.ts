@@ -74,6 +74,7 @@ describe('storage queries', () => {
 			items[2].get('id'),
 			items[1].get('id'),
 		]);
+		expect(query.hasNext).toBe(false);
 	});
 
 	it('can query array-based compound indexes by match and order', async () => {
@@ -96,6 +97,7 @@ describe('storage queries', () => {
 			items[1].get('id'),
 			items[5].get('id'),
 		]);
+		expect(query.hasNext).toBe(false);
 	});
 
 	it('can query starts-with on a string', async () => {
@@ -116,6 +118,7 @@ describe('storage queries', () => {
 			items[2].get('id'),
 			items[4].get('id'),
 		]);
+		expect(query.hasNext).toBe(false);
 	});
 
 	it('can do a paginated query', async () => {
@@ -139,12 +142,14 @@ describe('storage queries', () => {
 			items[0].get('id'),
 			items[2].get('id'),
 		]);
+		expect(query.hasNext).toBe(true);
 
 		const nextResults = await query.update({ offset: 1 });
 
 		expect(nextResults.map((i: any) => i.get('id'))).toEqual([
 			items[1].get('id'),
 		]);
+		expect(query.hasNext).toBe(false);
 	});
 
 	it('can do an infinite query', async () => {
@@ -168,6 +173,7 @@ describe('storage queries', () => {
 			items[0].get('id'),
 			items[2].get('id'),
 		]);
+		expect(query.hasNext).toBe(true);
 
 		const nextResults = await query.update({ offset: 1 });
 
@@ -176,5 +182,6 @@ describe('storage queries', () => {
 			items[2].get('id'),
 			items[1].get('id'),
 		]);
+		expect(query.hasNext).toBe(false);
 	});
 });

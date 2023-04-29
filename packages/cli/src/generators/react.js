@@ -84,6 +84,14 @@ export interface GeneratedHooks<Presence, Profile> {
 use${pascalName}(id: string, config?: { skip?: boolean }): ${pascalName} | null;
 useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName} | null;
 useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName}[];
+useAllPaginated${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize: number }>(config?: Config) => [
+	${pascalName}[],
+	{ next: () => void; previous: () => void; setPage: (page: number) => void, hasNext: boolean, hasPrevious: boolean }
+];
+useAllInfinite${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize: number }>(config?: Config) => [
+	${pascalName}[],
+	{ fetchMore: () => void; hasMore: boolean }
+];
     `;
 		})
 		.join('\n')}
