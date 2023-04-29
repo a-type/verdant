@@ -31,6 +31,14 @@ export interface CollectionApi {
 	get: (id: string) => LiveQuery<Entity | null>;
 	findOne: (filter: any) => LiveQuery<Entity | null>;
 	findAll: (filter?: any) => LiveQuery<Entity[]>;
+	findAllPaginated: (
+		filter?: any,
+		limit?: number,
+	) => LiveQuery<Entity[], { offset?: number }>;
+	findAllInfinite: (
+		filter?: any,
+		limit?: number,
+	) => LiveQuery<Entity[], { offset?: number }>;
 }
 
 // not actually used below, but helpful for internal code which
@@ -108,6 +116,10 @@ export class Client {
 					this._queryMaker.findOne(collectionName, query),
 				findAll: (query: any) =>
 					this._queryMaker.findAll(collectionName, query),
+				findAllPaginated: (query: any, limit: number) =>
+					this._queryMaker.findAllPaginated(collectionName, query, limit),
+				findAllInfinite: (query: any, limit: number) =>
+					this._queryMaker.findAllInfinite(collectionName, query, limit),
 			} as CollectionApi;
 		}
 	}

@@ -1,17 +1,13 @@
 import { Context } from '../context.js';
-import { ObjectEntity } from '../index.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { LiveQuery, UPDATE } from './LiveQuery.js';
-import { BaseQueryStore, QueryParams, QueryStore } from './QueryStore.js';
+import { QueryParams, QueryStore } from './QueryStore.js';
 
-export class LiveQueryStore<
-	Result extends (ObjectEntity<any, any> | null) | ObjectEntity<any, any>[] =
-		| (ObjectEntity<any, any> | null)
-		| ObjectEntity<any, any>[],
-> implements BaseQueryStore<LiveQuery<Result>>
-{
-	private queries: QueryStore<any>;
-	private cache = new Map<string, LiveQuery<any>>();
+const defaultUpdater = (_: any, x: any) => x;
+
+export class LiveQueryStore {
+	private queries: QueryStore;
+	private cache = new Map<string, LiveQuery>();
 
 	private _unsubscribes: (() => void)[] = [];
 
@@ -39,6 +35,7 @@ export class LiveQueryStore<
 		limit?: number;
 		single?: boolean;
 		write?: boolean;
+		updater?: (previous: any, value: any) => any;
 	}) => {
 		const key = this.queries.getQueryKey(config);
 		if (this.cache.has(key)) {
@@ -46,7 +43,7 @@ export class LiveQueryStore<
 		}
 
 		const baseQuery = this.queries.get(config);
-		const liveQuery = new LiveQuery(
+		const liveQuery = new LiveQuery<any, any>(
 			baseQuery,
 			(query) => {
 				const cached = this.cache.get(key);
@@ -62,6 +59,9 @@ export class LiveQueryStore<
 			(query) => {
 				this.prepareToCleanupQuery(query);
 			},
+			config.single ? null : [],
+			config.single ? undefined : { offset: 0 },
+			config.updater || defaultUpdater,
 		);
 		this.cache.set(key, liveQuery);
 		this.prepareToCleanupQuery(liveQuery);

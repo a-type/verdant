@@ -1,15 +1,17 @@
-import { CollectionFilter, StorageSchema } from '@lo-fi/common';
+import { CollectionFilter } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { ObjectEntity } from '../index.js';
 import { LiveQuery } from './LiveQuery.js';
-import { BaseQueryStore } from './QueryStore.js';
+import { LiveQueryStore } from './LiveQueryStore.js';
 import { getRange } from './ranges.js';
 
 export class LiveQueryMaker<
 	Result extends ObjectEntity<any, any, any> = ObjectEntity<any, any, any>,
-	Store extends BaseQueryStore<LiveQuery<any>> = BaseQueryStore<LiveQuery<any>>,
 > {
-	constructor(private readonly queryStore: Store, private context: Context) {}
+	constructor(
+		private readonly queryStore: LiveQueryStore,
+		private context: Context,
+	) {}
 
 	get = (collection: string, primaryKey: string): LiveQuery<Result> => {
 		return this.queryStore.get({
@@ -35,12 +37,45 @@ export class LiveQueryMaker<
 	findAll = (
 		collection: string,
 		query?: CollectionFilter,
+		limit?: number,
 	): LiveQuery<Result[]> => {
 		return this.queryStore.get({
 			collection,
 			range: this.getRange(collection, query),
 			index: query?.where,
 			direction: query?.order === 'desc' ? 'prev' : 'next',
+			limit,
+		});
+	};
+
+	findAllPaginated = (
+		collection: string,
+		query?: CollectionFilter,
+		limit?: number,
+	): LiveQuery<Result[]> => {
+		return this.queryStore.get({
+			collection,
+			range: this.getRange(collection, query),
+			index: query?.where,
+			direction: query?.order === 'desc' ? 'prev' : 'next',
+			limit,
+			updater: (_, next) => next,
+		});
+	};
+
+	findAllInfinite = (
+		collection: string,
+		query?: CollectionFilter,
+		limit?: number,
+	): LiveQuery<Result[]> => {
+		return this.queryStore.get({
+			collection,
+			range: this.getRange(collection, query),
+			index: query?.where,
+			direction: query?.order === 'desc' ? 'prev' : 'next',
+			limit,
+			// updater: (prev, next) => prev.concat(next),
+			updater: (prev, next) => [...prev, ...next],
 		});
 	};
 

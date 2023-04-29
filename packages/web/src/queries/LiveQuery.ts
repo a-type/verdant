@@ -1,14 +1,11 @@
-import { ObjectEntity } from '../reactives/Entity.js';
+import { Entity } from '../reactives/Entity.js';
 import { BaseQuery, Query } from './Query.js';
 
 export const UPDATE = '@@update';
 
-export class LiveQuery<
-	T extends (ObjectEntity<any, any> | null) | ObjectEntity<any, any>[],
-> implements BaseQuery<T>
-{
-	private _rawEntities: T | null = null;
-	private _resultEntities: T | null = null;
+export class LiveQuery<T = any, Params = undefined> implements BaseQuery<T> {
+	private _rawValue: T;
+	private _value: T;
 	private _subscribers: Set<(value: T | null) => void> = new Set();
 	resolved: Promise<T>;
 
@@ -28,26 +25,37 @@ export class LiveQuery<
 	}
 
 	constructor(
-		private readonly query: Query<T>,
-		private readonly onActivate: (query: LiveQuery<T>) => void,
-		private readonly onDispose: (query: LiveQuery<T>) => void,
+		private readonly query: Query<T, Params>,
+		private readonly onActivate: (query: LiveQuery<T, Params>) => void,
+		private readonly onDispose: (query: LiveQuery<T, Params>) => void,
+		initial: T,
+		private _params: Params,
+		private _updater: (previous: T, value: T) => T,
 	) {
+		this._rawValue = initial;
+		this._value = this.filterDeleted(initial);
 		this.resolved = this.execute();
 	}
 
-	private filterDeleted = (entities: T | null): T | null => {
+	private filterDeleted = (entities: T): T => {
 		if (Array.isArray(entities)) {
 			return entities.filter((entity) => !entity.deleted) as any;
+		} else if (entities instanceof Entity) {
+			return entities.deleted ? (null as any) : entities;
 		}
-		return entities?.deleted ? null : entities;
+		return entities;
 	};
 
-	private execute = async (): Promise<T> => {
-		this._rawEntities = await this.query.execute();
-		this.subscribeToDeleteAndRestore(this._rawEntities);
-		this._resultEntities = this.filterDeleted(this._rawEntities);
-		this._subscribers.forEach((subscriber) => subscriber(this._resultEntities));
-		return this._resultEntities as any;
+	private execute = async (params: Params = this._params): Promise<T> => {
+		this._params = params;
+		this._rawValue = this._updater(
+			this._value,
+			await this.query.execute(params),
+		);
+		this.subscribeToDeleteAndRestore(this._rawValue);
+		this._value = this.filterDeleted(this._rawValue);
+		this._subscribers.forEach((subscriber) => subscriber(this._value));
+		return this._value as any;
 	};
 
 	private subscribeToDeleteAndRestore = (result: T) => {
@@ -56,7 +64,7 @@ export class LiveQuery<
 		}
 
 		if (Array.isArray(result)) {
-			result.forEach((entity) => {
+			result.forEach((entity: Entity) => {
 				this._internalUnsubscribes.push(
 					entity.subscribe('delete', this.refilterDeleted),
 				);
@@ -64,7 +72,7 @@ export class LiveQuery<
 					entity.subscribe('restore', this.refilterDeleted),
 				);
 			});
-		} else if (result) {
+		} else if (result instanceof Entity) {
 			this._internalUnsubscribes.push(
 				result.subscribe('delete', this.refilterDeleted),
 			);
@@ -75,7 +83,7 @@ export class LiveQuery<
 	};
 
 	get current() {
-		return this._resultEntities;
+		return this._value;
 	}
 
 	[UPDATE] = () => {
@@ -92,8 +100,8 @@ export class LiveQuery<
 	};
 
 	private refilterDeleted = () => {
-		this._resultEntities = this.filterDeleted(this._rawEntities);
-		this._subscribers.forEach((subscriber) => subscriber(this._resultEntities));
+		this._value = this.filterDeleted(this._rawValue);
+		this._subscribers.forEach((subscriber) => subscriber(this._value));
 	};
 
 	subscribe = (callback: (value: T | null) => void) => {
@@ -107,6 +115,10 @@ export class LiveQuery<
 				this.onDispose(this);
 			}
 		};
+	};
+
+	update = (params: Params) => {
+		return this.execute(params);
 	};
 
 	get subscriberCount() {

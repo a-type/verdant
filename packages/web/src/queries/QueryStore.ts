@@ -1,7 +1,7 @@
 import { createOid, hashObject, ObjectIdentifier } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { storeRequestPromise } from '../idb.js';
-import { BaseQuery, Query } from './Query.js';
+import { Query } from './Query.js';
 
 export interface QueryParams {
 	collection: string;
@@ -13,16 +13,10 @@ export interface QueryParams {
 	write?: boolean;
 }
 
-export interface BaseQueryStore<QueryType extends BaseQuery<any>> {
-	getQueryKey(params: QueryParams): string;
-
-	get(params: QueryParams): QueryType;
-}
-
-export class QueryStore<Result> implements BaseQueryStore<Query> {
+export class QueryStore {
 	private _disposed = false;
 	constructor(
-		private hydrator: (oid: ObjectIdentifier) => Promise<Result>,
+		private hydrator: (oid: ObjectIdentifier) => Promise<any>,
 		private context: Context,
 	) {}
 
@@ -61,10 +55,9 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 			params;
 		const key = this.getQueryKey(params);
 
-		let run: () => Promise<any>;
 		if (single) {
 			if (!range) throw new Error('Single object query requires a range value');
-			run = async () => {
+			const run = async () => {
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
 				const request = source.getKey(range);
@@ -86,28 +79,35 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 					}
 				}
 			};
+			return new Query(key, collection, run);
 		} else {
-			run = async () => {
+			const run = async ({ offset }: { offset?: number }) => {
 				const store = this.getStore(collection, write);
 				const source = index ? store.index(index) : store;
 				const request = source.openCursor(range, direction);
 				try {
+					let hasDoneOffset = !offset;
 					const oids = await new Promise<ObjectIdentifier[]>(
 						(resolve, reject) => {
 							const result: any[] = [];
 							request.onsuccess = async () => {
 								const cursor = request.result;
-								if (cursor?.primaryKey) {
-									result.push(
-										createOid(collection, cursor.primaryKey.toString(), []),
-									);
-									if (limit && result.length >= limit) {
-										resolve(result);
-									} else {
-										cursor.continue();
-									}
+								if (!hasDoneOffset && cursor && offset && limit) {
+									cursor.advance(offset * limit);
+									hasDoneOffset = true;
 								} else {
-									resolve(result);
+									if (cursor?.primaryKey) {
+										result.push(
+											createOid(collection, cursor.primaryKey.toString(), []),
+										);
+										if (limit && result.length >= limit) {
+											resolve(result);
+										} else {
+											cursor.continue();
+										}
+									} else {
+										resolve(result);
+									}
 								}
 							};
 							request.onerror = () => reject(request.error);
@@ -121,14 +121,14 @@ export class QueryStore<Result> implements BaseQueryStore<Query> {
 				} catch (error) {
 					if (error instanceof Error && error.name === 'InvalidStateError') {
 						this.context.log('Query failed with InvalidStateError', error);
-						return null;
+						return [];
 					} else {
 						throw error;
 					}
 				}
 			};
+			return new Query<any[], { offset?: number }>(key, collection, run);
 		}
-		return new Query<Result>(key, collection, run);
 	};
 
 	dispose = () => {

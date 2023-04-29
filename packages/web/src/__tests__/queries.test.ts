@@ -117,4 +117,64 @@ describe('storage queries', () => {
 			items[4].get('id'),
 		]);
 	});
+
+	it('can do a paginated query', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const query = storage.todos.findAllPaginated(
+			{
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+			2,
+		);
+		const results = await query.resolved;
+
+		expect(results.map((i: any) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+		]);
+
+		const nextResults = await query.update({ offset: 1 });
+
+		expect(nextResults.map((i: any) => i.get('id'))).toEqual([
+			items[1].get('id'),
+		]);
+	});
+
+	it('can do an infinite query', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const query = storage.todos.findAllInfinite(
+			{
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+			2,
+		);
+		const results = await query.resolved;
+
+		expect(results.map((i: any) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+		]);
+
+		const nextResults = await query.update({ offset: 1 });
+
+		expect(nextResults.map((i: any) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+			items[1].get('id'),
+		]);
+	});
 });
