@@ -85,4 +85,15 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 			options,
 		);
 	};
+
+	deleteAllFromCollection = async (
+		collection: string,
+		ids: string[],
+		options: { undoable?: boolean } = {},
+	) => {
+		return this.entities.deleteAll(
+			ids.map((primaryKey) => createOid(collection, primaryKey, [])),
+			options,
+		);
+	};
 }

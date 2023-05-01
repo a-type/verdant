@@ -23,7 +23,7 @@ import {
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
-function useLiveQuery(liveQuery: Query<any, any> | null) {
+function useLiveQuery(liveQuery: Query<any> | null) {
 	if (liveQuery) {
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
@@ -392,7 +392,7 @@ export function createHooks<Presence = any, Profile = any>(
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].findOne(index);
+				return skip ? null : storage[name].findOne({ index });
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery);
 			return data;
@@ -412,7 +412,7 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAll(index)),
+				() => (skip ? null : storage[name].findAll({ index })),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
@@ -424,7 +424,7 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[getAllPaginatedHookName] = function useAllPaginated({
 			index,
 			skip,
-			pageSize,
+			pageSize = 10,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
@@ -434,34 +434,30 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAllPaginated(index, pageSize)),
+				() =>
+					skip
+						? null
+						: storage[name].findPage({
+								index,
+								pageSize,
+								page: 0,
+						  }),
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery);
 
 			const tools = useMemo(
 				() => ({
-					next: () =>
-						liveQuery?.update({
-							offset: liveQuery ? liveQuery.params.offset ?? 0 + 1 : 0,
-						}),
-					previous: () =>
-						liveQuery?.update({
-							offset: liveQuery
-								? Math.max(0, liveQuery.params.offset ?? 0 - 1)
-								: 0,
-						}),
-					setPage: (page: number) =>
-						liveQuery?.update({
-							offset: page,
-						}),
+					next: () => liveQuery?.nextPage(),
+					previous: () => liveQuery?.previousPage(),
+					setPage: (page: number) => liveQuery?.setPage(page),
 
 					get hasPrevious() {
-						return liveQuery?.params.offset ?? 0 > 0;
+						return liveQuery?.hasPreviousPage;
 					},
 
 					get hasNext() {
-						return liveQuery?.hasNext;
+						return liveQuery?.hasNextPage;
 					},
 				}),
 				[liveQuery],
@@ -475,7 +471,7 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[getAllInfiniteHookName] = function useAllInfinite({
 			index,
 			skip,
-			pageSize,
+			pageSize = 10,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
@@ -485,20 +481,23 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAllInfinite(index, pageSize)),
+				() =>
+					skip
+						? null
+						: storage[name].findAllInfinite({
+								index,
+								pageSize,
+						  }),
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery);
 
 			const tools = useMemo(
 				() => ({
-					fetchMore: () =>
-						liveQuery?.update({
-							offset: liveQuery ? liveQuery.params.offset ?? 0 + 1 : 0,
-						}),
+					fetchMore: () => liveQuery?.loadMore(),
 
 					get hasMore() {
-						return liveQuery?.hasNext;
+						return liveQuery?.hasMore;
 					},
 				}),
 				[liveQuery],

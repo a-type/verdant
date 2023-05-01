@@ -10,6 +10,8 @@ export class EventSubscriber<
 	protected counts: Record<string, number> = {} as any;
 	private _disabled = false;
 
+	constructor(private _onAllUnsubscribed?: (event: keyof Events) => void) {}
+
 	get disabled() {
 		return this._disabled;
 	}
@@ -36,6 +38,13 @@ export class EventSubscriber<
 		return () => {
 			delete this.subscribers[event][key];
 			this.counts[event]--;
+			if (this.counts[event] === 0) {
+				delete this.subscribers[event];
+				delete this.counts[event];
+				if (this._onAllUnsubscribed) {
+					this._onAllUnsubscribed(event);
+				}
+			}
 		};
 	};
 
@@ -50,8 +59,14 @@ export class EventSubscriber<
 	};
 
 	dispose = () => {
+		const events = Object.keys(this.subscribers);
 		this.subscribers = {} as any;
 		this.counts = {} as any;
+		events.forEach((event) => {
+			if (this._onAllUnsubscribed) {
+				this._onAllUnsubscribed(event);
+			}
+		});
 	};
 
 	disable = () => {

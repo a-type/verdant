@@ -11,7 +11,6 @@ export { ClientDescriptor as StorageDescriptor };
 export { Client as Storage };
 export type { ClientDescriptorOptions };
 export type { ClientDescriptorOptions as StorageInitOptions };
-export { LiveQuery as Query } from './queries/LiveQuery.js';
 export { Entity } from './reactives/Entity.js';
 export type {
 	ObjectEntity,
@@ -24,7 +23,6 @@ export type {
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { EntityFile } from './files/EntityFile.js';
-
 export {
 	collection,
 	schema,
@@ -37,5 +35,5 @@ export type {
 	StorageCollectionSchema,
 	Migration,
 } from '@lo-fi/common';
-
 export type { UserInfo } from '@lo-fi/common';
+export type { Query } from './queries2/types.js';
