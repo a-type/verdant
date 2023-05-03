@@ -58,11 +58,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		const defaulted = this.addDefaults(collection, init);
 		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
-		return this.entities.create(
-			defaulted,
-			oid,
-			options,
-		) as unknown as ObjectEntity<any, any>;
+		return this.entities.create(defaulted, oid, options) as any;
 	};
 
 	delete = async (

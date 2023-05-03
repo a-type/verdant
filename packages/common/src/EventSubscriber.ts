@@ -36,6 +36,9 @@ export class EventSubscriber<
 		subscribers[key] = callback;
 		this.counts[event] = (this.counts[event] || 0) + 1;
 		return () => {
+			// already removed
+			if (!this.subscribers[event]) return;
+
 			delete this.subscribers[event][key];
 			this.counts[event]--;
 			if (this.counts[event] === 0) {

@@ -25,7 +25,7 @@ interface ClientConfig<Presence = any> {
 // not actually used below, but helpful for internal code which
 // might rely on this stuff...
 export type ClientWithCollections = Client & {
-	[key: string]: CollectionQueries;
+	[key: string]: CollectionQueries<any, any, any>;
 };
 
 export class Client {
@@ -80,7 +80,6 @@ export class Client {
 		});
 		this._queryCache = new QueryCache({
 			context,
-			entities: this._entities,
 		});
 		this._documentManager = new DocumentManager(
 			this.meta,

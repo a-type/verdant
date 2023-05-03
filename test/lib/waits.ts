@@ -56,7 +56,7 @@ export async function waitForQueryResult(
 	timeoutMs = 15000,
 ) {
 	await new Promise<void>((resolve, reject) => {
-		if (predicate(query.current)) {
+		if (query.status !== 'initial' && predicate(query.current)) {
 			resolve();
 			return;
 		}

@@ -7,6 +7,7 @@ import {
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
+import { assert } from '@lo-fi/common';
 
 const context = createTestContext();
 
@@ -84,8 +85,10 @@ it('can sync multiple clients even if they go offline', async () => {
 		itemCount: number,
 	) {
 		const matchingCategoryQuery = client.categories.findOne({
-			where: 'name',
-			equals: category,
+			index: {
+				where: 'name',
+				equals: category,
+			},
 		});
 
 		await waitForQueryResult(matchingCategoryQuery, (val) => {
@@ -95,8 +98,10 @@ it('can sync multiple clients even if they go offline', async () => {
 		const matchingCategory = await matchingCategoryQuery.resolved;
 		expect(matchingCategory).toBeTruthy();
 		const matchingItemsQuery = client.items.findAll({
-			where: 'categoryId',
-			equals: matchingCategory!.get('id'),
+			index: {
+				where: 'categoryId',
+				equals: matchingCategory!.get('id'),
+			},
 		});
 		await waitForQueryResult(
 			matchingItemsQuery,
@@ -118,6 +123,7 @@ it('can sync multiple clients even if they go offline', async () => {
 	console.info('🔺--- Realtime sync actions ---');
 	const c_steakItem = await clientC.items.get(b_steakItem.get('id')).resolved;
 	expect(c_steakItem).toBeTruthy();
+	assert(c_steakItem);
 	c_steakItem.set('purchased', true);
 
 	await waitForCondition(() => {
@@ -127,6 +133,8 @@ it('can sync multiple clients even if they go offline', async () => {
 
 	const b_unknownItem = await clientB.items.get(a_unknownItem.get('id'))
 		.resolved;
+	expect(b_unknownItem).toBeTruthy();
+	assert(b_unknownItem);
 
 	a_unknownItem.get('tags').add('tag1');
 	a_unknownItem.get('tags').add('tag2');
@@ -147,7 +155,9 @@ it('can sync multiple clients even if they go offline', async () => {
 	}
 	await waitForTags(a_unknownItem);
 	await waitForTags(b_unknownItem);
-	await waitForTags(await clientC.items.get(a_unknownItem.get('id')).resolved!);
+	await waitForTags(
+		(await clientC.items.get(a_unknownItem.get('id')).resolved)!,
+	);
 
 	console.info('🔺--- Offline sync actions ---');
 	// go offline on two clients and push different items to the comments
@@ -178,6 +188,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		commentCount: number,
 	) {
 		const item = await client.items.get(itemId).resolved;
+		assert(item);
 		expect(item.get('comments').length).toBe(commentCount);
 	}
 

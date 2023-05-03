@@ -17,6 +17,7 @@ import type {
   EntityShape,
   AnyEntity,
   EntityDestructured,
+  EntityFile,
 } from "@lo-fi/web";
 
 type SkippableFilterConfig<F> = {
@@ -64,6 +65,9 @@ export interface GeneratedHooks<Presence, Profile> {
     entity: T,
     prop: P
   ): EntityDestructured<T>[P];
+  useWatch<T extends EntityFile | null>(file: T): string | null;
+  useUndo(): () => void;
+  useRedo(): () => void;
   useCanUndo(): boolean;
   useCanRedo(): boolean;
   /**
@@ -83,6 +87,25 @@ export interface GeneratedHooks<Presence, Profile> {
   useAllItems: <Config extends SkippableFilterConfig<ItemFilter>>(
     config?: Config
   ) => Item[];
+  useAllPaginatedItems: <
+    Config extends SkippableFilterConfig<ItemFilter> & { pageSize: number }
+  >(
+    config?: Config
+  ) => [
+    Item[],
+    {
+      next: () => void;
+      previous: () => void;
+      setPage: (page: number) => void;
+      hasNext: boolean;
+      hasPrevious: boolean;
+    }
+  ];
+  useAllInfiniteItems: <
+    Config extends SkippableFilterConfig<ItemFilter> & { pageSize: number }
+  >(
+    config?: Config
+  ) => [Item[], { fetchMore: () => void; hasMore: boolean }];
 
   useCategory(id: string, config?: { skip?: boolean }): Category | null;
   useOneCategory: <Config extends SkippableFilterConfig<CategoryFilter>>(
@@ -91,9 +114,50 @@ export interface GeneratedHooks<Presence, Profile> {
   useAllCategories: <Config extends SkippableFilterConfig<CategoryFilter>>(
     config?: Config
   ) => Category[];
+  useAllPaginatedCategories: <
+    Config extends SkippableFilterConfig<CategoryFilter> & { pageSize: number }
+  >(
+    config?: Config
+  ) => [
+    Category[],
+    {
+      next: () => void;
+      previous: () => void;
+      setPage: (page: number) => void;
+      hasNext: boolean;
+      hasPrevious: boolean;
+    }
+  ];
+  useAllInfiniteCategories: <
+    Config extends SkippableFilterConfig<CategoryFilter> & { pageSize: number }
+  >(
+    config?: Config
+  ) => [Category[], { fetchMore: () => void; hasMore: boolean }];
 }
 
-export function createHooks<Presence = any, Profile = any>(): GeneratedHooks<
-  Presence,
-  Profile
->;
+type HookName = `use${string}`;
+type HookWithoutClient<
+  Hook extends <TArgs extends any[], TRet>(
+    client: Client,
+    ...args: Targs
+  ) => TRet
+> = (...args: TArgs) => TRet;
+export function createHooks<
+  Presence = any,
+  Profile = any,
+  Mutations extends {
+    [N: HookName]: (client: Client, ...args: any[]) => any;
+  } = never
+>(
+  mutations?: Mutations
+): GeneratedHooks<Presence, Profile> & {
+  withMutations: <
+    Mutations extends {
+      [Name: HookName]: (client: Client, ...args: any[]) => unknown;
+    }
+  >(
+    mutations: Mutations
+  ) => GeneratedHooks<Presence, Profile> & {
+    [MutHook in keyof Mutations]: HookWithoutClient<Mutations[MutHook]>;
+  };
+};

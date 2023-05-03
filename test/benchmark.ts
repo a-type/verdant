@@ -30,7 +30,7 @@ async function setup2PeerTest() {
 	await waitForPeerCount(clientA, 1);
 	console.info('🔺 --- Both clients online ---');
 
-	const itemA = await clientA.items.create({
+	const itemA = await clientA.items.put({
 		id: 'a',
 		content: '0',
 	});
@@ -65,7 +65,7 @@ async function do10kChangesToOneObject() {
 	let start = Date.now();
 
 	for (let i = 0; i < 10001; i++) {
-		itemB.set('content', `${i}`);
+		itemB?.set('content', `${i}`);
 	}
 
 	await changeWaitPromise;
@@ -104,7 +104,7 @@ async function do1kChangesToOneObjectUnbatched() {
 	let start = Date.now();
 
 	for (let i = 0; i < 1001; i++) {
-		itemB.set('content', `${i}`);
+		itemB?.set('content', `${i}`);
 		clientB.entities.flushPatches();
 	}
 

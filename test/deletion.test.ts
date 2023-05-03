@@ -1,11 +1,14 @@
 import { it, expect } from 'vitest';
 import { createTestClient } from './lib/testClient.js';
 import { waitForQueryResult } from './lib/waits.js';
+import { assert } from '@lo-fi/common';
+import { log } from './lib/log.js';
 
 it('cleans up metadata after deletion but can still restore the document', async () => {
 	const client = await createTestClient({
 		library: 'test',
 		user: 'test',
+		// logId: 'A',
 	});
 
 	await client.items.put({
@@ -40,6 +43,8 @@ it('cleans up metadata after deletion but can still restore the document', async
 
 	const one = await client.items.get('1').resolved;
 	const two = await client.items.get('2').resolved;
+	assert(one);
+	assert(two);
 
 	expect(one.get('content')).toBe('test');
 	expect(two.get('content')).toBe('again');

@@ -1,7 +1,6 @@
 import { Context } from '../context.js';
-import { EntityStore } from '../reactives/EntityStore.js';
 import { Disposable } from '../utils/Disposable.js';
-import { BaseQuery, ON_ALL_UNSUBSCRIBED, UPDATE } from './BaseQuery.js';
+import { BaseQuery, ON_ALL_UNSUBSCRIBED } from './BaseQuery.js';
 
 export class QueryCache extends Disposable {
 	private _cache: Map<string, BaseQuery<any>> = new Map();
@@ -11,19 +10,14 @@ export class QueryCache extends Disposable {
 	constructor({
 		evictionTime = 5 * 1000,
 		context,
-		entities,
 	}: {
 		evictionTime?: number;
 		context: Context;
-		entities: EntityStore;
 	}) {
 		super();
 
 		this._evictionTime = evictionTime;
 		this.context = context;
-		this.addDispose(
-			entities.subscribe('collectionsChanged', this.onCollectionsChanged),
-		);
 	}
 
 	get<T extends BaseQuery<any>>(key: string): T | null {
@@ -51,17 +45,5 @@ export class QueryCache extends Disposable {
 				this._cache.delete(query.key);
 			}
 		}, this._evictionTime);
-	};
-
-	private onCollectionsChanged = (collections: string[]) => {
-		let updated = 0;
-		// FIXME: This is a naive implementation, improve beyond O(n)
-		for (const [key, query] of this._cache) {
-			if (collections.includes(query.collection)) {
-				query[UPDATE]();
-				updated++;
-				this.context.log('🔄 updated query', key);
-			}
-		}
 	};
 }

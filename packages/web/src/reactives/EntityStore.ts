@@ -33,9 +33,7 @@ export interface OperationBatch {
 	discard: () => void;
 }
 
-export class EntityStore extends EventSubscriber<{
-	collectionsChanged: (collections: string[]) => void;
-}> {
+export class EntityStore {
 	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
 
 	public meta;
@@ -75,8 +73,6 @@ export class EntityStore extends EventSubscriber<{
 		files: FileManager;
 		batchTimeout?: number;
 	}) {
-		super();
-
 		this.context = context;
 
 		this.defaultBatchTimeout = batchTimeout;
@@ -113,6 +109,9 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private resetFamilyCache = async (familyCache: DocumentFamilyCache) => {
+		// avoid writing to disposed db
+		if (this._disposed) return;
+
 		// metadata must be loaded from database to initialize family cache
 		const transaction = this.meta.createTransaction([
 			'baselines',
@@ -149,6 +148,7 @@ export class EntityStore extends EventSubscriber<{
 			familyCache = new DocumentFamilyCache({
 				oid: documentOid,
 				store: this,
+				context: this.context,
 			});
 			await this.resetFamilyCache(familyCache);
 
@@ -206,6 +206,7 @@ export class EntityStore extends EventSubscriber<{
 			const tx = this.db.transaction(collection, 'readwrite');
 			const store = tx.objectStore(collection);
 			await storeRequestPromise(store.delete(id));
+			this.log('info', '❌', 'deleted', collection, id, 'from storage');
 		}
 	};
 
@@ -341,6 +342,14 @@ export class EntityStore extends EventSubscriber<{
 					reset,
 					isLocal,
 				});
+				this.log('debug', 'Added data to cache for', oid);
+			} else {
+				this.log(
+					'debug',
+					'Could not add data to cache for',
+					oid,
+					'because it is not open',
+				);
 			}
 		}
 
@@ -378,6 +387,10 @@ export class EntityStore extends EventSubscriber<{
 		await this.meta.insertRemoteBaselines(baselines);
 		await this.meta.insertRemoteOperations(operations);
 
+		if (reset) {
+			await this.resetAllCaches();
+		}
+
 		// recompute all affected documents for querying
 		for (const oid of allDocumentOids) {
 			await this.writeDocumentToStorage(oid);
@@ -387,7 +400,11 @@ export class EntityStore extends EventSubscriber<{
 		const affectedCollections = new Set<string>(
 			allDocumentOids.map((oid) => decomposeOid(oid).collection),
 		);
-		this.emit('collectionsChanged', Array.from(affectedCollections));
+		this.context.log('changes to collections', affectedCollections);
+		this.context.entityEvents.emit(
+			'collectionsChanged',
+			Array.from(affectedCollections),
+		);
 	};
 
 	addLocalOperations = async (operations: Operation[]) => {
@@ -504,7 +521,11 @@ export class EntityStore extends EventSubscriber<{
 		const affectedCollections = new Set(
 			operations.map(({ oid }) => decomposeOid(oid).collection),
 		);
-		this.emit('collectionsChanged', Array.from(affectedCollections));
+		this.context.log('changes to collections', affectedCollections);
+		this.context.entityEvents.emit(
+			'collectionsChanged',
+			Array.from(affectedCollections),
+		);
 	};
 
 	private getInverseOperations = async (ops: Operation[]) => {
@@ -562,22 +583,17 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	reset = async () => {
-		const tx = this.db.transaction(
-			Object.keys(this.schema.collections),
-			'readwrite',
-		);
-		for (const collection of Object.keys(this.schema.collections)) {
-			const store = tx.objectStore(collection);
-			await storeRequestPromise(store.clear());
-		}
-		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.resetFamilyCache(cache);
-		}
+		this.context.log('warn', 'Resetting local database');
+		await this.resetStoredDocuments();
+		await this.resetAllCaches();
+		// this.context.entityEvents.emit(
+		// 	'collectionsChanged',
+		// 	Object.keys(this.schema.collections),
+		// );
 	};
 
 	destroy = () => {
 		this._disposed = true;
-		this.disable();
 		for (const unsubscribe of this.unsubscribes) {
 			unsubscribe();
 		}
@@ -588,7 +604,7 @@ export class EntityStore extends EventSubscriber<{
 	};
 
 	private handleRebase = (baselines: DocumentBaseline[]) => {
-		this.log('Reacting to rebases', baselines.length);
+		this.log('debug', 'Reacting to rebases', baselines.length);
 		this.addBaselinesToCaches(baselines, { isLocal: true });
 	};
 
@@ -600,6 +616,12 @@ export class EntityStore extends EventSubscriber<{
 		for (const collection of Object.keys(this.schema.collections)) {
 			const store = tx.objectStore(collection);
 			await storeRequestPromise(store.clear());
+		}
+	};
+
+	private resetAllCaches = async () => {
+		for (const [_, cache] of this.documentFamilyCaches) {
+			await this.resetFamilyCache(cache);
 		}
 	};
 }

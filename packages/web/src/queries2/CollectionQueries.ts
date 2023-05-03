@@ -9,17 +9,22 @@ import { FindInfiniteQuery } from './FindInfiniteQuery.js';
 import { FindAllQuery } from './FindAllQuery.js';
 import { DocumentManager } from '../DocumentManager.js';
 import cuid from 'cuid';
+import { ObjectEntity } from '../index.js';
 
-export class CollectionQueries {
+export class CollectionQueries<
+	T extends ObjectEntity<any, any>,
+	Init,
+	Filter extends CollectionFilter,
+> {
 	private cache;
 	private collection;
-	private hydrate;
+	private hydrate: (oid: string) => Promise<T>;
 	private context;
 	private documentManager;
 
-	put;
-	delete;
-	deleteAll;
+	put: (init: Init, options?: { undoable?: boolean }) => Promise<T>;
+	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
+	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
 
 	constructor({
 		collection,
@@ -36,7 +41,7 @@ export class CollectionQueries {
 	}) {
 		this.cache = cache;
 		this.collection = collection;
-		this.hydrate = entities.get;
+		this.hydrate = entities.get as any;
 		this.context = context;
 		this.documentManager = documentManager;
 
@@ -64,7 +69,7 @@ export class CollectionQueries {
 		return this.cache.getOrSet(
 			key,
 			() =>
-				new GetQuery({
+				new GetQuery<T>({
 					id,
 					collection: this.collection,
 					hydrate: this.hydrate,
@@ -74,12 +79,12 @@ export class CollectionQueries {
 		);
 	};
 
-	findOne = ({ index }: { index?: CollectionFilter } = {}) => {
+	findOne = ({ index }: { index?: Filter } = {}) => {
 		const key = `findOne:${this.collection}:${this.serializeIndex(index)}`;
 		return this.cache.getOrSet(
 			key,
 			() =>
-				new FindOneQuery({
+				new FindOneQuery<T>({
 					index,
 					collection: this.collection,
 					hydrate: this.hydrate,
@@ -89,12 +94,12 @@ export class CollectionQueries {
 		);
 	};
 
-	findAll = ({ index }: { index?: CollectionFilter } = {}) => {
+	findAll = ({ index }: { index?: Filter } = {}) => {
 		const key = `findAll:${this.collection}:${this.serializeIndex(index)}`;
 		return this.cache.getOrSet(
 			key,
 			() =>
-				new FindAllQuery({
+				new FindAllQuery<T>({
 					index,
 					collection: this.collection,
 					hydrate: this.hydrate,
@@ -109,14 +114,14 @@ export class CollectionQueries {
 		pageSize,
 		page,
 	}: {
-		index?: CollectionFilter;
+		index?: Filter;
 		pageSize: number;
 		page: number;
 	}) => {
 		const key = cuid();
 
 		return this.cache.set(
-			new FindPageQuery({
+			new FindPageQuery<T>({
 				index,
 				collection: this.collection,
 				hydrate: this.hydrate,
@@ -132,14 +137,14 @@ export class CollectionQueries {
 		index,
 		pageSize,
 	}: {
-		index?: CollectionFilter;
+		index?: Filter;
 		pageSize: number;
 	}) => {
 		const key = cuid();
 		return this.cache.getOrSet(
 			key,
 			() =>
-				new FindInfiniteQuery({
+				new FindInfiniteQuery<T>({
 					index,
 					collection: this.collection,
 					hydrate: this.hydrate,

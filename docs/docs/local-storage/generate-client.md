@@ -36,7 +36,7 @@ const clientDesc = new ClientDescriptor({
 });
 
 clientDesc.open().then((client) => {
-	client.todoItems.create({
+	client.todoItems.put({
 		id: '1',
 		details: 'Create a lo-fi client',
 		done: true,

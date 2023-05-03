@@ -1,6 +1,5 @@
 import { ReplicaType } from '@lo-fi/server';
 import {
-	Client,
 	ClientDescriptor,
 	ClientDescriptorOptions,
 	Migration,

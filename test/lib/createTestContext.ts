@@ -28,9 +28,9 @@ export function createTestContext({
 	});
 	afterAll(async () => {
 		await context.server.cleanup();
-		for (const client of context.clients) {
-			client.close();
-		}
+		await Promise.allSettled(
+			context.clients.map((client) => client.close().catch(() => {})),
+		);
 	}, 20 * 1000);
 
 	return context as Required<typeof context>;

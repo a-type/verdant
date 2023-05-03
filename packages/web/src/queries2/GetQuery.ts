@@ -1,5 +1,4 @@
 import { createOid } from '@lo-fi/common';
-import { Context } from '../context.js';
 import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
 
 export class GetQuery<T> extends BaseQuery<T | null> {
@@ -23,6 +22,7 @@ export class GetQuery<T> extends BaseQuery<T | null> {
 	}
 
 	protected run = async () => {
-		this.setValue(await this.hydrate(this.oid));
+		const value = await this.hydrate(this.oid);
+		this.setValue(value);
 	};
 }

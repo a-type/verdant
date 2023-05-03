@@ -56,6 +56,22 @@ async function addTestingItems(storage: ClientWithCollections) {
 }
 
 describe('storage queries', () => {
+	it('can query synthetic indexes', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const query = storage.todos.findAll({
+			index: {
+				where: 'example',
+				equals: 'something else',
+			},
+		});
+		const results = await query.resolved;
+
+		expect(results.map((i: any) => i.get('id'))).toEqual([items[3].get('id')]);
+	});
+
 	it('can query simple compound indexes by match and order', async () => {
 		const storage = await createTestStorage();
 

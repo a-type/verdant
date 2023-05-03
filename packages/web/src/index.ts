@@ -37,3 +37,4 @@ export type {
 } from '@lo-fi/common';
 export type { UserInfo } from '@lo-fi/common';
 export type { Query } from './queries2/types.js';
+export type { CollectionQueries } from './queries2/CollectionQueries.js';

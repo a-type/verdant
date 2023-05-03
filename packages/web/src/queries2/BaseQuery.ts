@@ -14,6 +14,7 @@ export type BaseQueryOptions<T> = {
 	initial: T;
 	collection: string;
 	key: string;
+	shouldUpdate?: (updatedCollections: string[]) => boolean;
 };
 
 export type QueryStatus = 'initial' | 'running' | 'ready';
@@ -27,16 +28,22 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	private _events;
 	private _internalUnsubscribes: (() => void)[] = [];
-	private _resolved: Resolvable<T> | null = null;
 	private _allUnsubscribedHandler?: (query: BaseQuery<T>) => void;
 	private _status: QueryStatus = 'initial';
+	private _executionPromise: Promise<T> | null = null;
 
 	protected context;
 
 	readonly collection;
 	readonly key;
 
-	constructor({ initial, context, collection, key }: BaseQueryOptions<T>) {
+	constructor({
+		initial,
+		context,
+		collection,
+		key,
+		shouldUpdate,
+	}: BaseQueryOptions<T>) {
 		super();
 		this._rawValue = initial;
 		this._value = initial;
@@ -48,6 +55,20 @@ export abstract class BaseQuery<T> extends Disposable {
 		this.context = context;
 		this.key = key;
 		this.collection = collection;
+		const shouldUpdateFn =
+			shouldUpdate ||
+			((collections: string[]) => collections.includes(collection));
+		this.addDispose(
+			this.context.entityEvents.subscribe(
+				'collectionsChanged',
+				(collections) => {
+					if (shouldUpdateFn(collections)) {
+						this.context.log('info', 'Updating query', this.key);
+						this.execute();
+					}
+				},
+			),
+		);
 	}
 
 	get current() {
@@ -55,12 +76,8 @@ export abstract class BaseQuery<T> extends Disposable {
 	}
 
 	get resolved() {
-		if (!this._resolved) {
-			this._resolved = new Resolvable<T>();
-			this.execute();
-			return this._resolved.promise;
-		}
-		return this._resolved.promise;
+		if (this.status === 'ready') return Promise.resolve(this._value);
+		return this._executionPromise ?? this.execute();
 	}
 
 	get subscribed() {
@@ -72,16 +89,17 @@ export abstract class BaseQuery<T> extends Disposable {
 	}
 
 	subscribe = (callback: (value: T) => void) => {
+		// accessing for side effects... eh
+		this.resolved;
 		return this._events.subscribe('change', callback);
 	};
 
 	protected setValue = (value: T) => {
 		this._rawValue = value;
+		this.subscribeToDeleteAndRestore(this._rawValue);
 		this._value = filterResultSet(value);
-		this.subscribeToDeleteAndRestore(this._value);
 		this._status = 'ready';
 		this._events.emit('change', this._value);
-		this._resolved?.resolve(this._value);
 	};
 
 	// re-applies filtering if results have changed
@@ -96,12 +114,14 @@ export abstract class BaseQuery<T> extends Disposable {
 
 		if (Array.isArray(value)) {
 			value.forEach((entity: any) => {
-				this._internalUnsubscribes.push(
-					entity.subscribe('delete', this.refreshValue),
-				);
-				this._internalUnsubscribes.push(
-					entity.subscribe('restore', this.refreshValue),
-				);
+				if (entity instanceof Entity) {
+					this._internalUnsubscribes.push(
+						entity.subscribe('delete', this.refreshValue),
+					);
+					this._internalUnsubscribes.push(
+						entity.subscribe('restore', this.refreshValue),
+					);
+				}
 			});
 		} else if (value instanceof Entity) {
 			this._internalUnsubscribes.push(
@@ -115,18 +135,15 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 	};
 
-	private execute = async () => {
+	private execute = () => {
+		this.context.log('debug', 'Executing query', this.key);
 		this._status = 'running';
-		this._resolved = new Resolvable<T>();
-		await this.run();
+		this._executionPromise = this.run().then(() => this._value);
+		return this._executionPromise;
 	};
 	protected abstract run(): Promise<void>;
 
 	[ON_ALL_UNSUBSCRIBED] = (handler: (query: BaseQuery<T>) => void) => {
 		this._allUnsubscribedHandler = handler;
-	};
-
-	[UPDATE] = () => {
-		this.execute();
 	};
 }
