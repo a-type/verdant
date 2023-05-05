@@ -152,11 +152,9 @@ The query returned from `findPage` has several special properties:
 
 ## Manual cache keys
 
-You can provide a custom cache key to `findPage` and `findAllInfinite` queries, as well as `findOne` and `findAll` queries. Only the first two are recommended, though.
+You can provide a custom cache key to `findPage`, `findAllInfinite`, `findOne` and `findAll` queries. Only the first two are recommended, though.
 
-Providing a custom key to `findPage`/`findAllInfinite` allows them to be cached and reused across multiple references. Be aware, though, that the loaded state of each query will also be the same in each place it's used. For example, if you go to page 2 on one screen of your app and navigate somewhere else where the same query and key are used, it will also now be on page 2. Same with the number of results loaded in an infinite query. However, without specifying this key, each of these queries would load its result set independently, leading to more loading states. It's just a trade-off you'll want to make depending on your needs.
-
-On the other hand, providing a key to a `findOne` or `findAll` query opts it _out_ of the default caching and caches it separately. Not sure why you'd want to do this particularly, but it's available.
+Providing a custom key to queries allows them to be cached independently of other queries with the same parameters. Without providing a custom cache key for repeated queries, the loaded state of each query will be the same in each place it's used. Usually this is a good thing, but not always for paginated queries. For example, if you go to page 2 on one screen of your app and navigate somewhere else where the same query and key are used, it will also now be on page 2. Same with the number of results loaded in an infinite query. To create two queries of the same parameters which don't share state like this, you need to provide a different cache key to one or both so they're not treated the same by the cache.
 
 ## Caveat: deleted entities
 

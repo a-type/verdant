@@ -24,7 +24,8 @@ import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
 function useLiveQuery(liveQuery: Query<any> | null) {
-	if (liveQuery) {
+	if (liveQuery && liveQuery.status === 'initial') {
+		console.log(liveQuery.key, 'is initial, suspending...');
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
 	return useSyncExternalStore(
@@ -447,7 +448,7 @@ export function createHooks<Presence = any, Profile = any>(
 								index,
 								pageSize,
 								page: 0,
-								key,
+								key: key || getAllPaginatedHookName,
 						  }),
 				[index, skip, pageSize],
 			);
@@ -496,7 +497,7 @@ export function createHooks<Presence = any, Profile = any>(
 						: storage[name].findAllInfinite({
 								index,
 								pageSize,
-								key,
+								key: key || getAllInfiniteHookName,
 						  }),
 				[index, skip, pageSize],
 			);
@@ -504,7 +505,7 @@ export function createHooks<Presence = any, Profile = any>(
 
 			const tools = useMemo(
 				() => ({
-					fetchMore: () => liveQuery?.loadMore(),
+					loadMore: () => liveQuery?.loadMore(),
 
 					get hasMore() {
 						return liveQuery?.hasMore;
