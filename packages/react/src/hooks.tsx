@@ -386,13 +386,15 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[findOneHookName] = function useOne({
 			skip,
 			index,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].findOne({ index });
+				return skip ? null : storage[name].findOne({ index, key });
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery);
 			return data;
@@ -404,15 +406,17 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[getAllHookName] = function useAll({
 			index,
 			skip,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAll({ index })),
+				() => (skip ? null : storage[name].findAll({ index, key })),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
@@ -425,10 +429,12 @@ export function createHooks<Presence = any, Profile = any>(
 			index,
 			skip,
 			pageSize = 10,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
 			pageSize?: number;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
@@ -441,6 +447,7 @@ export function createHooks<Presence = any, Profile = any>(
 								index,
 								pageSize,
 								page: 0,
+								key,
 						  }),
 				[index, skip, pageSize],
 			);
@@ -472,10 +479,12 @@ export function createHooks<Presence = any, Profile = any>(
 			index,
 			skip,
 			pageSize = 10,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
 			pageSize?: number;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
@@ -487,6 +496,7 @@ export function createHooks<Presence = any, Profile = any>(
 						: storage[name].findAllInfinite({
 								index,
 								pageSize,
+								key,
 						  }),
 				[index, skip, pageSize],
 			);

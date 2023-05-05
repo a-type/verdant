@@ -15,7 +15,7 @@
 		"test:watch": "turbo run test",
 		"ci:version": "pnpm changeset version",
 		"ci:publish": "pnpm changeset publish --access=public",
-		"link": "turbo run link"
+		"link": "pnpm link --global"
 	},
 	"repository": "https://github.com/a-type/lofi",
 	"author": "Grant Forrest <gaforres@gmail.com>",

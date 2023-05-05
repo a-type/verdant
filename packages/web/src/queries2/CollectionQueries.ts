@@ -79,8 +79,12 @@ export class CollectionQueries<
 		);
 	};
 
-	findOne = ({ index }: { index?: Filter } = {}) => {
-		const key = `findOne:${this.collection}:${this.serializeIndex(index)}`;
+	findOne = ({
+		index,
+		key: providedKey,
+	}: { index?: Filter; key?: string } = {}) => {
+		const key =
+			providedKey || `findOne:${this.collection}:${this.serializeIndex(index)}`;
 		return this.cache.getOrSet(
 			key,
 			() =>
@@ -94,8 +98,12 @@ export class CollectionQueries<
 		);
 	};
 
-	findAll = ({ index }: { index?: Filter } = {}) => {
-		const key = `findAll:${this.collection}:${this.serializeIndex(index)}`;
+	findAll = ({
+		index,
+		key: providedKey,
+	}: { index?: Filter; key?: string } = {}) => {
+		const key =
+			providedKey || `findAll:${this.collection}:${this.serializeIndex(index)}`;
 		return this.cache.getOrSet(
 			key,
 			() =>
@@ -113,45 +121,69 @@ export class CollectionQueries<
 		index,
 		pageSize,
 		page,
+		key,
 	}: {
 		index?: Filter;
 		pageSize: number;
 		page: number;
+		key?: string;
 	}) => {
-		const key = cuid();
-
-		return this.cache.set(
-			new FindPageQuery<T>({
-				index,
-				collection: this.collection,
-				hydrate: this.hydrate,
-				context: this.context,
-				key,
-				pageSize,
-				page,
-			}),
-		);
-	};
-
-	findAllInfinite = ({
-		index,
-		pageSize,
-	}: {
-		index?: Filter;
-		pageSize: number;
-	}) => {
-		const key = cuid();
-		return this.cache.getOrSet(
-			key,
-			() =>
-				new FindInfiniteQuery<T>({
+		if (key) {
+			return this.cache.set(
+				new FindPageQuery<T>({
 					index,
 					collection: this.collection,
 					hydrate: this.hydrate,
 					context: this.context,
 					key,
 					pageSize,
+					page,
 				}),
-		);
+			);
+		} else {
+			return new FindPageQuery<T>({
+				index,
+				collection: this.collection,
+				hydrate: this.hydrate,
+				context: this.context,
+				key: cuid(),
+				pageSize,
+				page,
+			});
+		}
+	};
+
+	findAllInfinite = ({
+		index,
+		pageSize,
+		key,
+	}: {
+		index?: Filter;
+		pageSize: number;
+		key?: string;
+	}) => {
+		if (key) {
+			return this.cache.getOrSet(
+				key,
+				() =>
+					new FindInfiniteQuery<T>({
+						index,
+						collection: this.collection,
+						hydrate: this.hydrate,
+						context: this.context,
+						key,
+						pageSize,
+					}),
+			);
+		} else {
+			return new FindInfiniteQuery<T>({
+				index,
+				collection: this.collection,
+				hydrate: this.hydrate,
+				context: this.context,
+				key: cuid(),
+				pageSize,
+			});
+		}
 	};
 }

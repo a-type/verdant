@@ -135,7 +135,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 	};
 
-	private execute = () => {
+	execute = () => {
 		this.context.log('debug', 'Executing query', this.key);
 		this._status = 'running';
 		this._executionPromise = this.run().then(() => this._value);
