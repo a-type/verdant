@@ -25,7 +25,6 @@ import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-s
 
 function useLiveQuery(liveQuery: Query<any> | null) {
 	if (liveQuery && liveQuery.status === 'initial') {
-		console.log(liveQuery.key, 'is initial, suspending...');
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
 	return useSyncExternalStore(
