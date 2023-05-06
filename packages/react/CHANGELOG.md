@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 15.0.1
+
+### Patch Changes
+
+- 228bdad: remove log from hooks
+- Updated dependencies [e981912]
+  - @lo-fi/web@2.0.1
+
 ## 15.0.0
 
 ### Minor Changes
