@@ -68,20 +68,20 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 		server,
 		library: 'rebase-passive-1',
 		user: 'User A',
-		logId: 'A',
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'rebase-passive-1',
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
 		library: 'rebase-passive-1',
 		user: 'User C',
 		type: ReplicaType.PassiveRealtime,
-		logId: 'C',
+		// logId: 'C',
 	});
 
 	clientA.sync.start();
@@ -135,6 +135,6 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	clientC.sync.start();
 	await waitForQueryResult(clientC.items.get(oranges.get('id')));
 	expect(
-		(await clientC.items.get(oranges.get('id')).resolved).get('purchased'),
+		(await clientC.items.get(oranges.get('id')).resolved)!.get('purchased'),
 	).toBe(true);
 });

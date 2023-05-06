@@ -2,6 +2,7 @@ import { migrate } from '@lo-fi/web';
 import { it, expect } from 'vitest';
 import v1 from './client/schemaVersions/v1.js';
 import { createTestClient } from './lib/testClient.js';
+import { assert } from '@lo-fi/common';
 
 async function fakeApi() {
 	return new Promise<string>((resolve) => {
@@ -40,16 +41,22 @@ it('can load initial data before the client opens', async () => {
 	expect(migrationsInvokedCount).toBe(1);
 
 	const category = await client.categories.findOne({
-		where: 'name',
-		equals: 'default',
+		index: {
+			where: 'name',
+			equals: 'default',
+		},
 	}).resolved;
 	expect(category).toBeTruthy();
+	assert(category);
 	expect(category.get('id').length).toBe(7);
 	const item = await client.items.findOne({
-		where: 'categoryId',
-		equals: category.get('id'),
+		index: {
+			where: 'categoryId',
+			equals: category.get('id'),
+		},
 	}).resolved;
 	expect(item).toBeTruthy();
+	assert(item);
 	expect(item.get('purchased')).toBe(false);
 
 	// it does not load initial data again

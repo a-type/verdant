@@ -1,27 +1,25 @@
 import {
-	Migration,
-	StorageSchema,
-	cloneDeep,
-	migrationRange,
-	diffToPatches,
-	assignIndexValues,
-	assignOid,
-	removeOidPropertiesFromAllSubObjects,
-	assignOidsToAllSubObjects,
-	assignOidPropertiesToAllSubObjects,
-	createOid,
-	initialToPatches,
-	ObjectIdentifier,
 	CollectionFilter,
-	removeOidsFromAllSubObjects,
-	addFieldDefaults,
-	decomposeOid,
+	Migration,
 	MigrationEngine,
+	ObjectIdentifier,
+	StorageSchema,
+	addFieldDefaults,
+	assignIndexValues,
+	assignOidPropertiesToAllSubObjects,
+	assignOidsToAllSubObjects,
+	cloneDeep,
+	createOid,
+	decomposeOid,
+	diffToPatches,
+	initialToPatches,
+	migrationRange,
+	removeOidPropertiesFromAllSubObjects,
+	removeOidsFromAllSubObjects,
 } from '@lo-fi/common';
 import { Context } from './context.js';
 import { Metadata } from './metadata/Metadata.js';
-import { QueryMaker } from './queries/QueryMaker.js';
-import { QueryStore } from './queries/QueryStore.js';
+import { findAllOids, findOneOid } from './queries2/dbQueries.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -379,23 +377,33 @@ function getMigrationEngine({
 	const newOids = new Array<ObjectIdentifier>();
 
 	const queries = migration.oldCollections.reduce((acc, collectionName) => {
-		const queryMaker = new QueryMaker(
-			new QueryStore(meta.getDocumentSnapshot, context),
-			migration.oldSchema,
-		);
 		acc[collectionName] = {
 			get: async (id: string) => {
-				const doc = await queryMaker.get(collectionName, id).execute();
+				const oid = createOid(collectionName, id, []);
+				const doc = await meta.getDocumentSnapshot(oid);
 				removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findOne: async (filter: CollectionFilter) => {
-				const doc = await queryMaker.findOne(collectionName, filter).execute();
+				const oid = await findOneOid({
+					collection: collectionName,
+					index: filter,
+					context,
+				});
+				if (!oid) return null;
+				const doc = await meta.getDocumentSnapshot(oid);
 				removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findAll: async (filter: CollectionFilter) => {
-				const docs = await queryMaker.findAll(collectionName, filter).execute();
+				const oids = await findAllOids({
+					collection: collectionName,
+					index: filter,
+					context,
+				});
+				const docs = await Promise.all(
+					oids.map((oid) => meta.getDocumentSnapshot(oid)),
+				);
 				docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
 				return docs;
 			},

@@ -23,7 +23,7 @@ describe('undoing operations', () => {
 		await storage.undoHistory.undo();
 
 		const restored = await storage.todos.get(item.get('id')).resolved;
-		expect(restored).toBeDefined();
+		expect(restored).toBeTruthy();
 		assert(!!restored);
 		expect(restored.get('id')).toBe(item.get('id'));
 		expect(restored.get('content')).toBe('item');

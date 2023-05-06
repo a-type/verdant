@@ -1,5 +1,4 @@
-import { StorageSchema } from '@lo-fi/common';
-import { Metadata } from './metadata/Metadata.js';
+import { EventSubscriber, StorageSchema } from '@lo-fi/common';
 import { UndoHistory } from './UndoHistory.js';
 
 /**
@@ -13,4 +12,7 @@ export interface Context {
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
 	log: (...args: any[]) => void;
+	entityEvents: EventSubscriber<{
+		collectionsChanged: (names: string[]) => void;
+	}>;
 }

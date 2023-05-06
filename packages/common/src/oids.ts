@@ -129,7 +129,7 @@ function unsanitizeFragment(id: string) {
 export function createOid(
 	collection: string,
 	documentId: string,
-	keyPath: KeyPath,
+	keyPath: KeyPath = [],
 	subId?: string,
 ) {
 	let oid =

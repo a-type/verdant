@@ -9,14 +9,12 @@ import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
-import { Entity } from '../index.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
 import { openDocumentDatabase } from '../openDocumentDatabase.js';
-import { LiveQuery } from '../queries/LiveQuery.js';
-import { LiveQueryMaker } from '../queries/LiveQueryMaker.js';
-import { LiveQueryStore } from '../queries/LiveQueryStore.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
+import { CollectionQueries } from '../queries2/CollectionQueries.js';
+import { QueryCache } from '../queries2/QueryCache.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
@@ -24,36 +22,22 @@ interface ClientConfig<Presence = any> {
 	files?: FileManagerConfig;
 }
 
-export interface CollectionApi {
-	put: (init: any) => Promise<Entity>;
-	delete: (id: string) => Promise<void>;
-	deleteAll: (ids: string[]) => Promise<void>;
-	get: (id: string) => LiveQuery<Entity | null>;
-	findOne: (filter: any) => LiveQuery<Entity | null>;
-	findAll: (filter?: any) => LiveQuery<Entity[]>;
-}
-
 // not actually used below, but helpful for internal code which
 // might rely on this stuff...
 export type ClientWithCollections = Client & {
-	[key: string]: CollectionApi;
+	[key: string]: CollectionQueries<any, any, any>;
 };
 
 export class Client {
 	readonly meta: Metadata;
-	private _entities!: EntityStore;
-	private _queryStore!: LiveQueryStore;
-	private _queryMaker!: LiveQueryMaker;
-	private _documentManager!: DocumentManager<any>;
-	private _fileManager!: FileManager;
+	private _entities: EntityStore;
+	private _queryCache: QueryCache;
+	private _documentManager: DocumentManager<any>;
+	private _fileManager: FileManager;
 
 	readonly collectionNames: string[];
 
 	private _sync!: Sync;
-
-	get queryMaker() {
-		return this._queryMaker;
-	}
 
 	get sync() {
 		return this._sync;
@@ -61,10 +45,6 @@ export class Client {
 
 	get entities() {
 		return this._entities;
-	}
-
-	get queryStore() {
-		return this._queryStore;
 	}
 
 	get documentManager() {
@@ -78,49 +58,6 @@ export class Client {
 	) {
 		this.meta = components.meta;
 		this.collectionNames = Object.keys(context.schema.collections);
-		this.initialize();
-
-		// self-assign collection shortcuts. these are not typed
-		// here but are typed in the generated code...
-		for (const [name, _collection] of Object.entries(
-			context.schema.collections,
-		)) {
-			const collection = _collection as SchemaCollection<any, any>;
-			const collectionName = collection.pluralName ?? collection.name + 's';
-			// TODO: untangle this requirement
-			assert(
-				collectionName === name,
-				`The key of the collection in the schema must be the plural of the name (expected: "${collectionName}")`,
-			);
-			// @ts-ignore
-			this[collectionName] = {
-				/** @deprecated - use put */
-				create: (doc: any) => this._documentManager.create(collectionName, doc),
-				put: (doc: any) => this._documentManager.create(collectionName, doc),
-				delete: (id: string) =>
-					this._documentManager.delete(collectionName, id),
-				deleteAll: (ids: string[]) =>
-					this._documentManager.deleteAll(
-						ids.map((id) => [collectionName, id]),
-					),
-				get: (id: string) => this._queryMaker.get(collectionName, id),
-				findOne: (query: any) =>
-					this._queryMaker.findOne(collectionName, query),
-				findAll: (query: any) =>
-					this._queryMaker.findAll(collectionName, query),
-			} as CollectionApi;
-		}
-	}
-
-	private addData = (data: {
-		operations: Operation[];
-		baselines: DocumentBaseline[];
-		reset?: boolean;
-	}) => {
-		return this._entities.addData(data);
-	};
-
-	private initialize = () => {
 		this._sync = this.config.syncConfig
 			? new ServerSync(this.config.syncConfig, {
 					meta: this.meta,
@@ -141,8 +78,9 @@ export class Client {
 			meta: this.meta,
 			files: this._fileManager,
 		});
-		this._queryStore = new LiveQueryStore(this._entities, this.context);
-		this._queryMaker = new LiveQueryMaker(this._queryStore, this.context);
+		this._queryCache = new QueryCache({
+			context,
+		});
 		this._documentManager = new DocumentManager(
 			this.meta,
 			this.schema,
@@ -168,6 +106,35 @@ export class Client {
 				window.location.reload();
 			}
 		});
+
+		// self-assign collection shortcuts. these are not typed
+		// here but are typed in the generated code...
+		for (const [name, _collection] of Object.entries(
+			context.schema.collections,
+		)) {
+			const collection = _collection as SchemaCollection<any, any>;
+			const collectionName = collection.pluralName ?? collection.name + 's';
+			// TODO: untangle this requirement
+			assert(
+				collectionName === name,
+				`The key of the collection in the schema must be the plural of the name (expected: "${collectionName}")`,
+			);
+			(this as any)[collectionName] = new CollectionQueries({
+				collection: collectionName,
+				cache: this._queryCache,
+				context: this.context,
+				entities: this.entities,
+				documentManager: this.documentManager,
+			});
+		}
+	}
+
+	private addData = (data: {
+		operations: Operation[];
+		baselines: DocumentBaseline[];
+		reset?: boolean;
+	}) => {
+		return this._entities.addData(data);
 	};
 
 	get documentDb() {
@@ -257,7 +224,6 @@ export class Client {
 
 		this.meta.close();
 
-		this._queryStore.destroy();
 		this._entities.destroy();
 
 		await closeDatabase(this.documentDb);
@@ -337,7 +303,5 @@ export class Client {
 			context: this.context,
 			version: currentSchema.version,
 		});
-		// re-initialize query store
-		this._queryStore.updateAll();
 	};
 }

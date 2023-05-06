@@ -1,10 +1,10 @@
 import { ReplicaType } from '@lo-fi/server';
 import {
+	ClientWithCollections,
 	collection,
 	Entity,
 	migrate,
 	schema,
-	Storage,
 	StorageDescriptor,
 } from '@lo-fi/web';
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -73,7 +73,7 @@ async function createTestClient({
 		indexedDb,
 	});
 	const client = await desc.open();
-	return client;
+	return client as ClientWithCollections;
 }
 
 function randomString() {
@@ -107,7 +107,7 @@ function randomInitialData(avoidLists = false) {
 }
 
 async function fuzz(
-	client: Storage,
+	client: ClientWithCollections,
 	{
 		avoidLists = false,
 		avoidDelete = false,
@@ -186,7 +186,10 @@ async function fuzz(
 	}
 }
 
-async function waitForConsistency(client1: Storage, client2: Storage) {
+async function waitForConsistency(
+	client1: ClientWithCollections,
+	client2: ClientWithCollections,
+) {
 	let attempts = 0;
 	await waitForCondition(async () => {
 		attempts++;
@@ -206,8 +209,8 @@ async function waitForConsistency(client1: Storage, client2: Storage) {
 	);
 }
 
-async function getFuzz(client: Storage) {
-	const fuzz = client.queryMaker.get('fuzz', 'default');
+async function getFuzz(client: ClientWithCollections) {
+	const fuzz = client.fuzz.get('default');
 	return (await fuzz.resolved)?.get('data');
 }
 

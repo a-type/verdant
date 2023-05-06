@@ -5,6 +5,7 @@ import {
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
+import { assert } from '@lo-fi/common';
 
 const context = createTestContext({
 	// serverLog: true,
@@ -22,13 +23,13 @@ it(
 		const clientB = await context.createTestClient({
 			library: 'sync-1',
 			user: 'User B',
-			// logId: 'B',
+			logId: 'B',
 		});
 
 		clientA.sync.start();
 		clientB.sync.start();
 
-		const a_itemA = await clientA.items.create({
+		const a_itemA = await clientA.items.put({
 			comments: [],
 			content: 'Item A',
 		});
@@ -37,8 +38,12 @@ it(
 		await waitForPeerCount(clientA, 1, true);
 		console.log('🔺 --- Online ---');
 
-		await waitForQueryResult(clientB.items.get(a_itemA.get('id')));
-		const b_itemA = await clientB.items.get(a_itemA.get('id')).resolved;
+		const clientB_A = clientB.items.get(a_itemA.get('id'));
+		await waitForQueryResult(clientB_A);
+		const clientB_A2 = clientB.items.get(a_itemA.get('id'));
+		const b_itemA = await clientB_A2.resolved;
+		expect(b_itemA).toBeTruthy();
+		assert(b_itemA);
 
 		clientA.sync.stop();
 		clientB.sync.stop();

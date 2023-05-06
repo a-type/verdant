@@ -12,21 +12,19 @@ export function getClientTypings({ collections, schemaPath }) {
 	return `
   import type schema from '${schemaPath}';
   import type { StorageSchema } from '@lo-fi/common';
-  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile } from '@lo-fi/web';
+  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile, CollectionQueries } from '@lo-fi/web';
   export * from '@lo-fi/web';
   export type Schema = typeof schema;
 
   interface Collection<Document extends ObjectEntity<any, any>, Snapshot, Init, Filter> {
-    /**
-     * @deprecated use put
-     */
-    create: (init: Init, options?: { undoable?: boolean }) => Promise<Document>;
     put: (init: Init, options?: { undoable?: boolean }) => Promise<Document>;
     delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
     deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
     get: (id: string) => Query<Document>;
     findOne: (filter: Filter) => Query<Document>;
     findAll: (filter?: Filter) => Query<Document[]>;
+    findAllPaginated: (filter?: Filter, pageSize?: number) => Query<Document[], { offset?: number }>;
+    findAllInfinite: (filter?: Filter, pageSize?: number) => Query<Document[], { offset?: number }>;
   }
 
 export class Client<Presence = any, Profile = any> {
@@ -73,7 +71,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 function getClientCollectionTypings({ singular, plural }) {
 	const pascalName = pascalCase(singular);
 	return `
-  readonly ${plural}: Collection<${pascalName}, ${pascalName}Snapshot, ${pascalName}Init, ${pascalName}Filter>
+  readonly ${plural}: CollectionQueries<${pascalName}, ${pascalName}Init, ${pascalName}Filter>
   `;
 }
 

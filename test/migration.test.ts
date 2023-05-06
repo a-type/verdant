@@ -6,6 +6,7 @@ import {
 	Migration,
 	createDefaultMigration,
 	migrate,
+	ClientWithCollections,
 } from '@lo-fi/web';
 import { ReplicaType } from '@lo-fi/server';
 // @ts-ignore
@@ -29,7 +30,7 @@ async function createTestClient({
 	type?: ReplicaType;
 	logId?: string;
 	indexedDb?: IDBFactory;
-}): Promise<any> {
+}): Promise<ClientWithCollections> {
 	const desc = new StorageDescriptor({
 		schema,
 		migrations,
@@ -48,7 +49,7 @@ async function createTestClient({
 		indexedDb,
 	});
 	const client = await desc.open();
-	return client;
+	return client as ClientWithCollections;
 }
 
 async function closeAllDatabases(indexedDB: IDBFactory) {}
@@ -188,27 +189,31 @@ it(
 
 		// check our new indexes
 		const emptyResults = await client.items.findAll({
-			where: 'hasTags',
-			equals: 'false',
+			index: {
+				where: 'hasTags',
+				equals: 'false',
+			},
 		}).resolved;
 		expect(emptyResults.length).toBe(1);
 
 		const compoundResults = await client.items.findAll({
-			where: 'contents_tag',
-			match: {
-				contents: 'foo',
-				tags: 'a',
+			index: {
+				where: 'contents_tag',
+				match: {
+					contents: 'foo',
+					tags: 'a',
+				},
 			},
 		}).resolved;
 		expect(compoundResults.length).toBe(1);
 
 		// create some more test data
-		let list1 = await client.lists.create({
+		let list1 = await client.lists.put({
 			id: 'list1',
 			name: 'list 1',
 		});
 
-		let item3 = await client.items.create({
+		let item3 = await client.items.put({
 			listId: list1.get('id'),
 		});
 		expect(item3.getSnapshot()).toMatchInlineSnapshot(`

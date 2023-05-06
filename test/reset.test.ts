@@ -1,12 +1,12 @@
-import { afterAll, beforeAll, expect, it, vitest } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { createTestClient } from './lib/testClient.js';
 import { startTestServer } from './lib/testServer.js';
 import {
-	waitForCondition,
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
+import { log } from './lib/log.js';
 
 let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
@@ -24,13 +24,11 @@ async function connectAndSeedData(library = 'reset-1') {
 		server,
 		library,
 		user: 'User A',
-		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library,
 		user: 'User B',
-		logId: 'B',
 	});
 
 	// seed data into library
@@ -71,10 +69,12 @@ async function connectNewReplicaAndCheckIntegrity(
 	library = 'reset-1',
 	{ a_unknownItem, a_produceCategory }: any,
 ) {
+	log('Connecting new replica to test integrity');
 	const clientC = await createTestClient({
 		server,
 		library,
 		user: 'User C',
+		// logId: 'C',
 	});
 	clientC.sync.start();
 
@@ -122,19 +122,19 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	await waitForQueryResult(clientA.items.get(a_banana.get('id')));
 
 	clientB.sync.start();
+	log('Waiting for client B to re-initialize');
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(
 		clientB.items.get(a_banana.get('id')),
 		(val) => {
-			clientB;
-			console.log('########', val);
 			return !!val;
 		},
 		1000,
 	);
-
-	expect(await clientB.items.get(b_pear.get('id')).resolved).toBe(null);
+	const b_pearQuery = clientB.items.get(b_pear.get('id'));
+	await waitForQueryResult(b_pearQuery, (val) => !val);
+	expect(b_pearQuery.current).toBe(null);
 
 	const clientC = await connectNewReplicaAndCheckIntegrity('reset-1', {
 		a_unknownItem,

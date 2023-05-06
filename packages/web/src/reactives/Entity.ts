@@ -113,6 +113,7 @@ export class Entity<
 	protected _current: any | null = null;
 
 	readonly oid: ObjectIdentifier;
+	readonly collection: string;
 	protected readonly store: StoreTools;
 	protected readonly fieldSchema;
 	protected readonly keyPath;
@@ -193,6 +194,10 @@ export class Entity<
 		return latest;
 	}
 
+	get uid() {
+		return this.oid;
+	}
+
 	constructor({
 		oid,
 		store,
@@ -207,10 +212,13 @@ export class Entity<
 		parent?: Entity<any, any>;
 	}) {
 		this.oid = oid;
+		const { collection, keyPath } = decomposeOid(oid);
+		this.collection = collection;
 		this.parent = parent && new WeakRef(parent);
 		this.store = store;
 		this.fieldSchema = fieldSchema;
-		this.keyPath = decomposeOid(oid).keyPath;
+		// TODO: remove, this is not safe
+		this.keyPath = keyPath;
 		this.cache = cache;
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;

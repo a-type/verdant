@@ -1,4 +1,4 @@
-import { Migration, StorageSchema } from '@lo-fi/common';
+import { EventSubscriber, Migration, StorageSchema } from '@lo-fi/common';
 import { Context } from '../context.js';
 import { FileManagerConfig } from '../files/FileManager.js';
 import { ReturnedFileData } from '../files/FileStorage.js';
@@ -101,6 +101,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 				schema: init.schema,
 				log: init.log || (() => {}),
 				undoHistory: init.undoHistory || new UndoHistory(),
+				entityEvents: new EventSubscriber(),
 			};
 			const meta = new Metadata({
 				context,

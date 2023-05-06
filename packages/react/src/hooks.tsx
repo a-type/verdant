@@ -24,7 +24,8 @@ import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
 function useLiveQuery(liveQuery: Query<any> | null) {
-	if (liveQuery) {
+	if (liveQuery && liveQuery.status === 'initial') {
+		console.log(liveQuery.key, 'is initial, suspending...');
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
 	return useSyncExternalStore(
@@ -386,13 +387,15 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[findOneHookName] = function useOne({
 			skip,
 			index,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].findOne(index);
+				return skip ? null : storage[name].findOne({ index, key });
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery);
 			return data;
@@ -404,19 +407,114 @@ export function createHooks<Presence = any, Profile = any>(
 		hooks[getAllHookName] = function useAll({
 			index,
 			skip,
+			key,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
+			key?: string;
 		} = {}) {
 			const storage = useStorage();
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAll(index)),
+				() => (skip ? null : storage[name].findAll({ index, key })),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
 			return data || [];
+		};
+		const getAllPaginatedHookName = `useAll${capitalize(
+			collection.pluralName || collection.name + 's',
+		)}Paginated`;
+		hooks[getAllPaginatedHookName] = function useAllPaginated({
+			index,
+			skip,
+			pageSize = 10,
+			key,
+		}: {
+			index?: CollectionIndexFilter;
+			skip?: boolean;
+			pageSize?: number;
+			key?: string;
+		} = {}) {
+			const storage = useStorage();
+			// assumptions: this query getter is fast and returns the same
+			// query identity for subsequent calls.
+			const liveQuery = useMemo(
+				() =>
+					skip
+						? null
+						: storage[name].findPage({
+								index,
+								pageSize,
+								page: 0,
+								key: key || getAllPaginatedHookName,
+						  }),
+				[index, skip, pageSize],
+			);
+			const data = useLiveQuery(liveQuery);
+
+			const tools = useMemo(
+				() => ({
+					next: () => liveQuery?.nextPage(),
+					previous: () => liveQuery?.previousPage(),
+					setPage: (page: number) => liveQuery?.setPage(page),
+
+					get hasPrevious() {
+						return liveQuery?.hasPreviousPage;
+					},
+
+					get hasNext() {
+						return liveQuery?.hasNextPage;
+					},
+				}),
+				[liveQuery],
+			);
+
+			return [data, tools] as const;
+		};
+		const getAllInfiniteHookName = `useAll${capitalize(
+			collection.pluralName || collection.name + 's',
+		)}Infinite`;
+		hooks[getAllInfiniteHookName] = function useAllInfinite({
+			index,
+			skip,
+			pageSize = 10,
+			key,
+		}: {
+			index?: CollectionIndexFilter;
+			skip?: boolean;
+			pageSize?: number;
+			key?: string;
+		} = {}) {
+			const storage = useStorage();
+			// assumptions: this query getter is fast and returns the same
+			// query identity for subsequent calls.
+			const liveQuery = useMemo(
+				() =>
+					skip
+						? null
+						: storage[name].findAllInfinite({
+								index,
+								pageSize,
+								key: key || getAllInfiniteHookName,
+						  }),
+				[index, skip, pageSize],
+			);
+			const data = useLiveQuery(liveQuery);
+
+			const tools = useMemo(
+				() => ({
+					loadMore: () => liveQuery?.loadMore(),
+
+					get hasMore() {
+						return liveQuery?.hasMore;
+					},
+				}),
+				[liveQuery],
+			);
+
+			return [data, tools] as const;
 		};
 	}
 
