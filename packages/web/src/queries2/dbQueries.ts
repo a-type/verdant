@@ -62,14 +62,14 @@ export async function findAllOids({
 	const direction = index?.order === 'desc' ? 'prev' : 'next';
 	const request = source.openCursor(range, direction);
 	const result = await new Promise<string[]>((resolve, reject) => {
-		const results: string[] = [];
+		const results = new Set<string>();
 		request.onsuccess = () => {
 			const cursor = request.result;
 			if (cursor) {
-				results.push(createOid(collection, cursor.primaryKey.toString()));
+				results.add(createOid(collection, cursor.primaryKey.toString()));
 				cursor.continue();
 			} else {
-				resolve(results);
+				resolve(Array.from(results));
 			}
 		};
 		request.onerror = () => {
@@ -110,7 +110,7 @@ export async function findPageOfOids({
 	let hasNextPage = false;
 	let visited = 0;
 	const result = await new Promise<string[]>((resolve, reject) => {
-		const results: string[] = [];
+		const results = new Set<string>();
 		request.onsuccess = () => {
 			visited++;
 			const cursor = request.result;
@@ -119,18 +119,18 @@ export async function findPageOfOids({
 					cursor.advance(offset);
 					hasDoneOffset = true;
 				} else {
-					if (limit && results.length < limit) {
-						results.push(createOid(collection, cursor.primaryKey.toString()));
+					if (limit && results.size < limit) {
+						results.add(createOid(collection, cursor.primaryKey.toString()));
 					}
 					if (limit && visited > limit) {
 						hasNextPage = true;
-						resolve(results);
+						resolve(Array.from(results));
 					} else {
 						cursor.continue();
 					}
 				}
 			} else {
-				resolve(results);
+				resolve(Array.from(results));
 			}
 		};
 		request.onerror = () => {
