@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.0.1
+
+### Patch Changes
+
+- e981912: Fix duplication in queries when multiple array index values match query
+
 ## 2.0.0
 
 ### Major Changes
