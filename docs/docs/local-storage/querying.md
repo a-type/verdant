@@ -29,6 +29,35 @@ This field won't be present on a todo item in your code, but it will be queryabl
 
 You can use any synchronous logic you want to create synthetic indexes. But you should keep them deterministic!
 
+##### Using synthetic indexes for text search
+
+You can do some basic text search using a simple synthetic index. The easiest version looks like this:
+
+```ts
+titleMatch: {
+	type: 'string[]',
+	compute: (post) => post.title.split(/\s+/)
+}
+```
+
+This splits the text into words which make up the index value. When you have an array-type index value, the document will be returned if any of the generated values matches the filter.
+
+So you can then search for text that includes a given word stem like so:
+
+```ts
+// will match posts with titles like: "fool's gold", "good food"
+client.posts.findAll({
+	index: {
+		where: 'titleMatch',
+		startsWith: 'foo',
+	},
+});
+```
+
+To reduce the index size, you can use a library like `stopword` to remove common words before indexing.
+
+For fuzzier text matching, you might be able to create a sort of flat trie structure with some alternate stems for various words. I haven't tried anything that advanced, but a the end of the day all you need to do is produce an array of strings which partially match the filter text, so you can get creative!
+
 #### Compound indexes
 
 Compound indexes are a special case of synthetic index with more structure and query options. You can use them to query on two or more fields at once. For example, if you had a compound index
