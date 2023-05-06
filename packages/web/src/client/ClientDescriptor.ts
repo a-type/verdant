@@ -1,4 +1,4 @@
-import { EventSubscriber, Migration, StorageSchema } from '@lo-fi/common';
+import { EventSubscriber, Migration, StorageSchema } from '@verdant/common';
 import { Context } from '../context.js';
 import { FileManagerConfig } from '../files/FileManager.js';
 import { ReturnedFileData } from '../files/FileStorage.js';

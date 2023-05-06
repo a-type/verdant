@@ -1,4 +1,4 @@
-import { CollectionFilter } from '@lo-fi/common';
+import { CollectionFilter } from '@verdant/common';
 import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
 import { findPageOfOids } from './dbQueries.js';
 

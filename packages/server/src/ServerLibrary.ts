@@ -17,7 +17,7 @@ import {
 	isFileRef,
 	SyncAckMessage,
 	EventSubscriber,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Database } from 'better-sqlite3';
 import { ReplicaInfos } from './Replicas.js';
 import { MessageSender } from './MessageSender.js';

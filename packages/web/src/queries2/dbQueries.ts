@@ -1,4 +1,4 @@
-import { CollectionFilter, createOid } from '@lo-fi/common';
+import { CollectionFilter, createOid } from '@verdant/common';
 import { Context } from '../context.js';
 import { getRange } from './ranges.js';
 

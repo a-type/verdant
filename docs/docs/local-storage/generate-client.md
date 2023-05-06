@@ -4,12 +4,12 @@ sidebar_position: 2
 
 # Generating the client code
 
-Using your [schema](./schema), you can generate your typed client code using lo-fi's CLI.
+Using your [schema](./schema), you can generate your typed client code using Verdant's CLI.
 
 ```
-> npm i --dev @lo-fi/cli
+> npm i --dev @verdant/cli
 
-> lo-fi --schema src/stores/todos/schema.ts --output src/stores/todos/client --react
+> Verdant --schema src/stores/todos/schema.ts --output src/stores/todos/client --react
 ```
 
 The CLI takes `schema` (the path to your schema TS file), `output` (the directory to output generated code), and `--react` (optional, generates React hooks to query your data).
@@ -38,7 +38,7 @@ const clientDesc = new ClientDescriptor({
 clientDesc.open().then((client) => {
 	client.todoItems.put({
 		id: '1',
-		details: 'Create a lo-fi client',
+		details: 'Create a Verdant client',
 		done: true,
 	});
 });

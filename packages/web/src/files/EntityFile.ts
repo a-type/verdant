@@ -1,4 +1,4 @@
-import { EventSubscriber, FileData } from '@lo-fi/common';
+import { EventSubscriber, FileData } from '@verdant/common';
 
 export type EntityFileEvents = {
 	change: () => void;

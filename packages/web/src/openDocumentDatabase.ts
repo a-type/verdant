@@ -16,7 +16,7 @@ import {
 	migrationRange,
 	removeOidPropertiesFromAllSubObjects,
 	removeOidsFromAllSubObjects,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Context } from './context.js';
 import { Metadata } from './metadata/Metadata.js';
 import { findAllOids, findOneOid } from './queries2/dbQueries.js';

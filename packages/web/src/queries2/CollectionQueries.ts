@@ -1,4 +1,4 @@
-import { CollectionFilter, hashObject } from '@lo-fi/common';
+import { CollectionFilter, hashObject } from '@verdant/common';
 import { Context } from '../context.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { GetQuery } from './GetQuery.js';

@@ -1,5 +1,5 @@
 {
-	"name": "@lo-fi/react",
+	"name": "@verdant/react",
 	"version": "15.0.1",
 	"access": "public",
 	"type": "module",
@@ -29,16 +29,16 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"@lo-fi/web": "^2.0.1",
+		"@verdant/web": "^2.0.1",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
-		"@lo-fi/common": "workspace:*",
+		"@verdant/common": "workspace:*",
 		"suspend-react": "^0.0.8",
 		"use-sync-external-store": "^1.2.0"
 	},
 	"devDependencies": {
-		"@lo-fi/web": "workspace:*",
+		"@verdant/web": "workspace:*",
 		"@types/react": "^18.0.17",
 		"@types/use-sync-external-store": "^0.0.3",
 		"fake-indexeddb": "^4.0.0",

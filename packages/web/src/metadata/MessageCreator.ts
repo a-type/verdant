@@ -9,7 +9,7 @@ import {
 	PresenceUpdateMessage,
 	SyncAckMessage,
 	SyncMessage,
-} from '@lo-fi/common';
+} from '@verdant/common';
 
 import { Metadata } from './Metadata.js';
 

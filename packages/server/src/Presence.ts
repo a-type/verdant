@@ -1,4 +1,4 @@
-import { UserInfo } from '@lo-fi/common';
+import { UserInfo } from '@verdant/common';
 import EventEmitter from 'events';
 
 /**

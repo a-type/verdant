@@ -1,4 +1,4 @@
-import { ServerMessage } from '@lo-fi/common';
+import { ServerMessage } from '@verdant/common';
 
 export interface MessageSender {
 	broadcast(

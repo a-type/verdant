@@ -7,7 +7,7 @@ sidebar_position: 1
 The first step client-side is to define a schema of what kind of documents you are working with. A schema looks like this:
 
 ```ts
-import { collection, schema } from '@lo-fi/web';
+import { collection, schema } from '@verdant/web';
 
 const todoItems = collection({
 	name: 'todoItem',

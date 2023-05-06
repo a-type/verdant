@@ -7,7 +7,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	StorageFieldSchema,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Entity, refreshEntity, StoreTools } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
 import { WeakRef } from './FakeWeakRef.js';

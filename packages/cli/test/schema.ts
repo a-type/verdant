@@ -1,4 +1,4 @@
-import { collection, schema } from '@lo-fi/common';
+import { collection, schema } from '@verdant/common';
 
 export const todo = collection({
 	name: 'todo',

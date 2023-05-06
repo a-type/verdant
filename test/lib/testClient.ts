@@ -1,4 +1,4 @@
-import { ReplicaType } from '@lo-fi/server';
+import { ReplicaType } from '@verdant/server';
 import {
 	ClientDescriptor,
 	ClientDescriptorOptions,

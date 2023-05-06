@@ -1,4 +1,4 @@
-import { FileData } from '@lo-fi/common';
+import { FileData } from '@verdant/common';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 
 export interface FileUploadResult {

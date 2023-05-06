@@ -6,9 +6,9 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-	title: 'lo-fi',
+	title: 'Verdant',
 	tagline: 'Local-first framework',
-	url: 'https://lo-fi.gfor.rest',
+	url: 'https://verdant.dev',
 	baseUrl: '/',
 	onBrokenLinks: 'throw',
 	onBrokenMarkdownLinks: 'warn',
@@ -17,7 +17,7 @@ const config = {
 	// GitHub pages deployment config.
 	// If you aren't using GitHub pages, you don't need these.
 	organizationName: 'a-type', // Usually your GitHub org/user name.
-	projectName: 'lo-fi', // Usually your repo name.
+	projectName: 'verdant', // Usually your repo name.
 	deploymentBranch: 'gh-pages',
 	trailingSlash: false,
 
@@ -61,29 +61,29 @@ const config = {
 				},
 				{
 					name: 'twitter:title',
-					content: 'lo-fi',
+					content: 'verdant',
 				},
 				{
 					name: 'twitter:description',
-					content: 'a holistic local-first toolkit',
+					content: 'a framework for small, sustainable, human apps',
 				},
 				{
 					name: 'twitter:image',
-					content: 'https://lo-fi.gfor.rest/opengraph.png',
+					content: 'https://verdant.dev/opengraph.png',
 				},
 				{
 					name: 'og:image',
-					content: 'https://lo-fi.gfor.rest/opengraph.png',
+					content: 'https://verdant.dev/opengraph.png',
 				},
 			],
 			colorMode: {
 				defaultMode: 'dark',
 			},
 			navbar: {
-				title: 'lo-fi',
+				title: 'Verdant',
 				logo: {
-					alt: 'lo-fi log',
-					src: 'img/logo.png',
+					alt: 'Verdant logo',
+					src: 'favicon-32x32.png',
 				},
 				items: [
 					{
@@ -93,7 +93,7 @@ const config = {
 						label: 'Docs',
 					},
 					{
-						href: 'https://github.com/a-type/lo-fi',
+						href: 'https://github.com/a-type/verdant',
 						label: 'GitHub',
 						position: 'right',
 					},
@@ -116,7 +116,7 @@ const config = {
 						items: [
 							{
 								label: 'GitHub',
-								href: 'https://github.com/a-type/lo-fi/discussions',
+								href: 'https://github.com/a-type/verdant/discussions',
 							},
 							{
 								label: 'Discord',
@@ -129,7 +129,7 @@ const config = {
 						items: [
 							{
 								label: 'GitHub',
-								href: 'https://github.com/a-type/lo-fi',
+								href: 'https://github.com/a-type/verdant',
 							},
 							{
 								label: 'Grant',

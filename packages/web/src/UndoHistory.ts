@@ -1,4 +1,4 @@
-import { EventSubscriber } from '@lo-fi/common';
+import { EventSubscriber } from '@verdant/common';
 
 type Undoable = () => Undoable | Promise<Undoable>;
 

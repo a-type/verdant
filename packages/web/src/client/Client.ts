@@ -4,7 +4,7 @@ import {
 	Migration,
 	Operation,
 	SchemaCollection,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';

@@ -15,7 +15,7 @@ import {
 	SortIndexFilter,
 	StartsWithIndexFilter,
 	StorageSchema,
-} from '@lo-fi/common';
+} from '@verdant/common';
 
 const matchIndexToIdbKeyRange = (filter: MatchCollectionIndexFilter) => {
 	return IDBKeyRange.only(sanitizeIndexValue(filter.equals));

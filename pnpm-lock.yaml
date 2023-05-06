@@ -87,18 +87,6 @@ importers:
 
   examples/tldraw:
     dependencies:
-      '@lo-fi/cli':
-        specifier: workspace:*
-        version: link:../../packages/cli
-      '@lo-fi/react':
-        specifier: workspace:*
-        version: link:../../packages/react
-      '@lo-fi/server':
-        specifier: workspace:*
-        version: link:../../packages/server
-      '@lo-fi/web':
-        specifier: workspace:*
-        version: link:../../packages/web
       '@tldraw/tldraw':
         specifier: ^1.26.2
         version: 1.26.2(@types/react@18.0.20)(react-dom@18.2.0)(react@18.2.0)(typescript@4.9.3)
@@ -111,6 +99,18 @@ importers:
       '@types/react-dom':
         specifier: ^18.0.9
         version: 18.0.9
+      '@verdant/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      '@verdant/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@verdant/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      '@verdant/web':
+        specifier: workspace:*
+        version: link:../../packages/web
       '@vitejs/plugin-react':
         specifier: ^2.2.0
         version: 2.2.0(vite@3.2.4)
@@ -154,13 +154,13 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
     devDependencies:
-      '@lo-fi/common':
+      '@verdant/common':
         specifier: workspace:*
         version: link:../common
-      '@lo-fi/react':
+      '@verdant/react':
         specifier: workspace:*
         version: link:../react
-      '@lo-fi/web':
+      '@verdant/web':
         specifier: workspace:*
         version: link:../web
       fake-indexeddb:
@@ -197,7 +197,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@lo-fi/common':
+      '@verdant/common':
         specifier: workspace:*
         version: link:../common
       suspend-react:
@@ -207,15 +207,15 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(react@18.2.0)
     devDependencies:
-      '@lo-fi/web':
-        specifier: workspace:*
-        version: link:../web
       '@types/react':
         specifier: ^18.0.17
         version: 18.0.20
       '@types/use-sync-external-store':
         specifier: ^0.0.3
         version: 0.0.3
+      '@verdant/web':
+        specifier: workspace:*
+        version: link:../web
       fake-indexeddb:
         specifier: ^4.0.0
         version: 4.0.0
@@ -271,7 +271,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@lo-fi/common':
+      '@verdant/common':
         specifier: workspace:*
         version: link:../common
       async-lock:
@@ -311,7 +311,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@lo-fi/common':
+      '@verdant/common':
         specifier: workspace:*
         version: link:../common
       cuid:
@@ -339,13 +339,13 @@ importers:
 
   scaleTest:
     dependencies:
-      '@lo-fi/cli':
+      '@verdant/cli':
         specifier: workspace:*
         version: link:../packages/cli
-      '@lo-fi/server':
+      '@verdant/server':
         specifier: workspace:*
         version: link:../packages/server
-      '@lo-fi/web':
+      '@verdant/web':
         specifier: workspace:*
         version: link:../packages/web
       cors:
@@ -382,18 +382,6 @@ importers:
       '@a-type/utils':
         specifier: ^1.0.2
         version: 1.0.2
-      '@lo-fi/cli':
-        specifier: workspace:*
-        version: link:../packages/cli
-      '@lo-fi/common':
-        specifier: workspace:*
-        version: link:../packages/common
-      '@lo-fi/server':
-        specifier: workspace:*
-        version: link:../packages/server
-      '@lo-fi/web':
-        specifier: workspace:*
-        version: link:../packages/web
       '@types/express':
         specifier: ^4.17.14
         version: 4.17.14
@@ -403,6 +391,18 @@ importers:
       '@types/ws':
         specifier: ^8.5.3
         version: 8.5.3
+      '@verdant/cli':
+        specifier: workspace:*
+        version: link:../packages/cli
+      '@verdant/common':
+        specifier: workspace:*
+        version: link:../packages/common
+      '@verdant/server':
+        specifier: workspace:*
+        version: link:../packages/server
+      '@verdant/web':
+        specifier: workspace:*
+        version: link:../packages/web
       express:
         specifier: ^4.18.2
         version: 4.18.2

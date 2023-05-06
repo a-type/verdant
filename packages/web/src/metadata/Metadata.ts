@@ -15,7 +15,7 @@ import {
 	Ref,
 	StorageSchema,
 	substituteRefsWithObjects,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
 import {

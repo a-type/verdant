@@ -1,4 +1,4 @@
-import { FileData } from '@lo-fi/common';
+import { FileData } from '@verdant/common';
 import { describe, expect, it } from 'vitest';
 import { processValueFiles } from './utils.js';
 

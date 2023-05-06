@@ -10,7 +10,7 @@ import {
 	StorageFieldSchema,
 	StorageFieldsSchema,
 	StorageSchema,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { ObjectEntity } from './reactives/Entity.js';
 import { EntityStore } from './reactives/EntityStore.js';
 import { Metadata } from './metadata/Metadata.js';

@@ -4,7 +4,7 @@ import {
 	getAllFileFields,
 	Operation,
 	Ref,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Database } from 'better-sqlite3';
 import { DocumentBaselineSpec } from './types.js';
 

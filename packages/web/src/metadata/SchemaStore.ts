@@ -1,4 +1,4 @@
-import { StorageSchema } from '@lo-fi/common';
+import { StorageSchema } from '@verdant/common';
 import { storeRequestPromise } from '../idb.js';
 
 type StoredSchema = {

@@ -1,4 +1,4 @@
-import { createOid } from '@lo-fi/common';
+import { createOid } from '@verdant/common';
 import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
 
 export class GetQuery<T> extends BaseQuery<T | null> {

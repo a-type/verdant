@@ -1,11 +1,11 @@
-import { ReplicaType } from '@lo-fi/server';
+import { ReplicaType } from '@verdant/server';
 import {
 	collection,
 	createDefaultMigration,
 	Migration,
 	schema,
 	StorageDescriptor,
-} from '@lo-fi/web';
+} from '@verdant/web';
 import { expect, it, vitest } from 'vitest';
 import { waitForQueryResult } from './lib/waits.js';
 

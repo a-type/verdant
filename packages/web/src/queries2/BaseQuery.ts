@@ -1,4 +1,4 @@
-import { EventSubscriber } from '@lo-fi/common';
+import { EventSubscriber } from '@verdant/common';
 import { filterResultSet } from './utils.js';
 import { Entity } from '../reactives/Entity.js';
 import { Disposable } from '../utils/Disposable.js';

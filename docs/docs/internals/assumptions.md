@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Protocol assumptions
 
-Collecting some thoughts about assumptions made in lo-fi's sync protocols. May format this to be more readable at some point, but for now it's mostly for me (doubt you're considering implementing your own replica client).
+Collecting some thoughts about assumptions made in Verdant's sync protocols. May format this to be more readable at some point, but for now it's mostly for me (doubt you're considering implementing your own replica client).
 
 A replica always does a `sync` exchange (`sync`, `sync-resp`, `sync-ack`) before sending any other messages (with the exception of `presence-update` which may be sent in parallel)
 

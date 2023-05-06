@@ -1,4 +1,4 @@
-import { assert, ReplicaType } from '@lo-fi/common';
+import { assert, ReplicaType } from '@verdant/common';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export class TokenVerifier {

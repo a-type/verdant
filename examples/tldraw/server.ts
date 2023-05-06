@@ -1,10 +1,10 @@
 import express from 'express';
-import { ReplicaType, Server, TokenProvider } from '@lo-fi/server';
+import { ReplicaType, Server, TokenProvider } from '@verdant/server';
 import { createServer } from 'http';
 import * as path from 'path';
 // @ts-ignore
 import nonce from 'gfynonce';
-import { LocalFileStorage } from '@lo-fi/server/src/files/FileStorage.js';
+import { LocalFileStorage } from '@verdant/server/src/files/FileStorage.js';
 
 const PORT = 5050;
 

@@ -1,4 +1,4 @@
-import { collection, schema } from '@lo-fi/web';
+import { collection, schema } from '@verdant/web';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './hooks.js';
 

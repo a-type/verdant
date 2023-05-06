@@ -20,7 +20,7 @@ import type { Client, ClientDescriptor, Schema, ${collections
 			AnyEntity,
 			EntityDestructured,
 			EntityFile,
-		} from '@lo-fi/web';
+		} from '@verdant/web';
 
 		type SkippableFilterConfig<F> = {
 			index?: F;
@@ -113,7 +113,7 @@ export function createHooks<Presence = any, Profile = any, Mutations extends {[N
 
 export function getReactImplementation(schemaPath) {
 	let impl = `
-import { createHooks as baseCreateHooks } from '@lo-fi/react';
+import { createHooks as baseCreateHooks } from '@verdant/react';
 import schema from '${schemaPath}';
 
 export function createHooks() {

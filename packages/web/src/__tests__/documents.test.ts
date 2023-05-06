@@ -1,4 +1,4 @@
-import { assert } from '@lo-fi/common';
+import { assert } from '@verdant/common';
 import cuid from 'cuid';
 import { describe, it, expect, vi, MockedFunction, vitest } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';

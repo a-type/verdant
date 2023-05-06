@@ -1,4 +1,4 @@
-# @lo-fi/react-router
+# @verdant/react-router
 
 ## 0.1.4
 

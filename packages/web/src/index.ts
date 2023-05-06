@@ -28,13 +28,13 @@ export {
 	schema,
 	createDefaultMigration,
 	migrate,
-} from '@lo-fi/common';
+} from '@verdant/common';
 export type {
 	StorageDocument,
 	StorageSchema,
 	StorageCollectionSchema,
 	Migration,
-} from '@lo-fi/common';
-export type { UserInfo } from '@lo-fi/common';
+} from '@verdant/common';
+export type { UserInfo } from '@verdant/common';
 export type { Query } from './queries2/types.js';
 export type { CollectionQueries } from './queries2/CollectionQueries.js';

@@ -1,4 +1,4 @@
-import { EventSubscriber, StorageSchema } from '@lo-fi/common';
+import { EventSubscriber, StorageSchema } from '@verdant/common';
 import { UndoHistory } from './UndoHistory.js';
 
 /**

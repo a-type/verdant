@@ -4,25 +4,29 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 import styles from './index.module.css';
-import { SubwayScene } from '@site/src/components/SubwayScene';
 
 import CodeBlock from '@theme/CodeBlock';
 import Layout from '@theme/Layout';
-import { Tagline } from '@site/src/components/Tagline';
-import { MusicPlayer } from '@site/src/components/MusicPlayer';
 
 function HomepageHeader() {
 	const { siteConfig } = useDocusaurusContext();
 	return (
 		<main className={styles.main}>
-			<MusicPlayer />
 			<header className={clsx('hero', styles.heroBanner)}>
 				<div className={styles.scene}>
-					<SubwayScene />
+					<video
+						autoPlay
+						muted
+						loop
+						src="/Silence-sm.m4v"
+						className={styles.video}
+					/>
 				</div>
 				<div className={clsx('container', styles.heroContent)}>
 					<h1 className={styles.title}>{siteConfig.title}</h1>
-					<Tagline />
+					<h2 className={styles.subtitle}>
+						is a framework and philosophy for small, sustainable, human web apps
+					</h2>
 					<div className={styles.buttons}>
 						<Link
 							className="button button--secondary button--lg"
@@ -34,7 +38,6 @@ function HomepageHeader() {
 				</div>
 			</header>
 			<section className={styles.features}>
-				<h2 className={styles.subtitle}>A holistic local-first web toolkit</h2>
 				<div className={styles.featureStep}>
 					<div className={styles.featureStepInfo}>
 						<h3>Build a schema</h3>
@@ -51,7 +54,7 @@ function HomepageHeader() {
 							{`import {
 	collection,
 	schema
-} from '@lo-fi/web';
+} from '@verdant/web';
 import cuid from 'cuid';
 
 const posts = collection({
@@ -220,7 +223,7 @@ function Post({ post }) {
 					</div>
 					<div className={styles.featureStepCode}>
 						<CodeBlock language="typescript" showLineNumbers title="server.ts">
-							{`import { Server } from '@lo-fi/server';
+							{`import { Server } from '@verdant/server';
 
 const server = new Server({
 	databaseFile: 'db.sqlite',

@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Sync Server
 
-lo-fi doesn't sync by default. It's offline-first, sync-optional. I built it that way because my goal is to support nice local-only anonymous experiences, and add sync & realtime on as an incentive to sign up (and potentially subscribe) to your app.
+Verdant doesn't sync by default. It's offline-first, sync-optional. I built it that way because my goal is to support nice local-only anonymous experiences, and add sync & realtime on as an incentive to sign up (and potentially subscribe) to your app.
 
 To start syncing, you must first host a server - just a few lines of code.
 
@@ -17,7 +17,7 @@ The server can be run standalone, or plugged into an existing HTTP server. It re
 Create a server like this:
 
 ```ts
-import { Server } from '@lo-fi/server';
+import { Server } from '@verdant/server';
 
 const server = new Server({
 	databaseFile: 'path/to/db.sqlite',
@@ -32,7 +32,7 @@ const server = new Server({
 		},
 	},
 	// supposing you're using Express or another server already,
-	// you can attach lo-fi to it instead of running it separately.
+	// you can attach Verdant to it instead of running it separately.
 	httpServer: myExistingServer,
 });
 
@@ -57,7 +57,7 @@ The `profiles` configuration option accepts anything that implements the profile
 
 ## Evicting libraries from server storage
 
-In keeping with the lo-fi principle of [matching infrastructure cost with user revenue](../manifesto), the server lets you selectively "evict" libraries from storage.
+In keeping with the Verdant principle of [matching infrastructure cost with user revenue](../manifesto), the server lets you selectively "evict" libraries from storage.
 
 You can evict libraries when a user ends their subscription. This will free up space in your database without disrupting the user's local copy of their data.
 
@@ -67,7 +67,7 @@ To evict a library, just call `server.evictLibrary('library-id')`.
 
 ### Using eviction for contingency scenarios
 
-Although I've done a lot of testing to try to make lo-fi as consistent and reliable as possible under a variety of circumstances, I can never guarantee it's bug-free.
+Although I've done a lot of testing to try to make Verdant as consistent and reliable as possible under a variety of circumstances, I can never guarantee it's bug-free.
 
 You may reach a situation where a user reaches out about problems with sync. Maybe devices are not consistent, or changes are being reverted.
 
@@ -75,4 +75,4 @@ The first thing to check would be that the user has the latest version of your c
 
 Other replicas which may have interacted with the library will be forced to reset back to this known state, so they'll lose any offline or out-of-sync changes -- but that's kind of the point; starting back at a clean slate.
 
-If this ever does happen to you, reach out with any details you can give me about what happened. Although I do feel better having these failsafes, I'd rather have lo-fi be 100% reliable and bug-free.
+If this ever does happen to you, reach out with any details you can give me about what happened. Although I do feel better having these failsafes, I'd rather have Verdant be 100% reliable and bug-free.

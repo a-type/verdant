@@ -1,4 +1,4 @@
-import { Operation, OperationPatch } from '@lo-fi/common';
+import { Operation, OperationPatch } from '@verdant/common';
 
 export interface LocalOperation extends Operation {
 	inverse: OperationPatch;

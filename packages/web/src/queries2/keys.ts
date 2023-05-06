@@ -1,4 +1,4 @@
-import { hashObject } from '@lo-fi/common';
+import { hashObject } from '@verdant/common';
 
 export interface QueryParams {
 	collection: string;

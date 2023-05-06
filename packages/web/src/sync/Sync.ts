@@ -6,7 +6,7 @@ import {
 	Operation,
 	ReplicaType,
 	ServerMessage,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
 import { EntityStore } from '../reactives/EntityStore.js';

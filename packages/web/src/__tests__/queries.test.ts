@@ -1,7 +1,7 @@
 import { describe, it, expect, vitest } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 import type { ClientWithCollections } from '../index.js';
-import { assert } from '@lo-fi/common';
+import { assert } from '@verdant/common';
 
 async function addTestingItems(storage: ClientWithCollections) {
 	let items = [];

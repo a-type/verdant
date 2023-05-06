@@ -1,4 +1,4 @@
-import { FileData, FileRef } from '@lo-fi/common';
+import { FileData, FileRef } from '@verdant/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';

@@ -1,4 +1,4 @@
-import { ClientMessage, EventSubscriber, ServerMessage } from '@lo-fi/common';
+import { ClientMessage, EventSubscriber, ServerMessage } from '@verdant/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
 import { Heartbeat } from './Heartbeat.js';

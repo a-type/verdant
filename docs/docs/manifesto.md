@@ -2,15 +2,15 @@
 sidebar_position: 2
 ---
 
-# The lo-fi manifesto on sustainable software
+# The Verdant manifesto on sustainable software
 
-lo-fi was designed for purpose, with a built-in business model meant to enable the gradual and sustainable growth of your consumer app as a small business.
+Verdant was designed for purpose, with a built-in business model meant to enable the gradual and sustainable growth of your consumer app as a small business.
 
 It may seem crude to be thinking about business models when designing a software library (I would certainly understand that reaction, I'm no fan of "business" as it's done across the software space today), but all code is a tool, and a tool is designed to solve a set of problems. I consider it responsible to try to define both the problems and solutions up front.
 
 ## The model
 
-Here's an overview of the "business model" of lo-fi:
+Here's an overview of the "business model" of Verdant:
 
 1. Users can use the product for free on their own device, and free users don't cost anything (or next to nothing) to "host."
 2. Only paying subscribers utilize paid server infrastructure. Meaning, every server request and megabyte of database storage has associated revenue.
@@ -23,13 +23,13 @@ I _like_ having technical principles like "local-first," but I'm even more excit
 
 This model comes with some limitations and biases. These might either be refreshing or disappointing to you:
 
-- You probably won't make a multi-billion valued unicorn with lo-fi
-- You probably can't use lo-fi as effectively in B2B scenarios (or at least it's not really designed for that)
+- You probably won't make a multi-billion valued unicorn with Verdant
+- You probably can't use Verdant as effectively in B2B scenarios (or at least it's not really designed for that)
 - You can't collect a bunch of information on people very easily, so it'll be hard to tell why users don't convert to paid subscriptions without engaging them yourself (or instrumenting your own analytics). They won't even exist on your server.
 
 The first one is probably the kicker. It's other side of the sustainable software coin. The point is grow carefully, grow gradually, grow with a plan. That means you're not optimizing for an overnight explosion. It also means you don't get very much up-front. No seed rounds.
 
-> **Note:** as of writing there's nothing in the license for lo-fi which would prevent you from doing any of these things. I suppose you could do a VC-funded startup using lo-fi if you want. But that's not the use case I'm designing for. I won't make decisions that actively hamper it unless they're required to pursue the sustainable vision. Can't think of any so far.
+> **Note:** as of writing there's nothing in the license for Verdant which would prevent you from doing any of these things. I suppose you could do a VC-funded startup using Verdant if you want. But that's not the use case I'm designing for. I won't make decisions that actively hamper it unless they're required to pursue the sustainable vision. Can't think of any so far.
 
 ### What does "sustainable" mean then?
 
@@ -51,13 +51,13 @@ Ideally, economies of scale should see the revenue growth outpace cost, but if t
 
 ### The short version
 
-So, basically, if you want to follow this model as designed, you should use the lo-fi client to pack as much of an enjoyable local app experience into the free usage as you can (to convince new users your product is valuable to them), then present users with an onramp to a paid subscription which gives sync and realtime access via your server. That means every user account is also a subscriber. Almost every user could benefit from sync across multiple devices. Many would also benefit from a shared account with friends or family. If your app experience doesn't benefit from realtime, you can decrease load by tweaking sync settings to only periodic push/pull requests, too. It's up to you to determine the cost of your subscription.
+So, basically, if you want to follow this model as designed, you should use the Verdant client to pack as much of an enjoyable local app experience into the free usage as you can (to convince new users your product is valuable to them), then present users with an onramp to a paid subscription which gives sync and realtime access via your server. That means every user account is also a subscriber. Almost every user could benefit from sync across multiple devices. Many would also benefit from a shared account with friends or family. If your app experience doesn't benefit from realtime, you can decrease load by tweaking sync settings to only periodic push/pull requests, too. It's up to you to determine the cost of your subscription.
 
 The rest of this page is basically outlining the _how_ and _why_ of that model.
 
-## How lo-fi achieves these goals
+## How Verdant achieves these goals
 
-Here are the key features of lo-fi which aim to provide you with the tools to build sustainable software, as I've defined it:
+Here are the key features of Verdant which aim to provide you with the tools to build sustainable software, as I've defined it:
 
 ### Local-first, not local-capable
 
@@ -65,15 +65,15 @@ The terminology has already gotten kind of muddy in this space. The idea of loca
 
 When users want to start going online, they bring their local data with them to your server, who learns of their existence for the first time. If they never go online, they never have to talk to your server, so they never cost you money.
 
-So lo-fi, as the name suggests, is local-first. Even a user who signs up day 1 has first had a purely local experience.
+So Verdant, as the name suggests, is local-first. Even a user who signs up day 1 has first had a purely local experience.
 
 ### The server is the gateway to a rich feature set
 
-This will be the longest section, as it focuses on a core _design decision_ of lo-fi: server-client architecture.
+This will be the longest section, as it focuses on a core _design decision_ of Verdant: server-client architecture.
 
-This may be a controversial decision for the library. It _is feasible_ to achieve a lot of the value of lo-fi without a server in the middle. You could (with the help of some basic signalling infrastructure) establish peer-to-peer networks of user-owned devices for sync and realtime capabilities. Many, if not most, frameworks in this space are either built around this concept or explicitly support it. If that sounds ideal to you, you'll want to continue researching!
+This may be a controversial decision for the library. It _is feasible_ to achieve a lot of the value of Verdant without a server in the middle. You could (with the help of some basic signalling infrastructure) establish peer-to-peer networks of user-owned devices for sync and realtime capabilities. Many, if not most, frameworks in this space are either built around this concept or explicitly support it. If that sounds ideal to you, you'll want to continue researching!
 
-However, lo-fi explicitly _does not_ support peer-to-peer. Everything goes through your server. This is a case of choosing the less glamorous, even less idealized, technical option for the explicit reason of supporting a business model. I have chosen to gate core features like sync and realtime behind a server which you are empowered to charge your users access for. Yuck!
+However, Verdant explicitly _does not_ support peer-to-peer. Everything goes through your server. This is a case of choosing the less glamorous, even less idealized, technical option for the explicit reason of supporting a business model. I have chosen to gate core features like sync and realtime behind a server which you are empowered to charge your users access for. Yuck!
 
 I'm not mocking anti-capitalists. I hope I fall in that category. What I am trying to do is be practical. The market is the primary game of our present society, and as long as that's true, I believe it's worth trying to find ways to play the game ethically.
 
@@ -83,7 +83,7 @@ I'm not mocking anti-capitalists. I hope I fall in that category. What I am tryi
 >
 > I think there's more to say here, but I should write on it separately rather than continue to bloat this documentation.
 
-To summarize, lo-fi explicitly chooses to use the server, and access to it, as an opportunity for revenue. You are welcome to give free access to your server if you wish. But the design of the framework does not rebel against the server-client model which has so far defined "web 2.0," it attempts to embrace it and put it to work for you in the format of a small business. It aims to give you the tools to build revenue, and indeed profit, as you grow your app.
+To summarize, Verdant explicitly chooses to use the server, and access to it, as an opportunity for revenue. You are welcome to give free access to your server if you wish. But the design of the framework does not rebel against the server-client model which has so far defined "web 2.0," it attempts to embrace it and put it to work for you in the format of a small business. It aims to give you the tools to build revenue, and indeed profit, as you grow your app.
 
 Giving away your product for free seems 'nice.' But it creates a rift in the whole system, turns users into objects to extract value from, and puts businesses in existential relationship to "angels" and other VC. The desire to grow the product userbase is no longer directly tied to increasing the value of those user's lives through access to your useful tool or service. Onboarding a user costs _you_ money, and leaves _you_ looking for a return on that cost. This is backwards. And the backwards-ness propagates into all sorts of irrational systems which have become the hallmark of consumer software on today's internet.
 
@@ -91,23 +91,23 @@ Just charge your users.
 
 ### Scaling down
 
-Here's another idea lo-fi tries to embrace: the arrow does not, indeed, always go up.
+Here's another idea Verdant tries to embrace: the arrow does not, indeed, always go up.
 
 It is easy to constantly grow your userbase when accounts are free and hard to delete. That's why speculators care about abstractions like "Daily Active User" rather than a `SELECT COUNT(*) FROM users` when assessing the health of a product.
 
-In contrast, lo-fi is designed to let users leave. When someone decides to stop paying for your product, they get to walk away with all of their data still locally accessible on their device. And _you_ get to delete _everything._
+In contrast, Verdant is designed to let users leave. When someone decides to stop paying for your product, they get to walk away with all of their data still locally accessible on their device. And _you_ get to delete _everything._
 
 And if they decide to come back, they give their data back to you, you provision their place on your servers again, and everything smoothly chugs along.
 
 You don't need to worry about archiving data so the user doesn't lose it; they always have it. Purge it. Downscale your storage volume. Drop a CPU. If everyone leaves, spin down the server and let the app lie fallow for a while. Set up an email alert if someone signs up so you know to boot the server back up. Or automate it. Maybe your time will come later. In the meantime, relax, your bill is the cost of a domain name. Maybe try a new project and see if you find better traction there.
 
-lo-fi tries to make scaling your app like doing branch-management in a restaurant sim videogame. You're getting a lot of traffic, your flagship location is overwhelmed! Open up a new franchise (spin up a new server) and start directing some users there. _You know how much that will cost, and how much they will be paying._ You can do the math.
+Verdant tries to make scaling your app like doing branch-management in a restaurant sim videogame. You're getting a lot of traffic, your flagship location is overwhelmed! Open up a new franchise (spin up a new server) and start directing some users there. _You know how much that will cost, and how much they will be paying._ You can do the math.
 
 A new competitor has arrived and is stealing your customers! Now that second branch is in the red; not enough subscriptions are active to pay the bills on both. Simple, send any remaining users on Server 2 back to Server 1, and pull it down. Even if you screw up, nobody loses their data in the long run, they can even keep editing it while you sort out your ops. They may not even notice.
 
 ### Sync flexibility
 
-Another feature which helps you tune your business is the flexibility of transport which lo-fi exposes for sync. If your app only needs basic device sync, you don't need to bother with websockets and constant network chatter. Depending on your use case, you could turn the push/pull sync frequency down to every 5 minutes or more.
+Another feature which helps you tune your business is the flexibility of transport which Verdant exposes for sync. If your app only needs basic device sync, you don't need to bother with websockets and constant network chatter. Depending on your use case, you could turn the push/pull sync frequency down to every 5 minutes or more.
 
 Permission to send data over a socket is gated and controlled by you. So if you don't need realtime features, you don't ever have to allow or utilize it. Save yourself some money in traffic, and then charge less for your subscription&mdash;since you're offering less, as well.
 
@@ -123,7 +123,7 @@ We don't get that in local-first world. There's no magic spell you can utter ove
 
 And some might not get the memo for a _while._ A user went off the grid for a week, but she made use of your fancy offline-capable app to add items to her grocery list. Her phone doesn't know you refactored the data model to support categories now. What's going to happen when she gets signal again?
 
-This is a class of problem all its own, and solving it can be a headache. lo-fi is designed to support migration of data, at any time, offline or online, so you don't have to worry about it. Once the user receives the new code, the lo-fi client will upgrade their data to the right shape, without causing inconsistencies if other offline clients do the same thing at a later time.
+This is a class of problem all its own, and solving it can be a headache. Verdant is designed to support migration of data, at any time, offline or online, so you don't have to worry about it. Once the user receives the new code, the Verdant client will upgrade their data to the right shape, without causing inconsistencies if other offline clients do the same thing at a later time.
 
 This all works in service of the user's ability to drop their subscription, keep their data intact, not interact with your server at all (i.e. cost you little to nothing), then return sometime and pick up where they left off.
 
@@ -135,4 +135,4 @@ Rather than using new technological systems to try to solve these problems, I'm 
 
 It's my dream to enable myself and anyone else interested to run a little business, or a few, on people's phones and computers. The equivalent of a nice, local bakery.
 
-If that sounds appealing, give lo-fi a spin, and tell me if you think it falls short of delivering on that solution.
+If that sounds appealing, give Verdant a spin, and tell me if you think it falls short of delivering on that solution.

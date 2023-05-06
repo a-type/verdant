@@ -1,4 +1,4 @@
-import { roughSizeOfObject } from '@lo-fi/common';
+import { roughSizeOfObject } from '@verdant/common';
 
 export function storeRequestPromise<T>(request: IDBRequest<T>) {
 	return new Promise<T>((resolve, reject) => {

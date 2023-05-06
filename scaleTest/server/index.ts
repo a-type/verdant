@@ -1,4 +1,4 @@
-import { Server, TokenProvider, ReplicaType } from '@lo-fi/server';
+import { Server, TokenProvider, ReplicaType } from '@verdant/server';
 import express from 'express';
 import { createServer } from 'http';
 

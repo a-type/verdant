@@ -16,7 +16,7 @@ import {
 	StorageFieldsSchema,
 	TimestampProvider,
 	traverseCollectionFieldsAndApplyDefaults,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { EntityFile } from '../files/EntityFile.js';
 import { processValueFiles } from '../files/utils.js';
 import { WeakRef } from './FakeWeakRef.js';

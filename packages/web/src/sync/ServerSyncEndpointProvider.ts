@@ -1,4 +1,4 @@
-import { assert, ReplicaType } from '@lo-fi/common';
+import { assert, ReplicaType } from '@verdant/common';
 import { default as jwtDecode } from 'jwt-decode';
 
 export interface ServerSyncEndpointProviderConfig {

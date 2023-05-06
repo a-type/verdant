@@ -17,7 +17,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	removeOidsFromAllSubObjects,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';

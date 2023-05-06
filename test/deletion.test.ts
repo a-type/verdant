@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { createTestClient } from './lib/testClient.js';
 import { waitForQueryResult } from './lib/waits.js';
-import { assert } from '@lo-fi/common';
+import { assert } from '@verdant/common';
 import { log } from './lib/log.js';
 
 it('cleans up metadata after deletion but can still restore the document', async () => {

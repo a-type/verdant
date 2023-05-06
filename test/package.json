@@ -1,13 +1,13 @@
 {
-	"name": "@lo-fi/test",
+	"name": "@verdant/test",
 	"private": true,
 	"type": "module",
 	"dependencies": {
 		"@a-type/utils": "^1.0.2",
-		"@lo-fi/cli": "workspace:*",
-		"@lo-fi/common": "workspace:*",
-		"@lo-fi/server": "workspace:*",
-		"@lo-fi/web": "workspace:*",
+		"@verdant/cli": "workspace:*",
+		"@verdant/common": "workspace:*",
+		"@verdant/server": "workspace:*",
+		"@verdant/web": "workspace:*",
 		"@types/express": "^4.17.14",
 		"@types/node": "16.11.7",
 		"@types/ws": "^8.5.3",

@@ -4,9 +4,9 @@ sidebar_position: 6
 
 # React Router
 
-A small, experimental, client-only router for React that includes cutting-edge Suspense and Concurrent Mode support. Designed to help your PWA feel like a native app, and integrate well with lo-fi.
+A small, experimental, client-only router for React that includes cutting-edge Suspense and Concurrent Mode support. Designed to help your PWA feel like a native app, and integrate well with Verdant.
 
-This router is stand-alone and doesn't rely on any other lo-fi packages. Feel free to use it in any client-focused React app. Just know that it won't be as battle-tested as the still-excellent React Router.
+This router is stand-alone and doesn't rely on any other Verdant packages. Feel free to use it in any client-focused React app. Just know that it won't be as battle-tested as the still-excellent React Router.
 
 ## Usage
 
@@ -83,7 +83,7 @@ Each route can have more advanced options, including children.
 
 ### Links
 
-Like React Router, `@lo-fi/react-router` comes with a Link component you use to render links.
+Like React Router, `@verdant/react-router` comes with a Link component you use to render links.
 
 Unlike React Router, this component also does external links explicitly, and comes with a `newTab` parameter for easy new-tabbing. Because I always end up reinventing these features in a wrapped Link component, anyway.
 
@@ -199,13 +199,13 @@ const routes = [
 ];
 ```
 
-#### Preloading with lo-fi queries
+#### Preloading with Verdant queries
 
-This is `@lo-fi/react-router`, after all, so you'd expect that preloading lo-fi data should be easy.
+This is `@verdant/react-router`, after all, so you'd expect that preloading Verdant data should be easy.
 
-Since all lo-fi queries are cached, you can go ahead and run whatever query you anticipate using on a page. But since queries are disposed from the cache after a while if they aren't subscribed to, there are different techniques depending on which callback you use.
+Since all Verdant queries are cached, you can go ahead and run whatever query you anticipate using on a page. But since queries are disposed from the cache after a while if they aren't subscribed to, there are different techniques depending on which callback you use.
 
-> Also note that these examples assume you have a single, global lo-fi client instance. If you have different instances provided by different levels of React context, you won't be able to use this feature as it works currently, sorry. Consider using `onClick` handlers on individual links to call queries on the lo-fi client you get from context instead.
+> Also note that these examples assume you have a single, global Verdant client instance. If you have different instances provided by different levels of React context, you won't be able to use this feature as it works currently, sorry. Consider using `onClick` handlers on individual links to call queries on the Verdant client you get from context instead.
 
 For `onVisited`, since the route is mounting, you can probably just fire-and-forget your query.
 
@@ -257,7 +257,7 @@ Hopefully you see what I'm going for, here. If the data is already loaded or is 
 
 #### Integrating preloaded data with Suspense
 
-This isn't `@lo-fi/react-router` specific, but since Suspense is still not widely adopted as an end-user pattern, here's how you could integrate your preloaded data into your page component:
+This isn't `@verdant/react-router` specific, but since Suspense is still not widely adopted as an end-user pattern, here's how you could integrate your preloaded data into your page component:
 
 ```tsx
 function PostPage() {

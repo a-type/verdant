@@ -1,4 +1,4 @@
-import { ReplicaType } from '@lo-fi/common';
+import { ReplicaType } from '@verdant/common';
 import jwt from 'jsonwebtoken';
 
 export class TokenProvider {

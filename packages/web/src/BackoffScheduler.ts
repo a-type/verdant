@@ -1,4 +1,4 @@
-import { EventSubscriber } from '@lo-fi/common';
+import { EventSubscriber } from '@verdant/common';
 
 export class BackoffScheduler extends EventSubscriber<{
 	trigger: () => void;

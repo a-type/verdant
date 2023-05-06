@@ -1,4 +1,4 @@
-import { collection, createDefaultMigration, schema } from '@lo-fi/common';
+import { collection, createDefaultMigration, schema } from '@verdant/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';

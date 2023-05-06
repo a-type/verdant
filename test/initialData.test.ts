@@ -1,8 +1,8 @@
-import { migrate } from '@lo-fi/web';
+import { migrate } from '@verdant/web';
 import { it, expect } from 'vitest';
 import v1 from './client/schemaVersions/v1.js';
 import { createTestClient } from './lib/testClient.js';
-import { assert } from '@lo-fi/common';
+import { assert } from '@verdant/common';
 
 async function fakeApi() {
 	return new Promise<string>((resolve) => {

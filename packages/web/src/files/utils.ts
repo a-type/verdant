@@ -1,4 +1,4 @@
-import { createFileRef, FileData } from '@lo-fi/common';
+import { createFileRef, FileData } from '@verdant/common';
 import cuid from 'cuid';
 
 export function createFileData(file: File): FileData {

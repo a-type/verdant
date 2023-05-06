@@ -1,4 +1,9 @@
-import { ServerMessage, EventSubscriber, Batcher, Batch } from '@lo-fi/common';
+import {
+	ServerMessage,
+	EventSubscriber,
+	Batcher,
+	Batch,
+} from '@verdant/common';
 import type { UserInfo } from '../index.js';
 import { LocalReplicaInfo } from '../metadata/LocalReplicaStore.js';
 

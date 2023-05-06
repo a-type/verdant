@@ -1,4 +1,4 @@
-import { FileData } from '@lo-fi/common';
+import { FileData } from '@verdant/common';
 import { IDBService } from '../IDBService.js';
 import { fileToArrayBuffer } from './utils.js';
 

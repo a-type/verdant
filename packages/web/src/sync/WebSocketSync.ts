@@ -5,7 +5,7 @@ import {
 	ObjectIdentifier,
 	assert,
 	ReplicaType,
-} from '@lo-fi/common';
+} from '@verdant/common';
 import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
 import { EntityStore } from '../reactives/EntityStore.js';

@@ -4,7 +4,7 @@ import {
 	createCompoundIndexValue,
 	StorageCollectionSchema,
 	StorageSyntheticIndexSchema,
-} from '@lo-fi/common';
+} from '@verdant/common';
 
 export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
 	const result: Record<string, any> = {};

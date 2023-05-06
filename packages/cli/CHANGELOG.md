@@ -1,4 +1,4 @@
-# @lo-fi/cli
+# @verdant/cli
 
 ## 2.0.0
 

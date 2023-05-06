@@ -1,5 +1,5 @@
 {
-	"name": "@lo-fi/server",
+	"name": "@verdant/server",
 	"version": "1.7.8",
 	"access": "public",
 	"type": "module",
@@ -27,7 +27,7 @@
 		"link": "pnpm link --global"
 	},
 	"dependencies": {
-		"@lo-fi/common": "workspace:*",
+		"@verdant/common": "workspace:*",
 		"async-lock": "^1.4.0",
 		"better-sqlite3": "^7.6.2",
 		"busboy": "^1.6.0",
