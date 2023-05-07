@@ -333,7 +333,7 @@ export function normalize(
 			if (isObject(value)) {
 				if (isObjectRef(value)) {
 					throw new Error(
-						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
+						'An attempt was made to normalize an already normalized object! This is an error in verdant itself.',
 					);
 				} else if (isFileRef(value)) {
 					copy[i] = value;
@@ -356,7 +356,7 @@ export function normalize(
 			if (isObject(value)) {
 				if (isObjectRef(value)) {
 					throw new Error(
-						'An attempt was made to normalize an already normalized object! This is an error in lo-fi itself.',
+						'An attempt was made to normalize an already normalized object! This is an error in verdant itself.',
 					);
 				} else if (isFileRef(value)) {
 					// stop here

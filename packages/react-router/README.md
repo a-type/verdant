@@ -4,4 +4,4 @@ A small, client-focused router for React with cutting-edge Suspense and Transiti
 
 ## Usage
 
-See the [lo-fi docs](https://lo-fi.gfor.rest/docs/react-router)
+See the [verdant docs](https://verdant.dev/docs/react-router)

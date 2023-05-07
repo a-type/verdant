@@ -43,10 +43,10 @@ server.listen(8080, () => {
 });
 ```
 
-If you want to attach to an existing HTTP server, you will also need to set up an HTTP endpoint to handle HTTP requests on the `/lofi` subpath. For example, using Express:
+If you want to attach to an existing HTTP server, you will also need to set up an HTTP endpoint to handle HTTP requests on the `/sync` subpath. For example, using Express:
 
 ```ts
-app.use('/lofi', server.handleRequest);
+app.use('/sync', server.handleRequest);
 ```
 
 Custom HTTP server support is a little limited right now. It should support Connect/Express-like middleware.

@@ -12,7 +12,7 @@ export class ClientDescriptor extends StorageDescriptor {
 
 export const clientPackage = `
 {
-  "name": "lo-fi-client",
+  "name": "verdant-client",
   "version": "0.0.1",
   "private": true,
   "type": "module",

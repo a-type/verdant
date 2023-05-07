@@ -18,7 +18,7 @@ const clientDesc = new ClientDescriptor({
 			emoji: '',
 		},
 		defaultProfile: { name: '' },
-		authEndpoint: 'http://localhost:3000/auth/lofi',
+		authEndpoint: 'http://localhost:3000/auth/sync',
 	},
 });
 

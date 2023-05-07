@@ -32,7 +32,7 @@ const server = new Server({
 		},
 	},
 	httpServer,
-	// log: (...args) => console.log('[lo-fi]', ...args),
+	// log: (...args) => console.log('[verdant]', ...args),
 });
 
 let activeConnections = 0;

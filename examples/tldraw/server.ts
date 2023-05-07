@@ -81,7 +81,7 @@ app.get('/auth', async (req, res) => {
 	const token = tokenProvider.getToken({
 		libraryId: library,
 		userId: user,
-		syncEndpoint: `http://localhost:${PORT}/lo-fi`,
+		syncEndpoint: `http://localhost:${PORT}/verdant`,
 		// for this example, we're making replicas passive - if someone disconnects and
 		// starts editing history offline, their changes will be dropped on reconnect.
 		type: ReplicaType.PassiveRealtime,
@@ -91,16 +91,16 @@ app.get('/auth', async (req, res) => {
 	});
 });
 
-app.post('/lo-fi', async (req, res) => {
+app.post('/verdant', async (req, res) => {
 	await server.handleRequest(req, res);
 });
-app.get('/lo-fi', async (req, res) => {
+app.get('/verdant', async (req, res) => {
 	await server.handleRequest(req, res);
 });
-app.post('/lo-fi/files/:fileId', async (req, res) => {
+app.post('/verdant/files/:fileId', async (req, res) => {
 	await server.handleFileRequest(req, res);
 });
-app.get('/lo-fi/files/:fileId', async (req, res) => {
+app.get('/verdant/files/:fileId', async (req, res) => {
 	await server.handleFileRequest(req, res);
 });
 

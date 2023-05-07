@@ -57,7 +57,7 @@ export function createHooks<Presence = any, Profile = any>(
 	function useStorage(): ClientWithCollections {
 		const ctx = useContext(Context);
 		if (!ctx) {
-			throw new Error('No lo-fi provider was found');
+			throw new Error('No verdant provider was found');
 		}
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]) as any;
 	}

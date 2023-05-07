@@ -196,7 +196,7 @@ export class EntityStore {
 				// if the document can't be written, something's very wrong :(
 				// log the error and move on...
 				this.log(
-					"⚠️ CRITICAL: possibly corrupt data couldn't be written to queryable storage. This is probably a bug in lo-fi! Please report at https://github.com/a-type/lo-fi/issues",
+					"⚠️ CRITICAL: possibly corrupt data couldn't be written to queryable storage. This is probably a bug in verdant! Please report at https://github.com/a-type/verdant/issues",
 					'\n',
 					'Invalid data:',
 					JSON.stringify(stored),

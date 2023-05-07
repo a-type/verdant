@@ -79,7 +79,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		// we can't initialize the storage
 		if (!('indexedDB' in window) && !init.indexedDb) {
 			throw new Error(
-				'A lo-fi client was initialized in an environment without IndexedDB. If you are using lo-fi in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
+				'A verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
 			);
 		}
 

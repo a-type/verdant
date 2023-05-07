@@ -350,7 +350,7 @@ export function shallowDiffToPatches(
 			}
 		} else {
 			throw new Error(
-				'Shallow diff was given a nested object. This is an error in lo-fi!',
+				'Shallow diff was given a nested object. This is an error in verdant!',
 			);
 		}
 	}

@@ -15,7 +15,7 @@ const clientDesc = new ClientDescriptor({
 	namespace: 'todos',
 	migrations,
 	sync: {
-		authEndpoint: 'https://your.server/auth/lofi',
+		authEndpoint: 'https://your.server/auth/sync',
 		initialPresence: {
 			emoji: '',
 		},
@@ -159,7 +159,7 @@ function App({ libraryId }: { libraryId: string }) {
 				namespace: libraryId,
 				migrations,
 				sync: {
-					authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
+					authEndpoint: `http://localhost:3001/auth/sync?library=${libraryId}`,
 					initialPresence: {},
 					// start sync when ready - useful if you want to sync
 					// in this setup. if you don't want to sync, that's fine too!

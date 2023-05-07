@@ -5,7 +5,7 @@
 	"description": "TLDRAW example",
 	"main": "index.js",
 	"scripts": {
-		"generate": "lo-fi generate --schema ./src/schema.ts --output ./src/client --react",
+		"generate": "verdant generate --schema ./src/schema.ts --output ./src/client --react",
 		"dev": "concurrently \"pnpm run dev:app\" \"pnpm run dev:server\"",
 		"dev:app": "vite",
 		"dev:server": "tsx watch server.ts"

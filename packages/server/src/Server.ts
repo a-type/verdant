@@ -287,7 +287,7 @@ export class Server extends EventEmitter implements MessageSender {
 	};
 
 	/**
-	 * Handles a multipart upload of a file from a lo-fi client. The upload
+	 * Handles a multipart upload of a file from a verdant client. The upload
 	 * will include parameters for the file's ID, name, and type. The request
 	 * must be authenticated with a token to tie it to a library.
 	 */

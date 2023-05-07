@@ -48,7 +48,7 @@ function lofiHandler(req: Request, res: Response) {
 		// change this line to point to the correct host for your sync
 		// server. if you have multiple environments, this must take them
 		// into account.
-		syncEndpoint: `http://localhost:3000/lofi`,
+		syncEndpoint: `http://localhost:3000/sync`,
 		// additional token options are available. see below.
 	});
 

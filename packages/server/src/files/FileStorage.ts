@@ -11,7 +11,7 @@ export interface FileInfo {
 
 /**
  * The interface for implementing a file storage backend.
- * lo-fi will supply file Blobs and metadata, and the storage backend
+ * verdant will supply file Blobs and metadata, and the storage backend
  * must store them somewhere.
  *
  * The storage backend must also provide a way to get a URL for the file,

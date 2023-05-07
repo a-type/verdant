@@ -19,7 +19,7 @@ export function getAllCollectionDefinitions(ast) {
 		defaultExportExpression.callee.value !== 'schema'
 	) {
 		throw new Error(
-			'Invalid schema file. Must have a default export which is a lo-fi schema.',
+			'Invalid schema file. Must have a default export which is a verdant schema.',
 		);
 	}
 	const schema = defaultExportExpression.arguments[0].expression;
