@@ -19,9 +19,9 @@ An IndexedDB-powered database and data sync solution for lightweight, local-firs
 
 ## Early software
 
-This is a very experimental set of libraries which I'm developing slowly alongside my app [Aglio](https://aglio.gfor.rest) to suit my [own goals](https://blog.gfor.rest/blog/Verdant-intro). The usage and behavior is subject to change, although I will either try to avoid changes that fundamentally change how data is stored, or provide upgrade paths which won't disrupt apps already in use as much as possible.
+This is a very experimental set of libraries which I'm developing slowly alongside my app [Gnocchi](https://gnocchi.club) to suit my [own goals](https://blog.gfor.rest/blog/Verdant-intro). The usage and behavior is subject to change, although I will either try to avoid changes that fundamentally change how data is stored, or provide upgrade paths which won't disrupt apps already in use as much as possible.
 
-Documentation will be sparse for a while. If you'd like to see a full-sized example, [Aglio is open source.](https://github.com/a-type/aglio)
+Documentation will be sparse for a while. If you'd like to see a full-sized example, [Gnocchi is open source.](https://github.com/a-type/gnocchi)
 
 ## What is Verdant trying to accomplish?
 
@@ -31,7 +31,7 @@ If you want to read more about how and why, it's in the [manifesto](./manifesto.
 
 ## What's it like to use?
 
-I've recorded myself working on my app, [Aglio](https://aglio.app), adding a new feature with Verdant.
+I've recorded myself working on my app, [Gnocchi](https://gnocchi.club), adding a new feature with Verdant (it used to be called "lo-fi" at the time of recording, but not much has changed in usage).
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/RUykjG-L8Z4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 

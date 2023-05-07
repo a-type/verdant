@@ -29,8 +29,23 @@
 	max-height: none;
 	max-width: none;
 	color: var(--ifm-font-color-base);
-	pointer-events: none;
 	font-family: Cormorant, serif;
+}
+
+.heroContent {
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	height: 100% !important;
+	max-width: none;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: flex-start;
+	max-height: none;
+	gap: 1rem;
+	padding: 8vw;
 }
 
 .features {
@@ -40,7 +55,7 @@
 	justify-content: center;
 	align-items: center;
 	width: 100%;
-	padding: 8rem;
+	padding: 8vw;
 }
 
 .title {
@@ -49,12 +64,33 @@
 	margin: 0;
 	font-family: inherit;
 	font-style: italic;
+	margin-left: -2rem;
 }
 
-.subtitle {
-	font-size: 1.5rem;
-	font-weight: 800;
+h1 {
+	font-size: 3rem;
+	font-weight: 200;
 	margin: 0;
+	margin-bottom: 2rem;
+	font-family: Cormorant, serif;
+	font-style: italic;
+}
+
+h2 {
+	font-size: 1.5rem;
+	/* font-weight: 800; */
+	font-weight: 200;
+	margin: 0;
+	margin-bottom: 2rem;
+	/* font-family: inherit; */
+	/* font-style: italic; */
+}
+
+h3 {
+	font-size: 1.25rem;
+	font-weight: 200;
+	margin: 0;
+	margin-bottom: 2rem;
 	font-family: inherit;
 	font-style: italic;
 }
@@ -93,20 +129,8 @@
 		hue-rotate(40deg);
 }
 
-.heroContent {
-	position: relative;
-	z-index: 1;
-	width: 100%;
-	height: 100% !important;
-	max-width: none;
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-end;
-	align-items: flex-start;
-	max-height: none;
-	gap: 2rem;
-	padding: 8rem;
+.featuresTitle {
+	margin-bottom: 6rem;
 }
 
 .featureStep {
@@ -164,4 +188,61 @@
 	.features {
 		padding: 8px;
 	}
+}
+
+.musing {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 8vw;
+	text-align: center;
+	font-size: 1.25rem;
+	font-weight: 200;
+}
+p {
+	max-width: 70ch;
+}
+
+strong {
+	font-family: Cormorant, serif;
+	font-style: italic;
+	font-size: 1.25em;
+}
+
+.explanation {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 8vw;
+	text-align: start;
+	font-size: 1.25rem;
+	font-weight: 200;
+	width: 100%;
+}
+
+.musing ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin-bottom: 2rem;
+}
+
+.musing ul > li {
+	margin: 0;
+	padding: 0;
+}
+
+summary {
+	cursor: pointer;
+	font-family: Cormorant, serif;
+	font-size: 1.25em;
+}
+
+summary > span {
+	font-style: italic;
 }

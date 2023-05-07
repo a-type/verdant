@@ -9,7 +9,7 @@ Using your [schema](./schema), you can generate your typed client code using Ver
 ```
 > npm i --dev @verdant/cli
 
-> Verdant --schema src/stores/todos/schema.ts --output src/stores/todos/client --react
+> verdant --schema src/stores/todos/schema.ts --output src/stores/todos/client --react
 ```
 
 The CLI takes `schema` (the path to your schema TS file), `output` (the directory to output generated code), and `--react` (optional, generates React hooks to query your data).
