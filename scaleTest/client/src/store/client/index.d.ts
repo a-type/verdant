@@ -1,4 +1,4 @@
-import type { StorageSchema } from '@verdant/common';
+import type { StorageSchema } from '@verdant-web/common';
 import type {
 	Storage,
 	StorageInitOptions,
@@ -6,8 +6,8 @@ import type {
 	ListEntity,
 	Query,
 	ServerSync,
-} from '@verdant/web';
-export * from '@verdant/web';
+} from '@verdant-web/store';
+export * from '@verdant-web/store';
 
 import type schema from './schema.js';
 export type Schema = typeof schema;

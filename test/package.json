@@ -1,13 +1,13 @@
 {
-	"name": "@verdant/test",
+	"name": "@verdant-web/test",
 	"private": true,
 	"type": "module",
 	"dependencies": {
 		"@a-type/utils": "^1.0.2",
-		"@verdant/cli": "workspace:*",
-		"@verdant/common": "workspace:*",
-		"@verdant/server": "workspace:*",
-		"@verdant/web": "workspace:*",
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/common": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"@types/express": "^4.17.14",
 		"@types/node": "16.11.7",
 		"@types/ws": "^8.5.3",

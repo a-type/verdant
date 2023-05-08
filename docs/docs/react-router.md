@@ -83,7 +83,7 @@ Each route can have more advanced options, including children.
 
 ### Links
 
-Like React Router, `@verdant/react-router` comes with a Link component you use to render links.
+Like React Router, `@verdant-web/react-router` comes with a Link component you use to render links.
 
 Unlike React Router, this component also does external links explicitly, and comes with a `newTab` parameter for easy new-tabbing. Because I always end up reinventing these features in a wrapped Link component, anyway.
 
@@ -201,7 +201,7 @@ const routes = [
 
 #### Preloading with Verdant queries
 
-This is `@verdant/react-router`, after all, so you'd expect that preloading Verdant data should be easy.
+This is `@verdant-web/react-router`, after all, so you'd expect that preloading Verdant data should be easy.
 
 Since all Verdant queries are cached, you can go ahead and run whatever query you anticipate using on a page. But since queries are disposed from the cache after a while if they aren't subscribed to, there are different techniques depending on which callback you use.
 
@@ -257,7 +257,7 @@ Hopefully you see what I'm going for, here. If the data is already loaded or is 
 
 #### Integrating preloaded data with Suspense
 
-This isn't `@verdant/react-router` specific, but since Suspense is still not widely adopted as an end-user pattern, here's how you could integrate your preloaded data into your page component:
+This isn't `@verdant-web/react-router` specific, but since Suspense is still not widely adopted as an end-user pattern, here's how you could integrate your preloaded data into your page component:
 
 ```tsx
 function PostPage() {

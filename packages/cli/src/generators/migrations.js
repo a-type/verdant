@@ -18,7 +18,7 @@ export function createMigration({
 
 	if (version === 1) {
 		return `import v${version}Schema from '${relativePathToHistory}/v${version}${fileEnd}';
-		import { migrate } from '@verdant/web';
+		import { migrate } from '@verdant-web/store';
 
 		// this is your first migration, so no logic is necessary!
 		export default migrate(v${version}Schema, async ({ mutations }) => {
@@ -32,7 +32,7 @@ export function createMigration({
 		version - 1
 	}${fileEnd}';
   import v${version}Schema from '${relativePathToHistory}/v${version}${fileEnd}';
-  import { migrate } from '@verdant/web';
+  import { migrate } from '@verdant-web/store';
 
   export default migrate(v${
 		version - 1

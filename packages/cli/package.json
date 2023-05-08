@@ -1,5 +1,5 @@
 {
-	"name": "@verdant/cli",
+	"name": "@verdant-web/cli",
 	"version": "2.0.0",
 	"description": "Schema management tools for verdant",
 	"type": "module",
@@ -34,9 +34,9 @@
 		"yargs": "^17.6.0"
 	},
 	"devDependencies": {
-		"@verdant/common": "workspace:*",
-		"@verdant/web": "workspace:*",
-		"@verdant/react": "workspace:*",
+		"@verdant-web/common": "workspace:*",
+		"@verdant-web/store": "workspace:*",
+		"@verdant-web/react": "workspace:*",
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"typescript": "^4.7.4",

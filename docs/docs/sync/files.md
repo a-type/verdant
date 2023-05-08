@@ -16,7 +16,7 @@ For this reason, you should always handle the `.loading === true` case on any En
 
 ## Storing files
 
-You must provide a file storage backend to the server to sync files. This can be the default `LocalFileStorage` backend which is exported from `@verdant/server`, or you can implement the `FileStorage` interface yourself to connect to a different file storage service (like S3, etc).
+You must provide a file storage backend to the server to sync files. This can be the default `LocalFileStorage` backend which is exported from `@verdant-web/server`, or you can implement the `FileStorage` interface yourself to connect to a different file storage service (like S3, etc).
 
 If you don't supply a storage backend, syncing files will fail.
 

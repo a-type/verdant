@@ -17,7 +17,7 @@ import type {
 	EntityShape,
 	AnyEntity,
 	EntityDestructured,
-} from '@verdant/web';
+} from '@verdant-web/store';
 
 type NullIfSkip<V, C> = C extends { skip: boolean } ? V | null : V;
 type SkippableFilterConfig<F> =

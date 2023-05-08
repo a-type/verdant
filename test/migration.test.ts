@@ -7,8 +7,8 @@ import {
 	createDefaultMigration,
 	migrate,
 	ClientWithCollections,
-} from '@verdant/web';
-import { ReplicaType } from '@verdant/server';
+} from '@verdant-web/store';
+import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 

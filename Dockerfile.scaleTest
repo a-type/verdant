@@ -19,7 +19,7 @@ RUN pnpm fetch
 COPY . .
 
 RUN pnpm install --filter . --frozen-lockfile
-RUN pnpm install --filter "@verdant/scale-test..." --frozen-lockfile --unsafe-perm
+RUN pnpm install --filter "@verdant-web/scale-test..." --frozen-lockfile --unsafe-perm
 
 WORKDIR /root/monorepo/scaleTest
 EXPOSE 3000

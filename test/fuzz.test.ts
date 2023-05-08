@@ -1,4 +1,4 @@
-import { ReplicaType } from '@verdant/server';
+import { ReplicaType } from '@verdant-web/server';
 import {
 	ClientWithCollections,
 	collection,
@@ -6,7 +6,7 @@ import {
 	migrate,
 	schema,
 	StorageDescriptor,
-} from '@verdant/web';
+} from '@verdant-web/store';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { startTestServer } from './lib/testServer.js';
 // @ts-ignore

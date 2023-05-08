@@ -9,7 +9,7 @@
 		"dev": "turbo run dev",
 		"build": "turbo run build",
 		"test": "turbo run test",
-		"test:integration": "pnpm -F @verdant/test test",
+		"test:integration": "pnpm -F @verdant-web/test test",
 		"ci:test:unit": "turbo run ci:test:unit",
 		"ci:test:integration": "turbo run ci:test:integration",
 		"test:watch": "turbo run test",

@@ -13,7 +13,7 @@ You can then edit this migration to include transformation of object shapes to c
 ```ts
 // migrations/v1.ts
 
-import { migrate } from '@verdant/web';
+import { migrate } from '@verdant-web/store';
 import v1Schema from '../generatedClient/schemaVersions/v1.js';
 import v2Schema from '../generatedClient/schemaVersions/v2.js';
 

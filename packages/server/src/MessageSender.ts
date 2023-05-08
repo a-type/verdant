@@ -1,4 +1,4 @@
-import { ServerMessage } from '@verdant/common';
+import { ServerMessage } from '@verdant-web/common';
 
 export interface MessageSender {
 	broadcast(

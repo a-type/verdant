@@ -1,10 +1,10 @@
 ---
-'@verdant/cli': patch
-'@verdant/common': patch
-'@verdant/react': patch
-'@verdant/react-router': patch
-'@verdant/server': patch
-'@verdant/web': patch
+'@verdant-web/cli': patch
+'@verdant-web/common': patch
+'@verdant-web/react': patch
+'@verdant-web/react-router': patch
+'@verdant-web/server': patch
+'@verdant-web/store': patch
 ---
 
 Rename framework to "Verdant"

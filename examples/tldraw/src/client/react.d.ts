@@ -17,7 +17,7 @@ import type {
 	EntityShape,
 	AnyEntity,
 	EntityDestructured,
-} from '@verdant/web';
+} from '@verdant-web/store';
 
 type SkippableFilterConfig<F> = {
 	index: F;

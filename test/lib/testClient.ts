@@ -1,4 +1,4 @@
-import { ReplicaType } from '@verdant/server';
+import { ReplicaType } from '@verdant-web/server';
 import {
 	ClientDescriptor,
 	ClientDescriptorOptions,

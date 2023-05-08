@@ -17,7 +17,7 @@ The server can be run standalone, or plugged into an existing HTTP server. It re
 Create a server like this:
 
 ```ts
-import { Server } from '@verdant/server';
+import { Server } from '@verdant-web/server';
 
 const server = new Server({
 	databaseFile: 'path/to/db.sqlite',

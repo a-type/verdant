@@ -1,4 +1,4 @@
-import { collection, schema } from '@verdant/common';
+import { collection, schema } from '@verdant-web/common';
 
 export const todo = collection({
 	name: 'todo',

@@ -1,4 +1,4 @@
-# @verdant/cli
+# @verdant-web/cli
 
 ## 2.0.0
 

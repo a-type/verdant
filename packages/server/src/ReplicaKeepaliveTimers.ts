@@ -1,4 +1,4 @@
-import { EventSubscriber } from '@verdant/common';
+import { EventSubscriber } from '@verdant-web/common';
 
 /**
  * A set of timers per-replica which are

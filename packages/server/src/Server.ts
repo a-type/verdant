@@ -7,7 +7,7 @@ import {
 	generateId,
 	Operation,
 	ServerMessage,
-} from '@verdant/common';
+} from '@verdant-web/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';

@@ -1,5 +1,5 @@
 {
-	"name": "@verdant/scale-test",
+	"name": "@verdant-web/scale-test",
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
@@ -8,9 +8,9 @@
 		"server": "tsx ./server/index.ts"
 	},
 	"dependencies": {
-		"@verdant/cli": "workspace:*",
-		"@verdant/server": "workspace:*",
-		"@verdant/web": "workspace:*",
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"cors": "^2.8.5",
 		"cuid": "^2.1.8",
 		"express": "^4.18.2",

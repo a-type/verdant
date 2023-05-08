@@ -12,7 +12,7 @@ Below is an example of a basic auth endpoint which gets a session for the reques
 
 ```ts
 import { Request, Response } from 'express';
-import { TokenProvider } from '@verdant/server';
+import { TokenProvider } from '@verdant-web/server';
 
 const tokenProvider = new TokenProvider({
 	// this must be the exact same secret as the one you supplied to Server

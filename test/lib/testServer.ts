@@ -1,8 +1,8 @@
-import { Server, TokenProvider, ReplicaType } from '@verdant/server';
+import { Server, TokenProvider, ReplicaType } from '@verdant-web/server';
 import express from 'express';
 import { createServer } from 'http';
 import * as fs from 'fs/promises';
-import { LocalFileStorage } from '@verdant/server/src/files/FileStorage.js';
+import { LocalFileStorage } from '@verdant-web/server/src/files/FileStorage.js';
 import * as path from 'path';
 
 const SECRET = 'notsecret';

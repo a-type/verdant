@@ -1,5 +1,5 @@
 import { assert } from '@a-type/utils';
-import { EntityFile } from '@verdant/web';
+import { EntityFile } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import { createTestContext } from './lib/createTestContext.js';
 import { createTestFile } from './lib/createTestFile.js';

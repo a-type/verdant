@@ -7,7 +7,7 @@ sidebar_position: 2
 Using your [schema](./schema), you can generate your typed client code using Verdant's CLI.
 
 ```
-> npm i --dev @verdant/cli
+> npm i --dev @verdant-web/cli
 
 > verdant --schema src/stores/todos/schema.ts --output src/stores/todos/client --react
 ```

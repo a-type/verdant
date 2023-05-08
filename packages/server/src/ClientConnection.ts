@@ -1,4 +1,4 @@
-import { ServerMessage } from '@verdant/common';
+import { ServerMessage } from '@verdant-web/common';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WebSocket } from 'ws';
 import { TokenInfo } from './TokenVerifier.js';

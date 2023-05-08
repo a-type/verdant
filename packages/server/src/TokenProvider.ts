@@ -1,4 +1,4 @@
-import { ReplicaType } from '@verdant/common';
+import { ReplicaType } from '@verdant-web/common';
 import jwt from 'jsonwebtoken';
 
 export class TokenProvider {

@@ -1,4 +1,4 @@
-import { createHooks as baseCreateHooks } from '@verdant/react';
+import { createHooks as baseCreateHooks } from '@verdant-web/react';
 import schema from './schema.js';
 
 export function createHooks() {

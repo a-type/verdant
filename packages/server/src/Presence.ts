@@ -1,4 +1,4 @@
-import { UserInfo } from '@verdant/common';
+import { UserInfo } from '@verdant-web/common';
 import EventEmitter from 'events';
 
 /**

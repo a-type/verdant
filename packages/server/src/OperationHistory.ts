@@ -1,4 +1,4 @@
-import { Operation } from '@verdant/common';
+import { Operation } from '@verdant-web/common';
 import { Database } from 'better-sqlite3';
 import { OperationSpec } from './types.js';
 

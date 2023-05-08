@@ -1,4 +1,4 @@
-import { CollectionIndexFilter, StorageSchema } from '@verdant/common';
+import { CollectionIndexFilter, StorageSchema } from '@verdant-web/common';
 import {
 	Query,
 	SyncTransportMode,
@@ -8,7 +8,7 @@ import {
 	ClientWithCollections,
 	EntityFile,
 	Client,
-} from '@verdant/web';
+} from '@verdant-web/store';
 import {
 	createContext,
 	ReactNode,

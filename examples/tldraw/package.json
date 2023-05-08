@@ -1,5 +1,5 @@
 {
-	"name": "@verdant/examples-tldraw",
+	"name": "@verdant-web/examples-tldraw",
 	"type": "module",
 	"version": "0.0.0",
 	"description": "TLDRAW example",
@@ -11,10 +11,10 @@
 		"dev:server": "tsx watch server.ts"
 	},
 	"dependencies": {
-		"@verdant/cli": "workspace:*",
-		"@verdant/react": "workspace:*",
-		"@verdant/server": "workspace:*",
-		"@verdant/web": "workspace:*",
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/react": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"@tldraw/tldraw": "^1.26.2",
 		"@types/express": "^4.17.14",
 		"@types/react": "^18.0.17",

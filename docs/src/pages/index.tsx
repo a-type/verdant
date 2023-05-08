@@ -172,7 +172,7 @@ function HomepageHeader() {
 							{`import {
 	collection,
 	schema
-} from '@verdant/web';
+} from '@verdant-web/store';
 import cuid from 'cuid';
 
 const posts = collection({
@@ -290,7 +290,7 @@ client.undoHistory.undo();
 					</div>
 					<div className={styles.featureStepCode}>
 						<CodeBlock language="typescript" showLineNumbers title="server.ts">
-							{`import { Server } from '@verdant/server';
+							{`import { Server } from '@verdant-web/server';
 
 const server = new Server({
 	databaseFile: 'db.sqlite',
