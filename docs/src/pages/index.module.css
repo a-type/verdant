@@ -222,7 +222,7 @@ strong {
 	width: 100%;
 }
 
-.musing ul {
+.explanation ul {
 	list-style: none;
 	padding: 0;
 	margin: 0;
@@ -232,15 +232,15 @@ strong {
 	margin-bottom: 2rem;
 }
 
-.musing ul > li {
+.explanation ul > li {
 	margin: 0;
 	padding: 0;
 }
 
 summary {
 	cursor: pointer;
-	font-family: Cormorant, serif;
-	font-size: 1.25em;
+	font-family: Lora, serif;
+	font-size: 1em;
 }
 
 summary > span {

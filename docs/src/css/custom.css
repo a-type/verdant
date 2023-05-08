@@ -59,6 +59,23 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'Lora';
+	src: url('/fonts/Lora-VariableFont_wght.ttf') format('truetype-variations');
+	font-weight: 1 999;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Lora';
+	src: url('/fonts/Lora-Italic-VariableFont_wght.ttf')
+		format('truetype-variations');
+	font-weight: 1 999;
+	font-style: italic;
+	font-display: swap;
+}
+
 button,
 a.button {
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -70,4 +87,8 @@ a.button {
 	font-family: Cormorant, serif;
 	font-style: italic;
 	font-size: 1.5em;
+}
+
+a {
+	font-weight: 600;
 }

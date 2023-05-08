@@ -77,7 +77,7 @@ const config = {
 				},
 			],
 			colorMode: {
-				defaultMode: 'dark',
+				defaultMode: 'light',
 			},
 			navbar: {
 				title: 'Verdant',
