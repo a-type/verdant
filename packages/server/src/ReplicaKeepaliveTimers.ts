@@ -1,4 +1,4 @@
-import { EventSubscriber } from '@lo-fi/common';
+import { EventSubscriber } from '@verdant-web/common';
 
 /**
  * A set of timers per-replica which are

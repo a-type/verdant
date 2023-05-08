@@ -1,4 +1,4 @@
-# lo-fi code generator CLI
+# verdant code generator CLI
 
 ## Generate a client from schema
 

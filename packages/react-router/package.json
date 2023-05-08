@@ -1,5 +1,5 @@
 {
-	"name": "@lo-fi/react-router",
+	"name": "@verdant-web/react-router",
 	"version": "0.1.4",
 	"access": "public",
 	"type": "module",

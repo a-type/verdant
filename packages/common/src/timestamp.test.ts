@@ -85,7 +85,7 @@ describe('the hybrid logical clock', () => {
 	// instead of attempting a distributed migration of timestamps, it
 	// will be easier that the new format just acts as always in the
 	// future of the old one. this will only mess with offline clients,
-	// but nobody is using lo-fi but me yet at time of this change (2022-12-19)
+	// but nobody is using verdant but me yet at time of this change (2022-12-19)
 	// which is kind of why I'm doing it now anyway.
 	it('old format always comes before new format', () => {
 		const clock = new HybridLogicalClockTimestampProvider();

@@ -1,13 +1,13 @@
 {
-	"name": "@lo-fi/test",
+	"name": "@verdant-web/test",
 	"private": true,
 	"type": "module",
 	"dependencies": {
 		"@a-type/utils": "^1.0.2",
-		"@lo-fi/cli": "workspace:*",
-		"@lo-fi/common": "workspace:*",
-		"@lo-fi/server": "workspace:*",
-		"@lo-fi/web": "workspace:*",
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/common": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"@types/express": "^4.17.14",
 		"@types/node": "16.11.7",
 		"@types/ws": "^8.5.3",
@@ -19,7 +19,7 @@
 		"ws": "^8.9.0"
 	},
 	"scripts": {
-		"pretest": "lo-fi generate -s ./schema.ts -o ./client -f",
+		"pretest": "verdant generate -s ./schema.ts -o ./client -f",
 		"test": "vitest",
 		"ci:test:integration": "vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts"

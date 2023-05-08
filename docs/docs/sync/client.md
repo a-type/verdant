@@ -18,7 +18,7 @@ const clientDesc = new ClientDescriptor({
 			emoji: '',
 		},
 		defaultProfile: { name: '' },
-		authEndpoint: 'http://localhost:3000/auth/lofi',
+		authEndpoint: 'http://localhost:3000/auth/sync',
 	},
 });
 
@@ -43,7 +43,7 @@ const clientDesc = new ClientDescriptor<Presence, Profile>({
 });
 ```
 
-To start syncing, call `client.sync.start` (where `client` is your instance of Client, i.e. `todos` above) This will connect to your websocket server. It's up to you to add any authentication and authorization to reject unregistered or unsubscribed clients if you want to limit access to sync. lo-fi itself will sync whoever you let connect.
+To start syncing, call `client.sync.start` (where `client` is your instance of Client, i.e. `todos` above) This will connect to your websocket server. It's up to you to add any authentication and authorization to reject unregistered or unsubscribed clients if you want to limit access to sync. Verdant itself will sync whoever you let connect.
 
 If you want to pause sync, call `client.sync.stop` (where `client` is your instance of Client, i.e. `todos` above).
 

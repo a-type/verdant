@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Migrations
 
-Every schema change requires a migration, including the initial one. When you increment your schema version number and run the `lo-fi generate` CLI, it will automatically generate the migration files for you and create a copy of your schema for use in future migrations.
+Every schema change requires a migration, including the initial one. When you increment your schema version number and run the `Verdant generate` CLI, it will automatically generate the migration files for you and create a copy of your schema for use in future migrations.
 
 By default this migration is very minimal and possibly incorrect. It iterates over all document collections and refreshes every item. This is sufficient for applying defaults to any new created fields and updating indexes, but will not be enough if you change the shape of your data in a meaningful way.
 
@@ -13,7 +13,7 @@ You can then edit this migration to include transformation of object shapes to c
 ```ts
 // migrations/v1.ts
 
-import { migrate } from '@lo-fi/web';
+import { migrate } from '@verdant-web/store';
 import v1Schema from '../generatedClient/schemaVersions/v1.js';
 import v2Schema from '../generatedClient/schemaVersions/v2.js';
 
@@ -37,7 +37,7 @@ However, keep in mind that until migration completes, your client will not be av
 
 ## Understanding how migrations are run
 
-Unlike centralized server databases, migrations are not done during a set maintenance period or deploy. Any migration you create could be run at any time on anyone's device! **A new user will run all your migrations before they start using the app, no matter when they find it.** This means if a major version change alters the way lo-fi does migrations, you may need to update _all_ your previous migrations to use the new syntax. I will try to avoid that!
+Unlike centralized server databases, migrations are not done during a set maintenance period or deploy. Any migration you create could be run at any time on anyone's device! **A new user will run all your migrations before they start using the app, no matter when they find it.** This means if a major version change alters the way Verdant does migrations, you may need to update _all_ your previous migrations to use the new syntax. I will try to avoid that!
 
 It's especially important to understand this new mental model for migrations if you make external requests as part of your migration / data initialization process. If you have a migration that's a year old and depends on an API on your server for data, you must not assume that because it's a year old you can safely remove that API endpoint. New users will still call that migration.
 

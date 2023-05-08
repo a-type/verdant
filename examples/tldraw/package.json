@@ -1,20 +1,20 @@
 {
-	"name": "@lo-fi/examples-tldraw",
+	"name": "@verdant-web/examples-tldraw",
 	"type": "module",
 	"version": "0.0.0",
 	"description": "TLDRAW example",
 	"main": "index.js",
 	"scripts": {
-		"generate": "lo-fi generate --schema ./src/schema.ts --output ./src/client --react",
+		"generate": "verdant generate --schema ./src/schema.ts --output ./src/client --react",
 		"dev": "concurrently \"pnpm run dev:app\" \"pnpm run dev:server\"",
 		"dev:app": "vite",
 		"dev:server": "tsx watch server.ts"
 	},
 	"dependencies": {
-		"@lo-fi/cli": "workspace:*",
-		"@lo-fi/react": "workspace:*",
-		"@lo-fi/server": "workspace:*",
-		"@lo-fi/web": "workspace:*",
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/react": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"@tldraw/tldraw": "^1.26.2",
 		"@types/express": "^4.17.14",
 		"@types/react": "^18.0.17",

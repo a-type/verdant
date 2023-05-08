@@ -60,7 +60,7 @@ it(
 		console.log('⭐️ image fetched');
 		const blob = await response.blob();
 		expect(blob.size).toBe(13);
-		expect(blob.type).toBe('text/plain;charset=utf-8');
+		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
 		const text = await blob.text();
 		// basically the file isn't encoded into the form data correctly.
 		// someday maybe I'll get this figured out

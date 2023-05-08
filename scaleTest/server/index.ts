@@ -1,4 +1,4 @@
-import { Server, TokenProvider, ReplicaType } from '@lo-fi/server';
+import { Server, TokenProvider, ReplicaType } from '@verdant-web/server';
 import express from 'express';
 import { createServer } from 'http';
 
@@ -32,7 +32,7 @@ const server = new Server({
 		},
 	},
 	httpServer,
-	// log: (...args) => console.log('[lo-fi]', ...args),
+	// log: (...args) => console.log('[verdant]', ...args),
 });
 
 let activeConnections = 0;

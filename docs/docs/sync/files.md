@@ -10,24 +10,24 @@ When going online, any file data which was unsynced is sent to the the server. I
 
 If you're already online when a local file is created, it will be uploaded ASAP.
 
-Meanwhile, in parallel, the normal lo-fi data sync protocol will synchronize any associated field which references that file. This means that peers may receive data about a file field before the client that created it has finished uploading the file itself, and well before that client can proceed to download it.
+Meanwhile, in parallel, the normal Verdant data sync protocol will synchronize any associated field which references that file. This means that peers may receive data about a file field before the client that created it has finished uploading the file itself, and well before that client can proceed to download it.
 
 For this reason, you should always handle the `.loading === true` case on any EntityFile you use, and probably `.failed === true` as well in case the server has problems.
 
 ## Storing files
 
-You must provide a file storage backend to the server to sync files. This can be the default `LocalFileStorage` backend which is exported from `@lo-fi/server`, or you can implement the `FileStorage` interface yourself to connect to a different file storage service (like S3, etc).
+You must provide a file storage backend to the server to sync files. This can be the default `LocalFileStorage` backend which is exported from `@verdant-web/server`, or you can implement the `FileStorage` interface yourself to connect to a different file storage service (like S3, etc).
 
 If you don't supply a storage backend, syncing files will fail.
 
 ## Exposing a file upload endpoint
 
-If you use the built-in lo-fi server (via calling `server.listen()`) the file endpoint will be created for you.
+If you use the built-in Verdant server (via calling `server.listen()`) the file endpoint will be created for you.
 
-If you integrate the lo-fi server into a custom HTTP server, you must route an endpoint to for files to `server.handleFileRequest`. The endpoint must end in `/files/<file id>` and accept both POST and GET. For example, an Express middleware:
+If you integrate the Verdant server into a custom HTTP server, you must route an endpoint to for files to `server.handleFileRequest`. The endpoint must end in `/files/<file id>` and accept both POST and GET. For example, an Express middleware:
 
 ```ts
-app.use('/lo-fi/files/:fileId', lofiServer.handleFileRequest);
+app.use('/Verdant/files/:fileId', lofiServer.handleFileRequest);
 ```
 
 > TODO: make this friendlier.

@@ -6,28 +6,28 @@
 
 /* You can override the default Infima variables here. */
 :root {
-	--ifm-color-primary: #2e3485;
-	--ifm-color-primary-dark: #292e78;
-	--ifm-color-primary-darker: #2c2771;
-	--ifm-color-primary-darkest: #3a205d;
-	--ifm-color-primary-light: #5f3392;
-	--ifm-color-primary-lighter: #603599;
-	--ifm-color-primary-lightest: #7a3cad;
-	--ifm-footer-background-color: #1b1b1d;
+	--ifm-color-primary: #278a2c;
+	--ifm-color-primary-dark: #236d41;
+	--ifm-color-primary-darker: #1c5c3f;
+	--ifm-color-primary-darkest: #174b2a;
+	--ifm-color-primary-light: #339261;
+	--ifm-color-primary-lighter: #35995a;
+	--ifm-color-primary-lightest: #3cad6b;
+	--ifm-footer-background-color: #1b1d1c;
 	--ifm-code-font-size: 95%;
 	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-	--ifm-color-primary: #a563fc;
-	--ifm-color-primary-dark: #8643f1;
-	--ifm-color-primary-darker: #7735f1;
-	--ifm-color-primary-darkest: #790cd3;
-	--ifm-color-primary-light: #8229d5;
-	--ifm-color-primary-lighter: #a932d8;
-	--ifm-color-primary-lightest: #b04fdd;
-	--ifm-footer-background-color: #a563fc;
+	--ifm-color-primary: #45d164;
+	--ifm-color-primary-dark: #43f1a0;
+	--ifm-color-primary-darker: #35f190;
+	--ifm-color-primary-darkest: #0cd369;
+	--ifm-color-primary-light: #29d593;
+	--ifm-color-primary-lighter: #32d890;
+	--ifm-color-primary-lightest: #4fdd9d;
+	--ifm-footer-background-color: #63fcba;
 	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
@@ -41,4 +41,33 @@
 	height: 100%;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Rampart+One&display=swap');
+@font-face {
+	font-family: 'Cormorant';
+	src: url('/fonts/Cormorant-VariableFont_wght.ttf')
+		format('truetype-variations');
+	font-weight: 1 999;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Cormorant';
+	src: url('/fonts/Cormorant-Italic-VariableFont_wght.ttf')
+		format('truetype-variations');
+	font-weight: 1 999;
+	font-style: italic;
+	font-display: swap;
+}
+
+button,
+a.button {
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+		Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	font-weight: 500;
+}
+
+.navbar__title {
+	font-family: Cormorant, serif;
+	font-style: italic;
+	font-size: 1.5em;
+}

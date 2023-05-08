@@ -7,7 +7,7 @@ import {
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
-import { assert } from '@lo-fi/common';
+import { assert } from '@verdant-web/common';
 
 const context = createTestContext();
 

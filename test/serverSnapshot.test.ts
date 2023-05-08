@@ -1,15 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestClient } from './lib/testClient.js';
 import { startTestServer } from './lib/testServer.js';
-import { waitForPeerCount, waitForQueryResult } from './lib/waits.js';
+import {
+	waitForCondition,
+	waitForPeerCount,
+	waitForQueryResult,
+} from './lib/waits.js';
 import * as fs from 'fs';
 import { createTestFile } from './lib/createTestFile.js';
+import { assert, hashObject } from '@verdant-web/common';
 
 let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
 	: never;
 beforeAll(async () => {
-	server = await startTestServer({ log: false, disableRebasing: true });
+	server = await startTestServer({ log: true, disableRebasing: true });
 });
 
 afterAll(() => {
@@ -41,7 +46,7 @@ it('the server allows retrieving a document snapshot', async () => {
 		server,
 		library,
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 
 	// seed data into library
@@ -91,6 +96,8 @@ it('the server allows retrieving a document snapshot', async () => {
 		})
 		.flush();
 
+	const match = a_apples.getSnapshot() as any;
+
 	// wait for B to get changes, which means they're on the server too
 	await waitForQueryResult(clientB.items.get(a_apples.get('id')), (doc) => {
 		return (
@@ -110,7 +117,6 @@ it('the server allows retrieving a document snapshot', async () => {
 	expect(snapshot).toBeDefined();
 	// should mostly match client-side snapshot of the same data,
 	// except the file has more data.
-	const match = a_apples.getSnapshot() as any;
 	match.image = {
 		id: match.image.id,
 		name: 'test.txt',

@@ -1,4 +1,4 @@
-import { ReplicaType } from '@lo-fi/server';
+import { ReplicaType } from '@verdant-web/server';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { Client, ClientDescriptor } from './client/index.js';
 import { createTestClient } from './lib/testClient.js';

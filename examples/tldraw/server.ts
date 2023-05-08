@@ -1,10 +1,10 @@
 import express from 'express';
-import { ReplicaType, Server, TokenProvider } from '@lo-fi/server';
+import { ReplicaType, Server, TokenProvider } from '@verdant-web/server';
 import { createServer } from 'http';
 import * as path from 'path';
 // @ts-ignore
 import nonce from 'gfynonce';
-import { LocalFileStorage } from '@lo-fi/server/src/files/FileStorage.js';
+import { LocalFileStorage } from '@verdant-web/server/src/files/FileStorage.js';
 
 const PORT = 5050;
 
@@ -81,7 +81,7 @@ app.get('/auth', async (req, res) => {
 	const token = tokenProvider.getToken({
 		libraryId: library,
 		userId: user,
-		syncEndpoint: `http://localhost:${PORT}/lo-fi`,
+		syncEndpoint: `http://localhost:${PORT}/verdant`,
 		// for this example, we're making replicas passive - if someone disconnects and
 		// starts editing history offline, their changes will be dropped on reconnect.
 		type: ReplicaType.PassiveRealtime,
@@ -91,16 +91,16 @@ app.get('/auth', async (req, res) => {
 	});
 });
 
-app.post('/lo-fi', async (req, res) => {
+app.post('/verdant', async (req, res) => {
 	await server.handleRequest(req, res);
 });
-app.get('/lo-fi', async (req, res) => {
+app.get('/verdant', async (req, res) => {
 	await server.handleRequest(req, res);
 });
-app.post('/lo-fi/files/:fileId', async (req, res) => {
+app.post('/verdant/files/:fileId', async (req, res) => {
 	await server.handleFileRequest(req, res);
 });
-app.get('/lo-fi/files/:fileId', async (req, res) => {
+app.get('/verdant/files/:fileId', async (req, res) => {
 	await server.handleFileRequest(req, res);
 });
 

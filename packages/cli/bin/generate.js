@@ -77,7 +77,7 @@ const v = yargs(hideBin(process.argv))
 
 run(v)
 	.then(() => {
-		console.log('✅ Generated lo-fi code');
+		console.log('✅ Generated verdant code');
 		process.exit(0);
 	})
 	.catch((err) => {

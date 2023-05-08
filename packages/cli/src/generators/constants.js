@@ -1,6 +1,6 @@
 export const clientImplementation = `
-import { Storage, StorageDescriptor } from '@lo-fi/web';
-export * from '@lo-fi/web';
+import { Storage, StorageDescriptor } from '@verdant-web/store';
+export * from '@verdant-web/store';
 
 export const Client = Storage;
 export class ClientDescriptor extends StorageDescriptor {
@@ -12,7 +12,7 @@ export class ClientDescriptor extends StorageDescriptor {
 
 export const clientPackage = `
 {
-  "name": "lo-fi-client",
+  "name": "verdant-client",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -31,5 +31,5 @@ export const clientPackage = `
 `;
 
 export const reactImplementation = `
-export { createHooks } from '@lo-fi/react';
+export { createHooks } from '@verdant-web/react';
 `;

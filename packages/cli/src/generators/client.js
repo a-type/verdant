@@ -11,9 +11,9 @@ export function getClientTypings({ collections, schemaPath }) {
 
 	return `
   import type schema from '${schemaPath}';
-  import type { StorageSchema } from '@lo-fi/common';
-  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile, CollectionQueries } from '@lo-fi/web';
-  export * from '@lo-fi/web';
+  import type { StorageSchema } from '@verdant-web/common';
+  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile, CollectionQueries } from '@verdant-web/store';
+  export * from '@verdant-web/store';
   export type Schema = typeof schema;
 
   interface Collection<Document extends ObjectEntity<any, any>, Snapshot, Init, Filter> {

@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # React
 
-lo-fi has React hooks generation. To enable it, pass `--react` to the [CLI](./local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Call it to construct hooks for your lo-fi storage.
+Verdant has React hooks generation. To enable it, pass `--react` to the [CLI](./local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Call it to construct hooks for your Verdant storage.
 
 ```ts
 import { ClientDescriptor, ServerSync } from './client/index.js';
@@ -15,7 +15,7 @@ const clientDesc = new ClientDescriptor({
 	namespace: 'todos',
 	migrations,
 	sync: {
-		authEndpoint: 'https://your.server/auth/lofi',
+		authEndpoint: 'https://your.server/auth/sync',
 		initialPresence: {
 			emoji: '',
 		},
@@ -159,7 +159,7 @@ function App({ libraryId }: { libraryId: string }) {
 				namespace: libraryId,
 				migrations,
 				sync: {
-					authEndpoint: `http://localhost:3001/auth/lofi?library=${libraryId}`,
+					authEndpoint: `http://localhost:3001/auth/sync?library=${libraryId}`,
 					initialPresence: {},
 					// start sync when ready - useful if you want to sync
 					// in this setup. if you don't want to sync, that's fine too!

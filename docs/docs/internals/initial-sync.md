@@ -14,7 +14,7 @@ However, there are a few contingencies to consider which require more robust pro
 
 Suppose replicas A and B are both attempting to sync, for the first time, to a brand new Library 1. A gets there first, so the server receives and copies A's local history into its own database.
 
-When B arrives, what should happen? B and A have entirely separate and theoretically irreconcilable histories. We could _attempt_ to merge them, but lo-fi's assumption is that this could cause more harm than good.
+When B arrives, what should happen? B and A have entirely separate and theoretically irreconcilable histories. We could _attempt_ to merge them, but Verdant's assumption is that this could cause more harm than good.
 
 Instead, the server will ignore B's incoming data and respond with its full storage, instructing B to reset its local state instead.
 

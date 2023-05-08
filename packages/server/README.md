@@ -1,4 +1,4 @@
-# lo-fi server
+# verdant server
 
 This server is designed to sync data from clients. That includes replication between clients and realtime updates, including presence.
 

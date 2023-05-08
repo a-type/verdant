@@ -1,4 +1,4 @@
-# @lo-fi/common
+# @verdant-web/common
 
 ## 1.11.0
 

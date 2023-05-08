@@ -1,4 +1,4 @@
-import { schema, collection } from '@lo-fi/web';
+import { schema, collection } from '@verdant-web/store';
 import cuid from 'cuid';
 
 const item = collection({

@@ -112,7 +112,7 @@ All cached queries are temporarily stored by default, so if you query the same t
 
 ## Querying your indexes
 
-lo-fi generates typings for filters on the indexes you create on your collections. Explore the generated TypeScript definitions to see what your query options are.
+Verdant generates typings for filters on the indexes you create on your collections. Explore the generated TypeScript definitions to see what your query options are.
 
 Indexed fields and compound indexes generate exact and range query filters. Compound indexes generate match filters.
 

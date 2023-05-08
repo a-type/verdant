@@ -1,6 +1,6 @@
 # fly.toml file generated for aglio on 2022-08-27T12:52:19-04:00
 
-app = "lo-fi-scale-test"
+app = "verdant-scale-test"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
@@ -9,7 +9,7 @@ processes = []
 dockerfile = "Dockerfile.scaleTest"
 
 [env]
-HOST = "https://lo-fi-scale-test.fly.dev"
+HOST = "https://verdant-scale-test.fly.dev"
 
 [experimental]
 allowed_public_ports = []

@@ -3,7 +3,7 @@ import {
 	Operation,
 	ReplicaInfo,
 	ReplicaType,
-} from '@lo-fi/common';
+} from '@verdant-web/common';
 
 export interface OperationSpec extends Operation {
 	serverOrder: number;

@@ -1,18 +1,16 @@
-![lo-fi headphones logo](./docs/static/img/logo.png)
+# Verdant 🌿
 
-# lo-fi
+An IndexedDB-powered database and data sync solution for sustainable, human, local-first web apps.
 
-An IndexedDB-powered database and data sync solution for lightweight, local-first web apps.
+## [Read the documentation](https://verdant.dev)
 
 > ## Early software!
 >
-> I'm still rapidly iterating and experimenting with lo-fi in my own projects. Be aware that it's not ready for production usage yet and may change significantly in the near future, or include bugs which can cause data inconsistency!
-
-![a gif of two whiteboards synchronized across windows](./docs/static/gif/tldraw.gif)
+> I'm still rapidly iterating and experimenting with Verdant in my own projects. Be aware that it's not ready for production usage yet and may change significantly in the near future, or include bugs which can cause data inconsistency!
 
 ## What does it do?
 
-lo-fi is an end-to-end storage and sync framework for web apps. Out of the box, it helps you manage everything you need with local data:
+Verdant is an end-to-end storage and sync framework for web apps. Out of the box, it helps you manage everything you need with local data:
 
 - 🏦 Store everything in IndexedDB across sessions
 - 🔎 Query your data using flexible indexes
@@ -36,6 +34,4 @@ It does it all without any of this\*:
 - 🤝 Peer to peer networking
 - 🚄 WASM-compiled databases in your browser
 
-## [Read the documentation](https://lo-fi.gfor.rest)
-
-<sub>\* I'm aware most of these are good! But they also add complexity or fundamental changes in model, and the goal of lo-fi is to be simple and recognizable.</sub>
+<sub>\* I'm aware most of these are good! But they also add complexity or fundamental changes in model, and the goal of Verdant is to be simple and recognizable.</sub>
