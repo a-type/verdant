@@ -66,6 +66,13 @@
 	font-style: italic;
 	margin-left: -2rem;
 }
+@media screen and (max-width: 996px) {
+	.title {
+		font-size: 4rem;
+		margin: auto;
+		margin-left: auto;
+	}
+}
 
 h1 {
 	font-size: 3rem;
