@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 15.0.2
+
+### Patch Changes
+
+- db43f41: Rename framework to "Verdant"
+- Updated dependencies [db43f41]
+  - @verdant-web/common@1.11.1
+  - @verdant-web/store@2.0.2
+
 ## 15.0.1
 
 ### Patch Changes

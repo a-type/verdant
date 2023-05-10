@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.11.1
+
+### Patch Changes
+
+- db43f41: Rename framework to "Verdant"
+
 ## 1.11.0
 
 ### Minor Changes
