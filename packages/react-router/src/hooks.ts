@@ -136,6 +136,11 @@ export function useRouteMatchesForPath(fullPath: string): RouteMatch[] {
 	return matches;
 }
 
+export function useMatchingRoutes(): RouteMatch[] {
+	const fullPath = useLocationPath();
+	return useRouteMatchesForPath(fullPath);
+}
+
 export function useNavigate() {
 	return useCallback(
 		(

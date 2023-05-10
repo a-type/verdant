@@ -10,4 +10,5 @@ export {
 	useMatch,
 	useSearchParams,
 	useOnLocationChange,
+	useMatchingRoutes,
 } from './hooks.js';
