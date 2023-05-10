@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 1.7.9
+
+### Patch Changes
+
+- db43f41: Rename framework to "Verdant"
+- Updated dependencies [db43f41]
+  - @verdant-web/common@1.11.1
+
 ## 1.7.8
 
 ### Patch Changes

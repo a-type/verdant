@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.0.1
+
+### Patch Changes
+
+- db43f41: Rename framework to "Verdant"
+
 ## 2.0.0
 
 ### Major Changes

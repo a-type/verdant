@@ -1,5 +1,12 @@
 # @verdant-web/react-router
 
+## 0.1.5
+
+### Patch Changes
+
+- 53d0c1e: add hook to get currently matching routes
+- db43f41: Rename framework to "Verdant"
+
 ## 0.1.4
 
 ### Patch Changes
