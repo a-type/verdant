@@ -153,7 +153,9 @@ export class PushPullSync
 	}
 
 	dispose = () => {};
-	reconnect(): void {}
+	reconnect(): void {
+		this.heartbeat.start(true);
+	}
 
 	// on a heartbeat, do a sync
 	private onHeartbeat = async () => {
