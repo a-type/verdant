@@ -16,13 +16,18 @@ export class Heartbeat extends EventSubscriber<{
 	constructor({
 		interval = 15 * 1000,
 		deadlineLength = 3 * 1000,
+		restartOnTabFocus = true,
 	}: {
 		interval?: number;
 		deadlineLength?: number;
+		restartOnTabFocus?: boolean;
 	} = {}) {
 		super();
 		this._interval = interval;
 		this.deadlineLength = deadlineLength;
+		if (restartOnTabFocus) {
+			window.addEventListener('pageshow', () => this.start(true));
+		}
 	}
 
 	keepAlive = () => {
