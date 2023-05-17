@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.7.10
+
+### Patch Changes
+
+- c298777: Handle server errors during message processing.
+
 ## 1.7.9
 
 ### Patch Changes

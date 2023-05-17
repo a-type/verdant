@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.0.3
+
+### Patch Changes
+
+- c298777: consistency fix for entity caching
+
 ## 2.0.2
 
 ### Patch Changes

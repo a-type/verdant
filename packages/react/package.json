@@ -29,7 +29,7 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"@verdant-web/store": "^2.0.2",
+		"@verdant-web/store": "^2.0.3",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
