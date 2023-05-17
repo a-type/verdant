@@ -77,11 +77,24 @@ export async function startTestServer({
 		});
 	});
 
+	server.on('error', (err) => {
+		console.error(err);
+	});
+
 	return {
 		port,
 		server,
 		cleanup: async () => {
-			await server.close();
+			try {
+				await server.close();
+			} catch (err) {
+				if (
+					err instanceof Error &&
+					err.message === 'The database connection is not open'
+				) {
+					// ignore
+				}
+			}
 			if (!keepDb) {
 				await fs.unlink(dbFileName);
 			}

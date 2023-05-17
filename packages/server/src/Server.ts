@@ -265,8 +265,15 @@ export class Server extends EventEmitter implements MessageSender {
 						});
 					}));
 
-				for (const message of body.messages) {
-					await this.handleMessage(key, info, message);
+				try {
+					for (const message of body.messages) {
+						await this.handleMessage(key, info, message);
+					}
+				} catch (e) {
+					this.emit('error', e);
+					res.writeHead(500);
+					res.end();
+					return;
 				}
 
 				// update our keepalive timers for presence management

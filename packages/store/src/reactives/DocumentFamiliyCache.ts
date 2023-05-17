@@ -108,6 +108,10 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 	};
 
+	/**
+	 * Insert new baselines for objects in this family.
+	 * Automatically drops operations before the new baseline.
+	 */
 	insertBaselines = (
 		baselines: DocumentBaseline[],
 		{

@@ -127,7 +127,7 @@ export class Entity<
 
 	private _updatedAt: number | null = null;
 
-	protected events = new EventSubscriber<EntityEvents>();
+	protected events;
 
 	protected hasSubscribersToDeepChanges() {
 		return this.events.subscriberCount('changeDeep') > 0;
@@ -204,12 +204,14 @@ export class Entity<
 		fieldSchema,
 		cache,
 		parent,
+		onAllUnsubscribed,
 	}: {
 		oid: ObjectIdentifier;
 		store: StoreTools;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
 		cache: CacheTools;
 		parent?: Entity<any, any>;
+		onAllUnsubscribed?: () => void;
 	}) {
 		this.oid = oid;
 		const { collection, keyPath } = decomposeOid(oid);
@@ -225,6 +227,11 @@ export class Entity<
 		this._deleted = deleted;
 		this._updatedAt = lastTimestamp ? lastTimestamp : null;
 		this.cachedDeepUpdatedAt = null;
+		this.events = new EventSubscriber<EntityEvents>(() => {
+			if (!this.hasSubscribers) {
+				onAllUnsubscribed?.();
+			}
+		});
 
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');

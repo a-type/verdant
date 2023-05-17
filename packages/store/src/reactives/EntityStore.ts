@@ -150,12 +150,12 @@ export class EntityStore {
 				store: this,
 				context: this.context,
 			});
+			this.documentFamilyCaches.set(documentOid, familyCache);
 			await this.resetFamilyCache(familyCache);
 
-			this.unsubscribes.push(
-				familyCache.subscribe('change:*', this.onEntityChange),
-			);
-			this.documentFamilyCaches.set(documentOid, familyCache);
+			// this.unsubscribes.push(
+			// 	familyCache.subscribe('change:*', this.onEntityChange),
+			// );
 
 			// TODO: cleanup cache when all documents are disposed
 		}
@@ -296,19 +296,22 @@ export class EntityStore {
 		});
 	};
 
-	private addBaselinesToCaches = async (
+	private addBaselinesToOpenCaches = async (
 		baselines: DocumentBaseline[],
 		info: { isLocal: boolean },
 	) => {
 		const baselinesByOid = groupBaselinesByRootOid(baselines);
 		const oids = Object.keys(baselinesByOid);
-		const caches = await Promise.all(
-			oids.map((oid) => this.openFamilyCache(oid)),
-		);
-		oids.forEach((oid, i) => {
-			const familyCache = caches[i];
-			if (familyCache) {
-				familyCache.insertBaselines(baselinesByOid[oid], info);
+		oids.forEach((oid) => {
+			const cache = this.documentFamilyCaches.get(oid);
+			if (cache) {
+				this.log(
+					'adding',
+					'baselines to cache',
+					oid,
+					baselinesByOid[oid].length,
+				);
+				cache.insertBaselines(baselinesByOid[oid], info);
 			}
 		});
 	};
@@ -605,7 +608,9 @@ export class EntityStore {
 
 	private handleRebase = (baselines: DocumentBaseline[]) => {
 		this.log('debug', 'Reacting to rebases', baselines.length);
-		this.addBaselinesToCaches(baselines, { isLocal: true });
+		// update any open caches with new baseline. this will automatically
+		// drop operations before the baseline.
+		this.addBaselinesToOpenCaches(baselines, { isLocal: true });
 	};
 
 	private resetStoredDocuments = async () => {
