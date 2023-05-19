@@ -139,6 +139,12 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	 * sent to the server. You can specify the batching time slice, in milliseconds,
 	 */
 	presenceUpdateBatchTimeout?: number;
+	/**
+	 * Experimental: sync messages over a broadcast channel between tabs.
+	 * Fixes tabs not reactively updating to changes when other tabs are open,
+	 * but is not yet thoroughly vetted.
+	 */
+	useBroadcastChannel?: boolean;
 }
 
 export class ServerSync<Profile = any, Presence = any>
@@ -174,6 +180,7 @@ export class ServerSync<Profile = any, Presence = any>
 			pullInterval,
 			presenceUpdateBatchTimeout,
 			defaultProfile,
+			useBroadcastChannel,
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
@@ -220,7 +227,7 @@ export class ServerSync<Profile = any, Presence = any>
 			endpointProvider: this.endpointProvider,
 			log: this.log,
 		});
-		if ('BroadcastChannel' in window) {
+		if (useBroadcastChannel && 'BroadcastChannel' in window) {
 			this.broadcastChannel = new BroadcastChannel('verdant');
 			this.broadcastChannel.addEventListener(
 				'message',
