@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.0.5
+
+### Patch Changes
+
+- c026fbf: Pass useBroadcastChannel to sync options to enable experimental cross-tab sync
+
 ## 2.0.4
 
 ### Patch Changes
