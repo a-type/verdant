@@ -155,6 +155,7 @@ export class ServerSync<Profile = any, Presence = any>
 		baselines: DocumentBaseline[];
 		reset?: boolean;
 	}) => Promise<void>;
+	private broadcastChannel: BroadcastChannel | null = null;
 
 	private meta: Metadata;
 
@@ -219,6 +220,13 @@ export class ServerSync<Profile = any, Presence = any>
 			endpointProvider: this.endpointProvider,
 			log: this.log,
 		});
+		if ('BroadcastChannel' in window) {
+			this.broadcastChannel = new BroadcastChannel('verdant');
+			this.broadcastChannel.addEventListener(
+				'message',
+				this.handleBroadcastChannelMessage,
+			);
+		}
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
 		} else {
@@ -274,6 +282,12 @@ export class ServerSync<Profile = any, Presence = any>
 		);
 	}
 
+	private handleBroadcastChannelMessage = (event: MessageEvent) => {
+		if (event.data.type === 'sync') {
+			this.handleMessage(event.data.message);
+		}
+	};
+
 	private handleMessage = async (message: ServerMessage) => {
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
@@ -317,6 +331,11 @@ export class ServerSync<Profile = any, Presence = any>
 			case 'server-ack':
 				await this.meta.updateLastSynced(message.timestamp);
 		}
+
+		this.broadcastChannel?.postMessage({
+			type: 'sync',
+			message,
+		});
 
 		// update presence if necessary
 		this.presence[HANDLE_MESSAGE](await this.meta.localReplica.get(), message);

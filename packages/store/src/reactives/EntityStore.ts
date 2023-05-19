@@ -34,14 +34,8 @@ export interface OperationBatch {
 	discard: () => void;
 }
 
-type BroadcastChannelSyncEvent = {
-	type: 'wrote-data';
-	collectionsChanged: string[];
-};
-
 export class EntityStore {
 	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
-	private broadcastChannel: BroadcastChannel | null = null;
 
 	public meta;
 	private operationBatcher;
@@ -97,32 +91,11 @@ export class EntityStore {
 			userData: { undoable: true },
 		});
 		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
-		if ('BroadcastChannel' in window) {
-			this.broadcastChannel = new BroadcastChannel('verdant');
-			this.setupCrossTabSync();
-		}
 	}
 
 	setContext = (context: Context) => {
 		this.context = context;
 	};
-
-	private setupCrossTabSync() {
-		// pretty coarse-grained for now... if another tab has written to
-		// idb, refresh everything. If we write to idb, send out a message.
-		// this is ok because idb is in sync between all open tabs, so the
-		// data should already be accessible to us.
-		this.broadcastChannel?.addEventListener('message', (event) => {
-			const data = event.data as BroadcastChannelSyncEvent;
-			if (data.type === 'wrote-data') {
-				this.refreshAllCaches();
-				this.context.entityEvents.emit(
-					'collectionsChanged',
-					data.collectionsChanged,
-				);
-			}
-		});
-	}
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
 		const { collection } = decomposeOid(oid);
@@ -435,11 +408,6 @@ export class EntityStore {
 		);
 		this.context.log('changes to collections', affectedCollections);
 		this.context.entityEvents.emit('collectionsChanged', affectedCollections);
-
-		this.broadcastChannel?.postMessage({
-			type: 'wrote-data',
-			affectedCollections: affectedCollections,
-		});
 	};
 
 	addLocalOperations = async (operations: Operation[]) => {
