@@ -17,6 +17,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	removeOidsFromAllSubObjects,
+	StorageCollectionSchema,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
@@ -33,8 +34,14 @@ export interface OperationBatch {
 	discard: () => void;
 }
 
+type BroadcastChannelSyncEvent = {
+	type: 'wrote-data';
+	collectionsChanged: string[];
+};
+
 export class EntityStore {
 	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
+	private broadcastChannel: BroadcastChannel | null = null;
 
 	public meta;
 	private operationBatcher;
@@ -90,11 +97,32 @@ export class EntityStore {
 			userData: { undoable: true },
 		});
 		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
+		if ('BroadcastChannel' in window) {
+			this.broadcastChannel = new BroadcastChannel('verdant');
+			this.setupCrossTabSync();
+		}
 	}
 
 	setContext = (context: Context) => {
 		this.context = context;
 	};
+
+	private setupCrossTabSync() {
+		// pretty coarse-grained for now... if another tab has written to
+		// idb, refresh everything. If we write to idb, send out a message.
+		// this is ok because idb is in sync between all open tabs, so the
+		// data should already be accessible to us.
+		this.broadcastChannel?.addEventListener('message', (event) => {
+			const data = event.data as BroadcastChannelSyncEvent;
+			if (data.type === 'wrote-data') {
+				this.refreshAllCaches();
+				this.context.entityEvents.emit(
+					'collectionsChanged',
+					data.collectionsChanged,
+				);
+			}
+		});
+	}
 
 	private getDocumentSchema = (oid: ObjectIdentifier) => {
 		const { collection } = decomposeOid(oid);
@@ -108,7 +136,7 @@ export class EntityStore {
 		} as const;
 	};
 
-	private resetFamilyCache = async (familyCache: DocumentFamilyCache) => {
+	private refreshFamilyCache = async (familyCache: DocumentFamilyCache) => {
 		// avoid writing to disposed db
 		if (this._disposed) return;
 
@@ -151,7 +179,7 @@ export class EntityStore {
 				context: this.context,
 			});
 			this.documentFamilyCaches.set(documentOid, familyCache);
-			await this.resetFamilyCache(familyCache);
+			await this.refreshFamilyCache(familyCache);
 
 			// this.unsubscribes.push(
 			// 	familyCache.subscribe('change:*', this.onEntityChange),
@@ -391,7 +419,7 @@ export class EntityStore {
 		await this.meta.insertRemoteOperations(operations);
 
 		if (reset) {
-			await this.resetAllCaches();
+			await this.refreshAllCaches();
 		}
 
 		// recompute all affected documents for querying
@@ -400,14 +428,18 @@ export class EntityStore {
 		}
 
 		// notify active queries
-		const affectedCollections = new Set<string>(
-			allDocumentOids.map((oid) => decomposeOid(oid).collection),
+		const affectedCollections = Array.from(
+			new Set<string>(
+				allDocumentOids.map((oid) => decomposeOid(oid).collection),
+			),
 		);
 		this.context.log('changes to collections', affectedCollections);
-		this.context.entityEvents.emit(
-			'collectionsChanged',
-			Array.from(affectedCollections),
-		);
+		this.context.entityEvents.emit('collectionsChanged', affectedCollections);
+
+		this.broadcastChannel?.postMessage({
+			type: 'wrote-data',
+			affectedCollections: affectedCollections,
+		});
 	};
 
 	addLocalOperations = async (operations: Operation[]) => {
@@ -588,7 +620,7 @@ export class EntityStore {
 	reset = async () => {
 		this.context.log('warn', 'Resetting local database');
 		await this.resetStoredDocuments();
-		await this.resetAllCaches();
+		await this.refreshAllCaches();
 		// this.context.entityEvents.emit(
 		// 	'collectionsChanged',
 		// 	Object.keys(this.schema.collections),
@@ -624,9 +656,9 @@ export class EntityStore {
 		}
 	};
 
-	private resetAllCaches = async () => {
+	private refreshAllCaches = async () => {
 		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.resetFamilyCache(cache);
+			await this.refreshFamilyCache(cache);
 		}
 	};
 }
