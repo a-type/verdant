@@ -2,4 +2,4 @@
 '@verdant-web/store': patch
 ---
 
-Notify other tabs of sync changes
+Pass useBroadcastChannel to sync options to enable experimental cross-tab sync
