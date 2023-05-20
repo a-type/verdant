@@ -1,5 +1,15 @@
 # @lo-fi/web
 
+## 2.1.0
+
+### Minor Changes
+
+- 9c9a288: Include own replicas in sync auto-upgrade logic
+
+### Patch Changes
+
+- a1278d9: New event on sync for active syncing state - subscribe to know when potentially long-running sync is taking place
+
 ## 2.0.5
 
 ### Patch Changes
