@@ -154,7 +154,9 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 }
 
 export class ServerSync<Profile = any, Presence = any>
-	extends EventSubscriber<SyncEvents>
+	extends EventSubscriber<
+		SyncEvents & { syncingChange: (syncing: boolean) => void }
+	>
 	implements Sync
 {
 	private webSocketSync: WebSocketSync;
@@ -168,6 +170,7 @@ export class ServerSync<Profile = any, Presence = any>
 		reset?: boolean;
 	}) => Promise<void>;
 	private broadcastChannel: BroadcastChannel | null = null;
+	private _activelySyncing = false;
 
 	private meta: Metadata;
 
@@ -299,6 +302,10 @@ export class ServerSync<Profile = any, Presence = any>
 		);
 	}
 
+	get syncing() {
+		return this._activelySyncing;
+	}
+
 	private handleBroadcastChannelMessage = (event: MessageEvent) => {
 		if (event.data.type === 'sync') {
 			this.handleMessage(event.data.message);
@@ -328,6 +335,8 @@ export class ServerSync<Profile = any, Presence = any>
 				await this.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
+				this._activelySyncing = true;
+				this.emit('syncingChange', true);
 				await this.onData({
 					operations: message.operations,
 					baselines: message.baselines,
@@ -339,6 +348,8 @@ export class ServerSync<Profile = any, Presence = any>
 				}
 
 				await this.meta.updateLastSynced(message.ackedTimestamp);
+				this._activelySyncing = false;
+				this.emit('syncingChange', false);
 				break;
 			case 'need-since':
 				this.activeSync.send(
