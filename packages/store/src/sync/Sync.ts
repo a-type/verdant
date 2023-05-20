@@ -120,13 +120,19 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	 * HTTP push/pull to sync changes. If another user joins, both users will
 	 * be upgraded to websockets.
 	 *
+	 * Provide `peers-only` to only automatically use websockets if other
+	 * users connect, but not if another device for the current user connects.
+	 * By default, automatic transport selection will upgrade to websockets if
+	 * another device from the current user connects, but if realtime sync is
+	 * not necessary for such cases, you can save bandwidth by disabling this.
+	 *
 	 * Turning off this feature allows you more control over the transport
 	 * which can be useful for low-power devices or to save server traffic.
 	 * To modify transport modes manually, utilize `client.sync.setMode`.
 	 * The built-in behavior is essentially switching modes based on
 	 * the number of peers detected by client.sync.presence.
 	 */
-	automaticTransportSelection?: boolean;
+	automaticTransportSelection?: boolean | 'peers-only';
 	initialTransport?: SyncTransportMode;
 	autoStart?: boolean;
 	/**
@@ -250,30 +256,34 @@ export class ServerSync<Profile = any, Presence = any>
 		this.pushPullSync.subscribe('message', this.handleMessage);
 		this.pushPullSync.subscribe('onlineChange', this.handleOnlineChange);
 
-		if (automaticTransportSelection) {
+		if (automaticTransportSelection && this.canDoRealtime) {
 			// automatically shift between transport modes depending
 			// on whether any peers are present
-			let switchoverTimeout: NodeJS.Timer;
-			this.presence.subscribe('peersChanged', (peers) => {
+			const decideIfUpgrade = () => {
 				if (switchoverTimeout) {
 					clearTimeout(switchoverTimeout);
 				}
-				if (Object.keys(peers).length > 0) {
-					// only upgrade if token allows it
-					if (this.canDoRealtime) {
-						if (this.mode === 'pull') {
-							this.setMode('realtime');
-						}
-					}
-				} else if (this.mode === 'realtime') {
-					// wait 1 second then switch to pull mode if still emtpy
+				const hasPeers = Object.keys(this.presence.peers).length > 0;
+				const shouldUpgrade =
+					hasPeers ||
+					(automaticTransportSelection !== 'peers-only' &&
+						this.presence.selfReplicaIds.size > 1);
+				if (shouldUpgrade && this.mode === 'pull') {
+					this.setMode('realtime');
+				} else if (!shouldUpgrade && this.mode === 'realtime') {
+					// wait 1 second then switch to pull mode if still empty
 					switchoverTimeout = setTimeout(() => {
 						if (Object.keys(this.presence.peers).length === 0) {
 							this.setMode('pull');
 						}
 					}, 1000);
 				}
-			});
+			};
+			let switchoverTimeout: NodeJS.Timer;
+			this.presence.subscribe('peersChanged', decideIfUpgrade);
+			if (automaticTransportSelection !== 'peers-only') {
+				this.presence.subscribe('selfChanged', decideIfUpgrade);
+			}
 		}
 
 		if (autoStart) {

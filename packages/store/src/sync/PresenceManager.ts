@@ -21,6 +21,8 @@ export class PresenceManager<
 }> {
 	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
 	private _self = { profile: {} } as UserInfo<Profile, Presence>;
+	// keep track of own replica IDs - applications may care if we're "alone" but with multiple devices.
+	private _selfReplicaIds = new Set<string>();
 	private _peerIds = new Array<string>();
 	private _updateBatcher;
 	private _updateBatch: Batch<Partial<Presence>>;
@@ -41,6 +43,10 @@ export class PresenceManager<
 		const everyone = { ...this._peers };
 		everyone[this.self.id] = this.self;
 		return everyone;
+	}
+
+	get selfReplicaIds() {
+		return this._selfReplicaIds;
 	}
 
 	constructor({
@@ -80,6 +86,7 @@ export class PresenceManager<
 	) => {
 		return (
 			localReplicaInfo.id === userInfo.replicaId ||
+			this._selfReplicaIds.has(userInfo.replicaId) ||
 			this._self.id === userInfo.id
 		);
 	};
@@ -94,6 +101,7 @@ export class PresenceManager<
 		if (message.type === 'presence-changed') {
 			if (this.isSelf(localReplicaInfo, message.userInfo)) {
 				this._self = message.userInfo;
+				this._selfReplicaIds.add(message.userInfo.replicaId);
 				this.emit('selfChanged', message.userInfo);
 			} else {
 				peerIdsSet.add(message.userInfo.id);
@@ -109,6 +117,7 @@ export class PresenceManager<
 			for (const [id, userInfo] of Object.entries(message.peerPresence)) {
 				if (this.isSelf(localReplicaInfo, userInfo)) {
 					this._self = userInfo;
+					this._selfReplicaIds.add(userInfo.replicaId);
 					this.emit('selfChanged', userInfo);
 				} else {
 					peersChanged = true;
@@ -119,6 +128,7 @@ export class PresenceManager<
 			}
 		} else if (message.type === 'presence-offline') {
 			peerIdsSet.delete(message.userId);
+			this._selfReplicaIds.delete(message.replicaId);
 			const lastPresence = this._peers[message.userId];
 			delete this._peers[message.userId];
 			peersChanged = true;
