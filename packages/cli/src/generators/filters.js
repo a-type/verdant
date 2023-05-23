@@ -83,7 +83,7 @@ export interface ${rangeName} {
 `,
 		},
 	];
-	if (fieldType === 'string') {
+	if (fieldType === 'string' || fieldType === 'string[]') {
 		filters.push({
 			name: `${pascalCase(collectionName)}${pascalCase(name)}StartsWithFilter`,
 			typing: `
