@@ -188,7 +188,7 @@ export function createHooks<Presence = any, Profile = any>(
 				const unsubs: (() => void)[] = [];
 				unsubs.push(
 					storage.sync.presence.subscribe('peerChanged', (id, user) => {
-						if (query(user)) {
+						if (user && query(user)) {
 							callback();
 						}
 					}),
@@ -219,7 +219,7 @@ export function createHooks<Presence = any, Profile = any>(
 				if (options?.includeSelf) {
 					peers.push(storage.sync.presence.self);
 				}
-				return peers.filter(query);
+				return peers.filter((p) => !!p).filter(query);
 			},
 			() => [] as UserInfo<any, any>[],
 			(peers) => peers,
