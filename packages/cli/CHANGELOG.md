@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.0.2
+
+### Patch Changes
+
+- 95ee4e8: Fix string[] indexes not having a startsWith filter type
+
 ## 2.0.1
 
 ### Patch Changes
