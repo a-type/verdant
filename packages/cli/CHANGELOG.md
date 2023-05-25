@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.0.3
+
+### Patch Changes
+
+- b044e75: Fix bug with presence hook, typing on mutation hooks
+
 ## 2.0.2
 
 ### Patch Changes
