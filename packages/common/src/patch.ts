@@ -2,7 +2,7 @@
  * High-level patch creation for use with complex nested objects.
  */
 
-import { createRef, createSubOid, KeyPath, ObjectIdentifier } from './oids.js';
+import { createRef, createSubOid, ObjectIdentifier } from './oids.js';
 import {
 	diffToPatches,
 	initialToPatches,
@@ -22,18 +22,9 @@ export class PatchCreator {
 	createDiff = (
 		from: any,
 		to: any,
-		keyPath: KeyPath,
 		options: { mergeUnknownObjects?: boolean; defaultUndefined?: boolean } = {},
 	) => {
-		return diffToPatches(
-			from,
-			to,
-			this.getNow,
-			keyPath,
-			this.createSubId,
-			[],
-			options,
-		);
+		return diffToPatches(from, to, this.getNow, this.createSubId, [], options);
 	};
 
 	createInitialize = (obj: any, oid: ObjectIdentifier) => {
@@ -44,7 +35,6 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		key: PropertyName,
 		value: any,
-		keyPath: KeyPath,
 	): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
@@ -61,7 +51,7 @@ export class PatchCreator {
 				},
 			];
 		} else {
-			const itemOid = createSubOid(oid, key, this.createSubId);
+			const itemOid = createSubOid(oid, this.createSubId);
 			return [
 				// since we're setting a complex nested object, we can initialize it wholesale.
 				// no diffing to do.
@@ -106,7 +96,7 @@ export class PatchCreator {
 				},
 			];
 		} else {
-			const itemOid = createSubOid(oid, 0, this.createSubId);
+			const itemOid = createSubOid(oid, this.createSubId);
 			return [
 				...initialToPatches(value, itemOid, this.getNow),
 				{
@@ -165,7 +155,7 @@ export class PatchCreator {
 				},
 			];
 		} else {
-			const itemOid = createSubOid(oid, index, this.createSubId);
+			const itemOid = createSubOid(oid, this.createSubId);
 			return [
 				...initialToPatches(value, itemOid, this.getNow),
 				{

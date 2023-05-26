@@ -50,71 +50,69 @@ describe('normalizing an object', () => {
 				{
 					foo: {
 						'@@type': 'ref',
-						id: 'test/a.foo:0',
+						id: 'test/a:0',
 					},
 					qux: {
 						'@@type': 'ref',
-						id: 'test/a.qux:2',
+						id: 'test/a:2',
 					},
 				},
 				'test/a',
 			),
 		);
-		expect(result.get('test/a.foo:0')).toEqual(
+		expect(result.get('test/a:0')).toEqual(
 			assignOid(
 				{
 					bar: 1,
 					baz: {
 						'@@type': 'ref',
-						id: 'test/a.foo.baz:1',
+						id: 'test/a:1',
 					},
 				},
-				'test/a.foo:0',
+				'test/a:0',
 			),
 		);
-		expect(result.get('test/a.foo.baz:1')).toEqual(
-			assignOid([2, 3], 'test/a.foo.baz:1'),
-		);
-		expect(result.get('test/a.qux:2')).toEqual(
+		expect(result.get('test/a:1')).toEqual(assignOid([2, 3], 'test/a:1'));
+		expect(result.get('test/a:2')).toEqual(
 			assignOid(
 				[
 					{
 						'@@type': 'ref',
-						id: 'test/a.qux.#:3',
+						id: 'test/a:3',
 					},
 					{
 						'@@type': 'ref',
-						id: 'test/a.qux.#:4',
+						id: 'test/a:4',
 					},
 				],
-				'test/a.qux:2',
+				'test/a:2',
 			),
 		);
-		expect(result.get('test/a.qux.#:3')).toEqual(
+		expect(result.get('test/a:3')).toEqual(
 			assignOid(
 				{
 					corge: true,
 				},
-				'test/a.qux.#:3',
+				'test/a:3',
 			),
 		);
-		expect(result.get('test/a.qux.#:4')).toEqual(
+		expect(result.get('test/a:4')).toEqual(
 			assignOid(
 				{
 					grault: {
 						'@@type': 'ref',
-						id: 'test/a.qux.#.grault:5',
+						id: 'test/a:5',
 					},
 				},
-				'test/a.qux.#:4',
+				'test/a:4',
 			),
 		);
-		expect(result.get('test/a.qux.#.grault:5')).toEqual(
+		expect(result.get('test/a:5')).toEqual(
 			assignOid(
 				{
 					garply: 4,
 				},
-				'test/a.qux.#.grault:5',
+				'test/a:5',
 			),
 		);
 	});
@@ -144,17 +142,17 @@ describe('normalizing an object', () => {
 				{
 					foo: {
 						'@@type': 'ref',
-						id: 'test/a.foo:0',
+						id: 'test/a:0',
 					},
 					qux: {
 						'@@type': 'ref',
-						id: 'test/a.qux:1',
+						id: 'test/a:1',
 					},
 				},
 				'test/a',
 			),
 		);
-		expect(result.get('test/a.foo:0')).toEqual(
+		expect(result.get('test/a:0')).toEqual(
 			assignOid(
 				{
 					bar: 1,
@@ -163,10 +161,10 @@ describe('normalizing an object', () => {
 						id: 'abcd123',
 					},
 				},
-				'test/a.foo:0',
+				'test/a:0',
 			),
 		);
-		expect(result.get('test/a.qux:1')).toEqual(
+		expect(result.get('test/a:1')).toEqual(
 			assignOid(
 				[
 					{
@@ -178,7 +176,7 @@ describe('normalizing an object', () => {
 						id: 'ijkl789',
 					},
 				],
-				'test/a.qux:2',
+				'test/a:2',
 			),
 		);
 	});
@@ -216,17 +214,36 @@ describe('normalizing the first level of an object', () => {
 			{
 			  "foo": {
 			    "@@type": "ref",
-			    "id": "test/a.foo:0",
+			    "id": "test/a:0",
 			  },
 			  "qux": {
 			    "@@type": "ref",
-			    "id": "test/a.qux:2",
+			    "id": "test/a:2",
 			  },
 			}
 		`);
-		expect(result.get('test/a:0')).toMatchInlineSnapshot('undefined');
+		expect(result.get('test/a:0')).toMatchInlineSnapshot(`
+			{
+			  "bar": 1,
+			  "baz": [
+			    2,
+			    3,
+			  ],
+			}
+		`);
 		expect(result.get('test/a:1')).toBeUndefined();
-		expect(result.get('test/a:2')).toMatchInlineSnapshot('undefined');
+		expect(result.get('test/a:2')).toMatchInlineSnapshot(`
+			[
+			  {
+			    "corge": true,
+			  },
+			  {
+			    "grault": {
+			      "garply": 4,
+			    },
+			  },
+			]
+		`);
 		expect(result.get('test/a:3')).toBeUndefined();
 		expect(result.get('test/a:4')).toBeUndefined();
 		expect(result.get('test/a:5')).toBeUndefined();
@@ -288,7 +305,7 @@ describe('assigning OIDs as properties', () => {
 			{
 			  "@@id": "test/a",
 			  "foo": {
-			    "@@id": "test/a.foo:0",
+			    "@@id": "test/a:0",
 			    "bar": 1,
 			    "baz": [
 			      2,
@@ -297,13 +314,13 @@ describe('assigning OIDs as properties', () => {
 			  },
 			  "qux": [
 			    {
-			      "@@id": "test/a.qux.#:3",
+			      "@@id": "test/a:3",
 			      "corge": true,
 			    },
 			    {
-			      "@@id": "test/a.qux.#:4",
+			      "@@id": "test/a:4",
 			      "grault": {
-			        "@@id": "test/a.qux.#.grault:5",
+			        "@@id": "test/a:5",
 			        "garply": 4,
 			      },
 			    },
@@ -311,7 +328,7 @@ describe('assigning OIDs as properties', () => {
 			}
 		`);
 		// extra check needed for array since it doesn't serialize in the snapshot
-		expect(maybeGetOidProperty(initial.qux)).toBe('test/a.qux:2');
+		expect(maybeGetOidProperty(initial.qux)).toBe('test/a:2');
 	});
 
 	it('should transfer assigned OID properties to the memory system', () => {
@@ -321,7 +338,7 @@ describe('assigning OIDs as properties', () => {
 					{
 						bar: 1,
 					},
-					'test/a.foo:1',
+					'test/a:1',
 				),
 				qux: assignOidProperty(
 					[
@@ -329,7 +346,7 @@ describe('assigning OIDs as properties', () => {
 							{
 								corge: true,
 							},
-							'test/a.qux.#:2',
+							'test/a:2',
 						),
 						assignOidProperty(
 							{
@@ -337,13 +354,13 @@ describe('assigning OIDs as properties', () => {
 									{
 										garply: 4,
 									},
-									'test/a.qux.#.grault:3',
+									'test/a:3',
 								),
 							},
-							'test/a.qux.#:4',
+							'test/a:4',
 						),
 					],
-					'test/a.qux:2',
+					'test/a:2',
 				),
 			},
 			'test/a',
@@ -352,28 +369,22 @@ describe('assigning OIDs as properties', () => {
 		removeOidPropertiesFromAllSubObjects(initial);
 
 		expect(getOid(initial)).toEqual('test/a');
-		expect(getOid(initial.foo)).toEqual('test/a.foo:1');
-		expect(getOid(initial.qux)).toEqual('test/a.qux:2');
-		expect(getOid(initial.qux[0])).toEqual('test/a.qux.#:2');
-		expect(getOid(initial.qux[1])).toEqual('test/a.qux.#:4');
-		expect(getOid(initial.qux[1].grault)).toEqual('test/a.qux.#.grault:3');
+		expect(getOid(initial.foo)).toEqual('test/a:1');
+		expect(getOid(initial.qux)).toEqual('test/a:2');
+		expect(getOid(initial.qux[0])).toEqual('test/a:2');
+		expect(getOid(initial.qux[1])).toEqual('test/a:4');
+		expect(getOid(initial.qux[1].grault)).toEqual('test/a:3');
 	});
 });
 
 it('should handle special characters in document id or collection', () => {
 	expect(
 		decomposeOid(
-			createOid(
-				'test.teesssst/asdf::',
-				'foo/bar (.) : huh:',
-				['baz?.quoo:/', 'qux'],
-				'corge',
-			),
+			createOid('test.teesssst/asdf::', 'foo/bar (.) : huh:', 'corge'),
 		),
 	).toEqual({
 		collection: 'test.teesssst/asdf::',
 		id: 'foo/bar (.) : huh:',
-		keyPath: ['baz?.quoo:/', 'qux'],
 		subId: 'corge',
 	});
 });

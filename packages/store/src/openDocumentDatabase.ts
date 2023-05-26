@@ -153,7 +153,7 @@ export async function openDocumentDatabase({
 					const readStore = documentReadTransaction.objectStore(collection);
 					const keys = await getAllKeys(readStore);
 					// map the keys to OIDs
-					const oids = keys.map((key) => createOid(collection, `${key}`, []));
+					const oids = keys.map((key) => createOid(collection, `${key}`));
 					oids.push(
 						...engine.newOids.filter((oid) => {
 							return decomposeOid(oid).collection === collection;
@@ -338,7 +338,7 @@ function getMigrationMutations({
 				addFieldDefaults(migration.newSchema.collections[collectionName], doc);
 				const primaryKey =
 					doc[migration.newSchema.collections[collectionName].primaryKey];
-				const oid = createOid(collectionName, primaryKey, []);
+				const oid = createOid(collectionName, primaryKey);
 				newOids.push(oid);
 				await meta.insertLocalOperation(
 					initialToPatches(doc, oid, getMigrationNow),
@@ -346,7 +346,7 @@ function getMigrationMutations({
 				return doc;
 			},
 			delete: (id: string) => {
-				const oid = createOid(collectionName, id, []);
+				const oid = createOid(collectionName, id);
 				return meta.insertLocalOperation([
 					{
 						oid,
@@ -379,7 +379,7 @@ function getMigrationEngine({
 	const queries = migration.oldCollections.reduce((acc, collectionName) => {
 		acc[collectionName] = {
 			get: async (id: string) => {
-				const oid = createOid(collectionName, id, []);
+				const oid = createOid(collectionName, id);
 				const doc = await meta.getDocumentSnapshot(oid);
 				removeOidsFromAllSubObjects(doc);
 				return doc;
@@ -470,7 +470,6 @@ function getMigrationEngine({
 							original,
 							newValue,
 							getMigrationNow,
-							[],
 							undefined,
 							[],
 							{

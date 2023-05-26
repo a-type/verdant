@@ -28,7 +28,7 @@ describe('creating diff patch operations', () => {
 			assignOid(from, 'test/a');
 			const to = { foo: 'bar', baz: 'pop' };
 			assignOid(to, 'test/a');
-			const ops = diffToPatches(from, to, createClock(), []);
+			const ops = diffToPatches(from, to, createClock());
 			expect(ops).toMatchInlineSnapshot(`
 				[
 				  {
@@ -70,7 +70,7 @@ describe('creating diff patch operations', () => {
 				},
 				'test/a',
 			);
-			const patches = diffToPatches(from, to, createClock(), []);
+			const patches = diffToPatches(from, to, createClock());
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -118,7 +118,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:1');
-			const patches = diffToPatches(from, to, createClock(), []);
+			const patches = diffToPatches(from, to, createClock());
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -166,7 +166,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock(), []);
+			const patches = diffToPatches(from, to, createClock());
 			expect(patches).toEqual([]);
 		});
 		it('patches sub-objects with same identity', () => {
@@ -182,7 +182,7 @@ describe('creating diff patch operations', () => {
 			};
 			assignOid(to, 'test/a');
 			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock(), []);
+			const patches = diffToPatches(from, to, createClock());
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -208,18 +208,10 @@ describe('creating diff patch operations', () => {
 				foo: 'bip',
 			};
 			assignOid(to, 'test/a');
-			const patches = diffToPatches(
-				from,
-				to,
-				createClock(),
-				[],
-				undefined,
-				[],
-				{
-					defaultUndefined: true,
-					mergeUnknownObjects: true,
-				},
-			);
+			const patches = diffToPatches(from, to, createClock(), undefined, [], {
+				defaultUndefined: true,
+				mergeUnknownObjects: true,
+			});
 			expect(patches).toMatchInlineSnapshot(`
 				[
 				  {
@@ -303,7 +295,7 @@ describe('creating diff patch operations', () => {
 		assignOid(to.baz, 'test/a:3');
 		assignOid(to.baz[0], 'test/a:4');
 		assignOid(to.baz[1], 'test/a:5');
-		expect(diffToPatches(from, to, createClock(), [])).toMatchInlineSnapshot(`
+		expect(diffToPatches(from, to, createClock())).toMatchInlineSnapshot(`
 			[
 			  {
 			    "data": {
@@ -400,7 +392,7 @@ describe('creating diff patch operations', () => {
 			],
 		};
 		expect(
-			diffToPatches(from, to, createClock(), [], createClock(5), [], {
+			diffToPatches(from, to, createClock(), createClock(5), [], {
 				mergeUnknownObjects: true,
 			}),
 		).toMatchInlineSnapshot(`
@@ -411,7 +403,7 @@ describe('creating diff patch operations', () => {
 			      "index": 2,
 			      "op": "list-delete",
 			    },
-			    "oid": "test/a.foo.bar:1",
+			    "oid": "test/a:1",
 			    "timestamp": "0",
 			  },
 			  {
@@ -421,7 +413,7 @@ describe('creating diff patch operations', () => {
 			        0,
 			      ],
 			    },
-			    "oid": "test/a.foo.bop:5",
+			    "oid": "test/a:5",
 			    "timestamp": "1",
 			  },
 			  {
@@ -430,10 +422,10 @@ describe('creating diff patch operations', () => {
 			      "op": "set",
 			      "value": {
 			        "@@type": "ref",
-			        "id": "test/a.foo.bop:5",
+			        "id": "test/a:5",
 			      },
 			    },
-			    "oid": "test/a.foo:0",
+			    "oid": "test/a:0",
 			    "timestamp": "2",
 			  },
 			  {
@@ -442,7 +434,7 @@ describe('creating diff patch operations', () => {
 			      "op": "set",
 			      "value": false,
 			    },
-			    "oid": "test/a.baz.#:3",
+			    "oid": "test/a:3",
 			    "timestamp": "3",
 			  },
 			  {
@@ -452,7 +444,7 @@ describe('creating diff patch operations', () => {
 			        "corge": false,
 			      },
 			    },
-			    "oid": "test/a.baz.#:6",
+			    "oid": "test/a:6",
 			    "timestamp": "4",
 			  },
 			  {
@@ -461,10 +453,10 @@ describe('creating diff patch operations', () => {
 			      "op": "set",
 			      "value": {
 			        "@@type": "ref",
-			        "id": "test/a.baz.#:6",
+			        "id": "test/a:6",
 			      },
 			    },
-			    "oid": "test/a.baz:2",
+			    "oid": "test/a:2",
 			    "timestamp": "5",
 			  },
 			]
@@ -488,7 +480,7 @@ describe('creating diff patch operations', () => {
 			bar: [createFileRef('def456')],
 		};
 		expect(
-			diffToPatches(from, to, createClock(), [], createClock(5), [], {
+			diffToPatches(from, to, createClock(), createClock(5), [], {
 				mergeUnknownObjects: true,
 			}),
 		).toMatchInlineSnapshot(`
@@ -502,7 +494,7 @@ describe('creating diff patch operations', () => {
 			        "id": "abc456",
 			      },
 			    },
-			    "oid": "test/a.foo:0",
+			    "oid": "test/a:0",
 			    "timestamp": "0",
 			  },
 			  {
@@ -511,7 +503,7 @@ describe('creating diff patch operations', () => {
 			      "index": 1,
 			      "op": "list-delete",
 			    },
-			    "oid": "test/a.bar:1",
+			    "oid": "test/a:1",
 			    "timestamp": "1",
 			  },
 			]
@@ -730,7 +722,7 @@ describe('creating patches from initial state', () => {
 			        "bar": "baz",
 			      },
 			    },
-			    "oid": "test/a.foo:0",
+			    "oid": "test/a:0",
 			    "timestamp": "0",
 			  },
 			  {
@@ -740,7 +732,7 @@ describe('creating patches from initial state', () => {
 			        "corge": "grault",
 			      },
 			    },
-			    "oid": "test/a.qux.#:2",
+			    "oid": "test/a:2",
 			    "timestamp": "1",
 			  },
 			  {
@@ -750,7 +742,7 @@ describe('creating patches from initial state', () => {
 			        "oof": 1,
 			      },
 			    },
-			    "oid": "test/a.qux.#.bin:4",
+			    "oid": "test/a:4",
 			    "timestamp": "2",
 			  },
 			  {
@@ -759,11 +751,11 @@ describe('creating patches from initial state', () => {
 			      "value": {
 			        "bin": {
 			          "@@type": "ref",
-			          "id": "test/a.qux.#.bin:4",
+			          "id": "test/a:4",
 			        },
 			      },
 			    },
-			    "oid": "test/a.qux.#:3",
+			    "oid": "test/a:3",
 			    "timestamp": "3",
 			  },
 			  {
@@ -772,15 +764,15 @@ describe('creating patches from initial state', () => {
 			      "value": [
 			        {
 			          "@@type": "ref",
-			          "id": "test/a.qux.#:2",
+			          "id": "test/a:2",
 			        },
 			        {
 			          "@@type": "ref",
-			          "id": "test/a.qux.#:3",
+			          "id": "test/a:3",
 			        },
 			      ],
 			    },
-			    "oid": "test/a.qux:1",
+			    "oid": "test/a:1",
 			    "timestamp": "4",
 			  },
 			  {
@@ -789,11 +781,11 @@ describe('creating patches from initial state', () => {
 			      "value": {
 			        "foo": {
 			          "@@type": "ref",
-			          "id": "test/a.foo:0",
+			          "id": "test/a:0",
 			        },
 			        "qux": {
 			          "@@type": "ref",
-			          "id": "test/a.qux:1",
+			          "id": "test/a:1",
 			        },
 			      },
 			    },

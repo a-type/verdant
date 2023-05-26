@@ -12,7 +12,7 @@ describe('getting field defaults', () => {
 			},
 		} as const;
 		const first = getFieldDefault(field);
-		assignOid(first, createOid('test', '1', []));
+		assignOid(first, createOid('test', '1'));
 		const second = getFieldDefault(field);
 		expect(maybeGetOid(second)).toBe(undefined);
 	});

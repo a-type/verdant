@@ -40,7 +40,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 				init,
 			)})`,
 		);
-		return createOid(collection, primaryKey, []);
+		return createOid(collection, primaryKey);
 	};
 
 	private addDefaults = (collectionName: string, init: any) => {
@@ -66,7 +66,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		primaryKey: string,
 		options: { undoable?: boolean } = {},
 	) => {
-		const oid = createOid(collection, primaryKey, []);
+		const oid = createOid(collection, primaryKey);
 		return this.entities.delete(oid, options);
 	};
 
@@ -75,9 +75,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		options: { undoable?: boolean } = {},
 	) => {
 		return this.entities.deleteAll(
-			ids.map(([collection, primaryKey]) =>
-				createOid(collection, primaryKey, []),
-			),
+			ids.map(([collection, primaryKey]) => createOid(collection, primaryKey)),
 			options,
 		);
 	};
@@ -88,7 +86,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		options: { undoable?: boolean } = {},
 	) => {
 		return this.entities.deleteAll(
-			ids.map((primaryKey) => createOid(collection, primaryKey, [])),
+			ids.map((primaryKey) => createOid(collection, primaryKey)),
 			options,
 		);
 	};

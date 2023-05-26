@@ -17,7 +17,7 @@ export class GetQuery<T> extends BaseQuery<T | null> {
 			initial: null,
 			...rest,
 		});
-		this.oid = createOid(rest.collection, id, []);
+		this.oid = createOid(rest.collection, id);
 		this.hydrate = hydrate;
 	}
 

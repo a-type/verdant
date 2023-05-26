@@ -34,12 +34,10 @@ import { isObject, assert } from './utils.js';
  */
 
 export type ObjectIdentifier = string;
-export type KeyPath = (string | number)[];
 
 export const LEGACY_OID_KEY = '__@@oid_do_not_use';
 export const OID_KEY = '@@id';
 
-const KEY_PATH_SEPARATOR = '.';
 const COLLECTION_SEPARATOR = '/';
 const RANDOM_SEPARATOR = ':';
 
@@ -94,11 +92,10 @@ export function isOidKey(key: string) {
 export function ensureOid(
 	obj: any,
 	rootOid: ObjectIdentifier,
-	key: string | number,
 	createSubId?: () => string,
 ) {
 	if (!hasOid(obj)) {
-		const oid = createSubOid(rootOid, key, createSubId);
+		const oid = createSubOid(rootOid, createSubId);
 		assignOid(obj, oid);
 		return oid;
 	} else {
@@ -129,7 +126,6 @@ function unsanitizeFragment(id: string) {
 export function createOid(
 	collection: string,
 	documentId: string,
-	keyPath: KeyPath = [],
 	subId?: string,
 ) {
 	let oid =
@@ -137,10 +133,6 @@ export function createOid(
 		COLLECTION_SEPARATOR +
 		sanitizeFragment(documentId);
 	if (subId) {
-		const keyPathItems = keyPath.map((k) =>
-			typeof k === 'number' ? '#' : sanitizeFragment(k),
-		);
-		oid += KEY_PATH_SEPARATOR + keyPathItems.join(KEY_PATH_SEPARATOR);
 		oid += RANDOM_SEPARATOR + subId;
 	}
 	return oid;
@@ -148,27 +140,23 @@ export function createOid(
 
 export function createSubOid(
 	root: ObjectIdentifier,
-	key: string | number,
 	createSubId: () => string = createOidSubId,
 ) {
-	const { collection, id, keyPath } = decomposeOid(root);
-	return createOid(collection, id, [...keyPath, key], createSubId());
+	const { collection, id } = decomposeOid(root);
+	return createOid(collection, id, createSubId());
 }
 
 export function decomposeOid(oid: ObjectIdentifier): {
 	collection: string;
 	id: string;
 	subId?: string;
-	keyPath: KeyPath;
 } {
 	const [core, random] = oid.split(RANDOM_SEPARATOR);
-	const [collection, paths] = core.split('/');
-	const [id, ...keyPath] = paths.split(KEY_PATH_SEPARATOR);
+	const [collection, id] = core.split('/');
 	return {
 		collection: unsanitizeFragment(collection),
 		id: unsanitizeFragment(id),
 		subId: random,
-		keyPath: keyPath.map(unsanitizeFragment),
 	};
 }
 
@@ -200,14 +188,14 @@ export function assignOidsToAllSubObjects(
 		for (let i = 0; i < obj.length; i++) {
 			item = obj[i];
 			if (isObject(item) && !isRef(item)) {
-				ensureOid(item, rootOid, i, createSubId);
+				ensureOid(item, rootOid, createSubId);
 				assignOidsToAllSubObjects(item, createSubId);
 			}
 		}
 	} else if (isObject(obj) && !isRef(obj)) {
 		for (const key of Object.keys(obj)) {
 			if (isObject(obj[key]) && !isRef(obj[key])) {
-				ensureOid(obj[key], rootOid, key, createSubId);
+				ensureOid(obj[key], rootOid, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
 		}
@@ -228,10 +216,6 @@ export function maybeGetOidProperty(obj: any) {
 		return undefined;
 	}
 	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
-}
-
-function hasOidProperty(obj: any) {
-	return !!maybeGetOidProperty(obj);
 }
 
 function removeOidProperty(obj: any) {
@@ -418,10 +402,7 @@ export function normalizeFirstLevel(obj: any) {
 }
 
 export function getOidRoot(oid: ObjectIdentifier) {
-	const [collection, idAndPaths] = oid.split(RANDOM_SEPARATOR)[0].split('/');
-	const sepIdx = idAndPaths.indexOf(KEY_PATH_SEPARATOR);
-	const id = sepIdx !== -1 ? idAndPaths.substring(0, sepIdx) : idAndPaths;
-	return `${collection}/${id}`;
+	return oid.split(RANDOM_SEPARATOR)[0];
 }
 
 /**

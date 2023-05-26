@@ -116,7 +116,6 @@ export class Entity<
 	readonly collection: string;
 	protected readonly store: StoreTools;
 	protected readonly fieldSchema;
-	protected readonly keyPath;
 	protected readonly cache: CacheTools;
 	protected _deleted = false;
 	protected parent: WeakRef<Entity<any, any>> | undefined;
@@ -214,13 +213,11 @@ export class Entity<
 		onAllUnsubscribed?: () => void;
 	}) {
 		this.oid = oid;
-		const { collection, keyPath } = decomposeOid(oid);
+		const { collection } = decomposeOid(oid);
 		this.collection = collection;
 		this.parent = parent && new WeakRef(parent);
 		this.store = store;
 		this.fieldSchema = fieldSchema;
-		// TODO: remove, this is not safe
-		this.keyPath = keyPath;
 		this.cache = cache;
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
@@ -441,7 +438,6 @@ export class Entity<
 				this.oid,
 				key as string | number,
 				this.processInputValue(value, key),
-				this.keyPath,
 			),
 		);
 	};
@@ -461,9 +457,7 @@ export class Entity<
 			if (deleteMode === 'delete') {
 				this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
 			} else {
-				this.addPatches(
-					this.store.patchCreator.createSet(this.oid, key, null, this.keyPath),
-				);
+				this.addPatches(this.store.patchCreator.createSet(this.oid, key, null));
 			}
 		}
 	};
@@ -530,7 +524,6 @@ export class Entity<
 			this.store.patchCreator.createDiff(
 				this.getSnapshot(),
 				assignOid(withoutFiles, this.oid),
-				this.keyPath,
 				{
 					mergeUnknownObjects: !replaceSubObjects,
 					defaultUndefined: merge,

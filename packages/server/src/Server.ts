@@ -554,7 +554,7 @@ export class Server extends EventEmitter implements MessageSender {
 	) => {
 		return this.library.getDocumentSnapshot(
 			libraryId,
-			createOid(collection, documentId, []),
+			createOid(collection, documentId),
 		);
 	};
 }

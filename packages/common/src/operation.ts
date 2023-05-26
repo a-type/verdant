@@ -4,20 +4,17 @@ import {
 	assignOid,
 	assignOidsToAllSubObjects,
 	createRef,
-	decomposeOid,
 	ensureOid,
 	getOid,
 	getOidRoot,
 	isOidKey,
-	KeyPath,
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
-	OID_KEY,
 	removeOid,
 } from './oids.js';
 import { compareRefs, isRef } from './refs.js';
-import { isObject, assert, cloneDeep, findLastIndex } from './utils.js';
+import { assert, cloneDeep, findLastIndex, isObject } from './utils.js';
 
 // export type ObjectIdentifier<
 // 	CollectionName extends string = string,
@@ -161,7 +158,6 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	from: T,
 	to: T,
 	getNow: () => string,
-	keyPath: KeyPath,
 	createSubId?: () => string,
 	patches: Operation[] = [],
 	options: {
@@ -198,7 +194,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 			const oldValueOid = maybeGetOid(oldValue);
 			let valueOid;
 			if (!options.mergeUnknownObjects) {
-				valueOid = ensureOid(value, oid, key, createSubId);
+				valueOid = ensureOid(value, oid, createSubId);
 			} else {
 				// if merge unknown objects is requested, we copy the previous value's oid
 				// to any mirrored new value if it doesn't have one assigned already.
@@ -207,7 +203,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 					assignOid(value, oldValueOid);
 					valueOid = oldValueOid;
 				} else {
-					valueOid = ensureOid(value, oid, key, createSubId);
+					valueOid = ensureOid(value, oid, createSubId);
 				}
 			}
 
@@ -239,15 +235,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 			} else {
 				// third case: OIDs are the same, meaning the identity is the same,
 				// and we must diff the objects
-				diffToPatches(
-					oldValue,
-					value,
-					getNow,
-					[...keyPath, key],
-					createSubId,
-					patches,
-					options,
-				);
+				diffToPatches(oldValue, value, getNow, createSubId, patches, options);
 			}
 		}
 	}
