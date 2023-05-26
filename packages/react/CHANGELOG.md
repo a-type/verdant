@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 16.0.1
+
+### Patch Changes
+
+- b044e75: Fix bug with presence hook, typing on mutation hooks
+
 ## 16.0.0
 
 ### Patch Changes
