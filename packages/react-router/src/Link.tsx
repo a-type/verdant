@@ -17,6 +17,10 @@ export interface LinkProps
 	replace?: boolean;
 	skipTransition?: boolean;
 	state?: any;
+	/**
+	 * Keep query string params intact when navigating
+	 */
+	preserveQuery?: boolean;
 }
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
@@ -28,6 +32,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 		replace,
 		skipTransition = false,
 		state,
+		preserveQuery,
 		...rest
 	},
 	ref,
@@ -69,14 +74,25 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 		function handleClick(event: MouseEvent<HTMLAnchorElement>) {
 			event.preventDefault();
 			wasClickedRef.current = true;
-			navigate(to, {
+			let destination = to;
+			if (preserveQuery) {
+				const currentQuery = new URLSearchParams(window.location.search);
+				const destinationQuery = new URLSearchParams(to.split('?')[1]);
+				currentQuery.forEach((value, key) => {
+					if (!destinationQuery.has(key)) {
+						destinationQuery.set(key, value);
+					}
+				});
+				destination = `${to.split('?')[0]}?${destinationQuery.toString()}`;
+			}
+			navigate(destination, {
 				replace,
 				skipTransition,
 				state,
 			});
 			onClick?.(event);
 		},
-		[onClick, matches, replace, state],
+		[onClick, matches, replace, state, preserveQuery],
 	);
 
 	const pathAtRenderTime =
