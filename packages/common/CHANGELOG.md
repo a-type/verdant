@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.12.0
+
+### Minor Changes
+
+- c243009: (internal) remove extranous data from object IDs
+
 ## 1.11.1
 
 ### Patch Changes

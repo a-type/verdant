@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.1.6
+
+### Patch Changes
+
+- 1dafc21: Add built-in preserve query prop to Link
+
 ## 0.1.5
 
 ### Patch Changes
