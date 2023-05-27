@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 1.8.0
+
+### Minor Changes
+
+- c243009: (internal) remove extranous data from object IDs
+
+### Patch Changes
+
+- Updated dependencies [c243009]
+  - @verdant-web/common@1.12.0
+
 ## 1.7.10
 
 ### Patch Changes
