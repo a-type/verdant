@@ -6,6 +6,7 @@ import {
 	StorageDocument,
 	CollectionFilter,
 	StorageDocumentInit,
+	removeExtraProperties,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
@@ -147,6 +148,12 @@ export interface MigrationTools<
 > {
 	migrate: MigrationRunner<Old, New>;
 	identity: <T>(val: T) => T;
+	/**
+	 * @deprecated - default field values are automatically
+	 * applied during migration, you don't need to use this.
+	 * Please remove it from your migrations - even old ones
+	 * (old migrations can be updated!)
+	 */
 	withDefaults: (collectionName: string, value: any) => any;
 	queries: MigrationQueries<Old>;
 	mutations: MigrationMutations<New>;
@@ -171,6 +178,7 @@ export interface MigrationEngine<
 	newOids: string[];
 	/** Promises that should be resolved before completing the migration */
 	awaitables: Promise<any>[];
+	log: (...messages: any[]) => void;
 }
 
 type MigrationProcedure<
@@ -226,6 +234,24 @@ export function migrate(
 	const addedCollections = Object.keys(newSchema.collections).filter(
 		(key) => !oldSchema.collections[key],
 	);
+	// collections which added one or more field defaults
+	const autoMigratedCollections = new Set<string>();
+	for (const collection of changedCollections) {
+		const oldFields = oldSchema.collections[collection].fields;
+		const newFields = newSchema.collections[collection].fields;
+		// a new default was added - we can auto-migrate it
+		if (
+			Object.keys(newFields).some(
+				(key) => !oldFields[key]?.default && newFields[key]?.default,
+			)
+		) {
+			autoMigratedCollections.add(collection);
+		}
+		// a field was removed - we can auto-migrate it
+		if (Object.keys(oldFields).some((key) => !newFields[key])) {
+			autoMigratedCollections.add(collection);
+		}
+	}
 
 	const addedIndexes: Record<string, MigrationIndexDescription[]> = {};
 	const removedIndexes: Record<string, MigrationIndexDescription[]> = {};
@@ -246,20 +272,36 @@ export function migrate(
 		}
 	}
 
+	const withDefaults = (collectionName: string, val: any) => {
+		return addFieldDefaults(newSchema.collections[collectionName], val);
+	};
+	const autoMigration = (collectionName: string) => (val: any) => {
+		const collection = newSchema.collections[collectionName];
+		return addFieldDefaults(collection, removeExtraProperties(collection, val));
+	};
+
 	return {
 		version: newSchema.version,
 		migrate: async (engine: MigrationEngine<any, any>) => {
 			const migratedCollections: string[] = [];
 			await procedure({
 				migrate: async (collection: any, strategy: any) => {
+					const auto = autoMigration(collection);
+					const wrapped = async (val: any) => {
+						const baseValue = await strategy(val);
+						const result = auto(baseValue);
+						return result;
+					};
 					// @ts-ignore
-					await engine.migrate(collection, strategy);
+					await engine.migrate(collection, wrapped);
 					migratedCollections.push(collection);
+					// since the user migrated this one and we wrap their
+					// strategy with auto-migration, we can remove it from
+					// the auto-migration list
+					autoMigratedCollections.delete(collection);
 				},
 				identity: (val: any) => val,
-				withDefaults: (collectionName: string, val: any) => {
-					return addFieldDefaults(newSchema.collections[collectionName], val);
-				},
+				withDefaults,
 				info: {
 					changedCollections,
 					addedCollections,
@@ -268,6 +310,19 @@ export function migrate(
 				queries: engine.queries,
 				mutations: engine.mutations,
 			});
+
+			// mandatory migration of fields which had defaults added or
+			// fields removed but weren't migrated by the user
+
+			engine.log(
+				'debug',
+				'auto-migrating collections with new defaults',
+				autoMigratedCollections,
+			);
+			for (const name of autoMigratedCollections) {
+				await engine.migrate(name, autoMigration(name));
+				migratedCollections.push(name);
+			}
 
 			const unmigrated = changedCollections.filter(
 				(collection) => !migratedCollections.includes(collection),

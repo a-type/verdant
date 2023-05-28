@@ -66,7 +66,7 @@ it(
 			primaryKey: 'id',
 			fields: {
 				id: { type: 'string' },
-				contents: { type: 'string' },
+				contents: { type: 'string', nullable: true },
 				tags: { type: 'array', items: { type: 'string' } },
 			},
 		});
@@ -106,7 +106,6 @@ it(
 		});
 		await client.items.put({
 			id: '3',
-			contents: 'foo',
 			tags: ['a', 'b'],
 		});
 
@@ -142,6 +141,7 @@ it(
 				id: { type: 'string', default: 'something' },
 				name: { type: 'string' },
 				items: { type: 'array', items: { type: 'string' } },
+				nullable: { type: 'string', nullable: true },
 			},
 		});
 
@@ -153,12 +153,13 @@ it(
 			},
 		});
 
-		migrations.push(createDefaultMigration(v1Schema, v2Schema));
+		// specifically testing empty migration here - will the new defaults
+		// be added?
+		migrations.push(migrate(v1Schema, v2Schema, async () => {}));
 
 		client = await createTestClient({
 			schema: v2Schema,
 			...clientInit,
-			// logId: 'client2',
 		});
 
 		console.debug('📈 Version 2 client created');
@@ -186,6 +187,18 @@ it(
 			  ],
 			}
 		`);
+		let item3 = await client.items.get('3').resolved;
+		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "contents": "empty",
+			  "id": "3",
+			  "listId": null,
+			  "tags": [
+			    "a",
+			    "b",
+			  ],
+			}
+		`);
 
 		// check our new indexes
 		const emptyResults = await client.items.findAll({
@@ -200,7 +213,7 @@ it(
 			index: {
 				where: 'contents_tag',
 				match: {
-					contents: 'foo',
+					contents: 'empty',
 					tags: 'a',
 				},
 			},
@@ -213,7 +226,7 @@ it(
 			name: 'list 1',
 		});
 
-		let item3 = await client.items.put({
+		item3 = await client.items.put({
 			listId: list1.get('id'),
 		});
 		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
@@ -261,17 +274,27 @@ it(
 			// TODO: synthetic index that returns an array, using that to map
 			// tags to their values, then using that to create a compound index?
 		});
+		const v3List = collection({
+			name: 'list',
+			primaryKey: 'id',
+			fields: {
+				id: { type: 'string', default: 'something' },
+				name: { type: 'string' },
+				items: { type: 'array', items: { type: 'string' } },
+				nullable: { type: 'string', default: 'not nullable anymore' },
+			},
+		});
 
 		const v3Schema = schema({
 			version: 3,
 			collections: {
 				items: v3Item,
-				lists: v2List,
+				lists: v3List,
 			},
 		});
 
 		migrations.push(
-			migrate(v2Schema, v3Schema, async ({ migrate, withDefaults }) => {
+			migrate(v2Schema, v3Schema, async ({ migrate }) => {
 				await migrate('items', ({ tags, ...rest }) => {
 					return {
 						...rest,
@@ -281,7 +304,6 @@ it(
 						})),
 					};
 				});
-				await migrate('lists', (old) => withDefaults('lists', old));
 			}),
 		);
 
@@ -327,7 +349,7 @@ it(
 		item3 = await client.items.get('3').resolved;
 		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
 			{
-			  "contents": "foo",
+			  "contents": "empty",
 			  "id": "3",
 			  "listId": null,
 			  "tags": [
@@ -340,6 +362,16 @@ it(
 			      "name": "b",
 			    },
 			  ],
+			}
+		`);
+
+		list1 = await client.lists.get('list1').resolved;
+		expect(list1.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "id": "list1",
+			  "items": [],
+			  "name": "list 1",
+			  "nullable": "not nullable anymore",
 			}
 		`);
 
@@ -371,34 +403,30 @@ it(
 		});
 
 		migrations.push(
-			migrate(
-				v3Schema,
-				v4Schema,
-				async ({ migrate, queries, mutations, withDefaults }) => {
-					await migrate('lists', async (old) => {
-						const items = await queries.items.findAll({
-							where: 'listId',
-							equals: old.id,
-						});
-						return {
-							...old,
-							items,
-						};
-					});
-
-					// we have to create a list for non-assigned items and assign them
-					// so they're not lost!
-					const unassignedItems = await queries.items.findAll({
+			migrate(v3Schema, v4Schema, async ({ migrate, queries, mutations }) => {
+				await migrate('lists', async (old) => {
+					const items = await queries.items.findAll({
 						where: 'listId',
-						equals: null,
+						equals: old.id,
 					});
-					await mutations.lists.put({
-						id: 'uncategorized',
-						name: 'Uncategorized',
-						items: unassignedItems,
-					});
-				},
-			),
+					return {
+						...old,
+						items,
+					};
+				});
+
+				// we have to create a list for non-assigned items and assign them
+				// so they're not lost!
+				const unassignedItems = await queries.items.findAll({
+					where: 'listId',
+					equals: null,
+				});
+				await mutations.lists.put({
+					id: 'uncategorized',
+					name: 'Uncategorized',
+					items: unassignedItems,
+				});
+			}),
 		);
 
 		client = await createTestClient({

@@ -418,6 +418,7 @@ function getMigrationEngine({
 	});
 	const awaitables = new Array<Promise<any>>();
 	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+		log: context.log,
 		newOids,
 		migrate: async (collection, strategy) => {
 			const docs = await new Promise<any[]>((resolve, reject) => {
@@ -493,6 +494,7 @@ function getMigrationEngine({
 function getVersion1MigrationEngine({
 	meta,
 	migration,
+	context,
 }: {
 	context: OpenDocumentDbContext;
 	migration: Migration;
@@ -519,6 +521,7 @@ function getVersion1MigrationEngine({
 		meta,
 	});
 	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+		log: context.log,
 		newOids,
 		migrate: (collection, strategy) => {
 			throw new Error(
