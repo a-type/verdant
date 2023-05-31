@@ -60,19 +60,23 @@ export function stableStringify(obj: any) {
 	return JSON.stringify(obj, orderedReplacer);
 }
 
-export function cloneDeep<T>(obj: T): T {
-	if (isObject(obj)) {
+/**
+ * A version of structured cloning which preserves object identity
+ * references in the system.
+ */
+export function cloneDeep<T>(obj: T, copyOids = true): T {
+	if (isObject(obj) || Array.isArray(obj)) {
 		const oid = maybeGetOid(obj);
 		let clone: any;
 		if (Array.isArray(obj)) {
-			clone = obj.map(cloneDeep) as T;
+			clone = obj.map((v) => cloneDeep(v, copyOids)) as T;
 		} else {
 			clone = {};
 			for (const [key, value] of Object.entries(obj as any)) {
-				clone[key] = cloneDeep(value);
+				clone[key] = cloneDeep(value, copyOids);
 			}
 		}
-		if (oid) {
+		if (copyOids && oid) {
 			assignOid(clone, oid);
 		}
 		return clone;

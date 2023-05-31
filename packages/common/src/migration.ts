@@ -7,6 +7,10 @@ import {
 	CollectionFilter,
 	StorageDocumentInit,
 	removeExtraProperties,
+	assert,
+	hasOid,
+	assignOid,
+	getOid,
 } from './index.js';
 
 export interface DroppedCollectionMigrationStrategy<
@@ -289,6 +293,9 @@ export function migrate(
 					const auto = autoMigration(collection);
 					const wrapped = async (val: any) => {
 						const baseValue = await strategy(val);
+						// assign OID from original value in case user's strategy
+						// involves cloning
+						assignOid(baseValue, getOid(val));
 						const result = auto(baseValue);
 						return result;
 					};
@@ -328,6 +335,7 @@ export function migrate(
 				(collection) => !migratedCollections.includes(collection),
 			);
 			if (unmigrated.length > 0) {
+				// TODO: does this deserve a full-on error?
 				console.error('Unmigrated changed collections:', unmigrated);
 			}
 		},
@@ -431,16 +439,12 @@ export function createDefaultMigration(
 				version: 0,
 				collections: {},
 		  };
-	return migrate(
-		oldSchema,
-		newSchema || schema,
-		async ({ migrate, withDefaults, info }) => {
-			if ((newSchema || schema).version === 1) return;
+	return migrate(oldSchema, newSchema || schema, async ({ migrate, info }) => {
+		if ((newSchema || schema).version === 1) return;
 
-			for (const collection of info.changedCollections as any) {
-				// @ts-ignore indefinite type resolution
-				await migrate(collection, (old) => withDefaults(collection, old));
-			}
-		},
-	);
+		for (const collection of info.changedCollections as any) {
+			// @ts-ignore indefinite type resolution
+			await migrate(collection, (old) => old);
+		}
+	});
 }

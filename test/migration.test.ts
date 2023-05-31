@@ -226,15 +226,16 @@ it(
 			name: 'list 1',
 		});
 
-		item3 = await client.items.put({
-			listId: list1.get('id'),
-		});
+		item3.set('listId', list1.get('id'));
 		expect(item3.getSnapshot()).toMatchInlineSnapshot(`
 			{
 			  "contents": "empty",
-			  "id": "default",
+			  "id": "3",
 			  "listId": "list1",
-			  "tags": [],
+			  "tags": [
+			    "a",
+			    "b",
+			  ],
 			}
 		`);
 
@@ -351,7 +352,7 @@ it(
 			{
 			  "contents": "empty",
 			  "id": "3",
-			  "listId": null,
+			  "listId": "list1",
 			  "tags": [
 			    {
 			      "color": "red",
@@ -417,10 +418,10 @@ it(
 
 				// we have to create a list for non-assigned items and assign them
 				// so they're not lost!
-				const unassignedItems = await queries.items.findAll({
-					where: 'listId',
-					equals: null,
-				});
+				// FIXME: allow querying directly for listId=null
+				const unassignedItems = (await queries.items.findAll()).filter(
+					(item) => !item.listId,
+				);
 				await mutations.lists.put({
 					id: 'uncategorized',
 					name: 'Uncategorized',
@@ -441,7 +442,33 @@ it(
 		expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
 			{
 			  "id": "uncategorized",
-			  "items": [],
+			  "items": [
+			    {
+			      "contents": "hello",
+			      "id": "1",
+			      "listId": null,
+			      "tags": [],
+			    },
+			    {
+			      "contents": "world",
+			      "id": "2",
+			      "listId": null,
+			      "tags": [
+			        {
+			          "color": "red",
+			          "name": "a",
+			        },
+			        {
+			          "color": "red",
+			          "name": "b",
+			        },
+			        {
+			          "color": "red",
+			          "name": "c",
+			        },
+			      ],
+			    },
+			  ],
 			  "name": "Uncategorized",
 			}
 		`);
@@ -452,9 +479,18 @@ it(
 			  "items": [
 			    {
 			      "contents": "empty",
-			      "id": "default",
+			      "id": "3",
 			      "listId": "list1",
-			      "tags": [],
+			      "tags": [
+			        {
+			          "color": "red",
+			          "name": "a",
+			        },
+			        {
+			          "color": "red",
+			          "name": "b",
+			        },
+			      ],
 			    },
 			  ],
 			  "name": "list 1",
@@ -518,7 +554,33 @@ it(
 		expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
 			{
 			  "id": "uncategorized",
-			  "items": [],
+			  "items": [
+			    {
+			      "contents": "hello",
+			      "id": "1",
+			      "listId": null,
+			      "tags": [],
+			    },
+			    {
+			      "contents": "world",
+			      "id": "2",
+			      "listId": null,
+			      "tags": [
+			        {
+			          "color": "red",
+			          "name": "a",
+			        },
+			        {
+			          "color": "red",
+			          "name": "b",
+			        },
+			        {
+			          "color": "red",
+			          "name": "c",
+			        },
+			      ],
+			    },
+			  ],
 			  "name": "Uncategorized",
 			}
 		`);
@@ -529,9 +591,18 @@ it(
 			  "items": [
 			    {
 			      "contents": "empty",
-			      "id": "default",
+			      "id": "3",
 			      "listId": "list1",
-			      "tags": [],
+			      "tags": [
+			        {
+			          "color": "red",
+			          "name": "a",
+			        },
+			        {
+			          "color": "red",
+			          "name": "b",
+			        },
+			      ],
 			    },
 			  ],
 			  "name": "list 1",

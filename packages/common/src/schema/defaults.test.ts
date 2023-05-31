@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFieldDefault } from './defaults.js';
+import { getFieldDefault } from './fields.js';
 import { assignOid, createOid, getOid, maybeGetOid } from '../oids.js';
 
 describe('getting field defaults', () => {

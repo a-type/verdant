@@ -18,7 +18,13 @@ import {
 
 function createClock(init = 0) {
 	let i = init;
-	return () => (i++).toString();
+	const clock = () => (i++).toString();
+	Object.defineProperty(clock, 'current', {
+		get() {
+			return i;
+		},
+	});
+	return clock;
 }
 
 describe('creating diff patch operations', () => {
@@ -505,6 +511,156 @@ describe('creating diff patch operations', () => {
 			    },
 			    "oid": "test/a:1",
 			    "timestamp": "1",
+			  },
+			]
+		`);
+	});
+
+	it('should assign a new OID to objects which had an incompatible existing OID', () => {
+		const from = {
+			foo: {
+				bar: [1, 2, 3],
+			},
+		};
+		assignOid(from, 'test/a');
+		assignOidsToAllSubObjects(from, createClock());
+		const to = {
+			foo: {
+				bar: [1, 2],
+			},
+		};
+		assignOid(to, 'test/a');
+		assignOid(to.foo, 'uff/b');
+		assignOidsToAllSubObjects(to.foo, createClock());
+		expect(
+			diffToPatches(from, to, createClock(), createClock(5), [], {
+				mergeUnknownObjects: true,
+			}),
+		).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": [
+			        1,
+			        2,
+			      ],
+			    },
+			    "oid": "test/a:6",
+			    "timestamp": "0",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "bar": {
+			          "@@type": "ref",
+			          "id": "test/a:6",
+			        },
+			      },
+			    },
+			    "oid": "test/a:5",
+			    "timestamp": "1",
+			  },
+			  {
+			    "data": {
+			      "name": "foo",
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a:5",
+			      },
+			    },
+			    "oid": "test/a",
+			    "timestamp": "2",
+			  },
+			  {
+			    "data": {
+			      "op": "delete",
+			    },
+			    "oid": "test/a:0",
+			    "timestamp": "3",
+			  },
+			]
+		`);
+	});
+
+	// an edge case - if a subobject which contains nested objects changes identity,
+	// this gets written as a new init patch tree - we want to ensure all init subobjects
+	// in that tree have compatible OIDs.
+	it('should assign a new OID to objects which have an incompatible OID when parent identity changes', () => {
+		const from = {
+			bar: [],
+		};
+		assignOid(from, 'test/a');
+		assignOid(from.bar, 'test/random');
+		const to = {
+			bar: [{ baz: 1 }, { baz: 2 }],
+		};
+		assignOid(to, 'test/a');
+		assignOidsToAllSubObjects(to, createClock());
+		assignOid(to.bar[0], 'uff/b');
+		expect(
+			diffToPatches(from, to, createClock(), createClock(5), [], {
+				mergeUnknownObjects: true,
+			}),
+		).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "baz": 1,
+			      },
+			    },
+			    "oid": "test/a:5",
+			    "timestamp": "0",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "baz": 2,
+			      },
+			    },
+			    "oid": "test/a:2",
+			    "timestamp": "1",
+			  },
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": [
+			        {
+			          "@@type": "ref",
+			          "id": "test/a:5",
+			        },
+			        {
+			          "@@type": "ref",
+			          "id": "test/a:2",
+			        },
+			      ],
+			    },
+			    "oid": "test/a:0",
+			    "timestamp": "2",
+			  },
+			  {
+			    "data": {
+			      "name": "bar",
+			      "op": "set",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "test/a:0",
+			      },
+			    },
+			    "oid": "test/a",
+			    "timestamp": "3",
+			  },
+			  {
+			    "data": {
+			      "op": "delete",
+			    },
+			    "oid": "test/random",
+			    "timestamp": "4",
 			  },
 			]
 		`);

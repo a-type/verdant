@@ -5,21 +5,33 @@ import {
 	ObjectIdentifier,
 	StorageSchema,
 	addFieldDefaults,
+	assert,
 	assignIndexValues,
+	assignOid,
 	assignOidPropertiesToAllSubObjects,
 	assignOidsToAllSubObjects,
 	cloneDeep,
 	createOid,
 	decomposeOid,
 	diffToPatches,
+	getOid,
+	hasOid,
 	initialToPatches,
 	migrationRange,
 	removeOidPropertiesFromAllSubObjects,
 	removeOidsFromAllSubObjects,
 } from '@verdant-web/common';
-import { Context } from './context.js';
-import { Metadata } from './metadata/Metadata.js';
-import { findAllOids, findOneOid } from './queries2/dbQueries.js';
+import { Context } from '../context.js';
+import { Metadata } from '../metadata/Metadata.js';
+import { findAllOids, findOneOid } from '../queries2/dbQueries.js';
+import {
+	acquireLock,
+	closeDatabase,
+	getDatabaseVersion,
+	openDatabase,
+	upgradeDatabase,
+} from './db.js';
+import { getMigrationPath } from './paths.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -53,13 +65,11 @@ export async function openDocumentDatabase({
 		version,
 	);
 
-	const toRunVersions = migrationRange(currentVersion, version);
-	const toRun = toRunVersions.map((ver) =>
-		migrations.find((m) => m.version === ver),
-	);
-	if (toRun.some((m) => !m)) {
-		throw new Error(`No migration found for version(s) ${toRunVersions}`);
-	}
+	const toRun = getMigrationPath({
+		currentVersion,
+		targetVersion: version,
+		migrations,
+	});
 
 	if (toRun.length > 0) {
 		await acquireLock(context.namespace, async () => {
@@ -240,86 +250,6 @@ export async function openDocumentDatabase({
 	}
 }
 
-async function getDatabaseVersion(
-	indexedDB: IDBFactory,
-	namespace: string,
-	version: number,
-	log?: (...args: any[]) => void,
-): Promise<number> {
-	function openAndGetVersion(
-		resolve: (res: [number, IDBDatabase]) => void,
-		reject: (err: Error) => void,
-	) {
-		let currentVersion: number;
-		let database: IDBDatabase;
-		const request = indexedDB.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
-		request.onupgradeneeded = async (event) => {
-			currentVersion = event.oldVersion;
-			const transaction = request.transaction!;
-			database = request.result;
-			transaction.abort();
-		};
-		request.onsuccess = (event) => {
-			resolve([request.result.version, request.result]);
-		};
-		request.onblocked = (event) => {
-			// retry if blocked
-			log?.('Database blocked, waiting...');
-			// setTimeout(() => {
-			// 	openAndGetVersion(resolve, reject);
-			// }, 200);
-		};
-		request.onerror = (event) => {
-			// FIXME: this fails if the code is older than the local database
-			resolve([currentVersion!, database!]);
-		};
-	}
-	const [currentVersion, db] = await new Promise<[number, IDBDatabase]>(
-		openAndGetVersion,
-	);
-	await closeDatabase(db);
-	return currentVersion;
-}
-
-async function openDatabase(
-	indexedDb: IDBFactory,
-	namespace: string,
-	version: number,
-): Promise<IDBDatabase> {
-	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDb.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
-		request.onupgradeneeded = async (event) => {
-			const transaction = request.transaction!;
-			transaction.abort();
-
-			reject(
-				new Error('Migration error: database version changed while migrating'),
-			);
-		};
-		request.onsuccess = (event) => {
-			resolve(request.result);
-		};
-		request.onblocked = (event) => {
-			reject(new Error('Migration error: database blocked'));
-		};
-		request.onerror = (event) => {
-			reject(new Error('Migration error: database error'));
-		};
-	});
-
-	db.addEventListener('versionchange', (event) => {
-		db.close();
-	});
-
-	return db;
-}
-
 function getMigrationMutations({
 	migration,
 	meta,
@@ -360,6 +290,51 @@ function getMigrationMutations({
 	}, {} as any);
 }
 
+function getMigrationQueries({
+	migration,
+	context,
+	meta,
+}: {
+	migration: Migration<any>;
+	context: Context;
+	meta: Metadata;
+}) {
+	return migration.oldCollections.reduce((acc, collectionName) => {
+		acc[collectionName] = {
+			get: async (id: string) => {
+				const oid = createOid(collectionName, id);
+				const doc = await meta.getDocumentSnapshot(oid);
+				// removeOidsFromAllSubObjects(doc);
+				return doc;
+			},
+			findOne: async (filter: CollectionFilter) => {
+				const oid = await findOneOid({
+					collection: collectionName,
+					index: filter,
+					context,
+				});
+				if (!oid) return null;
+				const doc = await meta.getDocumentSnapshot(oid);
+				// removeOidsFromAllSubObjects(doc);
+				return doc;
+			},
+			findAll: async (filter: CollectionFilter) => {
+				const oids = await findAllOids({
+					collection: collectionName,
+					index: filter,
+					context,
+				});
+				const docs = await Promise.all(
+					oids.map((oid) => meta.getDocumentSnapshot(oid)),
+				);
+				// docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
+				return docs;
+			},
+		};
+		return acc;
+	}, {} as any);
+}
+
 function getMigrationEngine({
 	meta,
 	migration,
@@ -376,40 +351,11 @@ function getMigrationEngine({
 
 	const newOids = new Array<ObjectIdentifier>();
 
-	const queries = migration.oldCollections.reduce((acc, collectionName) => {
-		acc[collectionName] = {
-			get: async (id: string) => {
-				const oid = createOid(collectionName, id);
-				const doc = await meta.getDocumentSnapshot(oid);
-				removeOidsFromAllSubObjects(doc);
-				return doc;
-			},
-			findOne: async (filter: CollectionFilter) => {
-				const oid = await findOneOid({
-					collection: collectionName,
-					index: filter,
-					context,
-				});
-				if (!oid) return null;
-				const doc = await meta.getDocumentSnapshot(oid);
-				removeOidsFromAllSubObjects(doc);
-				return doc;
-			},
-			findAll: async (filter: CollectionFilter) => {
-				const oids = await findAllOids({
-					collection: collectionName,
-					index: filter,
-					context,
-				});
-				const docs = await Promise.all(
-					oids.map((oid) => meta.getDocumentSnapshot(oid)),
-				);
-				docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
-				return docs;
-			},
-		};
-		return acc;
-	}, {} as any);
+	const queries = getMigrationQueries({
+		migration,
+		context,
+		meta,
+	});
 	const mutations = getMigrationMutations({
 		migration,
 		getMigrationNow,
@@ -421,43 +367,24 @@ function getMigrationEngine({
 		log: context.log,
 		newOids,
 		migrate: async (collection, strategy) => {
-			const docs = await new Promise<any[]>((resolve, reject) => {
-				const transaction = context.documentDb.transaction(
-					collection,
-					'readonly',
-				);
-
-				const store = transaction.objectStore(collection);
-				const cursorReq = store.openCursor();
-
-				const documentsToMigrate: any[] = [];
-
-				cursorReq.onsuccess = async (event) => {
-					const cursor = cursorReq.result;
-					if (cursor) {
-						documentsToMigrate.push(cursor.value);
-						cursor.continue();
-					} else {
-						resolve(documentsToMigrate);
-					}
-				};
-				cursorReq.onerror = (event) => {
-					reject(cursorReq.error);
-				};
-			});
+			const docs = await queries[collection].findAll();
 
 			await Promise.all(
-				docs.map(async (doc) => {
+				docs.map(async (doc: any) => {
+					assert(
+						hasOid(doc),
+						`Document is missing an OID: ${JSON.stringify(doc)}`,
+					);
 					const original = cloneDeep(doc);
 					// remove any indexes before computing the diff
-					const collectionSpec = migration.oldSchema.collections[collection];
-					const indexKeys = [
-						...Object.keys(collectionSpec.synthetics || {}),
-						...Object.keys(collectionSpec.compounds || {}),
-					];
-					indexKeys.forEach((key) => {
-						delete doc[key];
-					});
+					// const collectionSpec = migration.oldSchema.collections[collection];
+					// const indexKeys = [
+					// 	...Object.keys(collectionSpec.synthetics || {}),
+					// 	...Object.keys(collectionSpec.compounds || {}),
+					// ];
+					// indexKeys.forEach((key) => {
+					// 	delete doc[key];
+					// });
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
 					if (newValue) {
@@ -535,59 +462,6 @@ function getVersion1MigrationEngine({
 	return engine;
 }
 
-async function closeDatabase(db: IDBDatabase) {
-	db.close();
-	// FIXME: this isn't right!!!!
-	await new Promise<void>((resolve) => resolve());
-}
-
-async function upgradeDatabase(
-	indexedDb: IDBFactory,
-	namespace: string,
-	version: number,
-	upgrader: (
-		transaction: IDBTransaction,
-		db: IDBDatabase,
-		event: IDBVersionChangeEvent,
-	) => void,
-	log?: (...args: any[]) => void,
-): Promise<void> {
-	function openAndUpgrade(resolve: () => void, reject: (err: Error) => void) {
-		const request = indexedDb.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
-		let wasUpgraded = false;
-		request.onupgradeneeded = (event) => {
-			const transaction = request.transaction!;
-			upgrader(transaction, request.result, event);
-			wasUpgraded = true;
-		};
-		request.onsuccess = (event) => {
-			request.result.close();
-			if (wasUpgraded) {
-				resolve();
-			} else {
-				reject(
-					new Error(
-						'Database was not upgraded when a version change was expected',
-					),
-				);
-			}
-		};
-		request.onerror = (event) => {
-			reject(request.error || new Error('Unknown error'));
-		};
-		request.onblocked = (event) => {
-			log?.('Database upgrade blocked, waiting...');
-			// setTimeout(() => {
-			// 	openAndUpgrade(resolve, reject);
-			// }, 200);
-		};
-	}
-	return new Promise(openAndUpgrade);
-}
-
 async function getAllKeys(store: IDBObjectStore) {
 	return new Promise<IDBValidKey[]>((resolve, reject) => {
 		const request = store.getAllKeys();
@@ -622,13 +496,4 @@ async function putView(store: IDBObjectStore, view: any) {
 			reject(request.error);
 		};
 	});
-}
-
-async function acquireLock(namespace: string, procedure: () => Promise<void>) {
-	if (typeof navigator !== 'undefined' && navigator.locks) {
-		await navigator.locks.request(`lo-fi_migration_${namespace}`, procedure);
-	} else {
-		// TODO: is there a fallback?
-		await procedure();
-	}
 }

@@ -10,7 +10,7 @@ import { DocumentManager } from '../DocumentManager.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';
 import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
-import { openDocumentDatabase } from '../openDocumentDatabase.js';
+import { openDocumentDatabase } from '../migration/openDatabase.js';
 import { EntityStore } from '../reactives/EntityStore.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
 import { CollectionQueries } from '../queries2/CollectionQueries.js';

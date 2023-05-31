@@ -1,10 +1,9 @@
 import { EventSubscriber, Migration, StorageSchema } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManagerConfig } from '../files/FileManager.js';
-import { ReturnedFileData } from '../files/FileStorage.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { openMetadataDatabase } from '../metadata/openMetadataDatabase.js';
-import { openDocumentDatabase } from '../openDocumentDatabase.js';
+import { openDocumentDatabase } from '../migration/openDatabase.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
