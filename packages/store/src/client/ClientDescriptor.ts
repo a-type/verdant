@@ -7,6 +7,7 @@ import { openDocumentDatabase } from '../migration/openDatabase.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
+import { deleteAllDatabases } from '../idb.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -167,5 +168,9 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		if (this._initializing) {
 			(await this._readyPromise).close();
 		}
+	};
+
+	__dangerous__resetLocal = async () => {
+		await deleteAllDatabases(this.namespace);
 	};
 }

@@ -8,7 +8,11 @@ import {
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';
-import { closeDatabase, getSizeOfObjectStore } from '../idb.js';
+import {
+	closeDatabase,
+	deleteAllDatabases,
+	getSizeOfObjectStore,
+} from '../idb.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
 import { openDocumentDatabase } from '../migration/openDatabase.js';
 import { EntityStore } from '../reactives/EntityStore.js';
@@ -234,21 +238,7 @@ export class Client {
 
 	__dangerous__resetLocal = async () => {
 		this.sync.stop();
-		const req1 = indexedDB.deleteDatabase([this.namespace, 'meta'].join('_'));
-		const req2 = indexedDB.deleteDatabase(
-			[this.namespace, 'collections'].join('_'),
-		);
-		await Promise.all([
-			new Promise((resolve, reject) => {
-				req1.onsuccess = resolve;
-				req1.onerror = reject;
-			}),
-			new Promise((resolve, reject) => {
-				req2.onsuccess = resolve;
-				req2.onerror = reject;
-			}),
-		]);
-		window.location.reload();
+		await deleteAllDatabases(this.namespace, indexedDB);
 	};
 
 	export = async () => {

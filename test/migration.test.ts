@@ -616,3 +616,217 @@ it.todo(
 	'migrates in an online world where old operations still come in',
 	async () => {},
 );
+
+it('supports skip migrations in real life', async () => {
+	const v1Item = collection({
+		name: 'item',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string' },
+			contents: { type: 'string', nullable: true },
+			tags: { type: 'array', items: { type: 'string' } },
+		},
+	});
+	const v1Schema = schema({
+		version: 1,
+		collections: {
+			items: v1Item,
+		},
+	});
+
+	let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
+
+	const clientInit = {
+		migrations,
+		library: 'test',
+		user: 'a',
+	};
+
+	// @ts-ignore
+	let client = await createTestClient({
+		schema: v1Schema,
+		...clientInit,
+		// logId: 'client1',
+	});
+
+	console.debug('📈 Version 1 client created');
+
+	await client.items.put({
+		id: '1',
+		contents: 'hello',
+	});
+	await client.items.put({
+		id: '2',
+		contents: 'world',
+	});
+	await client.items.put({
+		id: '3',
+		tags: ['a', 'b'],
+	});
+
+	await client.close();
+
+	const v2Item = collection({
+		name: 'item',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string', default: () => 'default' },
+			contents: { type: 'string', default: 'empty' },
+			tags: { type: 'array', items: { type: 'string' } },
+			listId: { type: 'string', nullable: true, indexed: true },
+		},
+		synthetics: {
+			hasTags: {
+				type: 'string',
+				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
+			},
+		},
+		compounds: {
+			contents_tag: {
+				of: ['contents', 'tags'],
+			},
+		},
+	});
+	const v2List = collection({
+		name: 'list',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string', default: 'something' },
+			name: { type: 'string' },
+			items: { type: 'array', items: { type: 'string' } },
+			nullable: { type: 'string', nullable: true },
+		},
+	});
+
+	const v2Schema = schema({
+		version: 2,
+		collections: {
+			items: v2Item,
+			lists: v2List,
+		},
+	});
+
+	// this migration should be bypassed
+	migrations.push(
+		migrate(v1Schema, v2Schema, async () => {
+			throw new Error('should not be called');
+		}),
+	);
+
+	const v3Item = collection({
+		name: 'item',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string', default: () => 'default' },
+			contents: { type: 'string', default: 'empty' },
+			tags: {
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						name: {
+							type: 'string',
+						},
+						color: {
+							type: 'string',
+						},
+					},
+				},
+			},
+			listId: { type: 'string', nullable: true, indexed: true },
+		},
+		synthetics: {
+			hasTags: {
+				type: 'string',
+				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
+			},
+			itemTags: {
+				type: 'string[]',
+				compute: (item) => item.tags.map((tag) => tag.name),
+			},
+		},
+	});
+
+	const v3Schema = schema({
+		version: 3,
+		collections: {
+			items: v3Item,
+			lists: v2List,
+		},
+	});
+
+	migrations.push(
+		migrate(v2Schema, v3Schema, async () => {
+			throw new Error('should not be called');
+		}),
+	);
+
+	const v4List = collection({
+		name: 'list',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string', default: () => 'default' },
+			name: { type: 'string', default: 'empty' },
+			items: {
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						...v3Item.fields,
+					},
+				},
+			},
+		},
+	});
+
+	const v4Schema = schema({
+		version: 4,
+		collections: {
+			lists: v4List,
+		},
+	});
+
+	migrations.push(
+		migrate(v3Schema, v4Schema, async () => {
+			throw new Error('should not be called');
+		}),
+	);
+
+	/**
+	 * ⭐ The skip migration
+	 */
+	migrations.push(
+		migrate(v1Schema, v4Schema, async ({ mutations, queries }) => {
+			const items = await queries.items.findAll();
+			await mutations.lists.put({
+				id: 'uncategorized',
+				name: 'Uncategorized',
+				items: items.map((i) => ({
+					contents: i.contents || 'empty',
+					id: i.id,
+					listId: null,
+					tags: i.tags.map((t) => ({
+						name: t,
+						color: 'red',
+					})),
+				})),
+			});
+		}),
+	);
+
+	client = await createTestClient({
+		schema: v4Schema,
+		...clientInit,
+	});
+
+	console.debug('📈 Version 4 client created');
+
+	const defaultList = await client.lists.get('uncategorized').resolved;
+	expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
+		{
+		  "id": "uncategorized",
+		  "items": [],
+		  "name": "Uncategorized",
+		}
+	`);
+});
