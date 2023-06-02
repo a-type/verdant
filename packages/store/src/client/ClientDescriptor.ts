@@ -77,7 +77,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 	private initialize = async (init: ClientDescriptorOptions) => {
 		// if server-side and no alternative IndexedDB implementation was provided,
 		// we can't initialize the storage
-		if (!('indexedDB' in window) && !init.indexedDb) {
+		if (typeof window === 'undefined' && !init.indexedDb) {
 			throw new Error(
 				'A verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
 			);

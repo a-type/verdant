@@ -25,7 +25,7 @@ export class Heartbeat extends EventSubscriber<{
 		super();
 		this._interval = interval;
 		this.deadlineLength = deadlineLength;
-		if (restartOnTabFocus) {
+		if (typeof window !== 'undefined' && restartOnTabFocus) {
 			window.addEventListener('pageshow', () => this.start(true));
 		}
 	}

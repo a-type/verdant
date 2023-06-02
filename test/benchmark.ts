@@ -1,9 +1,59 @@
-import { Client } from './client/index.js';
+import { Client, Query } from './client/index.js';
 import { createTestClient } from './lib/testClient.js';
 import { startTestServer } from './lib/testServer.js';
-import { waitForPeerCount, waitForQueryResult } from './lib/waits.js';
 import 'fake-indexeddb/auto';
 import { WebSocket } from 'ws';
+
+function waitForPeerCount(client: Client, count: number, gte = false) {
+	return new Promise<void>((resolve, reject) => {
+		if (client.sync.presence.peerIds.length === count) {
+			resolve();
+			return;
+		}
+		const timeout = setTimeout(() => {
+			reject(new Error('Timed out waiting for connections ' + count));
+		}, 15000);
+		const unsubscribe = client.sync.presence.subscribe(
+			'peersChanged',
+			(peers) => {
+				if (
+					client.sync.presence.peerIds.length === count ||
+					(gte && client.sync.presence.peerIds.length >= count)
+				) {
+					unsubscribe();
+					clearTimeout(timeout);
+					resolve();
+				}
+			},
+		);
+	});
+}
+
+async function waitForQueryResult(
+	query: Query<any>,
+	predicate: (value: any) => boolean = (value) => {
+		return !!value && (Array.isArray(value) ? value.length > 0 : true);
+	},
+	timeoutMs = 15000,
+) {
+	await new Promise<void>((resolve, reject) => {
+		if (query.status !== 'initial' && predicate(query.current)) {
+			resolve();
+			return;
+		}
+
+		const timeout = setTimeout(() => {
+			reject(new Error('Timed out waiting for query ' + query.key));
+		}, timeoutMs);
+		const unsubscribe = query.subscribe((result) => {
+			if (predicate(query.current)) {
+				unsubscribe();
+				clearTimeout(timeout);
+				resolve();
+			}
+		});
+	});
+}
 
 // @ts-ignore
 global.WebSocket = WebSocket;

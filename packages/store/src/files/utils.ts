@@ -20,7 +20,7 @@ export function processValueFiles(
 	value: any,
 	onFileIdentified: (fileData: FileData) => void,
 ): any {
-	if (value instanceof File) {
+	if (typeof window !== 'undefined' && value instanceof File) {
 		const data = createFileData(value);
 		onFileIdentified(data);
 		return createFileRef(data.id);
