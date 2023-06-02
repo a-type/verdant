@@ -144,6 +144,9 @@ export class PresenceManager<
 		this._updateBatch.update({
 			items: [presence],
 		});
+		// proactively update the local presence
+		this.self.presence = { ...this.self.presence, ...presence };
+		this.emit('selfChanged', this.self);
 	};
 
 	flushPresenceUpdates = (presenceUpdates: Partial<Presence>[]) => {
