@@ -68,6 +68,9 @@ export function assignOid(obj: any, oid: ObjectIdentifier) {
 		isObject(obj),
 		`Only objects can be assigned OIDs, received ${JSON.stringify(obj)}`,
 	);
+	if (hasOid(obj)) {
+		removeOid(obj);
+	}
 	oidMap.set(obj, oid);
 	return obj;
 }
@@ -100,6 +103,27 @@ export function ensureOid(
 		return oid;
 	} else {
 		return getOid(obj);
+	}
+}
+
+export function ensureCompatibleOid(
+	obj: any,
+	rootOid: ObjectIdentifier,
+	createSubId?: () => string,
+) {
+	if (!hasOid(obj)) {
+		const oid = createSubOid(rootOid, createSubId);
+		assignOid(obj, oid);
+		return oid;
+	} else {
+		const existingOid = getOid(obj);
+		if (!areOidsRelated(existingOid, rootOid)) {
+			const oid = createSubOid(rootOid, createSubId);
+			assignOid(obj, oid);
+			return oid;
+		} else {
+			return getOid(obj);
+		}
 	}
 }
 
@@ -188,14 +212,14 @@ export function assignOidsToAllSubObjects(
 		for (let i = 0; i < obj.length; i++) {
 			item = obj[i];
 			if (isObject(item) && !isRef(item)) {
-				ensureOid(item, rootOid, createSubId);
+				ensureCompatibleOid(item, rootOid, createSubId);
 				assignOidsToAllSubObjects(item, createSubId);
 			}
 		}
 	} else if (isObject(obj) && !isRef(obj)) {
 		for (const key of Object.keys(obj)) {
 			if (isObject(obj[key]) && !isRef(obj[key])) {
-				ensureOid(obj[key], rootOid, createSubId);
+				ensureCompatibleOid(obj[key], rootOid, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
 		}
@@ -420,4 +444,8 @@ export function getRoots(oids: ObjectIdentifier[]) {
 		set.add(getOidRoot(oid));
 	}
 	return Array.from(set);
+}
+
+export function areOidsRelated(oidA: ObjectIdentifier, oidB: ObjectIdentifier) {
+	return getOidRoot(oidA) === getOidRoot(oidB);
 }

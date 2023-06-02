@@ -1,13 +1,13 @@
 import { EventSubscriber, Migration, StorageSchema } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManagerConfig } from '../files/FileManager.js';
-import { ReturnedFileData } from '../files/FileStorage.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { openMetadataDatabase } from '../metadata/openMetadataDatabase.js';
-import { openDocumentDatabase } from '../openDocumentDatabase.js';
+import { openDocumentDatabase } from '../migration/openDatabase.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
+import { deleteAllDatabases } from '../idb.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -77,7 +77,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 	private initialize = async (init: ClientDescriptorOptions) => {
 		// if server-side and no alternative IndexedDB implementation was provided,
 		// we can't initialize the storage
-		if (!('indexedDB' in window) && !init.indexedDb) {
+		if (typeof window === 'undefined' && !init.indexedDb) {
 			throw new Error(
 				'A verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
 			);
@@ -168,5 +168,9 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		if (this._initializing) {
 			(await this._readyPromise).close();
 		}
+	};
+
+	__dangerous__resetLocal = async () => {
+		await deleteAllDatabases(this.namespace);
 	};
 }

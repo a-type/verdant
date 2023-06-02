@@ -120,7 +120,16 @@ export class WebSocketSync
 			case 'need-since':
 			case 'presence-changed':
 			case 'presence-offline':
+				this.emit('message', message);
+				break;
 			case 'op-re':
+				if (!this.hasStartedSync) {
+					this.log(
+						`Skipping op-re message because sync hasn't started yet`,
+						message,
+					);
+					break;
+				}
 				this.emit('message', message);
 				break;
 			case 'heartbeat-response':

@@ -178,7 +178,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		deleted: boolean,
 		operations: Operation[],
 		after?: string,
-	) => {
+	): {
+		view: any;
+		deleted: boolean;
+		empty: boolean;
+	} => {
 		for (const operation of operations) {
 			if (after && operation.timestamp <= after) {
 				continue;
@@ -192,12 +196,19 @@ export class DocumentFamilyCache extends EventSubscriber<
 				}
 			}
 		}
-		return { view, deleted };
+		return { view, deleted, empty: !view && !operations.length };
 	};
 
 	computeView = (oid: ObjectIdentifier) => {
 		const confirmed = this.computeConfirmedView(oid);
 		const unconfirmedOperations = this.unconfirmedOperationsMap.get(oid) || [];
+		if (confirmed.empty && !unconfirmedOperations.length) {
+			this.context.log(
+				'debug',
+				`Entity ${oid} accessed with no local data at all`,
+			);
+			return { view: null, deleted: true, lastTimestamp: null };
+		}
 		let { view, deleted } = this.applyOperations(
 			confirmed.view,
 			confirmed.deleted,
@@ -209,21 +220,32 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return { view, deleted, lastTimestamp: this.getLastTimestamp(oid) };
 	};
 
-	computeConfirmedView = (oid: ObjectIdentifier) => {
+	computeConfirmedView = (
+		oid: ObjectIdentifier,
+	): {
+		view: any;
+		deleted: boolean;
+		empty: boolean;
+	} => {
 		const baseline = this.baselinesMap.get(oid);
 		const operations = this.operationsMap.get(oid) || [];
-		let view = cloneDeep(baseline?.snapshot || undefined);
-		view = this.applyOperations(view, !view, operations, baseline?.timestamp);
-		if (view) {
-			assignOid(view, oid);
+		const snapshot = cloneDeep(baseline?.snapshot || undefined);
+		const result = this.applyOperations(
+			snapshot,
+			!snapshot,
+			operations,
+			baseline?.timestamp,
+		);
+		if (result.view) {
+			assignOid(result.view, oid);
 		}
-		if (!baseline && !operations.length) {
+		if (result.empty) {
 			this.context.log(
 				'debug',
 				`Entity ${oid} accessed with no confirmed data`,
 			);
 		}
-		return view;
+		return result;
 	};
 
 	getLastTimestamp = (oid: ObjectIdentifier) => {

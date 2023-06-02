@@ -38,3 +38,4 @@ export type {
 export type { UserInfo } from '@verdant-web/common';
 export type { Query } from './queries2/types.js';
 export type { CollectionQueries } from './queries2/CollectionQueries.js';
+export { MigrationPathError } from './migration/errors.js';

@@ -86,3 +86,22 @@ export async function closeDatabase(db: IDBDatabase) {
 		resolve();
 	});
 }
+
+export async function deleteAllDatabases(
+	namespace: string,
+	indexedDB: IDBFactory = window.indexedDB,
+) {
+	const req1 = indexedDB.deleteDatabase([namespace, 'meta'].join('_'));
+	const req2 = indexedDB.deleteDatabase([namespace, 'collections'].join('_'));
+	await Promise.all([
+		new Promise((resolve, reject) => {
+			req1.onsuccess = resolve;
+			req1.onerror = reject;
+		}),
+		new Promise((resolve, reject) => {
+			req2.onsuccess = resolve;
+			req2.onerror = reject;
+		}),
+	]);
+	window.location.reload();
+}

@@ -1,9 +1,11 @@
 import { DocumentBaseline } from './baseline.js';
 import { FileRef } from './files.js';
 import {
+	areOidsRelated,
 	assignOid,
 	assignOidsToAllSubObjects,
 	createRef,
+	createSubOid,
 	ensureOid,
 	getOid,
 	getOidRoot,
@@ -192,13 +194,19 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 			}
 		} else {
 			const oldValueOid = maybeGetOid(oldValue);
-			let valueOid;
-			if (!options.mergeUnknownObjects) {
+			let valueOid = maybeGetOid(value);
+			// the user supplied an object which was already assigned an OID,
+			// but that OID is from a separate entity: this object must
+			// be cloned to a new identity.
+			if (valueOid && !areOidsRelated(oid, valueOid)) {
+				value = cloneDeep(value, false);
+				valueOid = createSubOid(oid, createSubId);
+				assignOid(value, valueOid);
+			} else if (!options.mergeUnknownObjects) {
 				valueOid = ensureOid(value, oid, createSubId);
 			} else {
 				// if merge unknown objects is requested, we copy the previous value's oid
 				// to any mirrored new value if it doesn't have one assigned already.
-				valueOid = maybeGetOid(value);
 				if (!valueOid && oldValueOid) {
 					assignOid(value, oldValueOid);
 					valueOid = oldValueOid;
@@ -206,6 +214,14 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 					valueOid = ensureOid(value, oid, createSubId);
 				}
 			}
+			assert(
+				!!valueOid,
+				'Error: no value OID was resolved during diff. This is a bug in Verdant.',
+			);
+			assert(
+				areOidsRelated(oid, valueOid),
+				`Error: value OID ${valueOid} is not related to parent OID ${oid}. This is a bug in Verdant.`,
+			);
 
 			if (oldValue === undefined || valueOid !== oldValueOid) {
 				// first case: previous value exists but the OIDs are different,

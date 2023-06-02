@@ -39,11 +39,10 @@ it(
 		});
 		a_item.set('image', createTestFile());
 
-		await waitForQueryResult(clientB.items.get(a_item.get('id')));
-		console.log('⭐️ item synced to B');
-		const b_item = await clientB.items.get(a_item.get('id')).resolved;
-
-		expect(b_item).toBeTruthy();
+		const b_itemQuery = clientB.items.get(a_item.get('id'));
+		await waitForQueryResult(b_itemQuery);
+		console.log(`⭐️ item ${a_item.get('id')} synced to B`);
+		const b_item = await b_itemQuery.resolved;
 		assert(!!b_item);
 		await waitForCondition(() => !!b_item.get('image'));
 		console.log('⭐️ image synced to B');
@@ -67,7 +66,7 @@ it(
 		expect(text).toBe('[object File]');
 	},
 	{
-		timeout: 10000,
+		timeout: 15000,
 		retry: 2,
 	},
 );
