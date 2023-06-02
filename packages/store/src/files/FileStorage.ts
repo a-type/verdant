@@ -20,9 +20,25 @@ export interface ReturnedFileData extends FileData {
 export class FileStorage extends IDBService {
 	addFile = async (
 		file: FileData,
-		{ transaction }: { transaction?: IDBTransaction } = {},
+		{
+			transaction,
+			downloadRemote = false,
+		}: { transaction?: IDBTransaction; downloadRemote?: boolean } = {},
 	) => {
-		const buffer = file.file ? await fileToArrayBuffer(file.file) : undefined;
+		let buffer = file.file ? await fileToArrayBuffer(file.file) : undefined;
+		if (!buffer && downloadRemote && file.url) {
+			try {
+				buffer = await fetch(file.url, {
+					method: 'GET',
+					credentials: 'include',
+				}).then((r) => r.arrayBuffer());
+			} catch (err) {
+				console.error(
+					"Failed to download file to cache it locally. The file will still be available using its URL. Check the file server's CORS configuration.",
+					err,
+				);
+			}
+		}
 		return this.run(
 			'files',
 			(store) => {

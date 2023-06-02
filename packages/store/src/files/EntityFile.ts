@@ -18,9 +18,22 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _loading = true;
 	private _failed = false;
 	private _disposed = false;
+	private _downloadRemote = false;
 
-	constructor(public readonly id: string) {
+	constructor(
+		public readonly id: string,
+		{
+			downloadRemote = false,
+		}: {
+			downloadRemote?: boolean;
+		} = {},
+	) {
 		super();
+		this._downloadRemote = downloadRemote;
+	}
+
+	get downloadRemote() {
+		return this._downloadRemote;
 	}
 
 	[UPDATE] = (fileData: FileData) => {

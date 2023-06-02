@@ -37,7 +37,12 @@ export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 export type StorageFileFieldSchema = {
 	type: 'file';
 	nullable?: boolean;
-	// downloadRemote?: boolean; TODO: is this a good feature? maybe later.
+	/**
+	 * Instructs the client to download synced files to local storage on first request for offline use.
+	 * Leave this false to save storage space on the client, at the cost of requiring a network
+	 * connection to use files created by other devices.
+	 */
+	downloadRemote?: boolean;
 };
 
 export type StorageFieldSchema =

@@ -133,7 +133,9 @@ export class FileManager {
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
 					file[UPDATE](result.data);
-					await this.storage.addFile(result.data);
+					await this.storage.addFile(result.data, {
+						downloadRemote: file.downloadRemote,
+					});
 				} else {
 					file[MARK_FAILED]();
 					if (result.retry) {
