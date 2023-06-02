@@ -36,15 +36,11 @@ export function createMigration({
 
   export default migrate(v${
 		version - 1
-	}Schema, v${version}Schema, async ({ migrate, withDefaults, info }) => {
-    // add or modify migration logic here
-		// if a line has a type error, that indicates the shape of your models may have changed
-		${collectionNames
-			.map(
-				(name) =>
-					`await migrate('${name}', old => withDefaults('${name}', old))`,
-			)
-			.join('\n')}
+	}Schema, v${version}Schema, async ({ migrate }) => {
+    // add or modify migration logic here. you must provide migrations for
+		// any collections that have changed field types or added new non-nullable
+		// fields without defaults
+		// migrate('collectionName', async (old) => ({ /* new */ }));
   });
   `;
 }
