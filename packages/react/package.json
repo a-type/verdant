@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react",
-	"version": "17.0.0",
+	"version": "18.0.0",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -29,7 +29,7 @@
 		"link": "pnpm link --global"
 	},
 	"peerDependencies": {
-		"@verdant-web/store": "^2.2.0",
+		"@verdant-web/store": "^2.3.0",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
