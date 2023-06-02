@@ -51,6 +51,10 @@ export class Metadata extends EventSubscriber<{
 	readonly time = new HybridLogicalClockTimestampProvider();
 
 	private readonly disableRebasing: boolean = false;
+	/**
+	 * indicates the client is shutting down and we should stop
+	 * accessing the database.
+	 */
 	private _closing = false;
 
 	private context: Omit<Context, 'documentDb'>;
@@ -190,8 +194,9 @@ export class Metadata extends EventSubscriber<{
 			timestamp,
 		});
 		if (
-			!localReplicaInfo.ackedLogicalTime ||
-			timestamp > localReplicaInfo.ackedLogicalTime
+			!this._closing &&
+			(!localReplicaInfo.ackedLogicalTime ||
+				timestamp > localReplicaInfo.ackedLogicalTime)
 		) {
 			this.localReplica.update({ ackedLogicalTime: timestamp });
 		}
@@ -257,6 +262,8 @@ export class Metadata extends EventSubscriber<{
 	};
 
 	updateLastSynced = async (timestamp: string) => {
+		if (this._closing) return;
+
 		return this.localReplica.update({
 			lastSyncedLogicalTime: timestamp,
 		});
