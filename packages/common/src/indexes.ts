@@ -131,9 +131,14 @@ export function assignIndexValues(
 	return doc;
 }
 
+export const NULL_INDEX_VALUE = 'null';
+
 export function sanitizeIndexValue(
 	value: unknown,
 ): string | number | (string | number)[] {
+	if (value === null) {
+		return NULL_INDEX_VALUE;
+	}
 	if (typeof value === 'string' || typeof value === 'number') {
 		return value;
 	}
