@@ -1,5 +1,18 @@
 # @lo-fi/web
 
+## 2.3.1
+
+### Patch Changes
+
+- ed6cda6: Optimistically update own presence
+- 8d32085: Provide more information for some errors
+- 9edb078: Experimental "downloadRemote" property for file fields, which tries to download and store the file locally for offline use if it's not already on the device.
+- Updated dependencies [6075f8d]
+- Updated dependencies [8d32085]
+- Updated dependencies [509917c]
+- Updated dependencies [9edb078]
+  - @verdant-web/common@1.13.1
+
 ## 2.3.0
 
 ### Minor Changes

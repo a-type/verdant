@@ -1,5 +1,14 @@
 # @verdant-web/common
 
+## 1.13.1
+
+### Patch Changes
+
+- 6075f8d: Bugfix: don't automigrate v1
+- 8d32085: Provide more information for some errors
+- 509917c: Major bugfix for legacy object identifier compatibility
+- 9edb078: Experimental "downloadRemote" property for file fields, which tries to download and store the file locally for offline use if it's not already on the device.
+
 ## 1.13.0
 
 ### Minor Changes
