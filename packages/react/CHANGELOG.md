@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 18.0.1
+
+### Patch Changes
+
+- Updated dependencies [ed6cda6]
+- Updated dependencies [6075f8d]
+- Updated dependencies [8d32085]
+- Updated dependencies [509917c]
+- Updated dependencies [9edb078]
+  - @verdant-web/store@2.3.1
+  - @verdant-web/common@1.13.1
+
 ## 18.0.0
 
 ### Patch Changes
