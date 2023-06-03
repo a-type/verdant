@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.13.2
+
+### Patch Changes
+
+- 9f2d7f2: bugfix: migrating new collections
+
 ## 1.13.1
 
 ### Patch Changes
