@@ -336,7 +336,10 @@ export function migrate(
 			);
 			if (unmigrated.length > 0) {
 				// TODO: does this deserve a full-on error?
-				console.error('Unmigrated changed collections:', unmigrated);
+				console.error(
+					`Unmigrated changed collections from version ${oldSchema.version} to version ${newSchema.version}:`,
+					unmigrated,
+				);
 			}
 		},
 		removedCollections,

@@ -186,7 +186,11 @@ export class FileManager {
 		const tx = this.storage.createTransaction(['files'], 'readwrite');
 		await Promise.all(
 			fileRefs.map(async (fileRef) => {
-				await this.storage.markPendingDelete(fileRef.id, { transaction: tx });
+				try {
+					await this.storage.markPendingDelete(fileRef.id, { transaction: tx });
+				} catch (err) {
+					this.context.log('error', 'Failed to mark file for deletion', err);
+				}
 			}),
 		);
 		this.context.log(

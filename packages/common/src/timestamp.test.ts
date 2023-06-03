@@ -2,6 +2,7 @@ import { describe, expect, it, vitest } from 'vitest';
 import {
 	convertOldHlcTimestamp,
 	deserializeHlcTimestamp,
+	encodeVersion,
 	HybridLogicalClockTimestampProvider,
 	OLD_encodeVersion,
 	OLD_serializeHlcTimestamp,
@@ -109,5 +110,17 @@ describe('the hybrid logical clock', () => {
 		const clock = new HybridLogicalClockTimestampProvider();
 		const now = clock.now(1);
 		expect(clock.getWallClockTime(now)).toEqual(time.getTime());
+	});
+});
+
+describe('version encoding', () => {
+	it('orders 1 before 2', () => {
+		expect(encodeVersion(1) < encodeVersion(2)).toBe(true);
+	});
+	it('orders 32 before 33', () => {
+		expect(encodeVersion(32) < encodeVersion(33)).toBe(true);
+	});
+	it('orders 34 before 35', () => {
+		expect(encodeVersion(34) < encodeVersion(35)).toBe(true);
 	});
 });
