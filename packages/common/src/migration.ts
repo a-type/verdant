@@ -323,25 +323,27 @@ export function migrate(
 			// mandatory migration of fields which had defaults added or
 			// fields removed but weren't migrated by the user
 
-			engine.log(
-				'debug',
-				'auto-migrating collections with new defaults',
-				autoMigratedCollections,
-			);
-			for (const name of autoMigratedCollections) {
-				await engine.migrate(name, autoMigration(name));
-				migratedCollections.push(name);
-			}
-
-			const unmigrated = changedCollections.filter(
-				(collection) => !migratedCollections.includes(collection),
-			);
-			if (unmigrated.length > 0) {
-				// TODO: does this deserve a full-on error?
-				console.error(
-					`Unmigrated changed collections from version ${oldSchema.version} to version ${newSchema.version}:`,
-					unmigrated,
+			if (newSchema.version > 1) {
+				engine.log(
+					'debug',
+					'auto-migrating collections with new defaults',
+					autoMigratedCollections,
 				);
+				for (const name of autoMigratedCollections) {
+					await engine.migrate(name, autoMigration(name));
+					migratedCollections.push(name);
+				}
+
+				const unmigrated = changedCollections.filter(
+					(collection) => !migratedCollections.includes(collection),
+				);
+				if (unmigrated.length > 0) {
+					// TODO: does this deserve a full-on error?
+					console.error(
+						`Unmigrated changed collections from version ${oldSchema.version} to version ${newSchema.version}:`,
+						unmigrated,
+					);
+				}
 			}
 		},
 		removedCollections,
