@@ -9,6 +9,7 @@ import {
 	decomposeOid,
 	getOid,
 	getOidRange,
+	getOidRoot,
 	hasOid,
 	maybeGetOidProperty,
 	normalize,
@@ -404,3 +405,9 @@ describe('assigning OIDs to sub-objects', () => {
 		expect(hasOid(obj.bar[0])).toBe(false);
 	});
 });
+
+it('should get the root OID for a legacy OID', () => [
+	expect(getOidRoot('items/clabgyjfh00003968qycsq3ld.inputs.#')).toEqual(
+		'items/clabgyjfh00003968qycsq3ld',
+	),
+]);

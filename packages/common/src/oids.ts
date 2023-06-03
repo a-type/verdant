@@ -426,7 +426,7 @@ export function normalizeFirstLevel(obj: any) {
 }
 
 export function getOidRoot(oid: ObjectIdentifier) {
-	return oid.split(RANDOM_SEPARATOR)[0];
+	return oid.split('.')[0].split(RANDOM_SEPARATOR)[0];
 }
 
 /**
