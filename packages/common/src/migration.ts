@@ -270,9 +270,11 @@ export function migrate(
 		);
 		if (added.length > 0) {
 			addedIndexes[changed] = added;
+			autoMigratedCollections.add(changed);
 		}
 		if (removed.length > 0) {
 			removedIndexes[changed] = removed;
+			autoMigratedCollections.add(changed);
 		}
 	}
 
