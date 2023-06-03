@@ -15,4 +15,15 @@ export interface Context {
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;
 	}>;
+	globalEvents: EventSubscriber<{
+		/**
+		 * A change from a future version of the application has been
+		 * witnessed. These changes are not applied but it indicates
+		 * the app has been updated and we should prompt the user
+		 * to reload or have their app user manually reload.
+		 *
+		 * The parameter is the timestamp of the future change.
+		 */
+		futureSeen: (timestamp: string) => void;
+	}>;
 }

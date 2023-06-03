@@ -47,6 +47,7 @@ export interface StoreTools {
 	addFile: (file: FileData) => void;
 	getFile: (id: string) => EntityFile;
 	time: TimestampProvider;
+	now: string;
 }
 
 export type AccessibleEntityProperty<T> = T extends Array<any>

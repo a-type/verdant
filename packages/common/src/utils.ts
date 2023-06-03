@@ -139,3 +139,15 @@ export function findLastIndex<T>(array: T[], predicate: (item: T) => boolean) {
 	}
 	return -1;
 }
+
+export function debounce<T extends (...args: any[]) => any>(
+	fn: T,
+	wait: number,
+): T {
+	let timeout: any;
+	return function (this: any, ...args: any[]) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => fn.apply(context, args), wait);
+	} as any;
+}

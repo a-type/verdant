@@ -1,6 +1,8 @@
 import {
 	assert,
+	debounce,
 	DocumentBaseline,
+	EventSubscriber,
 	Migration,
 	Operation,
 	SchemaCollection,
@@ -32,7 +34,18 @@ export type ClientWithCollections = Client & {
 	[key: string]: CollectionQueries<any, any, any>;
 };
 
-export class Client {
+export class Client extends EventSubscriber<{
+	/**
+	 * Called when a change from a future version of the application has
+	 * been witnessed. These changes are not applied but it indicates
+	 * the app has been updated and a peer is using a newer version.
+	 * You should listen to this event and prompt the user to reload
+	 * their client, or reload it for them.
+	 *
+	 * This event may be called multiple times.
+	 */
+	futureSeen: () => void;
+}> {
 	readonly meta: Metadata;
 	private _entities: EntityStore;
 	private _queryCache: QueryCache;
@@ -60,6 +73,7 @@ export class Client {
 		private context: Context,
 		components: { meta: Metadata },
 	) {
+		super();
 		this.meta = components.meta;
 		this.collectionNames = Object.keys(context.schema.collections);
 		this._sync = this.config.syncConfig
@@ -90,6 +104,11 @@ export class Client {
 			this.schema,
 			this._entities,
 		);
+
+		const notifyFutureSeen = debounce(() => {
+			this.emit('futureSeen');
+		}, 300);
+		this.context.globalEvents.subscribe('futureSeen', notifyFutureSeen);
 
 		this.documentDb.addEventListener('versionchange', () => {
 			this.context.log?.(

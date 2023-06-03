@@ -282,3 +282,11 @@ export function OLD_deserializeHlcTimestamp(clock: string): HLCTimestamp {
 		node: node.slice(node.length - 7),
 	};
 }
+
+export function getTimestampSchemaVersion(timestamp: string): number {
+	return parseInt(timestamp.slice(0, VERSION_BLOCK_LENGTH), 36);
+}
+
+export function compareTimestampSchemaVersions(a: string, b: string) {
+	return getTimestampSchemaVersion(a) - getTimestampSchemaVersion(b);
+}

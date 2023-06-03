@@ -102,6 +102,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 				log: init.log || (() => {}),
 				undoHistory: init.undoHistory || new UndoHistory(),
 				entityEvents: new EventSubscriber(),
+				globalEvents: new EventSubscriber(),
 			};
 			const meta = new Metadata({
 				context,

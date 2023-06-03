@@ -2,6 +2,7 @@ import {
 	applyPatch,
 	assignOid,
 	cloneDeep,
+	compareTimestampSchemaVersions,
 	DocumentBaseline,
 	EventSubscriber,
 	ObjectIdentifier,
@@ -48,6 +49,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			addFile: store.files.add,
 			getFile: store.files.get,
 			time: store.meta.time,
+			now: store.meta.now,
 		};
 		this.context = context;
 	}
@@ -183,8 +185,15 @@ export class DocumentFamilyCache extends EventSubscriber<
 		deleted: boolean;
 		empty: boolean;
 	} => {
+		let futureSeen: string | undefined = undefined;
+		const now = this.storeTools.now;
 		for (const operation of operations) {
 			if (after && operation.timestamp <= after) {
+				continue;
+			}
+			if (compareTimestampSchemaVersions(operation.timestamp, now) > 0) {
+				// we don't apply patches from future versions
+				futureSeen = operation.timestamp;
 				continue;
 			}
 			if (operation.data.op === 'delete') {
@@ -195,6 +204,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 					deleted = false;
 				}
 			}
+		}
+		if (futureSeen) {
+			this.context.globalEvents.emit('futureSeen', futureSeen);
 		}
 		return { view, deleted, empty: !view && !operations.length };
 	};
