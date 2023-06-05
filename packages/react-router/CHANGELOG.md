@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.0
+
+### Minor Changes
+
+- f081d74: Add tools for route transition animations, like manual control of rendering routes even if they don't match the path
+
 ## 0.1.6
 
 ### Patch Changes
