@@ -7,6 +7,7 @@ type CommonRouteConfig = {
 		[key: string]: string;
 	}) => Promise<any> | (() => void) | void;
 	onVisited?: (params: { [key: string]: string }) => void;
+	data?: any;
 };
 
 export type PathRouteConfig = CommonRouteConfig & {
