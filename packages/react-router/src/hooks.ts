@@ -83,7 +83,7 @@ function getBestRouteMatch(
 
 const EMPTY_ROUTES: RouteConfig[] = [];
 
-export function useMatchingRoute(
+export function useMatchingRouteForPath(
 	basePath: string,
 	routes: RouteConfig[] | null,
 ) {
@@ -139,6 +139,29 @@ export function useRouteMatchesForPath(fullPath: string): RouteMatch[] {
 export function useMatchingRoutes(): RouteMatch[] {
 	const fullPath = useLocationPath();
 	return useRouteMatchesForPath(fullPath);
+}
+
+export function useMatchingRoute(): RouteMatch | null {
+	const { match } = useContext(RouteLevelContext);
+	return match;
+}
+
+export function useNextMatchingRoute(): RouteMatch | null {
+	const {
+		match: parent,
+		subpath,
+		params: upstreamParams,
+	} = useContext(RouteLevelContext);
+
+	const match = useMatchingRouteForPath(
+		subpath,
+		parent?.route.children ?? null,
+	);
+
+	if (!match) {
+		return null;
+	}
+	return match;
 }
 
 export function useNavigate() {

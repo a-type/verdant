@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo } from 'react';
 import { RouteLevelContext, RouteLevelProvider } from './context.js';
-import { useMatchingRoute } from './hooks.js';
+import { useMatchingRouteForPath } from './hooks.js';
 
 export function Outlet() {
 	const {
@@ -9,7 +9,10 @@ export function Outlet() {
 		params: upstreamParams,
 	} = useContext(RouteLevelContext);
 
-	const match = useMatchingRoute(subpath, parent?.route.children ?? null);
+	const match = useMatchingRouteForPath(
+		subpath,
+		parent?.route.children ?? null,
+	);
 
 	const Component = parent?.route?.component ?? null;
 

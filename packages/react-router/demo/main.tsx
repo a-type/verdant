@@ -10,6 +10,7 @@ import {
 import { loadPost } from './data/fakePosts.js';
 import { delay } from './data/utils.js';
 import { Home } from './routes/Home.js';
+import { RouteTransition } from './RouteTransition.js';
 
 // this fake loading can be "preloaded" by calling early,
 // and will return immediately if already loaded
@@ -97,7 +98,7 @@ function handleNavigate(path: string, { state }: { state?: any }) {
 function App() {
 	return (
 		<Router routes={routes} onNavigate={handleNavigate}>
-			<main>
+			<main className="main">
 				<nav>
 					<Link to="/">Home</Link>
 					<Link to="/posts">Posts</Link>
@@ -106,9 +107,9 @@ function App() {
 				<TransitionIndicator delay={1000}>
 					<div>Loading next page...</div>
 				</TransitionIndicator>
-				<div>
+				<div className="content">
 					<Suspense fallback={<div>Loading...</div>}>
-						<Outlet />
+						<RouteTransition />
 					</Suspense>
 				</div>
 			</main>

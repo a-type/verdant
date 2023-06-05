@@ -11,4 +11,7 @@ export {
 	useSearchParams,
 	useOnLocationChange,
 	useMatchingRoutes,
+	useMatchingRoute,
+	useNextMatchingRoute,
 } from './hooks.js';
+export * from './Route.js';

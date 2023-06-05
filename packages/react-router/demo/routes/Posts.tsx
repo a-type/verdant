@@ -4,7 +4,7 @@ import { Outlet } from '../../src/Outlet.js';
 
 export function Posts() {
 	return (
-		<div>
+		<div style={{ background: 'lightblue' }} className="page">
 			<h1>Posts</h1>
 			<ul>
 				<li>
