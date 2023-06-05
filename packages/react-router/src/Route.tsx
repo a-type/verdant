@@ -1,28 +1,43 @@
-import { Outlet } from './Outlet.js';
+import { useEffect, useMemo } from 'react';
 import { RouteLevelProvider } from './context.js';
-import { useRouteMatchesForPath } from './hooks.js';
+import { RouteMatch } from './types.js';
 
 export interface RouteProps {
-	path: string;
+	value: RouteMatch;
+	/**
+	 * Any upstream route parameters to combine with the rendered
+	 * route's parameters. This is for passing params from parent
+	 * routes through the tree.
+	 */
+	params?: Record<string, string>;
 }
 
 /**
  * Render a specific route's UI, even if the current URL doesn't
  * match it.
  */
-export function Route({ path }: RouteProps) {
-	const matches = useRouteMatchesForPath(path);
-	const match = matches[matches.length - 1];
+export function Route({ value, params }: RouteProps) {
+	useEffect(() => {
+		value?.route.onVisited?.(value.params);
+	}, [value]);
 
-	if (!match) return null;
+	const paramsToPass = useMemo(
+		() => ({
+			...value.params,
+			...params,
+		}),
+		[value.params, params],
+	);
 
-	const Component = match.route.component;
+	if (!value?.route.component) return null;
+
+	const Component = value.route.component;
 
 	return (
 		<RouteLevelProvider
-			match={match}
-			subpath={match.path}
-			params={match.params}
+			match={value}
+			subpath={value.path}
+			params={paramsToPass}
 		>
 			<Component />
 		</RouteLevelProvider>

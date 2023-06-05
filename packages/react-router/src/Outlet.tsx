@@ -1,6 +1,7 @@
-import { useContext, useEffect, useMemo } from 'react';
-import { RouteLevelContext, RouteLevelProvider } from './context.js';
+import { useContext, useMemo } from 'react';
+import { RouteLevelContext } from './context.js';
 import { useMatchingRouteForPath } from './hooks.js';
+import { Route } from './Route.js';
 
 export function Outlet() {
 	const {
@@ -14,33 +15,7 @@ export function Outlet() {
 		parent?.route.children ?? null,
 	);
 
-	const Component = parent?.route?.component ?? null;
+	if (!match) return null;
 
-	useEffect(() => {
-		if (match?.route?.onVisited) {
-			match.route.onVisited(match.params);
-		}
-	}, [match]);
-
-	const params = useMemo(
-		() => ({
-			...upstreamParams,
-			...parent?.params,
-		}),
-		[upstreamParams, parent?.params],
-	);
-
-	if (Component) {
-		return (
-			<RouteLevelProvider
-				match={match}
-				subpath={match?.path ?? subpath}
-				params={params}
-			>
-				<Component />
-			</RouteLevelProvider>
-		);
-	}
-
-	return null;
+	return <Route value={match} params={upstreamParams} />;
 }

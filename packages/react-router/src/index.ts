@@ -15,3 +15,4 @@ export {
 	useNextMatchingRoute,
 } from './hooks.js';
 export * from './Route.js';
+export * from './RouteByPath.js';

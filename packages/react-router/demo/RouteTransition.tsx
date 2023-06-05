@@ -61,7 +61,6 @@ export function RouteTransition({}: RouteTransitionProps) {
 	console.log('PREVIOUS MATCH', previousMatch);
 	console.log('UPCOMING MATCH', match);
 
-	const Previous = previousMatch?.route.component;
 	return (
 		<div
 			style={{
@@ -71,7 +70,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 				flex: 1,
 			}}
 		>
-			{!!Previous && !!match && previousMatch?.route !== match.route && (
+			{!!previousMatch && !!match && previousMatch?.route !== match.route && (
 				<div
 					ref={oldRouteContainerRef}
 					style={{
@@ -81,7 +80,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 						left: '-100%',
 					}}
 				>
-					<Previous />
+					<Route value={previousMatch} />
 				</div>
 			)}
 			<div

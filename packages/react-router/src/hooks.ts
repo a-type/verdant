@@ -147,11 +147,7 @@ export function useMatchingRoute(): RouteMatch | null {
 }
 
 export function useNextMatchingRoute(): RouteMatch | null {
-	const {
-		match: parent,
-		subpath,
-		params: upstreamParams,
-	} = useContext(RouteLevelContext);
+	const { match: parent, subpath } = useContext(RouteLevelContext);
 
 	const match = useMatchingRouteForPath(
 		subpath,
