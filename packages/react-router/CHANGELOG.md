@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.1
+
+### Patch Changes
+
+- 2bd2c98: Add arbitrary data to routes
+
 ## 0.2.0
 
 ### Minor Changes
