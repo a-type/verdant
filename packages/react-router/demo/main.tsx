@@ -6,6 +6,7 @@ import {
 	Router,
 	TransitionIndicator,
 	makeRoutes,
+	useMatch,
 } from '../src/index.js';
 import { loadPost } from './data/fakePosts.js';
 import { delay } from './data/utils.js';
@@ -103,6 +104,7 @@ function App() {
 					<Link to="/">Home</Link>
 					<Link to="/posts">Posts</Link>
 					<Link to="/foo">404</Link>
+					<TestMatch path="/posts" />
 				</nav>
 				<TransitionIndicator delay={1000}>
 					<div>Loading next page...</div>
@@ -115,6 +117,16 @@ function App() {
 			</main>
 		</Router>
 	);
+}
+
+function TestMatch({ path }: { path: string }) {
+	const matchesPosts = useMatch({
+		path,
+		end: false,
+	});
+
+	if (matchesPosts) return <div>Matches {path}</div>;
+	return null;
 }
 
 createRoot(document.getElementById('root')!).render(

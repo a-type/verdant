@@ -39,7 +39,11 @@ export function matchPath(
 ): RouteMatch | null {
 	const keys: Key[] = [];
 	const { path, exact } = getRoutePath(route);
-	const re = pathToRegexp(joinPaths(basePath, path), keys, { end: !!exact });
+	const re = pathToRegexp(
+		path.startsWith('/') ? path : joinPaths(basePath, path),
+		keys,
+		{ end: !!exact },
+	);
 	const match = re.exec(fullPath);
 	if (!match) {
 		return null;
