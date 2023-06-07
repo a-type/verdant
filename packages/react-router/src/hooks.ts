@@ -10,6 +10,11 @@ import { IndexRouteConfig, RouteConfig, RouteMatch } from './types.js';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { RouteLevelContext, useRootMatch, useLocationPath } from './context.js';
 import { joinPaths } from './util.js';
+import {
+	getAllMatchingRoutes,
+	getBestRouteMatch,
+	matchPath,
+} from './resolution.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -34,53 +39,6 @@ export function useOnLocationChange(
 	}, [cb]);
 }
 
-function isIndexRoute(route: RouteConfig): route is IndexRouteConfig {
-	return (route as any).index === true;
-}
-
-function getRoutePath(route: RouteConfig): { path: string; exact: boolean } {
-	if (isIndexRoute(route)) {
-		return { path: '', exact: true };
-	}
-	if (route.path === '*') {
-		return { path: '', exact: false };
-	}
-	return { path: route.path, exact: !!route.exact };
-}
-
-function matchPath(
-	fullPath: string,
-	basePath: string,
-	route: RouteConfig,
-): RouteMatch | null {
-	const keys: Key[] = [];
-	const { path, exact } = getRoutePath(route);
-	const re = pathToRegexp(joinPaths(basePath, path), keys, { end: !!exact });
-	const match = re.exec(fullPath);
-	if (!match) {
-		return null;
-	}
-	const params = keys.reduce((params, key, index) => {
-		params[key.name] = match[index + 1];
-		return params;
-	}, {} as Record<string, string>);
-	return { path: match[0], params, route };
-}
-
-function getBestRouteMatch(
-	fullPath: string,
-	basePath: string,
-	routes: RouteConfig[],
-): RouteMatch | null {
-	for (const route of routes) {
-		const match = matchPath(fullPath, basePath, route);
-		if (match) {
-			return match;
-		}
-	}
-	return null;
-}
-
 const EMPTY_ROUTES: RouteConfig[] = [];
 
 export function useMatchingRouteForPath(
@@ -96,42 +54,18 @@ export function useMatchingRouteForPath(
 	return match;
 }
 
-function getAllMatchingRoutes(
-	fullPath: string,
-	basePath: string,
-	routes: RouteConfig[],
-): RouteMatch[] {
-	const match = getBestRouteMatch(fullPath, basePath, routes);
-	if (!match) {
-		return [];
-	}
-
-	const childRoutes = match.route.children;
-	if (!childRoutes) {
-		return [match];
-	}
-
-	return [match].concat(
-		getAllMatchingRoutes(
-			fullPath,
-			joinPaths(basePath, match.path),
-			childRoutes,
-		),
-	);
-}
-
 /**
  * Returns the full list of matching routes for the given path.
  * A path will match exactly one leaf route; this is the traversal
  * from the root to that leaf.
+ *
+ * The path can be relative to the current location or absolute.
  */
 export function useRouteMatchesForPath(fullPath: string): RouteMatch[] {
 	const root = useRootMatch();
-	const { subpath: basePath } = useContext(RouteLevelContext);
-
 	const matches = useMemo(
-		() => getAllMatchingRoutes(fullPath, basePath, root?.route.children || []),
-		[root, fullPath, basePath],
+		() => getAllMatchingRoutes(fullPath, '', root?.route.children || []),
+		[root, fullPath],
 	);
 	return matches;
 }

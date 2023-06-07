@@ -25,7 +25,8 @@
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
-		"demo": "vite --config ./demo/vite.config.ts ./demo"
+		"demo": "vite --config ./demo/vite.config.ts ./demo",
+		"test": "vitest"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0"

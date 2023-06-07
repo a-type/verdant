@@ -1,4 +1,4 @@
-import { Link, Outlet, useParams } from '../../src/index.js';
+import { Link, Outlet, RouteByPath, useParams } from '../../src/index.js';
 import { getPost, loadPost } from '../data/fakePosts.js';
 
 export function Post() {
@@ -15,6 +15,8 @@ export function Post() {
 			<p>{post.content}</p>
 			<Link to={`/posts/${id}/passthrough/testable`}>Test</Link>
 			<Outlet />
+			<div>Preview test:</div>
+			<RouteByPath path="passthrough/testable" />
 		</div>
 	);
 }
