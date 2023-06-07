@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.3
+
+### Patch Changes
+
+- 85920e1: Resolve relative paths in RouteByPath
+
 ## 0.2.2
 
 ### Patch Changes
