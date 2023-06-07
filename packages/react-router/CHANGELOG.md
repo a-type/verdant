@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.4
+
+### Patch Changes
+
+- c2c64a5: Fix more errors with RouteByPath
+
 ## 0.2.3
 
 ### Patch Changes
