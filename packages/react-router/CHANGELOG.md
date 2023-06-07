@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.2
+
+### Patch Changes
+
+- c177778: Fix params on useNextMatchingRoute to incorporate parent route params
+
 ## 0.2.1
 
 ### Patch Changes
