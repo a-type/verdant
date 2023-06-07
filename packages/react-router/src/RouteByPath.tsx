@@ -9,7 +9,7 @@ export interface RouteByPathProps {
 
 export function RouteByPath({ path }: RouteByPathProps) {
 	const basePath = useLocationPath();
-	const resolvedPath = joinPaths(basePath, path);
+	const resolvedPath = path.startsWith('/') ? path : joinPaths(basePath, path);
 	const matches = useRouteMatchesForPath(resolvedPath);
 	const match = matches[matches.length - 1];
 	if (!match) return null;
