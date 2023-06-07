@@ -147,17 +147,31 @@ export function useMatchingRoute(): RouteMatch | null {
 }
 
 export function useNextMatchingRoute(): RouteMatch | null {
-	const { match: parent, subpath } = useContext(RouteLevelContext);
+	const { match: parent, subpath, params } = useContext(RouteLevelContext);
 
 	const match = useMatchingRouteForPath(
 		subpath,
 		parent?.route.children ?? null,
 	);
 
+	// params must be merged in manually for this hook...
+	const matchWithParams = useMemo(
+		() => ({
+			...match,
+			params: {
+				...params,
+				...match?.params,
+			},
+		}),
+		[match, params],
+	);
+
 	if (!match) {
 		return null;
 	}
-	return match;
+
+	// cast here relies on match being defined
+	return matchWithParams as RouteMatch;
 }
 
 export function useNavigate() {
