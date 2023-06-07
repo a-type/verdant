@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.2.5
+
+### Patch Changes
+
+- 9ab6d86: Fix absolute paths for RouteByPath
+
 ## 0.2.4
 
 ### Patch Changes
