@@ -56,14 +56,6 @@ Each route can have more advanced options, including children.
   path: '/posts',
   exact: false, // optional. only match a complete path
   component: PostsPage,
-  onAccessible: async (params) => {
-    // preload UI or data for your route whenever a link
-    // to it is present in the current interface
-
-    // you can return a cleanup function which is called
-    // if the link unmounts without being clicked
-    return () => {};
-  },
   onVisited: async (params) => {
     // preload data your route will need as soon as it
     // is mounted. this runs in parallel with any
@@ -173,17 +165,15 @@ Yeah, so, I'll get to this eventually?
 
 For now, you can call `window.scrollTo(0, 0)` in all the `onVisited` callbacks you want this for. I know. I'll look into making this a default behavior.
 
-## Advanced Usage: Preloading
+## Advanced Usage
 
-### Preloading and parallel loading
+### Parallel loading
 
-`onAccessible` is called every time a `Link` is mounted which links to the route, **including nested routes**. For example, if you're on `/` and there's a link to `/posts/1`, the `/posts` route **and** the `/posts/:id` route will have `onAccessible` called.
-
-`onVisited` is called as soon as a route is matched after a path change. This also **includes nested routes**.
+`onVisited` is called as soon as a route is matched after a path change. This also **includes nested routes**. You can use this to load data or code in parallel with the new route.
 
 #### Preloading lazy components
 
-One big boost you can get from `onAccessible` is preloading the route components needed to render the pages the user might go to next.
+One big boost you can do is preloading the route components needed to render the pages the user might go to next.
 
 To do this we need something a bit more than React's built-in `lazy`, because we want to pre-fetch the component code before rendering. I recommend [react-lazy-with-preload](https://github.com/ianschmitz/react-lazy-with-preload).
 
@@ -192,9 +182,11 @@ const LazyPostsPage = lazyWithPreload(() => import('./PostsPage.jsx'));
 
 const routes = [
 	{
-		path: '/posts',
-		component: LazyPostsPage,
-		onAccessible: LazyPostsPage.preload,
+		path: '/',
+		component: HomePage,
+		// we think the user probably wants to load the Posts
+		// page soon, so we preload it on visit
+		onVisit: LazyPostsPage.preload,
 	},
 ];
 ```
@@ -218,22 +210,9 @@ For `onVisited`, since the route is mounting, you can probably just fire-and-for
 }
 ```
 
-For `onAccessible`, it might be a little longer between the time your query is preloaded, and when the route is shown (if ever). The query will likely be cleaned up before it can be useful. I'd recommend just using `onVisited` in most cases, but if you really need to start preloading a query on the previous page, you can go ahead and subscribe it and return the unsubscribe.
-
-```ts
-{
-  path: '/posts',
-  onAccessible: () => {
-    const query = client.posts.findAll();
-    // the subscriber is just a no-op
-    return query.subscribe(() => {});
-  }
-}
-```
-
 #### Preloading with your own data
 
-Expect `onAccessible` and `onVisited` to be called multiple times! Any preloading logic you do should be idempotent. For example, cache preloaded data, and only load it if the cache is empty. Even better, store the promise for your loading procedure and use that as your indicator that loading has already started, even if it hasn't completed yet.
+Expect `onVisited` to be called multiple times! Any preloading logic you do should be idempotent. For example, cache preloaded data, and only load it if the cache is empty. Even better, store the promise for your loading procedure and use that as your indicator that loading has already started, even if it hasn't completed yet.
 
 ```ts
 // this is just a rough idea, you might find a better way...
@@ -279,18 +258,18 @@ With Suspense, our component can `throw` a promise if the data isn't loaded yet.
 
 Of course, you may never need to use this low-level Suspense functionality, but that's how you do it, if you're curious!
 
-#### Skipping transitions
+### Skipping transitions
 
 Sometimes you do want to show a skeleton of the next page instead of waiting for everything to load. For example, if you create a new resource and immediately navigate to the editor screen, you don't want to instead sit on the list page and wait for the editor page to load, which would be a confusing UX.
 
 Pass `skipTransition` to `Link`, or to the second parameter of the `navigate` callback you get from `useNavigate`, to skip the concurrent mode transitioning and instead immediately navigate and await loading states on the new page.
 
-#### Using navigation state
+### Using navigation state
 
 Pass `state` to a `Link` and this state will be added to the route state during navigation. You can also pass `state` to the `navigate` callback you get from `useNavigate`, in the second parameter.
 
 This can be utilized in the `onNavigation` prop in `Router`, or the callback passed to `useOnLocationChange`.
 
-#### Intercepting navigation
+### Intercepting navigation
 
 Provide an `onNavigation` prop to `Router` to globally intercept navigation. You can return `false` from this callback to cancel a navigation, while the path will still update to the new location. This probably has limited uses, but I'm considering using it to do transparent PWA updates during navigation when a new version of the service worker is available, by canceling navigation and reloading the page instead.

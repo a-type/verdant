@@ -28,6 +28,12 @@ const routes = makeRoutes([
 	{
 		index: true,
 		component: Home,
+		onVisited: () => {
+			// fake preloading the posts page - this pre-runs the
+			// fake latency function so it's ready when loading the
+			// /posts route
+			return fakeComponentLatency();
+		},
 	},
 	{
 		path: '/posts',
@@ -76,12 +82,6 @@ const routes = makeRoutes([
 				],
 			},
 		],
-		// preloads the Posts page component when
-		// a link to it is mounted
-		onAccessible: () => {
-			console.log('Preloading Posts component');
-			fakeComponentLatency();
-		},
 	},
 	{
 		path: '*',

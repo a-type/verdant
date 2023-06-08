@@ -128,7 +128,7 @@ describe('matchPath', () => {
 
 	it('should incorporate basepath into exact simple match', () => {
 		const route = {
-			path: '/foo',
+			path: 'foo',
 			component: Null,
 			exact: true,
 		};
@@ -141,7 +141,7 @@ describe('matchPath', () => {
 
 	it('should incorporate basepath into non-exact simple match', () => {
 		const route = {
-			path: '/foo',
+			path: 'foo',
 			component: Null,
 		};
 		expect(matchPath('/bar/foo/baz', '/bar', route)).toEqual({
@@ -153,7 +153,7 @@ describe('matchPath', () => {
 
 	it('should incorporate basepath into param match', () => {
 		const route = {
-			path: '/foo/:bar',
+			path: 'foo/:bar',
 			component: Null,
 		};
 		expect(matchPath('/bar/foo/baz', '/bar', route)).toEqual({
@@ -190,7 +190,7 @@ describe('getBestRouteMatch', () => {
 	it('should incorporate basepath', () => {
 		const routes = [
 			{
-				path: '/foo',
+				path: 'foo',
 				component: Null,
 			},
 			{
@@ -309,7 +309,7 @@ describe('getAllMatchingRoutes', () => {
 	it('should incorporate basepath', () => {
 		const routes = [
 			{
-				path: '/foo',
+				path: 'foo',
 				component: Null,
 				children: [
 					{

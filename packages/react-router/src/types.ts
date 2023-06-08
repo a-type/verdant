@@ -3,9 +3,6 @@ import { ComponentType } from 'react';
 type CommonRouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
-	onAccessible?: (params: {
-		[key: string]: string;
-	}) => Promise<any> | (() => void) | void;
 	onVisited?: (params: { [key: string]: string }) => void;
 	data?: any;
 };

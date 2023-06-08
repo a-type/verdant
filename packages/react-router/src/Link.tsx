@@ -39,7 +39,6 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 ) {
 	const to = resolve(rawTo);
 	const external = forceExternal ?? isExternal(to);
-	const matches = useRouteMatchesForPath(to);
 	const transitioning = useIsRouteTransitioning();
 
 	const wasClickedRef = useRef(false);
@@ -50,12 +49,6 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 		if (notRouterCompatible) return;
 
 		const cleanups: Array<() => void> = [];
-		for (const match of matches) {
-			const ret = match.route.onAccessible?.(match.params);
-			if (typeof ret === 'function') {
-				cleanups.push(ret);
-			}
-		}
 		return () => {
 			// skip cleanup if the link was clicked
 			if (wasClickedRef.current) {
@@ -67,7 +60,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 				cleanup();
 			}
 		};
-	}, [matches, notRouterCompatible]);
+	}, [notRouterCompatible]);
 
 	const navigate = useNavigate();
 	const handleClick = useCallback(
@@ -92,7 +85,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 			});
 			onClick?.(event);
 		},
-		[onClick, matches, replace, state, preserveQuery],
+		[onClick, replace, state, preserveQuery],
 	);
 
 	const pathAtRenderTime =
