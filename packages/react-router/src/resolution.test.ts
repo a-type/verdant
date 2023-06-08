@@ -232,7 +232,7 @@ describe('getAllMatchingRoutes', () => {
 				component: Null,
 				children: [
 					{
-						path: '/bar',
+						path: 'bar',
 						component: Null,
 					},
 				],
@@ -328,6 +328,38 @@ describe('getAllMatchingRoutes', () => {
 			},
 			{
 				path: '/baz/foo/bar',
+				params: {},
+				route: routes[0].children[0],
+			},
+		]);
+	});
+
+	it('should handle layout routes', () => {
+		const routes = [
+			{
+				path: '/',
+				component: Null,
+				children: [
+					{
+						path: 'foo',
+						component: Null,
+					},
+					{
+						path: '',
+						component: Null,
+					},
+				],
+			},
+		];
+
+		expect(getAllMatchingRoutes('/foo', '', routes)).toEqual([
+			{
+				path: '/',
+				params: {},
+				route: routes[0],
+			},
+			{
+				path: '/foo',
 				params: {},
 				route: routes[0].children[0],
 			},

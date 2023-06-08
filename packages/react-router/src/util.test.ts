@@ -8,4 +8,7 @@ describe('joinPaths', () => {
 	it('eliminates double slashes', () => {
 		expect(joinPaths('/foo/', '/bar')).toBe('/foo/bar');
 	});
+	it("doesn't mess up relatie paths", () => {
+		expect(joinPaths('', 'foo')).toBe('foo');
+	});
 });

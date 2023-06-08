@@ -84,12 +84,7 @@ export function getAllMatchingRoutes(
 		return [match];
 	}
 
-	const remainder = fullPath.slice(match.path.length);
-
 	return [match].concat(
-		...getAllMatchingRoutes(remainder, '', childRoutes).map((m) => ({
-			...m,
-			path: joinPaths(match.path, m.path),
-		})),
+		getAllMatchingRoutes(fullPath, match.path, childRoutes),
 	);
 }
