@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.3.1
+
+### Patch Changes
+
+- b4a4803: Fix more path resolution errors
+
 ## 0.3.0
 
 ### Minor Changes
