@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createFileRef } from './files.js';
 import {
+	areOidsRelated,
 	assignOid,
 	assignOidPropertiesToAllSubObjects,
 	assignOidProperty,
 	assignOidsToAllSubObjects,
 	createOid,
+	createSubOid,
 	decomposeOid,
 	getOid,
 	getOidRange,
@@ -406,8 +408,26 @@ describe('assigning OIDs to sub-objects', () => {
 	});
 });
 
-it('should get the root OID for a legacy OID', () => [
-	expect(getOidRoot('items/clabgyjfh00003968qycsq3ld.inputs.#')).toEqual(
-		'items/clabgyjfh00003968qycsq3ld',
-	),
-]);
+describe('handling legacy OIDs', () => {
+	it('should get the root OID for a legacy OID', () => {
+		expect(getOidRoot('items/clabgyjfh00003968qycsq3ld.inputs.#')).toEqual(
+			'items/clabgyjfh00003968qycsq3ld',
+		);
+	});
+	it('should create sub-ids for legacy OIDs in new format', () => {
+		expect(
+			createSubOid(
+				'items/clabgyjfh00003968qycsq3ld.inputs.#',
+				() => 'pseudorandom',
+			),
+		).toEqual('items/clabgyjfh00003968qycsq3ld:pseudorandom');
+	});
+	it('should identify new sub-OIDs as related to the legacy root OID', () => {
+		expect(
+			areOidsRelated(
+				'items/clabgyjfh00003968qycsq3ld.inputs.#',
+				'items/clabgyjfh00003968qycsq3ld:pseudorandom',
+			),
+		).toBe(true);
+	});
+});

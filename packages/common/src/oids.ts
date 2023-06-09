@@ -176,7 +176,13 @@ export function decomposeOid(oid: ObjectIdentifier): {
 	subId?: string;
 } {
 	const [core, random] = oid.split(RANDOM_SEPARATOR);
-	const [collection, id] = core.split('/');
+	const [collection, idOrLegacyPathId] = core.split('/');
+	let id;
+	if (idOrLegacyPathId.includes('.')) {
+		id = idOrLegacyPathId.slice(0, idOrLegacyPathId.indexOf('.'));
+	} else {
+		id = idOrLegacyPathId;
+	}
 	return {
 		collection: unsanitizeFragment(collection),
 		id: unsanitizeFragment(id),
