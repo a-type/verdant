@@ -167,6 +167,47 @@ For now, you can call `window.scrollTo(0, 0)` in all the `onVisited` callbacks y
 
 ## Advanced Usage
 
+### Layout routes
+
+You can create nested layers of routes, which means you can also create a layer which doesn't really 'consume' part of the path, but encapsulates a set of children in a meaningful way. These act as layout layers, providing some intermediate layer of UI which wraps any children.
+
+I use this for delineating between pages which should or should not display common UI elements like navigation, like so:
+
+```tsx
+function LayoutWithNav() {
+	return (
+		<PageRoot>
+			<Outlet />
+			<Navigation />
+		</PageRoot>
+	);
+}
+
+const routes = [
+	{
+		path: '/some-page-without-nav',
+		component: SomePageWithoutNav,
+	},
+	// any routes above this one will not have navigation by default
+	{
+		path: '/',
+		component: LayoutWithNav,
+		// all routes contained here have navigation and
+		// common page layout
+		children: [
+			{
+				index: true,
+				component: HomePage,
+			},
+			{
+				path: 'posts',
+				component: PostsPage,
+			},
+		],
+	},
+];
+```
+
 ### Parallel loading
 
 `onVisited` is called as soon as a route is matched after a path change. This also **includes nested routes**. You can use this to load data or code in parallel with the new route.
@@ -270,6 +311,22 @@ Pass `state` to a `Link` and this state will be added to the route state during 
 
 This can be utilized in the `onNavigation` prop in `Router`, or the callback passed to `useOnLocationChange`.
 
+### Route data
+
+Each route has an optional `data` prop. Pack in any useful context data you may want to reference for different routes, it's up to you. You can then use the `useMatchingRoute` hook to retrieve the current route and its data. The route returned will depend on the level of the app you're in - higher-up nested components will get higher-up nested routes!
+
 ### Intercepting navigation
 
 Provide an `onNavigation` prop to `Router` to globally intercept navigation. You can return `false` from this callback to cancel a navigation, while the path will still update to the new location. This probably has limited uses, but I'm considering using it to do transparent PWA updates during navigation when a new version of the service worker is available, by canceling navigation and reloading the page instead.
+
+### Rendering non-matching routes
+
+This router exposes some advanced tooling to render routes which _don't_ match the current URL. This is particularly useful for creating transitions during navigation or enabling swipe-gesture based navigation in mobile apps.
+
+To render any route, use the `RouteByPath` component. It takes a path value which should match some routes in your router, and it will display the associated UI for those routes on any page.
+
+As an example, if you were doing swipe navigation, you probably want to start rendering the upcoming page "to the side" as the user begins the gesture. After detecting the gesture has begun, you could render a `<RouteByPath>` for the next page in a positioned container offscreen and animate it moving as the user moves their finger. Once the gesture is complete, you can use `useNavigate` to perform the actual page change, at which point the primary `<Outlet />` will begin rendering the new page. You might then want to use `<RouteByPath>` to show the prior page as it animates out of frame if the swipe was not 100% across the screen.
+
+Also useful for route transitions is the `useNextMatchingRoute` hook. This will return match information, including the route itself, for the 'next level down.' You can use this to create a transition root component which renders an Outlet as normal, but introspects the matching route with `useNextMatchingRoute` to observe when it changes and render transition animations from the prior to the new route (using `RouteByPath`). There's an example in the `demo` folder of the `react-router` package.
+
+When I implemented swipe navigation in [Gnocchi](https://gnocchi.club), I specified "left" and "right" page paths in each top-level route's `data`, then utilized `useNextMatchingRoute` in a component that wrapped the initial `<Outlet />` to reference those paths and decide which routes to render during a gesture. There are still a few tricky things, like how to structure your page layout correctly to accommodate the animated containers, but the combination of `useNextMatchingRoute` and `RouteByPath` makes the route rendering portion fairly straightforward!
