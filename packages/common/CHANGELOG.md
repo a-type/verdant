@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.13.4
+
+### Patch Changes
+
+- fd55c1b: Fix another bug with legacy OIDs
+
 ## 1.13.3
 
 ### Patch Changes
