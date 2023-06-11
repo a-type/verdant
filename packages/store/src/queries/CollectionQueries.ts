@@ -1,6 +1,6 @@
 import { CollectionFilter, hashObject } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { EntityStore } from '../reactives/EntityStore.js';
+import { EntityStore } from '../entities/EntityStore.js';
 import { GetQuery } from './GetQuery.js';
 import { QueryCache } from './QueryCache.js';
 import { FindOneQuery } from './FindOneQuery.js';
@@ -8,8 +8,8 @@ import { FindPageQuery } from './FindPageQuery.js';
 import { FindInfiniteQuery } from './FindInfiniteQuery.js';
 import { FindAllQuery } from './FindAllQuery.js';
 import { DocumentManager } from '../DocumentManager.js';
-import cuid from 'cuid';
 import { ObjectEntity } from '../index.js';
+import { UPDATE } from './BaseQuery.js';
 
 export class CollectionQueries<
 	T extends ObjectEntity<any, any>,
@@ -95,6 +95,9 @@ export class CollectionQueries<
 					context: this.context,
 					key,
 				}),
+			(existing) => {
+				existing[UPDATE](index);
+			},
 		);
 	};
 
@@ -114,6 +117,9 @@ export class CollectionQueries<
 					context: this.context,
 					key,
 				}),
+			(existing) => {
+				existing[UPDATE](index);
+			},
 		);
 	};
 
@@ -131,16 +137,21 @@ export class CollectionQueries<
 		const key =
 			providedKey ||
 			`findPage:${this.collection}:${this.serializeIndex(index)}:${pageSize}`;
-		return this.cache.set(
-			new FindPageQuery<T>({
-				index,
-				collection: this.collection,
-				hydrate: this.hydrate,
-				context: this.context,
-				key,
-				pageSize,
-				page,
-			}),
+		return this.cache.getOrSet(
+			key,
+			() =>
+				new FindPageQuery<T>({
+					index,
+					collection: this.collection,
+					hydrate: this.hydrate,
+					context: this.context,
+					key,
+					pageSize,
+					page,
+				}),
+			(existing) => {
+				existing[UPDATE](index);
+			},
 		);
 	};
 
@@ -169,6 +180,9 @@ export class CollectionQueries<
 					key,
 					pageSize,
 				}),
+			(existing) => {
+				existing[UPDATE](index);
+			},
 		);
 	};
 }

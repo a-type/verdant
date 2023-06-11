@@ -23,7 +23,7 @@ import {
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { findAllOids, findOneOid } from '../queries2/dbQueries.js';
+import { findAllOids, findOneOid } from '../queries/dbQueries.js';
 import {
 	acquireLock,
 	closeDatabase,

@@ -1,6 +1,7 @@
 import { CollectionFilter } from '@verdant-web/common';
-import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
+import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
 import { findPageOfOids } from './dbQueries.js';
+import { areIndexesEqual } from './utils.js';
 
 export class FindPageQuery<T> extends BaseQuery<T[]> {
 	private index;
@@ -76,5 +77,11 @@ export class FindPageQuery<T> extends BaseQuery<T[]> {
 	setPage = async (page: number) => {
 		this._page = page;
 		await this.run();
+	};
+
+	[UPDATE] = (index: CollectionFilter | undefined) => {
+		if (areIndexesEqual(this.index, index)) return;
+		this.index = index;
+		this.execute();
 	};
 }

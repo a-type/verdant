@@ -11,7 +11,7 @@ export { ClientDescriptor as StorageDescriptor };
 export { Client as Storage };
 export type { ClientDescriptorOptions };
 export type { ClientDescriptorOptions as StorageInitOptions };
-export { Entity } from './reactives/Entity.js';
+export { Entity } from './entities/Entity.js';
 export type {
 	ObjectEntity,
 	ListEntity,
@@ -19,7 +19,7 @@ export type {
 	AccessibleEntityProperty,
 	AnyEntity,
 	EntityDestructured,
-} from './reactives/Entity.js';
+} from './entities/Entity.js';
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { EntityFile } from './files/EntityFile.js';
@@ -36,6 +36,6 @@ export type {
 	Migration,
 } from '@verdant-web/common';
 export type { UserInfo } from '@verdant-web/common';
-export type { Query } from './queries2/types.js';
-export type { CollectionQueries } from './queries2/CollectionQueries.js';
+export type { Query } from './queries/types.js';
+export type { CollectionQueries } from './queries/CollectionQueries.js';
 export { MigrationPathError } from './migration/errors.js';

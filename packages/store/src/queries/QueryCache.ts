@@ -30,9 +30,16 @@ export class QueryCache extends Disposable {
 		return value;
 	}
 
-	getOrSet<V extends BaseQuery<any>>(key: string, create: () => V) {
+	getOrSet<V extends BaseQuery<any>>(
+		key: string,
+		create: () => V,
+		update?: (query: V) => void,
+	) {
 		const existing = this.get<V>(key);
-		if (existing) return existing;
+		if (existing) {
+			update?.(existing);
+			return existing;
+		}
 		return this.set(create());
 	}
 

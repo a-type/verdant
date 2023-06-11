@@ -205,6 +205,53 @@ describe('storage queries', () => {
 		]);
 		expect(query.hasMore).toBe(false);
 	});
+
+	it('caches queries by user key and updates their filters', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const firstQuery = storage.todos.findAll({
+			key: 'customKey',
+			index: {
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+		});
+		const firstResults = await firstQuery.resolved;
+		expect(firstResults.map((i: any) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+			items[1].get('id'),
+		]);
+
+		const secondQuery = storage.todos.findAll({
+			key: 'customKey',
+			index: {
+				where: 'categorySortedByDone',
+				match: {
+					category: 'specific',
+				},
+				order: 'asc',
+			},
+		});
+
+		const secondResults = await secondQuery.resolved;
+		expect(secondResults.map((i: any) => i.get('id'))).toEqual([
+			items[4].get('id'),
+			items[3].get('id'),
+			items[5].get('id'),
+		]);
+
+		expect(firstQuery.current.map((i: any) => i.get('id'))).toEqual([
+			items[4].get('id'),
+			items[3].get('id'),
+			items[5].get('id'),
+		]);
+	});
 });
 
 describe('query reactivity', () => {

@@ -9,7 +9,6 @@ import {
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
-import { EntityStore } from '../reactives/EntityStore.js';
 import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
 import { PushPullSync } from './PushPullSync.js';
 import {

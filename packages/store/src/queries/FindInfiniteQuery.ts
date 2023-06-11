@@ -1,6 +1,7 @@
 import { CollectionFilter } from '@verdant-web/common';
-import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
+import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
 import { findPageOfOids } from './dbQueries.js';
+import { areIndexesEqual } from './utils.js';
 
 export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	private index;
@@ -62,5 +63,11 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 			...this.current,
 			...(await Promise.all(result.map(this.hydrate))),
 		]);
+	};
+
+	[UPDATE] = (index: CollectionFilter | undefined) => {
+		if (areIndexesEqual(this.index, index)) return;
+		this.index = index;
+		this.execute();
 	};
 }

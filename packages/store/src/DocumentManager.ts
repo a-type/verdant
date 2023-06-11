@@ -1,18 +1,13 @@
 import {
 	addFieldDefaults,
 	assert,
-	assignOid,
 	createOid,
-	diffToPatches,
 	SchemaCollection,
 	StorageCollectionSchema,
 	StorageDocument,
-	StorageFieldSchema,
-	StorageFieldsSchema,
 	StorageSchema,
 } from '@verdant-web/common';
-import { ObjectEntity } from './reactives/Entity.js';
-import { EntityStore } from './reactives/EntityStore.js';
+import { EntityStore } from './entities/EntityStore.js';
 import { Metadata } from './metadata/Metadata.js';
 
 /**

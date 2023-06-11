@@ -1,9 +1,8 @@
 import { EventSubscriber } from '@verdant-web/common';
-import { filterResultSet } from './utils.js';
-import { Entity } from '../reactives/Entity.js';
-import { Disposable } from '../utils/Disposable.js';
 import { Context } from '../context.js';
-import { Resolvable } from '../utils/Resolvable.js';
+import { Entity } from '../entities/Entity.js';
+import { Disposable } from '../utils/Disposable.js';
+import { filterResultSet } from './utils.js';
 
 export type BaseQueryEvents = {
 	change: (value: any) => void;

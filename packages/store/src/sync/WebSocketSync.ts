@@ -1,19 +1,14 @@
 import {
 	ClientMessage,
-	ServerMessage,
 	EventSubscriber,
-	ObjectIdentifier,
-	assert,
-	ReplicaType,
+	ServerMessage,
 } from '@verdant-web/common';
-import { default as jwtDecode } from 'jwt-decode';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
-import { EntityStore } from '../reactives/EntityStore.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { PresenceManager } from './PresenceManager.js';
-import { SyncTransport, SyncTransportEvents } from './Sync.js';
 import { Heartbeat } from './Heartbeat.js';
+import { PresenceManager } from './PresenceManager.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
+import { SyncTransport, SyncTransportEvents } from './Sync.js';
 
 export class WebSocketSync
 	extends EventSubscriber<SyncTransportEvents>

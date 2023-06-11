@@ -17,10 +17,10 @@ import {
 } from '../idb.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
 import { openDocumentDatabase } from '../migration/openDatabase.js';
-import { EntityStore } from '../reactives/EntityStore.js';
+import { EntityStore } from '../entities/EntityStore.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
-import { CollectionQueries } from '../queries2/CollectionQueries.js';
-import { QueryCache } from '../queries2/QueryCache.js';
+import { CollectionQueries } from '../queries/CollectionQueries.js';
+import { QueryCache } from '../queries/QueryCache.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;

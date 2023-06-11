@@ -1,7 +1,7 @@
 import { CollectionFilter } from '@verdant-web/common';
-import { Context } from '../context.js';
+import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
 import { findAllOids } from './dbQueries.js';
-import { BaseQuery, BaseQueryOptions } from './BaseQuery.js';
+import { areIndexesEqual } from './utils.js';
 
 export class FindAllQuery<T> extends BaseQuery<T[]> {
 	private index;
@@ -30,5 +30,11 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 			context: this.context,
 		});
 		this.setValue(await Promise.all(oids.map(this.hydrate)));
+	};
+
+	[UPDATE] = (index: CollectionFilter | undefined) => {
+		if (areIndexesEqual(this.index, index)) return;
+		this.index = index;
+		this.execute();
 	};
 }
