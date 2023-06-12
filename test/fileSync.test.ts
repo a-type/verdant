@@ -2,7 +2,7 @@ import { assert } from '@a-type/utils';
 import { afterAll, expect, it } from 'vitest';
 import { createTestContext } from './lib/createTestContext.js';
 import { createTestFile } from './lib/createTestFile.js';
-import { waitForCondition, waitForQueryResult } from './lib/waits.js';
+import { waitForCondition, waitForEntityCondition, waitForQueryResult } from './lib/waits.js';
 import * as fs from 'fs';
 
 const context = createTestContext({
@@ -11,7 +11,11 @@ const context = createTestContext({
 
 afterAll(() => {
 	// delete the ./test-files directory
-	fs.rmdirSync('./test-files', { recursive: true });
+	try {
+		fs.rmdirSync('./test-files', { recursive: true });
+	} catch (e) {
+		console.log(e);
+	}
 });
 
 it(
@@ -44,7 +48,7 @@ it(
 		console.log(`⭐️ item ${a_item.get('id')} synced to B`);
 		const b_item = await b_itemQuery.resolved;
 		assert(!!b_item);
-		await waitForCondition(() => !!b_item.get('image'));
+		await waitForEntityCondition(b_item, () => !!b_item.get('image'));
 		console.log('⭐️ image synced to B');
 		const file = b_item.get('image')!;
 		await waitForCondition(() => !file.loading);
@@ -67,6 +71,6 @@ it(
 	},
 	{
 		timeout: 15000,
-		retry: 2,
+		// retry: 2,
 	},
 );

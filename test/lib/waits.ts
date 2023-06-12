@@ -1,5 +1,5 @@
 import { expect, Mock } from 'vitest';
-import { Client, Query } from '../client/index.js';
+import { AnyEntity, Client, Query } from '../client/index.js';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
 	return new Promise<void>((resolve) => {
@@ -125,6 +125,33 @@ export async function waitForCondition(
 			}
 		}
 		run();
+	});
+}
+
+export async function waitForEntityCondition<
+	T extends AnyEntity<any, any, any>,
+>(
+	entity: T,
+	condition: (entity: T) => boolean | Promise<boolean>,
+	timeout = 10000,
+	debugName?: string,
+) {
+	return new Promise<void>((resolve, reject) => {
+		if (timeout) {
+			setTimeout(() => {
+				reject(new Error('Timed out waiting for condition ' + debugName));
+			}, timeout);
+		}
+
+		if (condition(entity)) {
+			resolve();
+		} else {
+			entity.subscribe('change', () => {
+				if (condition(entity)) {
+					resolve();
+				}
+			});
+		}
 	});
 }
 

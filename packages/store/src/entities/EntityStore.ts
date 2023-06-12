@@ -25,6 +25,7 @@ import { processValueFiles } from '../files/utils.js';
 import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
+import { TaggedOperation } from '../types.js';
 
 const DEFAULT_BATCH_KEY = '@@default';
 
@@ -109,7 +110,10 @@ export class EntityStore {
 		} as const;
 	};
 
-	private refreshFamilyCache = async (familyCache: DocumentFamilyCache) => {
+	private refreshFamilyCache = async (
+		familyCache: DocumentFamilyCache,
+		dropUnconfirmed = false,
+	) => {
 		// avoid writing to disposed db
 		if (this._disposed) return;
 
@@ -120,7 +124,7 @@ export class EntityStore {
 		]);
 
 		const baselines: DocumentBaseline[] = [];
-		const operations: Operation[] = [];
+		const operations: TaggedOperation[] = [];
 
 		await Promise.all([
 			this.meta.baselines.iterateOverAllForDocument(
@@ -130,15 +134,19 @@ export class EntityStore {
 				},
 				{
 					transaction,
+					mode: 'readwrite',
 				},
 			),
 			this.meta.operations.iterateOverAllOperationsForDocument(
 				familyCache.oid,
-				(op) => operations.push(op),
-				{ transaction },
+				(op) => {
+					(op as TaggedOperation).confirmed = true;
+					operations.push(op as TaggedOperation);
+				},
+				{ transaction, mode: 'readwrite' },
 			),
 		]);
-		familyCache.reset(operations, baselines);
+		familyCache.reset(operations, baselines, dropUnconfirmed);
 	};
 
 	private openFamilyCache = async (oid: ObjectIdentifier) => {
@@ -254,7 +262,7 @@ export class EntityStore {
 		assignOid(processed, oid);
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
 		const familyCache = await this.openFamilyCache(oid);
-		familyCache.insertUnconfirmedOperations(operations);
+		familyCache.insertLocalOperations(operations);
 		// don't enqueue these, submit as distinct operation.
 		// we do this so it can be immediately queryable from storage...
 		// only holding it in memory would introduce lag before it shows up
@@ -273,8 +281,7 @@ export class EntityStore {
 
 	private addOperationsToOpenCaches = async (
 		operations: Operation[],
-		confirmed = true,
-		info: { isLocal: boolean },
+		info: { isLocal: boolean; confirmed?: boolean },
 	) => {
 		const operationsByOid = groupPatchesByRootOid(operations);
 		const oids = Object.keys(operationsByOid);
@@ -283,15 +290,15 @@ export class EntityStore {
 			if (familyCache) {
 				this.log(
 					'adding',
-					confirmed ? 'confirmed' : 'unconfirmed',
+					info.confirmed ? 'confirmed' : 'unconfirmed',
 					'operations to cache',
 					oid,
 					operationsByOid[oid].length,
 				);
-				if (confirmed) {
-					familyCache.insertOperations(operationsByOid[oid], info);
+				if (info.isLocal) {
+					familyCache.insertLocalOperations(operationsByOid[oid]);
 				} else {
-					familyCache.insertUnconfirmedOperations(operationsByOid[oid]);
+					familyCache.insertOperations(operationsByOid[oid], info);
 				}
 			}
 		});
@@ -324,7 +331,7 @@ export class EntityStore {
 		isLocal,
 	}: {
 		baselines: DocumentBaseline[];
-		operations: Operation[];
+		operations: TaggedOperation[];
 		reset?: boolean;
 		isLocal?: boolean;
 	}) => {
@@ -340,13 +347,21 @@ export class EntityStore {
 		for (const oid of allDocumentOids) {
 			const familyCache = this.documentFamilyCaches.get(oid);
 			if (familyCache) {
-				familyCache.addConfirmedData({
+				familyCache.addData({
 					operations: operationsByDocumentOid[oid] || [],
 					baselines: baselinesByDocumentOid[oid] || [],
 					reset,
 					isLocal,
 				});
-				this.log('debug', 'Added data to cache for', oid);
+				this.log(
+					'debug',
+					'Added data to cache for',
+					oid,
+					operationsByDocumentOid[oid]?.length ?? 0,
+					'operations',
+					baselinesByDocumentOid[oid]?.length ?? 0,
+					'baselines',
+				);
 			} else {
 				this.log(
 					'debug',
@@ -369,14 +384,18 @@ export class EntityStore {
 		baselines: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
-		// first, synchronously add data to any open caches for immediate change propagation
-		const allDocumentOids = this.addDataToOpenCaches({
-			operations,
-			baselines,
-			reset,
-		});
+		// convert operations to tagged operations with confirmed = false
+		// while we process and store them. this is in-place so as to
+		// not allocate a bunch of objects...
+		const taggedOperations = operations as TaggedOperation[];
+		for (const op of taggedOperations) {
+			op.confirmed = false;
+		}
 
-		// then, asynchronously add data to storage
+		let allDocumentOids: string[] = [];
+		// in a reset scenario, it only makes things confusing if we
+		// optimistically apply incoming operations, since the local
+		// history is out of sync
 		if (reset) {
 			this.log(
 				'Resetting local store to replicate remote synced data',
@@ -387,12 +406,28 @@ export class EntityStore {
 			);
 			await this.meta.reset();
 			await this.resetStoredDocuments();
+			allDocumentOids = Array.from(
+				new Set(
+					baselines
+						.map((b) => getOidRoot(b.oid))
+						.concat(operations.map((o) => getOidRoot(o.oid))),
+				),
+			);
+		} else {
+			// first, synchronously add data to any open caches for immediate change propagation
+			allDocumentOids = this.addDataToOpenCaches({
+				operations: taggedOperations,
+				baselines,
+				reset,
+			});
 		}
+
+		// then, asynchronously add data to storage
 		await this.meta.insertRemoteBaselines(baselines);
 		await this.meta.insertRemoteOperations(operations);
 
 		if (reset) {
-			await this.refreshAllCaches();
+			await this.refreshAllCaches(true);
 		}
 
 		// recompute all affected documents for querying
@@ -412,7 +447,10 @@ export class EntityStore {
 
 	addLocalOperations = async (operations: Operation[]) => {
 		this.log('Adding local operations', operations.length);
-		this.addOperationsToOpenCaches(operations, false, { isLocal: true });
+		this.addOperationsToOpenCaches(operations, {
+			isLocal: true,
+			confirmed: false,
+		});
 		this.operationBatcher.add({
 			key: this.currentBatchKey,
 			items: operations,
@@ -507,14 +545,13 @@ export class EntityStore {
 		}
 		await this.meta.insertLocalOperation(operations);
 
+		// confirm the operations
+		this.addDataToOpenCaches({ operations, baselines: [] });
+
 		// recompute all affected documents for querying
 		const allDocumentOids = Array.from(
 			new Set(operations.map((op) => getOidRoot(op.oid))),
 		);
-
-		// confirm the operations
-		this.addDataToOpenCaches({ operations, baselines: [], isLocal: true });
-
 		for (const oid of allDocumentOids) {
 			await this.writeDocumentToStorage(oid);
 		}
@@ -588,7 +625,7 @@ export class EntityStore {
 	reset = async () => {
 		this.context.log('warn', 'Resetting local database');
 		await this.resetStoredDocuments();
-		await this.refreshAllCaches();
+		await this.refreshAllCaches(true);
 		// this.context.entityEvents.emit(
 		// 	'collectionsChanged',
 		// 	Object.keys(this.schema.collections),
@@ -624,9 +661,9 @@ export class EntityStore {
 		}
 	};
 
-	private refreshAllCaches = async () => {
+	private refreshAllCaches = async (dropUnconfirmed = false) => {
 		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.refreshFamilyCache(cache);
+			await this.refreshFamilyCache(cache, dropUnconfirmed);
 		}
 	};
 }
