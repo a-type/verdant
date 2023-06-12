@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.0
+
+### Minor Changes
+
+- 52d0c0c: Changing index parameters on queries with specified keys will now update and re-run the query. Also fixed a rare race condition with incoming operations via sync.
+
 ## 2.4.1
 
 ### Patch Changes
