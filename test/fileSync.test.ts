@@ -2,7 +2,11 @@ import { assert } from '@a-type/utils';
 import { afterAll, expect, it } from 'vitest';
 import { createTestContext } from './lib/createTestContext.js';
 import { createTestFile } from './lib/createTestFile.js';
-import { waitForCondition, waitForEntityCondition, waitForQueryResult } from './lib/waits.js';
+import {
+	waitForCondition,
+	waitForEntityCondition,
+	waitForQueryResult,
+} from './lib/waits.js';
 import * as fs from 'fs';
 
 const context = createTestContext({
@@ -62,9 +66,10 @@ it(
 		const response = await fetch(file.url!);
 		console.log('⭐️ image fetched');
 		const blob = await response.blob();
+		const text = await blob.text();
+		console.log(`⭐️ image blob: ${text}`);
 		expect(blob.size).toBe(13);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
-		const text = await blob.text();
 		// basically the file isn't encoded into the form data correctly.
 		// someday maybe I'll get this figured out
 		expect(text).toBe('[object File]');

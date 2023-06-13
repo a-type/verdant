@@ -663,7 +663,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			rawReplicas.map((r) => this.profiles.get(r.clientId)),
 		);
 		const replicas = rawReplicas.map((r, index) => ({
-			replicaId: r.id,
+			id: r.id,
+			ackedLogicalTime: r.ackedLogicalTime,
+			ackedServerOrder: r.ackedServerOrder,
+			type: r.type,
 			profile: profiles[index],
 		}));
 
