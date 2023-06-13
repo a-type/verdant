@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.8.6
+
+### Patch Changes
+
+- 6a5382c: Add metadata API for retrieving advanced info about a library
+
 ## 1.8.5
 
 ### Patch Changes
