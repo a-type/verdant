@@ -528,8 +528,20 @@ export class Server extends EventEmitter implements MessageSender {
 		this.log('Evicted library', libraryId);
 	};
 
+	/**
+	 * Returns currently connected replica info for a library
+	 */
 	getLibraryPresence = (libraryId: string) => {
 		return this.library.getPresence(libraryId);
+	};
+
+	/**
+	 * Returns helpful information about a library.
+	 * This is currently only the known replicas and some
+	 * more low-level metadata.
+	 */
+	getLibraryInfo = (libraryId: string) => {
+		return this.library.getInfo(libraryId);
 	};
 
 	/**

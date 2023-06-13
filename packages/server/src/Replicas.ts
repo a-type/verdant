@@ -122,6 +122,17 @@ export class ReplicaInfos {
 			.all(libraryId, this.truantCutoff);
 	};
 
+	getAll = (libraryId: string): ReplicaInfoSpec[] => {
+		return this.db
+			.prepare(
+				`
+			SELECT * FROM ReplicaInfo
+			WHERE libraryId = ?
+		`,
+			)
+			.all(libraryId);
+	};
+
 	updateLastSeen = (libraryId: string, replicaId: string) => {
 		const clockTime = new Date().getTime();
 		return this.db

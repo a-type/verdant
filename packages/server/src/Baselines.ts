@@ -155,4 +155,17 @@ export class Baselines {
 			)
 			.run(libraryId);
 	};
+
+	getCount = (libraryId: string): number => {
+		return (
+			this.db
+				.prepare(
+					`
+			SELECT COUNT(*) AS count FROM DocumentBaseline
+			WHERE libraryId = ?
+		`,
+				)
+				.get(libraryId)?.count ?? 0
+		);
+	};
 }

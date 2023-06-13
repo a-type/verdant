@@ -657,6 +657,25 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		return this.presences.all(libraryId);
 	};
 
+	getInfo = async (libraryId: string) => {
+		const rawReplicas = this.replicas.getAll(libraryId);
+		const profiles = await Promise.all(
+			rawReplicas.map((r) => this.profiles.get(r.clientId)),
+		);
+		const replicas = rawReplicas.map((r, index) => ({
+			replicaId: r.id,
+			profile: profiles[index],
+		}));
+
+		return {
+			replicas,
+			latestServerOrder: this.operations.getLatestServerOrder(libraryId),
+			operationsCount: this.operations.getCount(libraryId),
+			baselinesCount: this.baselines.getCount(libraryId),
+			globalAck: this.replicas.getGlobalAck(libraryId),
+		};
+	};
+
 	evictUser = (libraryId: string, userId: string) => {
 		this.replicas.deleteAllForUser(libraryId, userId);
 	};

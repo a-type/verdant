@@ -110,6 +110,32 @@ export class OperationHistory {
 		return (result || []).map(this.hydratePatch);
 	};
 
+	getLatestServerOrder = (libraryId: string): number => {
+		const result = this.db
+			.prepare(
+				`
+			SELECT MAX(serverOrder) AS serverOrder FROM OperationHistory
+			WHERE libraryId = ?
+		`,
+			)
+			.get(libraryId);
+
+		return result?.serverOrder || 0;
+	};
+
+	getCount = (libraryId: string): number => {
+		const result = this.db
+			.prepare(
+				`
+			SELECT COUNT(*) AS count FROM OperationHistory
+			WHERE libraryId = ?
+		`,
+			)
+			.get(libraryId);
+
+		return result?.count || 0;
+	};
+
 	/**
 	 * Adds a new operation or replaces an existing one.
 	 * The server order will be set to the current max + 1
