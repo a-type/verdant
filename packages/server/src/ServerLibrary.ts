@@ -667,6 +667,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			ackedLogicalTime: r.ackedLogicalTime,
 			ackedServerOrder: r.ackedServerOrder,
 			type: r.type,
+			truant:
+				r.lastSeenWallClockTime &&
+				r.lastSeenWallClockTime < this.replicas.truantCutoff,
 			profile: profiles[index],
 		}));
 

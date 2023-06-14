@@ -8,7 +8,7 @@ export class ReplicaInfos {
 		private readonly replicaTruancyMinutes: number,
 	) {}
 
-	private get truantCutoff() {
+	get truantCutoff() {
 		return Date.now() - this.replicaTruancyMinutes * 60 * 1000;
 	}
 
