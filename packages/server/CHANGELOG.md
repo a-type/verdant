@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.8.7
+
+### Patch Changes
+
+- 7ec5730: Include more replica information in server info API
+
 ## 1.8.6
 
 ### Patch Changes
