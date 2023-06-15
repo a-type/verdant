@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.8.8
+
+### Patch Changes
+
+- 037e9b5: Add truancy to replica info api
+
 ## 1.8.7
 
 ### Patch Changes
