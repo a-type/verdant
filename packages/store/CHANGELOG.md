@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.1
+
+### Patch Changes
+
+- c9cd46b: Fix a bug with skip-level migrations from initial
+
 ## 2.5.0
 
 ### Minor Changes
