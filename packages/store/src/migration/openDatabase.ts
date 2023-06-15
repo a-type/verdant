@@ -78,8 +78,9 @@ export async function openDocumentDatabase({
 				// special case: if this is the version 1 migration, we have no pre-existing database
 				// to use for the migration.
 				let engine: MigrationEngine<any, any>;
-				if (migration.version === 1) {
-					engine = getVersion1MigrationEngine({
+				// migrations from 0 (i.e. initial migrations) don't attempt to open an existing db
+				if (migration.oldSchema.version === 0) {
+					engine = getInitialMigrationEngine({
 						meta,
 						migration,
 						context,
@@ -418,7 +419,7 @@ function getMigrationEngine({
 	return engine;
 }
 
-function getVersion1MigrationEngine({
+function getInitialMigrationEngine({
 	meta,
 	migration,
 	context,
@@ -436,7 +437,7 @@ function getVersion1MigrationEngine({
 	const queries = new Proxy({} as any, {
 		get() {
 			throw new Error(
-				'Queries are not available in version 1 migrations; there is no database yet!',
+				'Queries are not available in initial migrations; there is no database yet!',
 			);
 		},
 	}) as any;
@@ -450,9 +451,9 @@ function getVersion1MigrationEngine({
 	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
 		log: context.log,
 		newOids,
-		migrate: (collection, strategy) => {
+		migrate: () => {
 			throw new Error(
-				'Calling migrate() in version 1 migrations is not supported! Use version 1 migrations to seed initial data using mutations.',
+				'Calling migrate() in initial migrations is not supported! Use initial migrations to seed initial data using mutations.',
 			);
 		},
 		queries,
