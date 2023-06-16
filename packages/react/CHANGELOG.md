@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 20.0.1
+
+### Patch Changes
+
+- 589ae62: wrap invalid state update promise in effect
+
 ## 20.0.0
 
 ### Patch Changes
