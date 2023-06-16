@@ -270,9 +270,11 @@ export function createHooks<Presence = any, Profile = any>(
 		const client = desc?.current;
 
 		const [_, forceUpdate] = useState(0);
-		if (desc && !client) {
-			desc.readyPromise.then(() => forceUpdate((n) => n + 1));
-		}
+		useEffect(() => {
+			if (desc && !client) {
+				desc.readyPromise.then(() => forceUpdate((n) => n + 1));
+			}
+		}, [desc, client]);
 
 		return client || null;
 	}
