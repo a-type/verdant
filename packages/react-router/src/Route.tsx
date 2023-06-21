@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { RouteLevelProvider } from './context.js';
 import { RouteMatch } from './types.js';
+import { getScrollPosition } from './scrollPositions.js';
 
 export interface RouteProps {
 	value: RouteMatch;

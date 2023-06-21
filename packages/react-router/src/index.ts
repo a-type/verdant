@@ -16,3 +16,4 @@ export {
 } from './hooks.js';
 export * from './Route.js';
 export * from './RouteByPath.js';
+export * from './RestoreScroll.js';

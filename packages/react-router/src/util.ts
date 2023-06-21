@@ -14,3 +14,7 @@ export function joinPaths(path1: string, path2: string | undefined) {
 
 	return path1 + path2;
 }
+
+export function generateId() {
+	return Math.random().toString(36).slice(2, 9);
+}

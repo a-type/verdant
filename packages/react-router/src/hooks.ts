@@ -1,6 +1,7 @@
 import {
 	useCallback,
 	useContext,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -8,13 +9,24 @@ import {
 } from 'react';
 import { IndexRouteConfig, RouteConfig, RouteMatch } from './types.js';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { RouteLevelContext, useRootMatch, useLocationPath } from './context.js';
-import { joinPaths } from './util.js';
+import {
+	RouteLevelContext,
+	useRootMatch,
+	useLocationPath,
+	useEvents,
+} from './context.js';
+import { generateId, joinPaths } from './util.js';
 import {
 	getAllMatchingRoutes,
 	getBestRouteMatch,
 	matchPath,
 } from './resolution.js';
+import { WillNavigateEvent } from './events.js';
+import {
+	consumeScrollPosition,
+	getScrollPosition,
+	recordScrollPosition,
+} from './scrollPositions.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -28,12 +40,19 @@ export function useOnLocationChange(
 		state: {
 			state?: any;
 			skipTransition?: boolean;
+			id: string;
 		},
 	) => void,
 ) {
 	const cb = useStableCallback(callback);
 	useLayoutEffect(() => {
-		const handler = (ev: PopStateEvent) => cb(location, ev.state || {});
+		const handler = (ev: PopStateEvent) =>
+			cb(
+				location,
+				ev.state || {
+					id: 'initial',
+				},
+			);
 		window.addEventListener('popstate', handler);
 		return () => window.removeEventListener('popstate', handler);
 	}, [cb]);
@@ -109,6 +128,8 @@ export function useNextMatchingRoute(): RouteMatch | null {
 }
 
 export function useNavigate() {
+	const events = useEvents();
+
 	return useCallback(
 		(
 			to: string,
@@ -118,35 +139,25 @@ export function useNavigate() {
 				state = null,
 			}: { replace?: boolean; skipTransition?: boolean; state?: any } = {},
 		) => {
+			events.dispatchEvent(new WillNavigateEvent());
+			const id = generateId();
+			const routeState = {
+				state,
+				skipTransition,
+				id,
+			};
 			if (replace) {
-				window.history.replaceState(
-					{
-						state,
-						skipTransition,
-					},
-					'',
-					to,
-				);
+				window.history.replaceState(routeState, '', to);
 			} else {
-				window.history.pushState(
-					{
-						state,
-						skipTransition,
-					},
-					'',
-					to,
-				);
+				window.history.pushState(routeState, '', to);
 			}
 			window.dispatchEvent(
 				new PopStateEvent('popstate', {
-					state: {
-						state,
-						skipTransition,
-					},
+					state: routeState,
 				}),
 			);
 		},
-		[],
+		[events],
 	);
 }
 
@@ -185,4 +196,82 @@ export function useSearchParams() {
 		[internalSetParams],
 	);
 	return [params, setParams] as const;
+}
+
+export function useRouteState() {
+	const [state, setState] = useState(() => window.history.state);
+	useOnLocationChange((location, state) => setState(state));
+	return state;
+}
+
+/**
+ * Allows custom handling of scroll restoration.
+ * Provide a function to get the current scroll position and a function to
+ * restore the scroll position by applying it.
+ * This allows you full control to track scrolling in a custom element,
+ * wait for animations, etc.
+ */
+export function useScrollRestoration({
+	onGetScrollPosition,
+	onScrollRestored,
+	debug,
+	id,
+}: {
+	/**
+	 * Return the current scroll position for the current route.
+	 * Return false to keep the previous known position.
+	 */
+	onGetScrollPosition: () => [number, number] | false;
+	onScrollRestored: (position: [number, number]) => void;
+	debug?: boolean;
+	/**
+	 * If you are restoring multiple scroll containers which may be
+	 * rendered at the same time, you should provide a unique ID
+	 * for each one so they get assigned the correct scroll position.
+	 */
+	id?: string;
+}) {
+	const [routeId, setRouteId] = useState(() => {
+		return history.state?.id ?? 'initial';
+	});
+	useOnLocationChange((_, state) => {
+		setRouteId(state?.id ?? 'initial');
+	});
+
+	const restoreKey = `${id ?? 'default'}__${routeId}`;
+
+	const stableOnScrollRestored = useStableCallback(onScrollRestored);
+	const stableOnGetScrollPosition = useStableCallback(onGetScrollPosition);
+
+	const restoredKeyRef = useRef<string | null>(null);
+	useEffect(() => {
+		// using this ref to prevent double invocation of this
+		// effect in dev mode, since that would record 0,0 for
+		// scroll in some cases and errantly restore it
+		if (restoredKeyRef.current !== restoreKey) {
+			const scroll = getScrollPosition(restoreKey);
+			if (debug) {
+				console.log(
+					`Restoring scroll position for key ${restoreKey} to ${scroll}`,
+				);
+			}
+			if (scroll) {
+				onScrollRestored(scroll);
+			}
+			restoredKeyRef.current = restoreKey;
+		}
+	}, [restoreKey, stableOnScrollRestored, debug]);
+	useEffect(() => {
+		return () => {
+			const scroll = stableOnGetScrollPosition();
+			if (scroll) {
+				recordScrollPosition(restoreKey, scroll);
+				if (debug) {
+					console.log(
+						`Recording scroll position for key ${restoreKey} as ${scroll}`,
+					);
+				}
+			}
+		};
+	}, [restoreKey, stableOnGetScrollPosition]);
 }

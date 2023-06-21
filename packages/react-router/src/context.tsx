@@ -35,12 +35,14 @@ type RouteGlobalContextValue = {
 	rootMatch: RouteMatch | null;
 	path: string;
 	transitioning: boolean;
+	events: EventTarget;
 };
 
 export const RouteGlobalContext = createContext<RouteGlobalContextValue>({
 	rootMatch: null,
 	path: '',
 	transitioning: false,
+	events: new EventTarget(),
 });
 
 export const RouteGlobalProvider = ({
@@ -64,4 +66,10 @@ export function useLocationPath(): string {
 	const { path } = useContext(RouteGlobalContext);
 
 	return path;
+}
+
+export function useEvents(): EventTarget {
+	const { events } = useContext(RouteGlobalContext);
+
+	return events;
 }

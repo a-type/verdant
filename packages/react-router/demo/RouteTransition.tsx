@@ -21,6 +21,9 @@ export function RouteTransition({}: RouteTransitionProps) {
 			if (!newContainer) return;
 
 			if (oldContainer) {
+				oldContainer.getAnimations().forEach((animation) => {
+					animation.cancel();
+				});
 				oldContainer.animate(
 					[
 						{
@@ -37,6 +40,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 					},
 				);
 			}
+			newContainer.style.transform = 'translateX(100%)';
 			const animation = newContainer.animate(
 				[
 					{
@@ -58,8 +62,10 @@ export function RouteTransition({}: RouteTransitionProps) {
 		}
 	}, [previousMatch, match]);
 
-	console.log('PREVIOUS MATCH', previousMatch);
-	console.log('UPCOMING MATCH', match);
+	const previousKey = previousMatch
+		? previousMatch.path + JSON.stringify(previousMatch.params)
+		: '';
+	const currentKey = match ? match.path + JSON.stringify(match.params) : '';
 
 	return (
 		<div
@@ -79,6 +85,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 						position: 'absolute',
 						left: '-100%',
 					}}
+					key={previousKey}
 				>
 					<Route value={previousMatch} />
 				</div>
@@ -89,6 +96,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 					width: '100%',
 					height: '100%',
 				}}
+				key={currentKey}
 			>
 				<Outlet />
 			</div>

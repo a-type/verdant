@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Link } from '../../src/Link.js';
 import { Outlet } from '../../src/Outlet.js';
+import { ContainerScrollTester, ScrollTester } from '../ScrollTester.js';
 
 export function Posts() {
 	return (
@@ -26,6 +27,7 @@ export function Posts() {
 					<Outlet />
 				</Suspense>
 			</div>
+			<ContainerScrollTester />
 		</div>
 	);
 }

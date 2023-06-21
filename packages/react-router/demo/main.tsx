@@ -100,7 +100,7 @@ function App() {
 	return (
 		<Router routes={routes} onNavigate={handleNavigate}>
 			<main className="main">
-				<nav>
+				<nav style={{ position: 'sticky', top: 0, zIndex: 1 }}>
 					<Link to="/">Home</Link>
 					<Link to="/posts">Posts</Link>
 					<Link to="/foo">404</Link>

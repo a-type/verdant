@@ -159,11 +159,27 @@ setParams((old) => {
 });
 ```
 
-### Scrolling to top
+### Scroll restoration
 
-Yeah, so, I'll get to this eventually?
+Scroll restoration is something you might overlook when integrating a router. And some routers do this for you automatically. But Verdant's router is pretty experimental, and scroll restoration is no exception. I tried to make it powerful and versatile.
 
-For now, you can call `window.scrollTo(0, 0)` in all the `onVisited` callbacks you want this for. I know. I'll look into making this a default behavior.
+To effectively restore scroll positions for navigation history, you'll need to either utilize the `RestoreScroll` component or the `useScrollRestoration` hook. The component is better for most use cases, but the hook exists for more complex scenarios (like animating scroll position, if you want to).
+
+#### `<RestoreScroll />`
+
+This component doesn't render any DOM, it invokes `useScrollRestoration` internally. You can render it anywhere, but I recommend putting it **inside a Suspense boundary alongside loaded data**. As soon as this component is mounted, it will restore scroll position to the recorded value for the current history item. It works best if the relevant data on the page has already been loaded, so that the UI is in the right configuration to restore scroll. Otherwise, you can get 'stuck' at 0 because there's not enough content to scroll the container.
+
+You can capture the scroll position of a container besides the window by passing its ref to `scrollableRef`. This is helpful if your primary scroll container on the page is part of the app's UI.
+
+#### `useScrollRestoration`
+
+This hook takes two function parameters which allow you to customize the logic for recording and restoring scroll values.
+
+`onGetScrollPosition` is called when the system wants to record scroll position. You can read the `scrollY` of the window, `scrollTop` of an element, or anything else you like.
+
+This function should return a `[number,number]` tuple, or `false` if you don't want to register a new scroll position (the previous one, if any, will be retained).
+
+`onScrollRestored` is called with a `[number,number]` tuple when scroll should be restored. Call `window.scrollTo`, `element.scrollTo`, or even animate the scroll value as you like.
 
 ## Advanced Usage
 
