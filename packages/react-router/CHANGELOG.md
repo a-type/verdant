@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.4.0
+
+### Minor Changes
+
+- 32592a8: Added scroll restoration tools
+
 ## 0.3.1
 
 ### Patch Changes
