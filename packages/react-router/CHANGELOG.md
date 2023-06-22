@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.4.1
+
+### Patch Changes
+
+- cfa0692: Expose missing scroll restoration hook
+
 ## 0.4.0
 
 ### Minor Changes
