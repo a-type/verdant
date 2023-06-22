@@ -13,6 +13,7 @@ export {
 	useMatchingRoutes,
 	useMatchingRoute,
 	useNextMatchingRoute,
+	useScrollRestoration,
 } from './hooks.js';
 export * from './Route.js';
 export * from './RouteByPath.js';
