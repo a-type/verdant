@@ -23,8 +23,18 @@ import {
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 
+function isQueryCurrentValid(query: Query<any>) {
+	if (query.status === 'ready') return true;
+	if (query.status === 'initial') return false;
+	if (!query.current) return false;
+	// for list queries: if it's running and results are 0,
+	// wait for the next update just in case.
+	if (Array.isArray(query.current) && query.current.length === 0) return false;
+	return true;
+}
 function useLiveQuery(liveQuery: Query<any> | null) {
-	if (liveQuery && liveQuery.status === 'initial') {
+	// suspend if the query doesn't have a valid result set yet.
+	if (liveQuery && !isQueryCurrentValid(liveQuery)) {
 		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
 	return useSyncExternalStore(

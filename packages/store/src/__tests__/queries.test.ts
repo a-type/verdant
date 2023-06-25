@@ -280,6 +280,16 @@ describe('query reactivity', () => {
 		expect(query.status).toBe('ready');
 	});
 
+	it('returns the initial result set after status changes to ready', async () => {
+		const storage = await createTestStorage();
+		await addTestingItems(storage);
+		const query = storage.todos.findAll();
+		expect(query.status).toBe('initial');
+		await query.resolved;
+		expect(query.status).toBe('ready');
+		expect(query.current.length).toBe(6);
+	});
+
 	it('updates a get query when the item is deleted', async () => {
 		const client = await createTestStorage();
 		const query = await getQuery(client);
