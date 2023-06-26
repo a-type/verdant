@@ -16,7 +16,7 @@ export type BaseQueryOptions<T> = {
 	shouldUpdate?: (updatedCollections: string[]) => boolean;
 };
 
-export type QueryStatus = 'initial' | 'running' | 'ready';
+export type QueryStatus = 'initial' | 'initializing' | 'revalidating' | 'ready';
 
 export const ON_ALL_UNSUBSCRIBED = Symbol('ON_ALL_UNSUBSCRIBED');
 export const UPDATE = Symbol('UPDATE');
@@ -136,7 +136,14 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	execute = () => {
 		this.context.log('debug', 'Executing query', this.key);
-		this._status = 'running';
+
+		if (this._status === 'initial') {
+			this._status = 'initializing';
+		} else if (this._status === 'ready') {
+			this._status = 'revalidating';
+		}
+		// no status change needed if already in a 'running' status.
+
 		this._executionPromise = this.run().then(() => this._value);
 		return this._executionPromise;
 	};

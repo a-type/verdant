@@ -285,9 +285,13 @@ describe('query reactivity', () => {
 		await addTestingItems(storage);
 		const query = storage.todos.findAll();
 		expect(query.status).toBe('initial');
-		await query.resolved;
+		const resolved = query.resolved;
+		// accessing resolved begins initializing
+		expect(query.status).toBe('initializing');
+		await resolved;
 		expect(query.status).toBe('ready');
 		expect(query.current.length).toBe(6);
+		// revalidating on change is tested elsewhere below.
 	});
 
 	it('updates a get query when the item is deleted', async () => {
@@ -329,7 +333,7 @@ describe('query reactivity', () => {
 		});
 
 		for (const query of queries) {
-			expect(query.status).toBe('running');
+			expect(query.status).toBe('revalidating');
 		}
 
 		await Promise.all(queries.map((q) => q.resolved));
@@ -358,7 +362,7 @@ describe('query reactivity', () => {
 		await client.todos.delete('1');
 
 		for (const query of queries) {
-			expect(query.status).toBe('running');
+			expect(query.status).toBe('revalidating');
 		}
 		await Promise.all(queries.map((q) => q.resolved));
 		expect(queries[0].current.length).toBe(5);
