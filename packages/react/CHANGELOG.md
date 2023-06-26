@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 20.0.2
+
+### Patch Changes
+
+- fae9af2: Attempted fix for list queries showing up empty initially
+
 ## 20.0.1
 
 ### Patch Changes
