@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.2
+
+### Patch Changes
+
+- feb503e: Better state tracking for queries and react hooks
+
 ## 2.5.1
 
 ### Patch Changes

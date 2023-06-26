@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 20.0.3
+
+### Patch Changes
+
+- feb503e: Better state tracking for queries and react hooks
+- Updated dependencies [feb503e]
+  - @verdant-web/store@2.5.2
+
 ## 20.0.2
 
 ### Patch Changes
