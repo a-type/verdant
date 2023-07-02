@@ -19,7 +19,7 @@ An IndexedDB-powered database and data sync solution for lightweight, local-firs
 
 ## Early software
 
-This is a very experimental set of libraries which I'm developing slowly alongside my app [Gnocchi](https://gnocchi.club) to suit my [own goals](https://blog.gfor.rest/blog/Verdant-intro). The usage and behavior is subject to change, although I will either try to avoid changes that fundamentally change how data is stored, or provide upgrade paths which won't disrupt apps already in use as much as possible.
+This is a very experimental set of libraries which I'm developing slowly alongside my app [Gnocchi](https://gnocchi.club) to suit my [own goals](https://blog.gfor.rest/blog/lofi-intro). The usage and behavior is subject to change, although I will either try to avoid changes that fundamentally change how data is stored, or provide upgrade paths which won't disrupt apps already in use as much as possible.
 
 Documentation will be sparse for a while. If you'd like to see a full-sized example, [Gnocchi is open source.](https://github.com/a-type/gnocchi)
 
