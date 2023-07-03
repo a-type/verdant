@@ -1,0 +1,20 @@
+{
+	"name": "@{{todo}}/verdant",
+	"version": "0.0.1",
+	"private": true,
+	"main": "src/index.ts",
+	"type": "module",
+	"scripts": {
+		"generate": "verdant-web -s ./src/schema.ts -o ./src/client -r"
+	},
+	"peerDependencies": {
+		"react": "^18.2.0"
+	},
+	"dependencies": {
+		"@verdant-web/cli": "^2.1.0",
+		"@verdant-web/common": "^1.13.4",
+		"@verdant-web/react": "^20.0.3",
+		"@verdant-web/store": "^2.5.2",
+		"cuid": "^2.1.8"
+	}
+}

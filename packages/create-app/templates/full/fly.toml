@@ -8,7 +8,7 @@ dockerfile = "Dockerfile"
 
 [env]
 DATABASE_URL = "file:/data/{{todo}}.db"
-LOFI_DB_FILE = "/data/{{todo}}-lofi.db"
+VERDANT_DB_FILE = "/data/{{todo}}-lofi.db"
 HOST = "https://{{todo}}.todo"
 
 [experimental]

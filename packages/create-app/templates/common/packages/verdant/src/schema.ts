@@ -1,4 +1,4 @@
-import { collection, schema } from '@lo-fi/web';
+import { collection, schema } from '@verdant-web/store';
 import cuid from 'cuid';
 
 /**
@@ -20,32 +20,32 @@ import cuid from 'cuid';
  */
 
 const items = collection({
-  name: 'item',
-  primaryKey: 'id',
-  fields: {
-    id: {
-      type: 'string',
-      default: cuid,
-    },
-    content: {
-      type: 'string',
-      default: '',
-    },
-    done: {
-      type: 'boolean',
-      default: false,
-    },
-    createdAt: {
-      type: 'number',
-      default: () => Date.now(),
-      indexed: true,
-    },
-  },
+	name: 'item',
+	primaryKey: 'id',
+	fields: {
+		id: {
+			type: 'string',
+			default: cuid,
+		},
+		content: {
+			type: 'string',
+			default: '',
+		},
+		done: {
+			type: 'boolean',
+			default: false,
+		},
+		createdAt: {
+			type: 'number',
+			default: () => Date.now(),
+			indexed: true,
+		},
+	},
 });
 
 export default schema({
-  version: 1,
-  collections: {
-    items,
-  },
+	version: 1,
+	collections: {
+		items,
+	},
 });
