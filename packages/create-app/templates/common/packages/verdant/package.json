@@ -5,7 +5,7 @@
 	"main": "src/index.ts",
 	"type": "module",
 	"scripts": {
-		"generate": "verdant-web -s ./src/schema.ts -o ./src/client -r"
+		"generate": "verdant -s ./src/schema.ts -o ./src/client -r"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0"
