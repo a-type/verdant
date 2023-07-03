@@ -1,0 +1,44 @@
+name: Production Deploy
+on:
+  push:
+    branches: [main]
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  changed_files:
+    name: Determine changed files
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.api.outputs.any_changed }}
+      ui: ${{ steps.ui.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get API changed files
+        id: api
+        uses: tj-actions/changed-files@v23
+        with:
+          since_last_remote_commit: true
+          files: |
+            **/apps/api/src/**/*.ts
+            **/apps/api/src/**/*.tsx
+            **/packages/**/src/**/*.ts
+            **/packages/**/src/**/*.tsx
+            ./Dockerfile
+            ./fly.toml
+            **/apps/api/package.json
+            ./pnpm-lock.yaml
+
+  deploy:
+    needs: [changed_files]
+    runs-on: ubuntu-latest
+    name: Deploy to production
+    steps:
+      - uses: actions/checkout@v2
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy API
+        if: needs.changed_files.outputs.api == 'true'
+        run: flyctl deploy --remote-only

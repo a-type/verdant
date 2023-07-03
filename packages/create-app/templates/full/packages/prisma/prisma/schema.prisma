@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../.generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String           @id @default(cuid())
+  name        String           @map("name")
+  email       String           @unique
+  imageUrl    String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  planId      String           @map("plan_id")
+  role        String           @default("user")
+  plan        Plan             @relation(fields: [planId], references: [id])
+  invitations PlanInvitation[]
+  accounts    Account[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  type              String
+  accessToken       String?  @map("access_token")
+  refreshToken      String?  @map("refresh_token")
+  tokenType         String?  @map("token_type")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Plan {
+  id                     String           @id @default(cuid())
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+  deletedAt              DateTime?        @map("deleted_at")
+  stripeCustomerId       String?          @map("stripe_customer_id")
+  stripeSubscriptionId   String?          @map("stripe_subscription_id")
+  subscriptionExpiresAt  DateTime?        @map("subscription_expires_at")
+  subscriptionCanceledAt DateTime?        @map("subscription_canceled_at")
+  subscriptionStatus     String?          @map("subscription_status")
+  members                User[]
+  invitations            PlanInvitation[]
+
+  @@map("plans")
+}
+
+model PlanInvitation {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  expiresAt   DateTime  @map("expires_at")
+  claimedAt   DateTime? @map("claimed_at")
+  inviterName String    @map("inviter_name")
+  inviterId   String    @map("inviter_id")
+  inviter     User      @relation(fields: [inviterId], references: [id])
+  planId      String    @map("plan_id")
+  plan        Plan      @relation(fields: [planId], references: [id])
+
+  @@map("plan_invitations")
+}

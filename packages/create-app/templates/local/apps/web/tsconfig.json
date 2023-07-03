@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"jsx": "preserve",
+		"outDir": "./dist",
+		"rootDir": ".",
+		"baseUrl": ".",
+		"lib": ["es2017", "dom", "dom.iterable", "ES2021"],
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"types": ["vite/client", "vite-plugin-pwa"]
+	},
+	"include": ["src"],
+}

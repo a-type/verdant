@@ -1,0 +1,21 @@
+{
+	"name": "@{{todo}}/lo-fi",
+	"version": "0.0.1",
+	"private": true,
+	"main": "src/index.ts",
+	"type": "module",
+	"scripts": {
+		"generate": "lo-fi -s ./src/schema.ts -o ./src/client -r",
+		"link-lofi": "pnpm link --global @lo-fi/web && pnpm link --global @lo-fi/cli && pnpm link --global @lo-fi/common && pnpm link --global @lo-fi/react"
+	},
+	"peerDependencies": {
+		"react": "^18.2.0"
+	},
+	"dependencies": {
+		"@lo-fi/cli": "^1.12.0",
+		"@lo-fi/common": "^1.10.2",
+		"@lo-fi/react": "^13.0.2",
+		"@lo-fi/web": "^1.12.6",
+		"cuid": "^2.1.8"
+	}
+}

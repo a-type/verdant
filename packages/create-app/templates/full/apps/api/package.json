@@ -1,0 +1,43 @@
+{
+  "name": "@{{todo}}]/api",
+  "version": "0.0.1",
+  "description": "",
+  "author": "gaforres@gmail.com",
+  "type": "module",
+  "scripts": {
+    "dev": "env-cmd tsx watch ./src/server.ts",
+    "prestart": "cd ../../packages/prisma && prisma migrate deploy && prisma db seed",
+    "start": "pnpm prestart && tsx --tsconfig ./tsconfig.json ./src/server.ts",
+    "start:local": "env-cmd pnpm start",
+    "build": "tsc --build tsconfig.json",
+    "link-lofi": "pnpm link --global @lo-fi/common && pnpm link --global @lo-fi/server"
+  },
+  "dependencies": {
+    "@{{todo}}/prisma": "workspace:*",
+    "@lo-fi/common": "^1.10.2",
+    "@lo-fi/server": "^1.7.3",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/body-parser": "^1.19.2",
+    "@types/cookie": "^0.5.1",
+    "@types/cors": "^2.8.12",
+    "@types/express": "4.17.13",
+    "@types/jsonwebtoken": "^8.5.8",
+    "@types/node": "^18.0.0",
+    "@types/ws": "^8.5.3",
+    "better-sqlite3": "^7.6.2",
+    "body-parser": "^1.20.0",
+    "cookie": "^0.5.0",
+    "cors": "^2.8.5",
+    "cuid": "^3.0.0",
+    "env-cmd": "^10.1.0",
+    "express": "^4.18.1",
+    "googleapis": "^105.0.0",
+    "iso8601-duration": "^2.1.1",
+    "jsonwebtoken": "^8.5.1",
+    "stripe": "^11.12.0",
+    "tsx": "^3.8.2",
+    "typescript": "^4.9.5",
+    "utf-8-validate": "^5.0.9",
+    "ws": "^8.8.1"
+  }
+}

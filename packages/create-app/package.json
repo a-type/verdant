@@ -1,0 +1,27 @@
+{
+	"name": "@verdant-web/create-app",
+	"version": "0.1.0",
+	"description": "Verdant app bootstrapper CLI",
+	"main": "dist/index.js",
+	"bin": {
+		"create-verdant-app": "dist/index.js"
+	},
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "tsc -p tsconfig.json",
+		"link": "pnpm link --global"
+	},
+	"keywords": [],
+	"author": "Grant Forrest",
+	"license": "MIT",
+	"dependencies": {
+		"@clack/prompts": "^0.5.1",
+		"cp-tpl": "^1.0.9",
+		"fs-extra": "^11.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^18.14.1",
+		"typescript": "^4.9.5"
+	}
+}

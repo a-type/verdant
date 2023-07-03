@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+		"noImplicitAny": true,
+		"noLib": false,
+		"target": "es2017",
+		"sourceMap": true,
+		"module": "es2022",
+		"moduleResolution": "NodeNext",
+		"lib": ["dom", "esnext", "webworker"],
+		"skipLibCheck": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"jsx": "react-jsx",
+		"downlevelIteration": true,
+		"experimentalDecorators": true,
+		"isolatedModules": true
+	},
+	"exclude": ["node_modules", "**/*/dist"],
+	"references": [
+		{
+			"path": "./packages/prisma"
+		},
+		{
+			"path": "./packages/lo-fi"
+		}
+	]
+}
