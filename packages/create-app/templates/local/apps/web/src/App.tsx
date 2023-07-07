@@ -6,16 +6,16 @@ import { Pages } from '@/pages/Pages.jsx';
 export interface AppProps {}
 
 export function App({}: AppProps) {
-  return (
-    <Suspense>
-      <LofiProvider>
-        <Pages />
-        <UpdatePrompt />
-      </LofiProvider>
-    </Suspense>
-  );
+	return (
+		<Suspense>
+			<VerdantProvider>
+				<Pages />
+				<UpdatePrompt />
+			</VerdantProvider>
+		</Suspense>
+	);
 }
 
-function LofiProvider({ children }: { children: ReactNode }) {
-  return <hooks.Provider value={clientDescriptor}>{children}</hooks.Provider>;
+function VerdantProvider({ children }: { children: ReactNode }) {
+	return <hooks.Provider value={clientDescriptor}>{children}</hooks.Provider>;
 }
