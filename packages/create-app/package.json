@@ -3,6 +3,9 @@
 	"version": "0.1.0",
 	"description": "Verdant app bootstrapper CLI",
 	"main": "dist/index.js",
+	"publishConfig": {
+		"access": "public"
+	},
 	"bin": {
 		"create-verdant-app": "dist/index.js"
 	},
