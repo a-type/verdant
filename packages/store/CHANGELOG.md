@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.3
+
+### Patch Changes
+
+- 731b5f4: Fix bug with sync and migration: clients would not be able to query certain documents created by peers after migrating.
+
 ## 2.5.2
 
 ### Patch Changes
