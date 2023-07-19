@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.1.1
+
+### Patch Changes
+
+- 0a8f0f2: Add typings for client events
+
 ## 2.1.0
 
 ### Minor Changes
