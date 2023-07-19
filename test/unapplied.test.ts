@@ -91,6 +91,8 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 	expect(bHasSeenFuture).toHaveBeenCalled();
 	expect(await clientB.items.get(a2_bananas.get('id')).resolved).toBeNull();
 
+	expect((await clientB.items.findAll().resolved).length).toBe(2);
+
 	// ok, now let's upgrade B
 	await clientB.close();
 	await new Promise<void>((resolve) => resolve());
@@ -116,4 +118,13 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		},
 	}).resolved;
 	expect(apples).not.toBe(null);
+	const allItems = await clientB2.items.findAll().resolved;
+	// Apples, Oranges, Bananas.
+	// when originally diagnosing this problem, Bananas wouldn't
+	// be in this list because it was created in the future and
+	// therefore not written to storage, then subsequently not
+	// re-written during migration because it did not exist in
+	// storage, so the migration didn't know about it despite the
+	// operations being in meta.
+	expect(allItems.length).toBe(3);
 });

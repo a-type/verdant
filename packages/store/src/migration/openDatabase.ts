@@ -152,6 +152,28 @@ export async function openDocumentDatabase({
 					context.log,
 				);
 
+				/**
+				 * In cases where operations from the future have been
+				 * received by this client, we may have created entire
+				 * documents in metadata which were not written to storage
+				 * because all of their operations were in the future (
+				 * i.e. in the next version). We have to find those documents
+				 * and also write their snapshots to storage, because they
+				 * won't be present in storage already to 'refresh,' so
+				 * if we don't analyze metadata for 'future' operations like
+				 * this, we won't know they exist.
+				 *
+				 * This led to behavior where the metadata would be properly
+				 * synced, but after upgrading the app and migrating, items
+				 * would be missing from findAll and findOne queries.
+				 */
+				const docsWithUnappliedMigrations =
+					await getDocsWithUnappliedMigrations({
+						meta,
+						currentVersion: migration.oldSchema.version,
+						newVersion: migration.newSchema.version,
+					});
+
 				// once the schema is ready, we can write back the migrated documents
 				const upgradedDatabase = await openDatabase(
 					indexedDB,
@@ -170,6 +192,9 @@ export async function openDocumentDatabase({
 					const oids = keys.map((key) => createOid(collection, `${key}`));
 					oids.push(
 						...engine.newOids.filter((oid) => {
+							return decomposeOid(oid).collection === collection;
+						}),
+						...docsWithUnappliedMigrations.filter((oid) => {
 							return decomposeOid(oid).collection === collection;
 						}),
 					);
