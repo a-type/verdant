@@ -51,6 +51,14 @@ const items = collection({
 			nullable: true,
 		},
 	},
+	synthetics: {
+		purchasedYesNo: {
+			type: 'string',
+			compute(item) {
+				return item.purchased ? 'yes' : 'no';
+			},
+		},
+	},
 });
 
 const categories = collection({

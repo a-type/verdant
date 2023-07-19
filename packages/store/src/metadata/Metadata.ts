@@ -168,7 +168,9 @@ export class Metadata extends EventSubscriber<{
 				}
 				objectMap.set(op.oid, newObj);
 			},
-			{ transaction },
+			{
+				transaction,
+			},
 		);
 		const root = objectMap.get(documentOid);
 		if (root) {
@@ -188,6 +190,9 @@ export class Metadata extends EventSubscriber<{
 	 */
 	ack = async (timestamp: string) => {
 		const localReplicaInfo = await this.localReplica.get();
+		// can't ack timestamps from the future.
+		if (timestamp > this.now) return;
+
 		this.emit('message', {
 			type: 'ack',
 			replicaId: localReplicaInfo.id,
@@ -438,6 +443,7 @@ export class Metadata extends EventSubscriber<{
 	};
 
 	setGlobalAck = async (timestamp: string) => {
+		if (this._closing) return;
 		await this.ackInfo.setGlobalAck(timestamp);
 		if (!this.disableRebasing) {
 			await this.runRebase(timestamp);

@@ -15,6 +15,7 @@ import {
 	decomposeOid,
 	diffToPatches,
 	getOid,
+	getOidRoot,
 	hasOid,
 	initialToPatches,
 	migrationRange,
@@ -32,6 +33,7 @@ import {
 	upgradeDatabase,
 } from './db.js';
 import { getMigrationPath } from './paths.js';
+import { ClientOperation } from '../metadata/OperationsStore.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -112,6 +114,7 @@ export async function openDocumentDatabase({
 					// make the appropriate schema changes during the upgrade.
 					await closeDatabase(originalDatabase);
 				}
+
 				await upgradeDatabase(
 					indexedDB,
 					context.namespace,
@@ -497,4 +500,33 @@ async function putView(store: IDBObjectStore, view: any) {
 			reject(request.error);
 		};
 	});
+}
+
+/**
+ * Gets a list of root OIDs for all documents which had operations stored already
+ * that were not applied to their queryable snapshots because they were in the
+ * future. These documents need to be refreshed in storage.
+ */
+async function getDocsWithUnappliedMigrations({
+	meta,
+	currentVersion,
+	newVersion: _,
+}: {
+	currentVersion: number;
+	newVersion: number;
+	meta: Metadata;
+}) {
+	// scan for all operations in metadata after the current version.
+	// this could be more efficient if also filtering below or equal newVersion but
+	// that seems so unlikely in practice...
+	const unappliedOperations: ClientOperation[] = [];
+	await meta.operations.iterateOverAllOperations(
+		(op) => unappliedOperations.push(op),
+		{
+			from: meta.time.zero(currentVersion + 1),
+		},
+	);
+	return Array.from(
+		new Set(unappliedOperations.map((op) => getOidRoot(op.oid))),
+	);
 }

@@ -200,7 +200,7 @@ export class EntityStore {
 				const tx = this.db.transaction(collection, 'readwrite');
 				const store = tx.objectStore(collection);
 				await storeRequestPromise(store.put(stored));
-				this.log('info', '📝', 'wrote', collection, id, 'to storage');
+				this.log('info', '📝', 'wrote', collection, id, 'to storage', stored);
 			} catch (err) {
 				// if the document can't be written, something's very wrong :(
 				// log the error and move on...

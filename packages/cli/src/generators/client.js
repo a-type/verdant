@@ -12,7 +12,7 @@ export function getClientTypings({ collections, schemaPath }) {
 	return `
   import type schema from '${schemaPath}';
   import type { StorageSchema } from '@verdant-web/common';
-  import type { Storage, StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile, CollectionQueries } from '@verdant-web/store';
+  import type { Client as Storage, ClientDescriptorOptions as StorageInitOptions, ObjectEntity, ListEntity, Query, ServerSync, EntityFile, CollectionQueries } from '@verdant-web/store';
   export * from '@verdant-web/store';
   export type Schema = typeof schema;
 
@@ -43,6 +43,8 @@ export class Client<Presence = any, Profile = any> {
   export: Storage['export'];
   import: Storage['import'];
 
+  subscribe: Storage['subscribe'];
+
   stats: () => Promise<any>;
   /**
    * Resets all local data. Use with caution. If this replica
@@ -54,6 +56,8 @@ export class Client<Presence = any, Profile = any> {
 
 // schema is provided internally. loadInitialData must be revised to pass the typed Client
 interface ClientInitOptions<Presence = any, Profile = any> extends Omit<StorageInitOptions<Presence, Profile>, 'schema'> {
+  /** WARNING: overriding the schema is dangerous. Use with caution. */
+  schema?: StorageSchema;
 }
 
 export class ClientDescriptor<Presence = any, Profile = any> {

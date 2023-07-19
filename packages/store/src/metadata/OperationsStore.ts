@@ -195,8 +195,12 @@ export class OperationsStore extends IDBService {
 			before,
 			transaction,
 			mode,
+			from,
 		}: {
+			/** Ending timestamp, exclusive */
 			before?: string | null;
+			/** Starting timestamp, inclusive */
+			from?: string | null;
 			transaction?: IDBTransaction;
 			mode?: 'readwrite' | 'readonly';
 		},
@@ -204,9 +208,17 @@ export class OperationsStore extends IDBService {
 		await this.iterate(
 			'operations',
 			(store) => {
+				const start = from ? createLowerBoundIndexValue(from) : undefined;
 				const end = before ? createUpperBoundIndexValue(before) : undefined;
 
-				const range = end ? IDBKeyRange.upperBound(end, true) : undefined;
+				const range =
+					start && end
+						? IDBKeyRange.bound(start, end, false, true)
+						: start
+						? IDBKeyRange.lowerBound(start, false)
+						: end
+						? IDBKeyRange.upperBound(end, true)
+						: undefined;
 				const index = store.index('timestamp');
 				return index.openCursor(range, 'next');
 			},

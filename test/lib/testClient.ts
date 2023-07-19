@@ -19,6 +19,7 @@ export async function createTestClient({
 	files,
 	transport = 'realtime',
 	onLog,
+	schema,
 }: {
 	server?: { port: number };
 	library: string;
@@ -30,6 +31,7 @@ export async function createTestClient({
 	files?: ClientDescriptorOptions['files'];
 	transport?: 'realtime' | 'pull';
 	onLog?: (messages: string) => void;
+	schema?: any;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
@@ -56,6 +58,7 @@ export async function createTestClient({
 			? (...args: any[]) => onLog(args.map((a) => JSON.stringify(a)).join('\n'))
 			: undefined,
 		files,
+		schema,
 	});
 	const client = await desc.open();
 	return client;
