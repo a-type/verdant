@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.4
+
+### Patch Changes
+
+- 75ff47f: Add vanilla browser bundle to build for store
+
 ## 2.5.3
 
 ### Patch Changes
