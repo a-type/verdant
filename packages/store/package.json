@@ -30,7 +30,9 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"build:lib": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"build:bundle": "esbuild src/vanilla.ts --bundle --format=cjs --outfile=dist/bundle/index.js --sourcemap --minify --platform=browser",
+		"build": "pnpm run build:lib && pnpm run build:bundle",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global"
 	},
@@ -41,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "16.11.7",
+		"esbuild": "^0.18.15",
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"typescript": "^4.8.3",
