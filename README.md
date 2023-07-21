@@ -140,7 +140,7 @@ Here's what the objects comprising a _document_ might look like, in abstract:
 }
 ```
 
-Imagining two replicas sequentially inserted a new comment at position 1, and updated the comment at position 1's content to read "Nice post (edit: really!). A naive merge without object identities would have overwritten the content of the new comment." In Verdant, this would result in 2 operations: "insert a new object at position 1" and "update the object `foo/1:hijklmn`'s content." Because the operation is tied to the comment's ID, not its position in the document, the change to the content 'follows it' as it moves to position 2 due to the insertion. This is how Verdant avoids some basic problems of conflict resolution.
+Imagining one replica inserted a new comment at position 1, and a millisecond after that another replica updated the comment at position 1's content to read "Nice post (edit: really!)". A naive merge without object identities would have overwritten the content of the new comment. In Verdant, this would result in 2 operations: "insert a new object at position 1" and "update the object `foo/1:hijklmn`'s content." Because the operation is tied to the comment's ID, not its position in the document, the change to the content 'follows it' as it moves to position 2 due to the insertion. This is how Verdant avoids some basic problems of conflict resolution.
 
 From there, _operations_ simply apply in last-write-wins fashion, according to their timestamps. I consider this good enough for most usage and haven't found a need for a fancier approach, personally.
 
