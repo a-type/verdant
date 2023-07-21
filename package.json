@@ -29,5 +29,8 @@
 	},
 	"dependencies": {
 		"fake-indexeddb": "^4.0.1"
+	},
+	"volta": {
+		"node": "18.17.0"
 	}
 }
