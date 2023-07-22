@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Verdant Vanilla</title>
+		<script
+			lang="javascript"
+			src="https://unpkg.com/@verdant-web/store@2.5.4/dist/bundle/index.js"
+		></script>
+	</head>
+	<body>
+		<div id="app">
+			<h2>Counter 1</h2>
+			<x-counter id="default"></x-counter>
+			<h2>Counter 2</h2>
+			<x-counter id="other"></x-counter>
+			<p>Try refreshing the page. These values are stored on your device.</p>
+		</div>
+		<script lang="javascript">
+			const schema = {
+				version: 1,
+				collections: {
+					counters: {
+						name: 'counter',
+						primaryKey: 'id',
+						fields: {
+							id: {
+								type: 'string',
+								default: () => Math.random().toString(36).substr(2, 9),
+							},
+							value: {
+								type: 'number',
+								default: 0,
+							}
+						}
+					}
+				}
+			};
+
+			const migrations = [
+				Verdant.migrate(schema, () => {}),
+			];
+
+			const clientDescriptor = new Verdant.ClientDescriptor({
+				namespace: 'vanilla',
+				schema,
+				migrations,
+			});
+
+			/**
+				* This custom Counter element uses the supplied "id" attribute
+				* to create or get a counter, and supplies a UI to manipulate
+				* it.
+				*/
+			customElements.define(
+				'x-counter',
+				class Counter extends HTMLElement {
+					static get observedAttributes() {
+						return ['id'];
+					}
+
+					constructor() {
+						super();
+						this.attachShadow({ mode: 'open' });
+						this.shadowRoot.innerHTML = `
+							<div>
+							<button id="decrement">-</button>
+							<span id="value"></span>
+							<button id="increment">+</button>
+							</div>
+							<style>
+								div {
+									display: flex;
+									align-items: center;
+								}
+								button {
+									width: 50px;
+									height: 50px;
+									border-radius: 50%;
+									border: none;
+									background-color: #eee;
+									font-size: 24px;
+									font-weight: bold;
+									cursor: pointer;
+								}
+								span {
+									margin: 0 10px;
+									font-size: 24px;
+									font-weight: bold;
+								}
+							</style>
+						`;
+						this.counter = null;
+					}
+
+					connectedCallback() {
+						// bind the buttons to the increment and decrement methods
+						this.shadowRoot.getElementById('increment').addEventListener('click', () => {
+							this.increment();
+						});
+						this.shadowRoot.getElementById('decrement').addEventListener('click', () => {
+							this.decrement();
+						});
+
+						// if the id attribute changed, load the new counter.
+						const id = this.getAttribute('id');
+						if (id) {
+							if (this.unsubscribe) {
+								this.unsubscribe();
+							}
+							this.loadCounter(id);
+						}
+
+						this.update();
+					}
+
+					/**
+						* Loads the counter from the database, or creates it if it doesn't
+						* exist.
+						*/
+					loadCounter = async (id) => {
+						// we have to wait for the client to open before we can use it.
+						// if the client is already open, this will immediately resolve.
+						const client = await clientDescriptor.open();
+						// query the counter by its id
+						this.counter = await client.counters.get(id).resolved;
+						// if the query comes back empty, create a new counter
+						if (!this.counter) {
+							this.counter = await client.counters.put({ id });
+						}
+						// update the UI when the counter value changes
+						this.unsubscribe = this.counter.subscribe('change', this.update);
+						// immediately update the UI to initialize
+						this.update();
+					}
+
+					increment = () => {
+						this.counter.set('value', this.counter.get('value') + 1);
+					}
+
+					decrement= () => {
+						this.counter.set('value', this.counter.get('value') - 1);
+					}
+
+					update = async () => {
+						if (!this.counter) return;
+
+						this.shadowRoot.getElementById('value').innerText = this.counter.get('value');
+					}
+				}
+			);
+
+			console.log('Initialized!');
+		</script>
+	</body>
+</html>
