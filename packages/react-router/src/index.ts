@@ -15,7 +15,11 @@ export {
 	useScrollRestoration,
 	useParams,
 } from './hooks.js';
-export { Route, RouteTree } from './Route.js';
-export type { RouteProps } from './Route.js';
+export { Route, RouteTree, RouteRenderer } from './Route.js';
+export type {
+	RouteProps,
+	RouteTreeProps,
+	RouteRendererProps,
+} from './Route.js';
 export { Route as RouteByPath } from './Route.js';
 export * from './RestoreScroll.js';

@@ -69,14 +69,20 @@ export function Route({ path }: RouteProps) {
 	return <RouteRenderer value={match} />;
 }
 
+export interface RouteTreeProps {
+	path: string;
+	/** Skip a number of routes from the top */
+	skip?: number;
+}
+
 /**
  * Renders the top-to-bottom route tree matching the provided path.
  */
-export function RouteTree({ path }: RouteProps) {
+export function RouteTree({ path, skip = 0 }: RouteTreeProps) {
 	const basePath = useLocationPath();
 	const resolvedPath = path.startsWith('/') ? path : joinPaths(basePath, path);
 	const matches = useRouteMatchesForPath(resolvedPath);
-	const match = matches[0];
+	const match = matches[skip];
 	if (!match) return null;
 	return <RouteRenderer value={match} />;
 }
