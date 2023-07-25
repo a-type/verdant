@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.0
+
+### Minor Changes
+
+- 0293316: Rename RouteByPath to Route. Add RouteTree. Fix params being local level only.
+
 ## 0.4.1
 
 ### Patch Changes
