@@ -64,10 +64,11 @@ describe('matchPath', () => {
 			component: Null,
 			exact: true,
 		};
-		expect(matchPath('/foo', '', route)).toEqual({
+		expect(matchPath('/foo', route)).toEqual({
 			path: '/foo',
 			params: {},
 			route,
+			remainingPath: '',
 		});
 	});
 
@@ -76,10 +77,11 @@ describe('matchPath', () => {
 			path: '/foo',
 			component: Null,
 		};
-		expect(matchPath('/foo/bar', '', route)).toEqual({
+		expect(matchPath('/foo/bar', route)).toEqual({
 			path: '/foo',
 			params: {},
 			route,
+			remainingPath: '/bar',
 		});
 	});
 
@@ -89,10 +91,11 @@ describe('matchPath', () => {
 			component: Null,
 			exact: true,
 		};
-		expect(matchPath('/foo/baz', '', route)).toEqual({
+		expect(matchPath('/foo/baz', route)).toEqual({
 			path: '/foo/baz',
 			params: { bar: 'baz' },
 			route,
+			remainingPath: '',
 		});
 	});
 
@@ -101,10 +104,11 @@ describe('matchPath', () => {
 			path: '/foo/:bar',
 			component: Null,
 		};
-		expect(matchPath('/foo/baz/qux', '', route)).toEqual({
+		expect(matchPath('/foo/baz/qux', route)).toEqual({
 			path: '/foo/baz',
 			params: { bar: 'baz' },
 			route,
+			remainingPath: '/qux',
 		});
 	});
 
@@ -114,7 +118,7 @@ describe('matchPath', () => {
 			component: Null,
 			exact: true,
 		};
-		expect(matchPath('/foo/bar', '', route)).toEqual(null);
+		expect(matchPath('/foo/bar', route)).toEqual(null);
 	});
 
 	it('should not match exact routes with parameters if path is longer', () => {
@@ -123,50 +127,13 @@ describe('matchPath', () => {
 			component: Null,
 			exact: true,
 		};
-		expect(matchPath('/foo/baz/bop', '', route)).toEqual(null);
-	});
-
-	it('should incorporate basepath into exact simple match', () => {
-		const route = {
-			path: 'foo',
-			component: Null,
-			exact: true,
-		};
-		expect(matchPath('/bar/foo', '/bar', route)).toEqual({
-			path: '/bar/foo',
-			params: {},
-			route,
-		});
-	});
-
-	it('should incorporate basepath into non-exact simple match', () => {
-		const route = {
-			path: 'foo',
-			component: Null,
-		};
-		expect(matchPath('/bar/foo/baz', '/bar', route)).toEqual({
-			path: '/bar/foo',
-			params: {},
-			route,
-		});
-	});
-
-	it('should incorporate basepath into param match', () => {
-		const route = {
-			path: 'foo/:bar',
-			component: Null,
-		};
-		expect(matchPath('/bar/foo/baz', '/bar', route)).toEqual({
-			path: '/bar/foo/baz',
-			params: { bar: 'baz' },
-			route,
-		});
+		expect(matchPath('/foo/baz/bop', route)).toEqual(null);
 	});
 });
 
 describe('getBestRouteMatch', () => {
 	it('should return null if no routes match', () => {
-		expect(getBestRouteMatch('/foo', '', [])).toEqual(null);
+		expect(getBestRouteMatch('/foo', [])).toEqual(null);
 	});
 
 	it('should match the first of multiple matches', () => {
@@ -180,28 +147,11 @@ describe('getBestRouteMatch', () => {
 				component: Null,
 			},
 		];
-		expect(getBestRouteMatch('/foo/bar', '', routes)).toEqual({
+		expect(getBestRouteMatch('/foo/bar', routes)).toEqual({
 			path: '/foo',
 			params: {},
 			route: routes[0],
-		});
-	});
-
-	it('should incorporate basepath', () => {
-		const routes = [
-			{
-				path: 'foo',
-				component: Null,
-			},
-			{
-				path: '*',
-				component: Null,
-			},
-		];
-		expect(getBestRouteMatch('/bar/foo', '/bar', routes)).toEqual({
-			path: '/bar/foo',
-			params: {},
-			route: routes[0],
+			remainingPath: '/bar',
 		});
 	});
 
@@ -212,17 +162,18 @@ describe('getBestRouteMatch', () => {
 				component: Null,
 			},
 		];
-		expect(getBestRouteMatch('/foo', '', routes)).toEqual({
+		expect(getBestRouteMatch('/foo', routes)).toEqual({
 			path: '/foo',
 			params: {},
 			route: routes[0],
+			remainingPath: '',
 		});
 	});
 });
 
 describe('getAllMatchingRoutes', () => {
 	it('should return empty array if no routes match', () => {
-		expect(getAllMatchingRoutes('/foo', '', [])).toEqual([]);
+		expect(getAllMatchingRoutes('/foo', [])).toEqual([]);
 	});
 
 	it('should follow a simple nested route path', () => {
@@ -238,16 +189,18 @@ describe('getAllMatchingRoutes', () => {
 				],
 			},
 		];
-		expect(getAllMatchingRoutes('/foo/bar', '', routes)).toEqual([
+		expect(getAllMatchingRoutes('/foo/bar', routes)).toEqual([
 			{
 				path: '/foo',
 				params: {},
 				route: routes[0],
+				remainingPath: '/bar',
 			},
 			{
-				path: '/foo/bar',
+				path: '/bar',
 				params: {},
 				route: routes[0].children[0],
+				remainingPath: '',
 			},
 		]);
 	});
@@ -265,16 +218,18 @@ describe('getAllMatchingRoutes', () => {
 				],
 			},
 		];
-		expect(getAllMatchingRoutes('/foo/bar', '', routes)).toEqual([
+		expect(getAllMatchingRoutes('/foo/bar', routes)).toEqual([
 			{
 				path: '/foo',
 				params: {},
 				route: routes[0],
+				remainingPath: '/bar',
 			},
 			{
-				path: '/foo/bar',
+				path: '/bar',
 				params: {},
 				route: routes[0].children[0],
+				remainingPath: '',
 			},
 		]);
 	});
@@ -292,44 +247,18 @@ describe('getAllMatchingRoutes', () => {
 				],
 			},
 		];
-		expect(getAllMatchingRoutes('/foo/baz/qux', '', routes)).toEqual([
+		expect(getAllMatchingRoutes('/foo/baz/qux', routes)).toEqual([
 			{
 				path: '/foo/baz',
 				params: { bar: 'baz' },
 				route: routes[0],
+				remainingPath: '/qux',
 			},
 			{
-				path: '/foo/baz/qux',
+				path: '/qux',
 				params: { qux: 'qux' },
 				route: routes[0].children[0],
-			},
-		]);
-	});
-
-	it('should incorporate basepath', () => {
-		const routes = [
-			{
-				path: 'foo',
-				component: Null,
-				children: [
-					{
-						path: 'bar',
-						component: Null,
-					},
-				],
-			},
-		];
-		const result = getAllMatchingRoutes('/baz/foo/bar', '/baz', routes);
-		expect(result).toEqual([
-			{
-				path: '/baz/foo',
-				params: {},
-				route: routes[0],
-			},
-			{
-				path: '/baz/foo/bar',
-				params: {},
-				route: routes[0].children[0],
+				remainingPath: '',
 			},
 		]);
 	});
@@ -352,16 +281,18 @@ describe('getAllMatchingRoutes', () => {
 			},
 		];
 
-		expect(getAllMatchingRoutes('/foo', '', routes)).toEqual([
+		expect(getAllMatchingRoutes('/foo', routes)).toEqual([
 			{
 				path: '/',
 				params: {},
 				route: routes[0],
+				remainingPath: '/foo',
 			},
 			{
 				path: '/foo',
 				params: {},
 				route: routes[0].children[0],
+				remainingPath: '',
 			},
 		]);
 	});

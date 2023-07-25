@@ -38,6 +38,9 @@ export function matchPath(
 	/** Route to test for a match */
 	route: RouteConfig,
 ): RouteMatch | null {
+	if (!comparePath.startsWith('/')) {
+		comparePath = `/${comparePath}`;
+	}
 	const keys: Key[] = [];
 	const { path, exact } = getRoutePath(route);
 	const re = pathToRegexp(
@@ -53,12 +56,22 @@ export function matchPath(
 		params[key.name] = match[index + 1];
 		return params;
 	}, {} as Record<string, string>);
-	const remainingPath = comparePath.slice(match[0].length);
+	let remainingPath;
+
+	// special case: don't consume if match is '/'
+	// FIXME: this probably means the logic around this is not as
+	// straightforward as it should be.
+	if (match[0] === '/') {
+		remainingPath = comparePath;
+	} else {
+		remainingPath = comparePath.slice(match[0].length);
+	}
+
 	return {
 		path: isWildcardRoute(route) ? comparePath : match[0],
 		params,
 		route,
-		remainingPath,
+		remainingPath: isWildcardRoute(route) ? '' : remainingPath,
 	};
 }
 
