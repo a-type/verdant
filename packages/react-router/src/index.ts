@@ -3,7 +3,6 @@ export * from './Outlet.js';
 export type { RouteConfig } from './types.js';
 export * from './Link.js';
 export * from './TransitionIndicator.js';
-export { useParams } from './context.js';
 export { makeRoutes } from './routes.js';
 export {
 	useNavigate,
@@ -14,7 +13,9 @@ export {
 	useMatchingRoute,
 	useNextMatchingRoute,
 	useScrollRestoration,
+	useParams,
 } from './hooks.js';
-export * from './Route.js';
-export * from './RouteByPath.js';
+export { Route, RouteTree } from './Route.js';
+export type { RouteProps } from './Route.js';
+export { Route as RouteByPath } from './Route.js';
 export * from './RestoreScroll.js';

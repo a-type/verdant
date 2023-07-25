@@ -1,9 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { RouteLevelProvider } from './context.js';
 import { RouteMatch } from './types.js';
-import { getScrollPosition } from './scrollPositions.js';
+import { useLocationPath } from './context.js';
+import { useRouteMatchesForPath } from './hooks.js';
+import { joinPaths } from './util.js';
 
-export interface RouteProps {
+export interface RouteRendererProps {
 	value: RouteMatch;
 	/**
 	 * Any upstream route parameters to combine with the rendered
@@ -17,7 +19,7 @@ export interface RouteProps {
  * Render a specific route's UI, even if the current URL doesn't
  * match it.
  */
-export function Route({ value, params }: RouteProps) {
+export function RouteRenderer({ value, params }: RouteRendererProps) {
 	useEffect(() => {
 		value?.route.onVisited?.(value.params);
 	}, [value]);
@@ -35,12 +37,46 @@ export function Route({ value, params }: RouteProps) {
 	const Component = value.route.component;
 
 	return (
-		<RouteLevelProvider
-			match={value}
-			subpath={value.path}
-			params={paramsToPass}
-		>
-			<Component />
+		<RouteLevelProvider match={value} params={paramsToPass}>
+			<MemoizedComponentRenderer Component={Component} />
 		</RouteLevelProvider>
 	);
+}
+
+// idk if this... does anything...
+const MemoizedComponentRenderer = memo(function MemoizedComponentRenderer({
+	Component,
+}: {
+	Component: any;
+}) {
+	return <Component />;
+});
+
+export interface RouteProps {
+	path: string;
+}
+
+/**
+ * Renders the leaf-most route that matches the provided path.
+ * To render the entire route tree, use RouteTree.
+ */
+export function Route({ path }: RouteProps) {
+	const basePath = useLocationPath();
+	const resolvedPath = path.startsWith('/') ? path : joinPaths(basePath, path);
+	const matches = useRouteMatchesForPath(resolvedPath);
+	const match = matches[matches.length - 1];
+	if (!match) return null;
+	return <RouteRenderer value={match} />;
+}
+
+/**
+ * Renders the top-to-bottom route tree matching the provided path.
+ */
+export function RouteTree({ path }: RouteProps) {
+	const basePath = useLocationPath();
+	const resolvedPath = path.startsWith('/') ? path : joinPaths(basePath, path);
+	const matches = useRouteMatchesForPath(resolvedPath);
+	const match = matches[0];
+	if (!match) return null;
+	return <RouteRenderer value={match} />;
 }

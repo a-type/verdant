@@ -39,15 +39,16 @@ export function Router({
 		}),
 		[routes],
 	);
+	const [path, setPath] = useState(() => window.location.pathname);
 	const root: RouteMatch = useMemo(
 		() => ({
 			path: '',
+			remainingPath: path,
 			params: {},
 			route: rootRoute,
 		}),
-		[rootRoute],
+		[rootRoute, path],
 	);
-	const [path, setPath] = useState(() => window.location.pathname);
 	const [transitioning, startTransition] = useTransition();
 	const [events] = useState(() => new EventTarget());
 
@@ -80,9 +81,7 @@ export function Router({
 			transitioning={transitioning}
 			events={events}
 		>
-			<RouteLevelProvider subpath={''} match={root}>
-				{children}
-			</RouteLevelProvider>
+			<RouteLevelProvider match={root}>{children}</RouteLevelProvider>
 		</RouteGlobalProvider>
 	);
 }

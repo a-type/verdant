@@ -22,4 +22,5 @@ export type RouteMatch = {
 	route: RouteConfig;
 	path: string;
 	params: Record<string, string>;
+	remainingPath: string;
 };

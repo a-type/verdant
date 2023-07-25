@@ -33,18 +33,19 @@ export function getRoutePath(route: RouteConfig): {
 }
 
 export function matchPath(
-	fullPath: string,
-	basePath: string,
+	/** What location the route is matched against */
+	comparePath: string,
+	/** Route to test for a match */
 	route: RouteConfig,
 ): RouteMatch | null {
 	const keys: Key[] = [];
 	const { path, exact } = getRoutePath(route);
 	const re = pathToRegexp(
-		path.startsWith('/') ? path : joinPaths(basePath, path),
+		path.startsWith('/') ? path : path.length ? `/${path}` : path,
 		keys,
 		{ end: !!exact },
 	);
-	const match = re.exec(fullPath);
+	const match = re.exec(comparePath);
 	if (!match) {
 		return null;
 	}
@@ -52,16 +53,21 @@ export function matchPath(
 		params[key.name] = match[index + 1];
 		return params;
 	}, {} as Record<string, string>);
-	return { path: isWildcardRoute(route) ? fullPath : match[0], params, route };
+	const remainingPath = comparePath.slice(match[0].length);
+	return {
+		path: isWildcardRoute(route) ? comparePath : match[0],
+		params,
+		route,
+		remainingPath,
+	};
 }
 
 export function getBestRouteMatch(
 	fullPath: string,
-	basePath: string,
 	routes: RouteConfig[],
 ): RouteMatch | null {
 	for (const route of routes) {
-		const match = matchPath(fullPath, basePath, route);
+		const match = matchPath(fullPath, route);
 		if (match) {
 			return match;
 		}
@@ -71,10 +77,9 @@ export function getBestRouteMatch(
 
 export function getAllMatchingRoutes(
 	fullPath: string,
-	basePath: string,
 	routes: RouteConfig[],
 ): RouteMatch[] {
-	const match = getBestRouteMatch(fullPath, basePath, routes);
+	const match = getBestRouteMatch(fullPath, routes);
 	if (!match) {
 		return [];
 	}
@@ -84,7 +89,5 @@ export function getAllMatchingRoutes(
 		return [match];
 	}
 
-	return [match].concat(
-		getAllMatchingRoutes(fullPath, match.path, childRoutes),
-	);
+	return [match].concat(getAllMatchingRoutes(match.remainingPath, childRoutes));
 }

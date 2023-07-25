@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Link, RouteByPath } from '../../src/index.js';
+import { Link, RouteTree } from '../../src/index.js';
 import { ScrollTester } from '../ScrollTester.js';
 
 export function Home() {
@@ -7,11 +7,11 @@ export function Home() {
 		<div className="page">
 			<div>Home</div>
 			<Link to="/posts/2">Direct post link</Link>
-			<div>Preview of that page:</div>
+			<div>Route tree for /posts</div>
 			<Suspense fallback={<div>Loading...</div>}>
-				<RouteByPath path="/posts/2" />
+				<RouteTree path="/posts" />
 			</Suspense>
-			<ScrollTester />
+			{/* <ScrollTester /> */}
 		</div>
 	);
 }

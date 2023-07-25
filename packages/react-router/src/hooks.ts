@@ -61,13 +61,12 @@ export function useOnLocationChange(
 const EMPTY_ROUTES: RouteConfig[] = [];
 
 export function useMatchingRouteForPath(
-	basePath: string,
+	path: string,
 	routes: RouteConfig[] | null,
 ) {
-	const fullPath = useLocationPath();
 	const match = useMemo(
-		() => getBestRouteMatch(fullPath, basePath, routes || EMPTY_ROUTES),
-		[routes, basePath, fullPath],
+		() => getBestRouteMatch(path, routes || EMPTY_ROUTES),
+		[routes, path],
 	);
 
 	return match;
@@ -83,7 +82,7 @@ export function useMatchingRouteForPath(
 export function useRouteMatchesForPath(fullPath: string): RouteMatch[] {
 	const root = useRootMatch();
 	const matches = useMemo(
-		() => getAllMatchingRoutes(fullPath, '', root?.route.children || []),
+		() => getAllMatchingRoutes(fullPath, root?.route.children || []),
 		[root, fullPath],
 	);
 	return matches;
@@ -94,16 +93,26 @@ export function useMatchingRoutes(): RouteMatch[] {
 	return useRouteMatchesForPath(fullPath);
 }
 
+export function useParams<Shape extends Record<string, string>>(): Shape {
+	const matches = useMatchingRoutes();
+	return useMemo(() => {
+		return matches.reduce((params, match) => {
+			Object.assign(params, match.params);
+			return params;
+		}, {} as any as Shape);
+	}, [matches]);
+}
+
 export function useMatchingRoute(): RouteMatch | null {
 	const { match } = useContext(RouteLevelContext);
 	return match;
 }
 
 export function useNextMatchingRoute(): RouteMatch | null {
-	const { match: parent, subpath, params } = useContext(RouteLevelContext);
+	const { match: parent, params } = useContext(RouteLevelContext);
 
 	const match = useMatchingRouteForPath(
-		subpath,
+		parent?.remainingPath ?? '',
 		parent?.route.children ?? null,
 	);
 
@@ -162,12 +171,15 @@ export function useNavigate() {
 }
 
 export function useMatch({ path, end }: { path: string; end?: boolean }) {
-	const locationPath = useLocationPath();
-	const { subpath: basePath } = useContext(RouteLevelContext);
+	const { match } = useContext(RouteLevelContext);
 	return useMemo(
 		() =>
-			matchPath(locationPath, basePath, { path, exact: end, component: Null }),
-		[locationPath, path, end],
+			matchPath(match?.remainingPath ?? '', {
+				path,
+				exact: end,
+				component: Null,
+			}),
+		[match?.remainingPath, path, end],
 	);
 }
 

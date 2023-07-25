@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNextMatchingRoute, Route, Outlet } from '../src/index.js';
+import { useNextMatchingRoute, Outlet } from '../src/index.js';
+import { RouteRenderer } from '../src/Route.js';
 
 export interface RouteTransitionProps {}
 
@@ -87,7 +88,7 @@ export function RouteTransition({}: RouteTransitionProps) {
 					}}
 					key={previousKey}
 				>
-					<Route value={previousMatch} />
+					<RouteRenderer value={previousMatch} />
 				</div>
 			)}
 			<div

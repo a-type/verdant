@@ -2,15 +2,14 @@ import { ReactNode, createContext, useContext } from 'react';
 import { RouteMatch } from './types.js';
 
 type RouteLevelContextValue = {
+	/** Current level's matching route */
 	match: RouteMatch | null;
-	subpath: string;
 	// these accumulate for each level
 	params?: Record<string, string>;
 };
 
 export const RouteLevelContext = createContext<RouteLevelContextValue>({
 	match: null,
-	subpath: '',
 	params: {},
 });
 
@@ -24,12 +23,6 @@ export const RouteLevelProvider = ({
 		</RouteLevelContext.Provider>
 	);
 };
-
-export function useParams<Shape extends Record<string, string>>(): Shape {
-	const { params } = useContext(RouteLevelContext);
-
-	return (params || {}) as any;
-}
 
 type RouteGlobalContextValue = {
 	rootMatch: RouteMatch | null;

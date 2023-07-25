@@ -7,6 +7,7 @@ import {
 	TransitionIndicator,
 	makeRoutes,
 	useMatch,
+	useParams,
 } from '../src/index.js';
 import { loadPost } from './data/fakePosts.js';
 import { delay } from './data/utils.js';
@@ -105,6 +106,7 @@ function App() {
 					<Link to="/posts">Posts</Link>
 					<Link to="/foo">404</Link>
 					<TestMatch path="/posts" />
+					<TestParams />
 				</nav>
 				<TransitionIndicator delay={1000}>
 					<div>Loading next page...</div>
@@ -127,6 +129,11 @@ function TestMatch({ path }: { path: string }) {
 
 	if (matchesPosts) return <div>Matches {path}</div>;
 	return null;
+}
+
+function TestParams() {
+	const params = useParams();
+	return <div>{JSON.stringify(params)}</div>;
 }
 
 createRoot(document.getElementById('root')!).render(
