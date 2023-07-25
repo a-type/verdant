@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.1
+
+### Patch Changes
+
+- 186d7e6: Allow skipping top level routes in RouteTree
+
 ## 0.5.0
 
 ### Minor Changes
