@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 21.0.0
+
+### Major Changes
+
+- 17f66ca: Provider no longer has an internal suspense boundary. You must wrap your Provider in your own Suspense. This gives you more control over loading behavior at the cost of a slight initial bump of having to understand Suspense, which the React Verdant bindings kind of require anyway.
+
 ## 20.0.3
 
 ### Patch Changes
