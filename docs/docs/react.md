@@ -119,9 +119,11 @@ function Todos() {
 
 function App() {
 	return (
-		<hooks.Provider value={clientDescriptor}>
-			<Todos />
-		</hooks.Provider>
+		<Suspense fallback={<div>Loading...</div>}>
+			<hooks.Provider value={clientDescriptor}>
+				<Todos />
+			</hooks.Provider>
+		</Suspense>
 	);
 }
 ```
@@ -177,9 +179,11 @@ function App({ libraryId }: { libraryId: string }) {
 	}, [descriptor]);
 
 	return (
-		<hooks.Provider value={clientDescriptor}>
-			<Todos />
-		</hooks.Provider>
+		<Suspense fallback={<div>Loading...</div>}>
+			<hooks.Provider value={clientDescriptor}>
+				<Todos />
+			</hooks.Provider>
+		</Suspense>
 	);
 }
 ```

@@ -348,13 +348,11 @@ export function createHooks<Presence = any, Profile = any>(
 			value,
 			children,
 			sync,
-			suspenseFallback,
 			...rest
 		}: {
 			children?: ReactNode;
 			value: StorageDescriptor;
 			sync?: boolean;
-			suspenseFallback?: ReactNode;
 		}) => {
 			// auto-open storage when used in provider
 			useMemo(() => {
@@ -362,10 +360,8 @@ export function createHooks<Presence = any, Profile = any>(
 			}, [value]);
 			return (
 				<Context.Provider value={value} {...rest}>
-					<Suspense fallback={suspenseFallback || null}>
-						{children}
-						{sync !== undefined && <SyncController isOn={sync} />}
-					</Suspense>
+					{children}
+					{sync !== undefined && <SyncController isOn={sync} />}
 				</Context.Provider>
 			);
 		},
