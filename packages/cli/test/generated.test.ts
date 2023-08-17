@@ -29,9 +29,11 @@ describe('generated client', () => {
 		expect(item.get('content')).toBe('test');
 
 		const query = client.todos.findAll({
-			where: 'example',
-			gt: 'a',
-			lt: 'x',
+			index: {
+				where: 'example',
+				gt: 'a',
+				lt: 'x',
+			},
 		});
 		const result = await query.resolved;
 		expect(result[0].get('id')).toBeDefined();

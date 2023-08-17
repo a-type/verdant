@@ -5,7 +5,7 @@ import { getObjectProperty } from './tools.js';
 export function getReactTypings({ collections, commonjs = false }) {
 	return `
 import { Context, ComponentType, ReactNode } from 'react';
-import type { Client, ClientDescriptor, Schema, ${collections
+import type { Client, ClientDescriptor, Schema, QueryStatus, ${collections
 		.map((c) => getObjectProperty(c, 'name').value)
 		.map((c) => pascalCase(c))
 		.flatMap((name) => [name, `${name}Filter`])
@@ -87,11 +87,11 @@ useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>
 useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName}[];
 useAll${pascalPlural}Paginated: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize?: number }>(config?: Config) => [
 	${pascalName}[],
-	{ next: () => void; previous: () => void; setPage: (page: number) => void, hasNext: boolean, hasPrevious: boolean }
+	{ next: () => void; previous: () => void; setPage: (page: number) => void, hasNext: boolean, hasPrevious: boolean, status: QueryStatus }
 ];
 useAll${pascalPlural}Infinite: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize?: number }>(config?: Config) => [
 	${pascalName}[],
-	{ loadMore: () => void; hasMore: boolean }
+	{ loadMore: () => void; hasMore: boolean, status: QueryStatus }
 ];
     `;
 		})

@@ -8,11 +8,11 @@ import {
 	ClientWithCollections,
 	EntityFile,
 	Client,
+	QueryStatus,
 } from '@verdant-web/store';
 import {
 	createContext,
 	ReactNode,
-	Suspense,
 	useCallback,
 	useContext,
 	useEffect,
@@ -34,13 +34,27 @@ function useLiveQuery(liveQuery: Query<any> | null) {
 	return useSyncExternalStore(
 		(callback) => {
 			if (liveQuery) {
-				return liveQuery.subscribe(callback);
+				return liveQuery.subscribe('change', callback);
 			} else {
 				return () => {};
 			}
 		},
 		() => {
 			return liveQuery ? liveQuery.current : null;
+		},
+	);
+}
+function useLiveQueryStatus(liveQuery: Query<any> | null): QueryStatus {
+	return useSyncExternalStore(
+		(callback) => {
+			if (liveQuery) {
+				return liveQuery.subscribe('statusChange', callback);
+			} else {
+				return () => {};
+			}
+		},
+		() => {
+			return liveQuery?.status ?? 'initial';
 		},
 	);
 }
@@ -454,6 +468,7 @@ export function createHooks<Presence = any, Profile = any>(
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery);
+			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
 				() => ({
@@ -468,8 +483,10 @@ export function createHooks<Presence = any, Profile = any>(
 					get hasNext() {
 						return liveQuery?.hasNextPage;
 					},
+
+					status,
 				}),
-				[liveQuery],
+				[liveQuery, status],
 			);
 
 			return [data, tools] as const;
@@ -503,6 +520,7 @@ export function createHooks<Presence = any, Profile = any>(
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery);
+			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
 				() => ({
@@ -511,8 +529,10 @@ export function createHooks<Presence = any, Profile = any>(
 					get hasMore() {
 						return liveQuery?.hasMore;
 					},
+
+					status,
 				}),
-				[liveQuery],
+				[liveQuery, status],
 			);
 
 			return [data, tools] as const;

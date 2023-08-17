@@ -689,6 +689,18 @@ export class Entity<
 	) => {
 		this.getAsWrapped().forEach(callback);
 	};
+
+	some = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
+		return this.getAsWrapped().some(predicate);
+	};
+
+	every = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
+		return this.getAsWrapped().every(predicate);
+	};
+
+	find = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
+		return this.getAsWrapped().find(predicate);
+	};
 }
 
 export interface BaseEntity<
@@ -752,6 +764,11 @@ export interface ListEntity<
 	delete(index: number): void;
 	has(value: ListItemValue<Value>): boolean;
 	forEach(callback: (value: ListItemValue<Value>, index: number) => void): void;
+	some(predicate: (value: ListItemValue<Value>) => boolean): boolean;
+	every(predicate: (value: ListItemValue<Value>) => boolean): boolean;
+	find(
+		predicate: (value: ListItemValue<Value>) => boolean,
+	): ListItemValue<Value> | undefined;
 }
 
 export type AnyEntity<

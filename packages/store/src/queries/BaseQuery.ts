@@ -6,6 +6,7 @@ import { filterResultSet } from './utils.js';
 
 export type BaseQueryEvents = {
 	change: (value: any) => void;
+	statusChange: (status: QueryStatus) => void;
 };
 
 export type BaseQueryOptions<T> = {
@@ -20,6 +21,12 @@ export type QueryStatus = 'initial' | 'initializing' | 'revalidating' | 'ready';
 
 export const ON_ALL_UNSUBSCRIBED = Symbol('ON_ALL_UNSUBSCRIBED');
 export const UPDATE = Symbol('UPDATE');
+
+// export interface BaseQuery<T> {
+// 	subscribe(event: 'change', callback: (value: T) => void): () => void;
+// 	subscribe(event: 'statusChange', callback: (status: QueryStatus) => void): () => void;
+// 	subscribe(callback: (value: T) => void): () => void;
+// }
 
 export abstract class BaseQuery<T> extends Disposable {
 	private _rawValue;
@@ -87,11 +94,42 @@ export abstract class BaseQuery<T> extends Disposable {
 		return this._status;
 	}
 
-	subscribe = (callback: (value: T) => void) => {
-		// accessing for side effects... eh
-		this.resolved;
-		return this._events.subscribe('change', callback);
-	};
+	/**
+	 * Subscribe to changes in the query value.
+	 *
+	 * @deprecated use the two parameter form instead
+	 */
+	subscribe(callback: (value: T) => void): () => void;
+	/**
+	 * Subscribe to changes in the query value.
+	 */
+	subscribe(event: 'change', callback: (value: T) => void): () => void;
+	/**
+	 * Subscribe to changes in the query state.
+	 */
+	subscribe(
+		event: 'statusChange',
+		callback: (status: QueryStatus) => void,
+	): () => void;
+	subscribe(eventOrCallback: any, callback?: any) {
+		// change subscription has special behavior...
+		if (callback === undefined && typeof eventOrCallback === 'function') {
+			// accessing for side effects... eh
+			this.resolved;
+			return this._events.subscribe('change', eventOrCallback);
+		} else if (eventOrCallback === 'change' && callback !== undefined) {
+			// accessing for side effects... eh
+			this.resolved;
+			return this._events.subscribe('change', callback);
+		} else if (
+			eventOrCallback === 'statusChange' &&
+			typeof callback === 'function'
+		) {
+			return this._events.subscribe(eventOrCallback, callback);
+		} else {
+			throw new Error('Invalid invocation of Query.subscribe');
+		}
+	}
 
 	protected setValue = (value: T) => {
 		this._rawValue = value;
