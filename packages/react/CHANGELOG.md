@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 21.0.1
+
+### Patch Changes
+
+- a989af4: Query.subscribe now supports specifying event to subscribe to. Former use is deprecated but still available. React paginated query hooks now supply a status parameter to check query re-validation.
+- Updated dependencies [a989af4]
+- Updated dependencies [a989af4]
+  - @verdant-web/store@2.5.5
+
 ## 21.0.0
 
 ### Major Changes

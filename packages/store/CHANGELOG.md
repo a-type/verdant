@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 2.5.5
+
+### Patch Changes
+
+- a989af4: Add some,every,find List entity methods
+- a989af4: Query.subscribe now supports specifying event to subscribe to. Former use is deprecated but still available. React paginated query hooks now supply a status parameter to check query re-validation.
+
 ## 2.5.4
 
 ### Patch Changes

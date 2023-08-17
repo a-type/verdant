@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.2
+
+### Patch Changes
+
+- 9a731e4: Scroll restoration now restores to [0,0] explicitly on first-time route visits. A second parameter will indicate if this is the first visit for custom behavior.
+
 ## 0.5.1
 
 ### Patch Changes
