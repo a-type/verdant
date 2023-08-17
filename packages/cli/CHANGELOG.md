@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.1.2
+
+### Patch Changes
+
+- a989af4: Query.subscribe now supports specifying event to subscribe to. Former use is deprecated but still available. React paginated query hooks now supply a status parameter to check query re-validation.
+
 ## 2.1.1
 
 ### Patch Changes
