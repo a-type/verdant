@@ -234,7 +234,7 @@ export function useScrollRestoration({
 	 * Return false to keep the previous known position.
 	 */
 	onGetScrollPosition: () => [number, number] | false;
-	onScrollRestored: (position: [number, number]) => void;
+	onScrollRestored: (position: [number, number], isFirstVisit: boolean) => void;
 	debug?: boolean;
 	/**
 	 * If you are restoring multiple scroll containers which may be
@@ -268,7 +268,9 @@ export function useScrollRestoration({
 				);
 			}
 			if (scroll) {
-				onScrollRestored(scroll);
+				onScrollRestored(scroll, false);
+			} else {
+				onScrollRestored([0, 0], true);
 			}
 			restoredKeyRef.current = restoreKey;
 		}
