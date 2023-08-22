@@ -4,7 +4,8 @@
 	"description": "Schema management tools for verdant",
 	"type": "module",
 	"bin": {
-		"verdant": "bin/generate.js"
+		"verdant": "bin/generate.js",
+		"verdant-preflight": "bin/preflight.js"
 	},
 	"exports": {
 		".": {
@@ -23,20 +24,23 @@
 	"scripts": {
 		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d -f",
 		"pretest:cjs": "node ./bin/generate.js -s test/schema.ts -o test/.generated-cjs -r -d -f -c -m test/migrations-cjs",
+		"preflight": "node ./bin/preflight.js -o test/.generated",
 		"test": "pnpm run pretest && vitest",
 		"ci:test:unit": "pnpm run pretest && vitest run",
 		"link": "pnpm link --global"
 	},
 	"dependencies": {
+		"@clack/prompts": "^0.5.1",
 		"@swc/core": "^1.3.8",
-		"prettier": "^2.7.1",
 		"change-case": "^4.1.2",
+		"prettier": "^2.7.1",
 		"yargs": "^17.6.0"
 	},
 	"devDependencies": {
+		"@types/estree": "^1.0.1",
 		"@verdant-web/common": "workspace:*",
-		"@verdant-web/store": "workspace:*",
 		"@verdant-web/react": "workspace:*",
+		"@verdant-web/store": "workspace:*",
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"typescript": "^4.7.4",

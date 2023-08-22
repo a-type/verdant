@@ -145,6 +145,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@clack/prompts':
+        specifier: ^0.5.1
+        version: 0.5.1
       '@swc/core':
         specifier: ^1.3.8
         version: 1.3.9
@@ -158,6 +161,9 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
     devDependencies:
+      '@types/estree':
+        specifier: ^1.0.1
+        version: 1.0.1
       '@verdant-web/common':
         specifier: workspace:*
         version: link:../common
@@ -6514,6 +6520,10 @@ packages:
 
   /@types/estree@0.0.51:
     resolution: {integrity: sha512-CuPgU6f3eT/XgKKPqKd/gLZV1Xmvf1a2R5POBOGQa6uv82xpls89HU5zKeVoyR8XzHd1RGNOlQlvUe3CFkjWNQ==}
+
+  /@types/estree@1.0.1:
+    resolution: {integrity: sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA==}
+    dev: true
 
   /@types/express-serve-static-core@4.17.31:
     resolution: {integrity: sha512-DxMhY+NAsTwMMFHBTtJFNp5qiHKJ7TeqOo23zVEM9alT1Ml27Q3xcTH0xwxn7Q0BbMcVEJOs/7aQtUWupUQN3Q==}

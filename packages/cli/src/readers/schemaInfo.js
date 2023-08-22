@@ -36,3 +36,9 @@ export async function schemasDiffer(schemaOnePath, schemaTwoPath) {
 	]);
 	return one !== two;
 }
+
+export function getSchemaIsWIP(ast) {
+	const schema = getSchemaDeclaration(ast);
+
+	return getObjectProperty(schema, 'wip')?.value ?? false;
+}
