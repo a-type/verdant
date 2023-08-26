@@ -20,7 +20,7 @@ export default async function verdantAuthHandler(req: Request, res: Response) {
 		const token = tokenProvider.getToken({
 			userId: session.userId,
 			libraryId: session.planId,
-			syncEndpoint: `${serverHost}/lo-fi`,
+			syncEndpoint: `${serverHost}/verdant`,
 			type: ReplicaType.Realtime,
 		});
 
