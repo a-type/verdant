@@ -1,6 +1,6 @@
 # {{todo}}
 
-Welcome to your lo-fi PWA!
+Welcome to your Verdant PWA!
 
 This is a very opinionated starter aimed at getting you working on your idea on day 1, not fussing with tools or doing bootstrapping work like OAuth.
 
@@ -13,8 +13,8 @@ Here's what you need to do before your app is ready to use:
 - [ ] Create a Google Cloud project for your app and configure the OAuth consent screen
 - [ ] Create a Stripe project for your app and create an API key
 - [ ] Fill in the missing values in `./apps/api/.env`
-- [ ] Edit `./packages/lo-fi/src/schema.ts` and add your first lo-fi schema
-- [ ] Run `pnpm generate` to generate the lo-fi client
+- [ ] Edit `./packages/verdant/src/schema.ts` and add your first Verdant schema
+- [ ] Run `pnpm generate` to generate the Verdant client
 - [ ] Run `pnpm prisma migrate dev` to set up the database
 
 Finally, run `pnpm dev` to start the API and PWA in parallel.
@@ -25,13 +25,13 @@ The app works offline-first. Users can use it anonymously for free, storing all 
 
 The built-in business model is simple: to sync to other devices or collaborate with other people, users must create an account and subscribe to your product in Stripe. Currently, the model is set up so that only one subscription is required per "plan," which can include any number of collaborators.
 
-You can build your features with lo-fi, and they'll work in a limited, on-device way for free users. You can then add upsells to convert your free, anonymous users to paid subscribers. Your server load will only scale as your paid userbase does.
+You can build your features with Verdant, and they'll work in a limited, on-device way for free users. You can then add upsells to convert your free, anonymous users to paid subscribers. Your server load will only scale as your paid userbase does.
 
 ## What's inside
 
-### A lo-fi client monorepo package
+### A Verdant client monorepo package
 
-All your generated lo-fi client code can be imported from `@{{todo}}/lo-fi`
+All your generated Verdant client code can be imported from `@{{todo}}/Verdant`
 
 ### A Vite PWA
 
@@ -41,11 +41,11 @@ You should supply some icons in `/apps/web/public` for your app, and check out `
 
 ### A Node server
 
-The server handles user management and lo-fi syncing.
+The server handles user management and Verdant syncing.
 
 - uses Prisma (`/packages/prisma`) to manage storing user accounts in SQLite
 - authenticates users with Google OAuth
-- integrates with Stripe to restrict lo-fi sync to only users with a valid subscription
+- integrates with Stripe to restrict Verdant sync to only users with a valid subscription
 
 ## How to deploy
 

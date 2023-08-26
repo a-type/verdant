@@ -42,16 +42,16 @@ app.get('/', (req, res) => {
 app.use('/api', apiRouter);
 
 const lofiServer = attachVerdantServer(server);
-app.post('/lo-fi', async (req, res) => {
+app.post('/verdant', async (req, res) => {
 	await lofiServer.handleRequest(req, res);
 });
-app.get('/lo-fi', async (req, res) => {
+app.get('/verdant', async (req, res) => {
 	await lofiServer.handleRequest(req, res);
 });
-app.post('/lo-fi/files/:fileId', async (req, res) => {
+app.post('/verdant/files/:fileId', async (req, res) => {
 	await lofiServer.handleFileRequest(req, res);
 });
-app.get('/lo-fi/files/:fileId', async (req, res) => {
+app.get('/verdant/files/:fileId', async (req, res) => {
 	await lofiServer.handleFileRequest(req, res);
 });
 

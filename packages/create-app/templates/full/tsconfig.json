@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {
+	"compilerOptions": {
 		"noImplicitAny": true,
 		"noLib": false,
 		"target": "es2017",
@@ -24,7 +24,7 @@
 			"path": "./packages/prisma"
 		},
 		{
-			"path": "./packages/lo-fi"
+			"path": "./packages/verdant"
 		}
 	]
 }
