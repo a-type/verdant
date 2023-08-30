@@ -1,4 +1,4 @@
-import { ReactNode, useContext } from 'react';
+import { ReactElement, ReactNode, useContext } from 'react';
 import { RouteLevelContext } from './context.js';
 import { useMatchingRouteForPath } from './hooks.js';
 import { RouteRenderer } from './Route.js';
@@ -13,7 +13,7 @@ export interface OutletProps {
 	children?: (
 		match: RouteMatch | null,
 		params: Record<string, string> | undefined,
-	) => ReactNode;
+	) => ReactElement | null;
 }
 
 export function Outlet({ children }: OutletProps) {
