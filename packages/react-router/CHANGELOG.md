@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.3
+
+### Patch Changes
+
+- 86f1a42: Add rendering override for Outlet, docs for hooks
+
 ## 0.5.2
 
 ### Patch Changes
