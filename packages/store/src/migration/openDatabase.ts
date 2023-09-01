@@ -399,7 +399,7 @@ function getMigrationEngine({
 			const docs = await queries[collection].findAll();
 
 			await Promise.all(
-				docs.map(async (doc: any) => {
+				docs.filter(Boolean).map(async (doc: any) => {
 					assert(
 						hasOid(doc),
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
