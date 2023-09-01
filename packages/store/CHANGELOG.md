@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 2.5.6
+
+### Patch Changes
+
+- Updated dependencies [e2fe2aa]
+  - @verdant-web/common@1.14.0
+
 ## 2.5.5
 
 ### Patch Changes

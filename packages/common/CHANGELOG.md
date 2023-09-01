@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.14.0
+
+### Minor Changes
+
+- e2fe2aa: Bugfix: fix file refs breaking document snapshots
+
 ## 1.13.4
 
 ### Patch Changes
