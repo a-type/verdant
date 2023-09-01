@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.7
+
+### Patch Changes
+
+- e9c332a: Filter out empty doc snapshots during migration
+
 ## 2.5.6
 
 ### Patch Changes
