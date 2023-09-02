@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.5.8
+
+### Patch Changes
+
+- 28170e4: Do not apply future operations to document snapshots during migration
+
 ## 2.5.7
 
 ### Patch Changes
