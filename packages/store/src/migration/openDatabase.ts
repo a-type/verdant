@@ -106,9 +106,18 @@ export async function openDocumentDatabase({
 							documentDb: originalDatabase,
 						},
 					});
-					await migration.migrate(engine);
-					// wait on any out-of-band async operations to complete
-					await Promise.all(engine.awaitables);
+					try {
+						await migration.migrate(engine);
+						// wait on any out-of-band async operations to complete
+						await Promise.all(engine.awaitables);
+					} catch (err) {
+						context.log(
+							'critical',
+							`Migration failed (${migration.oldSchema.version} -> ${migration.newSchema.version})`,
+							err,
+						);
+						throw err;
+					}
 
 					// now we have to open the database again with the next version and
 					// make the appropriate schema changes during the upgrade.
@@ -202,7 +211,9 @@ export async function openDocumentDatabase({
 					const snapshots = await Promise.all(
 						oids.map(async (oid) => {
 							try {
-								const snap = await meta.getDocumentSnapshot(oid);
+								const snap = await meta.getDocumentSnapshot(oid, {
+									to: meta.time.now(migration.newSchema.version),
+								});
 								return [oid, snap];
 							} catch (e) {
 								// this seems to happen with baselines/ops which are not fully
@@ -332,7 +343,10 @@ function getMigrationQueries({
 		acc[collectionName] = {
 			get: async (id: string) => {
 				const oid = createOid(collectionName, id);
-				const doc = await meta.getDocumentSnapshot(oid);
+				const doc = await meta.getDocumentSnapshot(oid, {
+					// only get the snapshot up to the previous version (newer operations may have synced)
+					to: meta.time.now(migration.oldSchema.version),
+				});
 				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
@@ -343,7 +357,10 @@ function getMigrationQueries({
 					context,
 				});
 				if (!oid) return null;
-				const doc = await meta.getDocumentSnapshot(oid);
+				const doc = await meta.getDocumentSnapshot(oid, {
+					// only get the snapshot up to the previous version (newer operations may have synced)
+					to: meta.time.now(migration.oldSchema.version),
+				});
 				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
@@ -354,7 +371,12 @@ function getMigrationQueries({
 					context,
 				});
 				const docs = await Promise.all(
-					oids.map((oid) => meta.getDocumentSnapshot(oid)),
+					oids.map((oid) =>
+						meta.getDocumentSnapshot(oid, {
+							// only get the snapshot up to the previous version (newer operations may have synced)
+							to: meta.time.now(migration.oldSchema.version),
+						}),
+					),
 				);
 				// docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
 				return docs;

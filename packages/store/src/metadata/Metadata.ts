@@ -141,7 +141,10 @@ export class Metadata extends EventSubscriber<{
 		return Array.from(oids);
 	};
 
-	getDocumentSnapshot = async (oid: ObjectIdentifier) => {
+	getDocumentSnapshot = async (
+		oid: ObjectIdentifier,
+		options: { to?: string } = {},
+	) => {
 		const documentOid = getOidRoot(oid);
 		assert(documentOid === oid, 'Must be root document OID');
 		const transaction = this.db.transaction(
@@ -170,6 +173,8 @@ export class Metadata extends EventSubscriber<{
 			},
 			{
 				transaction,
+				// only apply operations up to the current time
+				to: options.to || this.now,
 			},
 		);
 		const root = objectMap.get(documentOid);

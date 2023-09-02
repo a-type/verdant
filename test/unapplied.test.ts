@@ -58,16 +58,29 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		version: 2,
 		collections: {
 			...defaultSchema.collections,
+			items: {
+				...defaultSchema.collections.items,
+				fields: {
+					...defaultSchema.collections.items.fields,
+					// adding a new field to test future operation application on unmigrated client
+					test: {
+						type: 'number' as const,
+						default: 100,
+					},
+				},
+			},
 		},
 	});
-
-	const v2Migration = migrate(defaultSchema, v2Schema, async () => {});
 
 	const clientA2 = await createTestClient({
 		server,
 		library: 'unapplied-1',
 		user: 'User A',
-		migrations: [...defaultMigrations, v2Migration],
+		migrations: [
+			...defaultMigrations,
+			// items should automigrate due to the field change
+			migrate(defaultSchema, v2Schema, async () => {}),
+		],
 		schema: v2Schema,
 		indexedDb,
 	});
@@ -101,7 +114,20 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		server,
 		library: 'unapplied-1',
 		user: 'User B',
-		migrations: [...defaultMigrations, v2Migration],
+		migrations: [
+			...defaultMigrations,
+			migrate(defaultSchema, v2Schema, async (tools) => {
+				await tools.migrate('items', (item) => {
+					// expect that the new field has not yet been applied to this snapshot -
+					// the snapshot should represent the item from v1 only
+					expect((item as any).test).toBe(undefined);
+					return {
+						...item,
+						test: 100,
+					};
+				});
+			}),
+		],
 		schema: v2Schema,
 		indexedDb,
 		logId: 'B2',
