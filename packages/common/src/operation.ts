@@ -1,5 +1,5 @@
 import { DocumentBaseline } from './baseline.js';
-import { FileRef } from './files.js';
+import { FileRef, isFileRef } from './files.js';
 import {
 	areOidsRelated,
 	assignOid,
@@ -689,6 +689,8 @@ export function substituteRefsWithObjects(
 				substituteRefsWithObjects(base[i], refs, used);
 			}
 		}
+	} else if (isFileRef(base)) {
+		// don't do anything with file refs
 	} else if (isObject(base)) {
 		// not sure where to put this assertion but it's important to make
 		// sure all nested objects include an OID
