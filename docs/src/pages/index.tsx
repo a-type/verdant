@@ -37,6 +37,78 @@ function HomepageHeader() {
 					</div>
 				</div>
 			</header>
+			<CodeBlock
+				language="typescript"
+				showLineNumbers
+				title="app.ts"
+				className={`${styles.heroCode} ${styles.heroCodeMobile}`}
+			>
+				{`// initialize your data directly on
+// the client
+const post = await client.posts.put({
+	title: 'Hello World'
+});
+
+// reactively update your UI
+post.subscribe(
+	'change',
+	() => {
+		bodyText.innerText =
+			post.get('content');
+	},
+);
+
+// synchronously interact with data
+post.set(
+	'content',
+	\`Verdant makes both local storage
+	and synchronized data feel as simple
+	as plain objects.\`
+);
+
+// build rich apps with
+// simple tools
+post.set('image', fileInput.files[0]);
+post.get('tags').push('local-first');
+
+// now your post is saved locally
+// and synced to the server,
+// even if you're offline
+// or refresh the page
+					`}
+			</CodeBlock>
+			<CodeBlock
+				language="typescript"
+				showLineNumbers
+				title="app.ts"
+				className={`${styles.heroCode}`}
+			>
+				{`// initialize your data directly on the client
+const post = await client.posts.put({
+	title: 'Hello World'
+});
+
+// reactively update your UI
+post.subscribe(
+	'change',
+	() => bodyText.innerText = post.get('content'),
+);
+
+// synchronously interact with data
+post.set(
+	'content',
+	\`Verdant makes both local storage and synchronized data
+	feel as simple as plain objects.\`
+);
+
+// build rich apps with simple tools
+post.set('image', fileInput.files[0]);
+post.get('tags').push('local-first');
+
+// now your post is saved locally and synced to the server,
+// even if you're offline or refresh the page
+					`}
+			</CodeBlock>
 			<section className={styles.musing}>
 				<p>
 					There is a little plant on a shelf near my desk. It's no larger than
