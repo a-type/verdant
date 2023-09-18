@@ -485,7 +485,7 @@ export function createHooks<Presence = any, Profile = any>(
 				() => (skip ? null : storage[name].findAll({ index, key })),
 				[index, skip],
 			);
-			const data = useLiveQuery(liveQuery, true);
+			const data = useLiveQuery(liveQuery, true) || [];
 			const status = useLiveQueryStatus(liveQuery);
 
 			return { data, status };
