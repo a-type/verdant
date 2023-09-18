@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 21.1.1
+
+### Patch Changes
+
+- 2b70030: Fix empty state for unsuspended all hook
+
 ## 21.1.0
 
 ### Minor Changes
