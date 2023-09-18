@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 21.1.0
+
+### Minor Changes
+
+- a3cd86c: Add unsuspended React hook variants
+
 ## 21.0.2
 
 ### Patch Changes
