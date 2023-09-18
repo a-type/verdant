@@ -22,7 +22,7 @@ import type { Client, ClientDescriptor, Schema, QueryStatus, ${collections
 			EntityFile,
 		} from '@verdant-web/store';
 
-		type SkippableFilterConfig<F> = {
+		type HookConfig<F> = {
 			index?: F;
 			skip?: boolean;
 			key?: string;
@@ -83,13 +83,16 @@ export interface GeneratedHooks<Presence, Profile> {
 			);
 			return `
 use${pascalName}(id: string, config?: { skip?: boolean }): ${pascalName} | null;
-useOne${pascalName}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName} | null;
-useAll${pascalPlural}: <Config extends SkippableFilterConfig<${pascalName}Filter>>(config?: Config) => ${pascalName}[];
-useAll${pascalPlural}Paginated: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize?: number }>(config?: Config) => [
+use${pascalName}Unsuspended(id: string, config?: { skip?: boolean }): { data: ${pascalName} | null; status: QueryStatus };
+useOne${pascalName}: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => ${pascalName} | null;
+useOne${pascalPlural}Unsuspended: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => { data: ${pascalName} | null; status: QueryStatus };
+useAll${pascalPlural}: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => ${pascalName}[];
+useAll${pascalPlural}Unsuspended: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => { data: ${pascalName}[]; status: QueryStatus };
+useAll${pascalPlural}Paginated: <Config extends HookConfig<${pascalName}Filter> & { pageSize?: number, suspend?: false }>(config?: Config) => [
 	${pascalName}[],
 	{ next: () => void; previous: () => void; setPage: (page: number) => void, hasNext: boolean, hasPrevious: boolean, status: QueryStatus }
 ];
-useAll${pascalPlural}Infinite: <Config extends SkippableFilterConfig<${pascalName}Filter> & { pageSize?: number }>(config?: Config) => [
+useAll${pascalPlural}Infinite: <Config extends HookConfig<${pascalName}Filter> & { pageSize?: number, suspend?: false }>(config?: Config) => [
 	${pascalName}[],
 	{ loadMore: () => void; hasMore: boolean, status: QueryStatus }
 ];
