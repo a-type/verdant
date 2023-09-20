@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react",
-	"version": "21.1.1",
+	"version": "21.1.2",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",

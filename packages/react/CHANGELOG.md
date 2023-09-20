@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 21.1.2
+
+### Patch Changes
+
+- 9cd36d1: Fix default suspense behavior on paginated hooks
+
 ## 21.1.1
 
 ### Patch Changes
