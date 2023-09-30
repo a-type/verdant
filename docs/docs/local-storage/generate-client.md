@@ -21,7 +21,7 @@ The CLI takes `schema` (the path to your schema TS file), `output` (the director
 > - All collections are defined separately
 > - Collection key/values are specified with the verbose `todoItems: todoItems` syntax, not shorthand
 >
-> Bear with as I get through the backlog of improvements to make this less rigid!
+> Bear with me as I get through the backlog of improvements to make this less rigid!
 
 Now you can import your client from the output directory and construct its descriptor:
 
