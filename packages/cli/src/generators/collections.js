@@ -102,7 +102,7 @@ function getCollectionDocumentTyping(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pascalName = changeCase.pascalCase(collectionName);
 
-	return `export type ${pascalName} = ObjectEntity<${pascalName}Init, ${pascalName}Destructured>;\n\n`;
+	return `export type ${pascalName} = ObjectEntity<${pascalName}Init, ${pascalName}Destructured, ${pascalName}Snapshot>;\n\n`;
 }
 
 export function getCollectionPluralName(collection) {
