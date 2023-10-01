@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 2.2.1
+
+### Patch Changes
+
+- df7577f: fix one more snapshot typing error
+
 ## 2.2.0
 
 ### Minor Changes
