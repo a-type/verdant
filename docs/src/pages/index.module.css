@@ -271,7 +271,7 @@ summary > span {
 	text-align: start;
 	display: flex;
 }
-.heroCodeMobile {
+.heroCodeMobile.heroCodeMobile {
 	display: none;
 }
 
@@ -282,7 +282,7 @@ summary > span {
 		font-size: 0.9rem;
 		display: none;
 	}
-	.heroCodeMobile {
+	.heroCodeMobile.heroCodeMobile {
 		display: flex;
 	}
 }
