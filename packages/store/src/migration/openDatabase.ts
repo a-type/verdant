@@ -7,24 +7,21 @@ import {
 	addFieldDefaults,
 	assert,
 	assignIndexValues,
-	assignOid,
 	assignOidPropertiesToAllSubObjects,
 	assignOidsToAllSubObjects,
 	cloneDeep,
 	createOid,
 	decomposeOid,
 	diffToPatches,
-	getOid,
 	getOidRoot,
 	hasOid,
-	hashObject,
 	initialToPatches,
-	migrationRange,
 	removeOidPropertiesFromAllSubObjects,
-	removeOidsFromAllSubObjects,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
+import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
+import { ClientOperation } from '../metadata/OperationsStore.js';
 import { findAllOids, findOneOid } from '../queries/dbQueries.js';
 import {
 	acquireLock,
@@ -34,8 +31,6 @@ import {
 	upgradeDatabase,
 } from './db.js';
 import { getMigrationPath } from './paths.js';
-import { ClientOperation } from '../metadata/OperationsStore.js';
-import { cursorIterator, storeRequestPromise } from '../idb.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -67,6 +62,7 @@ export async function openDocumentDatabase({
 	);
 
 	context.log(
+		'debug',
 		'Current database version:',
 		currentVersion,
 		'target version:',
@@ -80,9 +76,14 @@ export async function openDocumentDatabase({
 	});
 
 	if (toRun.length > 0) {
-		await runMigrations({ context, toRun, meta });
+		context.log(
+			'debug',
+			'Migrations to run:',
+			toRun.map((m) => m.version),
+		);
+		await runMigrations({ context, toRun, meta, indexedDB });
 	}
-	return openDatabase(indexedDB, context.namespace, version);
+	return openDatabase(indexedDB, context.namespace, version, context.log);
 }
 
 export async function openWIPDocumentDatabase({
@@ -100,41 +101,50 @@ export async function openWIPDocumentDatabase({
 	context: OpenDocumentDbContext;
 	wipNamespace: string;
 }) {
-	const currentVersion = await getDatabaseVersion(
+	context.log('debug', 'Opening WIP database', wipNamespace);
+	const currentWIPVersion = await getDatabaseVersion(
 		indexedDB,
 		wipNamespace,
 		version,
 		context.log,
 	);
 
-	if (currentVersion === version) {
-		console.info(`WIP schema is up-to-date; not refreshing database`);
+	if (currentWIPVersion === version) {
+		context.log('info', `WIP schema is up-to-date; not refreshing database`);
 	} else {
-		console.info(`WIP schema is out-of-date; refreshing database`);
+		context.log('info', `WIP schema is out-of-date; refreshing database`);
 
 		// first we need to copy the data from the production database to the WIP database
 		// at the current (non-wip) version.
 
 		const initialToRun = getMigrationPath({
-			currentVersion,
+			currentVersion: currentWIPVersion,
 			targetVersion: version - 1,
 			migrations,
 		});
 
 		if (initialToRun.length > 0) {
-			await runMigrations({ context, toRun: initialToRun, meta });
+			await runMigrations({
+				context,
+				toRun: initialToRun,
+				meta,
+				indexedDB,
+				namespace: wipNamespace,
+			});
 
 			// now, we copy the data from the main database.
 			const mainDatabase = await openDatabase(
 				indexedDB,
 				context.namespace,
 				version - 1,
+				context.log,
 			);
 
 			const wipDatabase = await openDatabase(
 				indexedDB,
 				wipNamespace,
 				version - 1,
+				context.log,
 			);
 
 			// DOMStringList... doesn't have iterable... why
@@ -172,29 +182,39 @@ export async function openWIPDocumentDatabase({
 		}
 
 		const toRun = getMigrationPath({
-			currentVersion,
+			currentVersion: version - 1,
 			targetVersion: version,
 			migrations,
 		});
 
 		if (toRun.length > 0) {
-			await runMigrations({ context, toRun, meta });
+			await runMigrations({
+				context,
+				toRun,
+				meta,
+				indexedDB,
+				namespace: wipNamespace,
+			});
 		}
 	}
 
-	return openDatabase(indexedDB, wipNamespace, version);
+	return openDatabase(indexedDB, wipNamespace, version, context.log);
 }
 
 async function runMigrations({
 	context,
 	toRun,
 	meta,
+	indexedDB = globalIDB,
+	namespace = context.namespace,
 }: {
 	context: OpenDocumentDbContext;
 	toRun: Migration<any>[];
 	meta: Metadata;
+	indexedDB?: IDBFactory;
+	namespace?: string;
 }) {
-	await acquireLock(context.namespace, async () => {
+	await acquireLock(namespace, async () => {
 		// now the fun part
 		for (const migration of toRun) {
 			// special case: if this is the version 1 migration, we have no pre-existing database
@@ -213,8 +233,9 @@ async function runMigrations({
 				// align with the database's current version.
 				const originalDatabase = await openDatabase(
 					indexedDB,
-					context.namespace,
+					namespace,
 					migration.oldSchema.version,
+					context.log,
 				);
 
 				// this will only write to our metadata store via operations!
@@ -235,9 +256,16 @@ async function runMigrations({
 				await closeDatabase(originalDatabase);
 			}
 
+			context.log(
+				'debug',
+				'Upgrading database',
+				namespace,
+				'to version',
+				migration.newSchema.version,
+			);
 			await upgradeDatabase(
 				indexedDB,
-				context.namespace,
+				namespace,
 				migration.newSchema.version,
 				(transaction, db) => {
 					for (const newCollection of migration.addedCollections) {
@@ -295,8 +323,9 @@ async function runMigrations({
 			// once the schema is ready, we can write back the migrated documents
 			const upgradedDatabase = await openDatabase(
 				indexedDB,
-				context.namespace,
+				namespace,
 				migration.newSchema.version,
+				context.log,
 			);
 			for (const collection of migration.allCollections) {
 				// first step is to read in all the keys we need to rewrite
@@ -370,6 +399,7 @@ async function runMigrations({
 
 			await closeDatabase(upgradedDatabase);
 
+			context.log('debug', `Migration of ${namespace} complete.`);
 			context.log(`
 				⬆️ v${migration.newSchema.version} Migration complete. Here's the rundown:
 					- Added collections: ${migration.addedCollections.join(', ')}

@@ -111,7 +111,14 @@ export async function openWIPMetadataDatabase({
 
 	await closeDatabase(prodDb);
 
-	log?.('debug', 'Finished copy of production metadata database to WIP');
+	log?.(
+		'debug',
+		'Finished copy of production metadata database to WIP. Copied:',
+		baselines.length,
+		'baselines,',
+		operations.length,
+		'operations',
+	);
 
 	return result;
 }

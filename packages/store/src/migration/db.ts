@@ -114,7 +114,9 @@ export async function openDatabase(
 	indexedDb: IDBFactory,
 	namespace: string,
 	version: number,
+	log?: (...args: any[]) => void,
 ): Promise<IDBDatabase> {
+	log?.('debug', 'Opening database', namespace, 'at version', version);
 	const db = await new Promise<IDBDatabase>((resolve, reject) => {
 		const request = indexedDb.open(
 			[namespace, 'collections'].join('_'),
@@ -124,8 +126,19 @@ export async function openDatabase(
 			const transaction = request.transaction!;
 			transaction.abort();
 
+			log?.(
+				'error',
+				'Database upgrade needed, but not expected',
+				'Expected',
+				version,
+				'Got',
+				request.result.version,
+			);
 			reject(
-				new Error('Migration error: database version changed while migrating'),
+				request.error ||
+					new Error(
+						`Migration error: database version changed unexpectedly when reading current data. Expected ${version}, got ${request.result.version}`,
+					),
 			);
 		};
 		request.onsuccess = (event) => {
