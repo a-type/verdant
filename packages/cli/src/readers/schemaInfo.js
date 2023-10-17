@@ -34,7 +34,11 @@ export async function schemasDiffer(schemaOnePath, schemaTwoPath) {
 		fs.readFile(schemaOnePath, 'utf-8'),
 		fs.readFile(schemaTwoPath, 'utf-8'),
 	]);
-	return one !== two;
+	return removeWipFlag(one) !== removeWipFlag(two);
+}
+
+function removeWipFlag(schemaFileText) {
+	return schemaFileText.replace(/\n\s*wip: true,?/, '');
 }
 
 export function getSchemaIsWIP(ast) {

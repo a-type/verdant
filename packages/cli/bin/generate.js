@@ -37,7 +37,15 @@ import {
 import { fileExists } from '../src/fs/exists.js';
 import { getObjectProperty } from '../src/generators/tools.js';
 import { createDirectory } from '../src/fs/createDirectory.js';
-import { intro, outro, spinner, text, confirm, select } from '@clack/prompts';
+import {
+	intro,
+	outro,
+	spinner,
+	text,
+	confirm,
+	select,
+	isCancel,
+} from '@clack/prompts';
 import {
 	setWipFlagOnSchemaString,
 	writeSchemaVersion,
@@ -184,7 +192,7 @@ async function run({
 		!historicalSchemaExists ||
 		(await schemasDiffer(historicalSchemaPath, schemaInputFilePath));
 	const compiledSchemaExists = await fileExists(compiledSchemaPath);
-	const conflictWithCompiled =
+	const conflictWithCanonical =
 		!compiledSchemaExists ||
 		(await schemasDiffer(compiledSchemaPath, schemaInputFilePath));
 
@@ -196,83 +204,85 @@ async function run({
 		canonicalSchemaVersion = getSchemaVersion(compiledSchemaParsed.body);
 	}
 
-	if (conflictWithHistorical || conflictWithCompiled) {
-		if (canonicalSchemaIsWIP) {
-			const confirmWIPBump = await confirm({
-				message: `A WIP schema for version ${version} already exists. This will reset data to the initial state with your new schema.`,
-				active: `Apply new WIP schema`,
-				inactive: `Cancel`,
+	if (conflictWithHistorical || canonicalSchemaIsWIP) {
+		let selection;
+		if (!historicalSchemaExists) {
+			selection = await select({
+				message: `New schema version: ${version}. Choose a way to proceed:`,
+				options: [
+					{ value: 'wip', label: '🏗️  Start a new WIP version' },
+					{ value: 'publish', label: '📦 Publish a new version' },
+					{ value: 'exit', label: '🚪 Exit (do nothing)' },
+				],
 			});
-			if (!confirmWIPBump) {
-				process.exit(0);
-			} else {
-				await upsertMigration({
-					version,
-					historicalSchemasDirectory,
-					migrationsDirectory,
-					collectionNames,
-					commonjs,
-				});
-				await copyToHistoricalSchema({
-					schemaInputFilePath,
-					historicalSchemaPath,
-				});
-				outro('✨ Applied new WIP schema.');
-			}
+		} else if (canonicalSchemaIsWIP) {
+			selection = await select({
+				message: `A WIP schema for version ${version} already exists. Choose a way to proceed:`,
+				options: [
+					{ value: 'wip', label: `🏗️  Refresh WIP version ${version}` },
+					{ value: 'publish', label: `📦 Publish version ${version}` },
+					{ value: 'exit', label: '🚪 Exit (do nothing)' },
+				],
+			});
 		} else {
-			let selection;
-			if (!historicalSchemaExists) {
-				selection = await select({
-					message: `New schema version: ${version}. Choose a way to proceed:`,
-					options: [
-						{ value: 'wip', label: '🏗️  Start a new WIP version' },
-						{ value: 'publish', label: '📦 Publish a new version' },
-						{ value: 'exit', label: '🚪 Exit (do nothing)' },
-					],
-				});
-			} else {
-				selection = await select({
-					message: `Schema version ${version} already exists and the schemas are different. Choose a way to proceed:`,
-					options: [
-						{ value: 'wip', label: '🏗️  Start a new WIP version' },
-						{ value: 'publish', label: '📦 Publish a new version' },
-						{ value: 'exit', label: '🚪 Exit (do nothing)' },
-						{ value: 'force', label: `⚠️  Overwrite version ${version}` },
-					],
-				});
-			}
+			selection = await select({
+				message: `Schema version ${version} already exists and the schemas are different. Choose a way to proceed:`,
+				options: [
+					{ value: 'wip', label: `🏗️  Start a new WIP version ${version + 1}` },
+					{ value: 'publish', label: `📦 Publish new version ${version + 1}` },
+					{ value: 'exit', label: '🚪 Exit (do nothing)' },
+					{
+						value: 'force',
+						label: `⚠️  Overwrite version ${version}`,
+					},
+				],
+			});
+		}
 
-			if (selection === 'exit') {
+		if (isCancel(selection)) {
+			outro('Bye!');
+			process.exit(0);
+		}
+
+		if (selection === 'exit') {
+			outro('Bye!');
+			process.exit(0);
+		}
+
+		if (selection === 'force') {
+			const confirmOverwrite = await confirm({
+				message: `Are you sure you want to overwrite version ${version}? If you already deployed this version, user data will get corrupted.`,
+				active: `I have not deployed version ${version} yet`,
+				inactive: `I have already deployed version ${version}`,
+			});
+			if (isCancel(confirmOverwrite)) {
 				outro('Bye!');
 				process.exit(0);
 			}
-
-			if (selection === 'force') {
-				const confirmOverwrite = await confirm({
-					message: `Are you sure you want to overwrite version ${version}? If you already deployed this version, user data will get corrupted.`,
-					active: `I have not deployed version ${version} yet`,
-					inactive: `I have already deployed version ${version}`,
-				});
-				if (!confirmOverwrite) {
-					outro(
-						`ℹ️ Run the command again and select either "Start a new WIP version" or "Publish a new version"`,
-					);
-					process.exit(0);
-				}
-			} else if (historicalSchemaExists) {
-				console.info(`🆙  Bumping your schema to v${version + 1}...`);
-				await writeSchemaVersion(schemaInputFilePath, version + 1);
-				historicalSchemaPath = path.resolve(
-					historicalSchemasDirectory,
-					`./v${version + 1}.ts`,
+			if (!confirmOverwrite) {
+				outro(
+					`ℹ️ Run the command again and select either "Start a new WIP version" or "Publish a new version"`,
 				);
-				rollbacks.push(async () => {
-					await writeSchemaVersion(schemaInputFilePath, version);
-				});
+				process.exit(0);
 			}
-
-			// all other logic is the same, except WIP sets the WIP flag.
-
+		} else if (historicalSchemaExists && !canonicalSchemaIsWIP) {
+			console.info(`🆙  Bumping your schema to v${version + 1}...`);
+			await writeSchemaVersion(schemaInputFilePath, version + 1);
+			historicalSchemaPath = path.resolve(
+				historicalSchemasDirectory,
+				`./v${version + 1}.ts`,
+			);
+			rollbacks.push(async () => {
+				await writeSchemaVersion(schemaInputFilePath, version);
+			});
+			await upsertMigration({
+				version: version + 1,
+				historicalSchemasDirectory,
+				migrationsDirectory,
+				collectionNames,
+				commonjs,
+			});
+		} else {
 			await upsertMigration({
 				version,
 				historicalSchemasDirectory,
@@ -280,39 +290,40 @@ async function run({
 				collectionNames,
 				commonjs,
 			});
+		}
 
-			await writeClient({
+		// all other logic is the same, except WIP sets the WIP flag.
+		await writeClient({
+			output: outputDirectory,
+			collections,
+			relativeSchemaPath,
+			commonjs,
+		});
+
+		if (includeReact) {
+			await writeReact({
 				output: outputDirectory,
 				collections,
 				relativeSchemaPath,
 				commonjs,
 			});
-
-			if (includeReact) {
-				await writeReact({
-					output: outputDirectory,
-					collections,
-					relativeSchemaPath,
-					commonjs,
-				});
-			}
-
-			await copyToHistoricalSchema({
-				schemaInputFilePath,
-				historicalSchemaPath,
-			});
-			// write canonical schema last, in case something happens...
-			// TODO: better error handling
-			await writeCanonicalSchema({
-				output: outputDirectory,
-				input,
-				commonjs,
-				wip: selection === 'wip',
-				path: compiledSchemaPath,
-			});
-
-			outro(`✨ Applied new${selection === 'wip' ? ' WIP' : ''} schema.`);
 		}
+
+		await copyToHistoricalSchema({
+			schemaInputFilePath,
+			historicalSchemaPath,
+		});
+		// write canonical schema last, in case something happens...
+		// TODO: better error handling
+		await writeCanonicalSchema({
+			output: outputDirectory,
+			input,
+			commonjs,
+			wip: selection === 'wip',
+			path: compiledSchemaPath,
+		});
+
+		outro(`✨ Applied new${selection === 'wip' ? ' WIP' : ''} schema.`);
 	} else {
 		// schemas are identical. we just need to refresh generated code.
 		const relativeSchemaPath = commonjs ? './schema' : './schema.js';

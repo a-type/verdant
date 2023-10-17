@@ -1,0 +1,1 @@
+This is just a place to test out the Verdant libraries in real-life scenarios without publishing the packages. The `src` directory is gitignored; put anything you want in there to test out Verdant functionality.

@@ -4,3 +4,4 @@ packages:
   - 'test'
   - 'examples/**'
   - 'scaleTest'
+  - 'scratchpad'

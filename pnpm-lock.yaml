@@ -191,10 +191,16 @@ importers:
       cuid:
         specifier: ^2.1.8
         version: 2.1.8
+      object-hash:
+        specifier: ^3.0.0
+        version: 3.0.0
       uuid:
         specifier: ^8.3.2
         version: 8.3.2
     devDependencies:
+      '@types/object-hash':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/uuid':
         specifier: ^8.3.4
         version: 8.3.4
@@ -408,6 +414,39 @@ importers:
       '@types/express':
         specifier: ^4.17.15
         version: 4.17.15
+
+  scratchpad:
+    dependencies:
+      '@types/express':
+        specifier: ^4.17.14
+        version: 4.17.15
+      '@verdant-web/cli':
+        specifier: workspace:*
+        version: link:../packages/cli
+      '@verdant-web/server':
+        specifier: workspace:*
+        version: link:../packages/server
+      '@verdant-web/store':
+        specifier: workspace:*
+        version: link:../packages/store
+      concurrently:
+        specifier: ^7.5.0
+        version: 7.5.0
+      express:
+        specifier: ^4.18.2
+        version: 4.18.2
+      gfynonce:
+        specifier: ^1.0.2
+        version: 1.0.2
+      tsx:
+        specifier: ^3.12.1
+        version: 3.12.1
+      typescript:
+        specifier: ^4.9.3
+        version: 4.9.5
+      vite:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@16.11.7)
 
   test:
     dependencies:
@@ -6647,6 +6686,10 @@ packages:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
     dev: true
 
+  /@types/object-hash@3.0.4:
+    resolution: {integrity: sha512-w4fEy2suq1bepUxHoJRCBHJz0vS5DPAYpSbcgNwOahljxwyJsiKmi8qyes2/TJc+4Avd7fsgP+ZgUuXZjPvdug==}
+    dev: true
+
   /@types/offscreencanvas@2019.7.0:
     resolution: {integrity: sha512-PGcyveRIpL1XIqK8eBsmRBt76eFgtzuPiSTyKHZxnGemp2yzGzWpjYKAfK3wIMiU7eH+851yEpiuP8JZerTmWg==}
     dev: false
@@ -11496,6 +11539,11 @@ packages:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
 
+  /object-hash@3.0.0:
+    resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
+    engines: {node: '>= 6'}
+    dev: false
+
   /object-inspect@1.12.2:
     resolution: {integrity: sha512-z+cPxW0QGUp0mcqcsgQyLVRDoXFQbXOwBaqyF7VIgI4TWNQsDHrBpUQslRmIfAoYWdYzs6UlKJtB2XJpTaNSpQ==}
 
@@ -14611,7 +14659,6 @@ packages:
     resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
     engines: {node: '>=4.2.0'}
     hasBin: true
-    dev: true
 
   /typeson-registry@1.0.0-alpha.39:
     resolution: {integrity: sha512-NeGDEquhw+yfwNhguLPcZ9Oj0fzbADiX4R0WxvoY8nGhy98IbzQy1sezjoEFWOywOboj/DWehI+/aUlRVrJnnw==}
