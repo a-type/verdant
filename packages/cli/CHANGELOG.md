@@ -1,5 +1,21 @@
 # @verdant-web/cli
 
+## 2.2.1
+
+### Patch Changes
+
+- df7577f: fix one more snapshot typing error
+
+## 2.2.0
+
+### Minor Changes
+
+- a3cd86c: Add unsuspended React hook variants
+
+### Patch Changes
+
+- f36369e: Fix entity snapshot typings
+
 ## 2.1.2
 
 ### Patch Changes

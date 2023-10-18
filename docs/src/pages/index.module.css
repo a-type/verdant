@@ -115,6 +115,13 @@ h3 {
 	pointer-events: initial;
 }
 
+@media screen and (max-width: 996px) {
+	.buttons {
+		flex-direction: column;
+		width: 100%;
+	}
+}
+
 .scene {
 	position: absolute;
 	top: 0;
@@ -138,6 +145,63 @@ h3 {
 
 .featuresTitle {
 	margin-bottom: 6rem;
+}
+
+.musing {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 8vw;
+	text-align: center;
+	font-size: 1.25rem;
+	font-weight: 200;
+}
+p {
+	max-width: 70ch;
+}
+
+strong {
+	font-family: Cormorant, serif;
+	font-style: italic;
+	font-size: 1.25em;
+}
+
+.explanation {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 8vw;
+	text-align: start;
+	font-size: 1.25rem;
+	font-weight: 200;
+	width: 100%;
+}
+
+.explanation ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin-bottom: 2rem;
+}
+
+.explanation ul > li {
+	margin: 0;
+	padding: 0;
+}
+
+summary {
+	cursor: pointer;
+	font-family: Lora, serif;
+	font-size: 1em;
+}
+
+summary > span {
+	font-style: italic;
 }
 
 .featureStep {
@@ -197,59 +261,28 @@ h3 {
 	}
 }
 
-.musing {
-	display: flex;
+.heroCode {
 	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 8vw;
-	text-align: center;
-	font-size: 1.25rem;
-	font-weight: 200;
-}
-p {
-	max-width: 70ch;
-}
-
-strong {
-	font-family: Cormorant, serif;
-	font-style: italic;
-	font-size: 1.25em;
-}
-
-.explanation {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	justify-content: center;
-	padding: 8vw;
+	tab-size: 2ch;
+	flex: 1 0 0;
+	min-width: 400px;
+	width: max-content;
+	font-size: 1rem;
 	text-align: start;
-	font-size: 1.25rem;
-	font-weight: 200;
-	width: 100%;
-}
-
-.explanation ul {
-	list-style: none;
-	padding: 0;
-	margin: 0;
 	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-	margin-bottom: 2rem;
+}
+.heroCodeMobile.heroCodeMobile {
+	display: none;
 }
 
-.explanation ul > li {
-	margin: 0;
-	padding: 0;
-}
-
-summary {
-	cursor: pointer;
-	font-family: Lora, serif;
-	font-size: 1em;
-}
-
-summary > span {
-	font-style: italic;
+@media (max-width: 700px) {
+	.heroCode {
+		width: 100%;
+		min-width: 0;
+		font-size: 0.9rem;
+		display: none;
+	}
+	.heroCodeMobile.heroCodeMobile {
+		display: flex;
+	}
 }

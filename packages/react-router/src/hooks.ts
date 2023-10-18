@@ -7,26 +7,21 @@ import {
 	useRef,
 	useState,
 } from 'react';
-import { IndexRouteConfig, RouteConfig, RouteMatch } from './types.js';
-import { pathToRegexp, Key } from 'path-to-regexp';
 import {
 	RouteLevelContext,
-	useRootMatch,
-	useLocationPath,
 	useEvents,
+	useLocationPath,
+	useRootMatch,
 } from './context.js';
-import { generateId, joinPaths } from './util.js';
+import { WillNavigateEvent } from './events.js';
 import {
 	getAllMatchingRoutes,
 	getBestRouteMatch,
 	matchPath,
 } from './resolution.js';
-import { WillNavigateEvent } from './events.js';
-import {
-	consumeScrollPosition,
-	getScrollPosition,
-	recordScrollPosition,
-} from './scrollPositions.js';
+import { getScrollPosition, recordScrollPosition } from './scrollPositions.js';
+import { RouteConfig, RouteMatch } from './types.js';
+import { generateId } from './util.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -34,6 +29,9 @@ function useStableCallback<T extends Function>(cb: T): T {
 	return useCallback((...args: any[]) => ref.current(...args), []) as any as T;
 }
 
+/**
+ * Calls the given callback when the location changes.
+ */
 export function useOnLocationChange(
 	callback: (
 		location: Location,
@@ -60,6 +58,10 @@ export function useOnLocationChange(
 
 const EMPTY_ROUTES: RouteConfig[] = [];
 
+/**
+ * Returns the best matching route for the given path from the
+ * list of supplied routes.
+ */
 export function useMatchingRouteForPath(
 	path: string,
 	routes: RouteConfig[] | null,
@@ -93,6 +95,9 @@ export function useMatchingRoutes(): RouteMatch[] {
 	return useRouteMatchesForPath(fullPath);
 }
 
+/**
+ * Returns the matched path params for the current route.
+ */
 export function useParams<Shape extends Record<string, string>>(): Shape {
 	const matches = useMatchingRoutes();
 	return useMemo(() => {
@@ -103,11 +108,18 @@ export function useParams<Shape extends Record<string, string>>(): Shape {
 	}, [matches]);
 }
 
+/**
+ * Returns the current level's matching route.
+ */
 export function useMatchingRoute(): RouteMatch | null {
 	const { match } = useContext(RouteLevelContext);
 	return match;
 }
 
+/**
+ * Returns the next matching route for the current level (the
+ * child of the current route that matches the current path, if any).
+ */
 export function useNextMatchingRoute(): RouteMatch | null {
 	const { match: parent, params } = useContext(RouteLevelContext);
 
@@ -136,6 +148,10 @@ export function useNextMatchingRoute(): RouteMatch | null {
 	return matchWithParams as RouteMatch;
 }
 
+/**
+ * Provides a method you can call to navigate to a new path, with
+ * state and options to skip React transitions.
+ */
 export function useNavigate() {
 	const events = useEvents();
 
@@ -170,6 +186,14 @@ export function useNavigate() {
 	);
 }
 
+/**
+ * Returns a match against the currently active routes at the current level for the
+ * given path.
+ *
+ * For example, if the current location is /foo/bar/baz, and this
+ * hook is called in a component at level /foo/bar, the match will
+ * return a match for /baz, but not /qux or /foo.
+ */
 export function useMatch({ path, end }: { path: string; end?: boolean }) {
 	const { match } = useContext(RouteLevelContext);
 	return useMemo(
@@ -185,6 +209,11 @@ export function useMatch({ path, end }: { path: string; end?: boolean }) {
 
 const Null = () => null;
 
+/**
+ * Returns current query (search) params and a method to update
+ * them which either takes previous and returns a new URLSearchParams,
+ * accepts a URLSearchParams object outright.
+ */
 export function useSearchParams() {
 	const [params, internalSetParams] = useState(
 		new URLSearchParams(location.search),
@@ -210,6 +239,10 @@ export function useSearchParams() {
 	return [params, setParams] as const;
 }
 
+/**
+ * Returns the current route state (additional data you can attach
+ * to route changes in useNavigate or as a prop to Link).
+ */
 export function useRouteState() {
 	const [state, setState] = useState(() => window.history.state);
 	useOnLocationChange((location, state) => setState(state));

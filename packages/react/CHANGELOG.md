@@ -1,5 +1,31 @@
 # @lo-fi/react
 
+## 21.1.2
+
+### Patch Changes
+
+- 9cd36d1: Fix default suspense behavior on paginated hooks
+
+## 21.1.1
+
+### Patch Changes
+
+- 2b70030: Fix empty state for unsuspended all hook
+
+## 21.1.0
+
+### Minor Changes
+
+- a3cd86c: Add unsuspended React hook variants
+
+## 21.0.2
+
+### Patch Changes
+
+- Updated dependencies [e2fe2aa]
+  - @verdant-web/common@1.14.0
+  - @verdant-web/store@2.5.6
+
 ## 21.0.1
 
 ### Patch Changes

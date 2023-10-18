@@ -102,7 +102,7 @@ function getCollectionDocumentTyping(collection) {
 	const collectionName = getObjectProperty(collection, 'name').value;
 	const pascalName = changeCase.pascalCase(collectionName);
 
-	return `export type ${pascalName} = ObjectEntity<${pascalName}Init, ${pascalName}Destructured>;\n\n`;
+	return `export type ${pascalName} = ObjectEntity<${pascalName}Init, ${pascalName}Destructured, ${pascalName}Snapshot>;\n\n`;
 }
 
 export function getCollectionPluralName(collection) {
@@ -116,7 +116,7 @@ function getObjectTypings(field, name) {
 	const { type, optional, nullable } = parseField(field);
 	if (type === 'object' || type === 'array' || type === 'map') {
 		if (type === 'object' || type === 'map') {
-			content += `export type ${name} = ObjectEntity<${name}Init, ${name}Destructured>;\n`;
+			content += `export type ${name} = ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>;\n`;
 
 			if (type === 'object') {
 				const fields = objectExpressionEntries(
@@ -148,7 +148,7 @@ function getObjectTypings(field, name) {
 		} else {
 			const itemFieldType = getObjectProperty(field, 'items');
 			const itemName = getSubObjectFieldName(name, 'Item');
-			content += `export type ${name} = ListEntity<${name}Init, ${name}Destructured>;\n`;
+			content += `export type ${name} = ListEntity<${name}Init, ${name}Destructured, ${name}Snapshot>;\n`;
 			content += `export type ${name}Init = Array<${itemName}Init>;\n`;
 			content += `export type ${name}Destructured = Array<${itemName}>;\n`;
 			content += `export type ${name}Snapshot = Array<${itemName}Snapshot>;\n`;

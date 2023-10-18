@@ -1,5 +1,24 @@
 # @lo-fi/web
 
+## 2.5.8
+
+### Patch Changes
+
+- 28170e4: Do not apply future operations to document snapshots during migration
+
+## 2.5.7
+
+### Patch Changes
+
+- e9c332a: Filter out empty doc snapshots during migration
+
+## 2.5.6
+
+### Patch Changes
+
+- Updated dependencies [e2fe2aa]
+  - @verdant-web/common@1.14.0
+
 ## 2.5.5
 
 ### Patch Changes

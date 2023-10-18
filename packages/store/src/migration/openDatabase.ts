@@ -247,9 +247,18 @@ async function runMigrations({
 						documentDb: originalDatabase,
 					},
 				});
-				await migration.migrate(engine);
-				// wait on any out-of-band async operations to complete
-				await Promise.all(engine.awaitables);
+				try {
+					await migration.migrate(engine);
+					// wait on any out-of-band async operations to complete
+					await Promise.all(engine.awaitables);
+				} catch (err) {
+					context.log(
+						'critical',
+						`Migration failed (${migration.oldSchema.version} -> ${migration.newSchema.version})`,
+						err,
+					);
+					throw err;
+				}
 
 				// now we have to open the database again with the next version and
 				// make the appropriate schema changes during the upgrade.
@@ -475,7 +484,10 @@ function getMigrationQueries({
 		acc[collectionName] = {
 			get: async (id: string) => {
 				const oid = createOid(collectionName, id);
-				const doc = await meta.getDocumentSnapshot(oid);
+				const doc = await meta.getDocumentSnapshot(oid, {
+					// only get the snapshot up to the previous version (newer operations may have synced)
+					to: meta.time.now(migration.oldSchema.version),
+				});
 				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
@@ -486,7 +498,10 @@ function getMigrationQueries({
 					context,
 				});
 				if (!oid) return null;
-				const doc = await meta.getDocumentSnapshot(oid);
+				const doc = await meta.getDocumentSnapshot(oid, {
+					// only get the snapshot up to the previous version (newer operations may have synced)
+					to: meta.time.now(migration.oldSchema.version),
+				});
 				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
@@ -497,7 +512,12 @@ function getMigrationQueries({
 					context,
 				});
 				const docs = await Promise.all(
-					oids.map((oid) => meta.getDocumentSnapshot(oid)),
+					oids.map((oid) =>
+						meta.getDocumentSnapshot(oid, {
+							// only get the snapshot up to the previous version (newer operations may have synced)
+							to: meta.time.now(migration.oldSchema.version),
+						}),
+					),
 				);
 				// docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
 				return docs;
@@ -542,7 +562,7 @@ function getMigrationEngine({
 			const docs = await queries[collection].findAll();
 
 			await Promise.all(
-				docs.map(async (doc: any) => {
+				docs.filter(Boolean).map(async (doc: any) => {
 					assert(
 						hasOid(doc),
 						`Document is missing an OID: ${JSON.stringify(doc)}`,

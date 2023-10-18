@@ -347,6 +347,23 @@ export class Entity<
 	};
 
 	protected processInputValue = (value: any, key: any) => {
+		// disassociate incoming OIDs on values and generally break object
+		// references. cloning doesn't work on files so those are
+		// filtered out.
+		// The goal here is to be safe about a bunch of cases that could
+		// result in corrupt data, like...
+		// ent1.set('objField', ent2.get('objField'))
+		// or
+		// var shared = { foo: 'bar' };
+		// ent1.set('objField', shared);
+		// ent2.set('objField', shared);
+		// ... each of these would result in the same object being
+		// referenced in multiple entities, which could mean introduction
+		// of foreign OIDs, or one object being assigned different OIDs
+		// with unexpected results.
+		if (!(value instanceof File)) {
+			value = cloneDeep(value, false);
+		}
 		const fieldSchema = this.getChildFieldSchema(key);
 		if (fieldSchema) {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);

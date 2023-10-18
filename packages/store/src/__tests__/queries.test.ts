@@ -239,6 +239,9 @@ describe('storage queries', () => {
 			},
 		});
 
+		// doesn't remove old results until ready
+		expect(firstQuery.current.length).toBe(3);
+
 		const secondResults = await secondQuery.resolved;
 		expect(secondResults.map((i: any) => i.get('id'))).toEqual([
 			items[4].get('id'),

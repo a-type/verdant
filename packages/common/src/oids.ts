@@ -455,3 +455,38 @@ export function getRoots(oids: ObjectIdentifier[]) {
 export function areOidsRelated(oidA: ObjectIdentifier, oidB: ObjectIdentifier) {
 	return getOidRoot(oidA) === getOidRoot(oidB);
 }
+
+/**
+ * Recursively rewrites any OIDs in an object which are 'foreign' -
+ * i.e. relate to some other object/entity - to be local to the
+ * current object. This is deterministic, so it can be done
+ * on multiple clients independently with predictable results.
+ */
+export function fixForeignOids(obj: any) {
+	const oid = maybeGetOid(obj);
+	if (!oid) return;
+
+	if (Array.isArray(obj)) {
+		for (let i = 0; i < obj.length; i++) {
+			migrateForeignOid(oid, obj[i]);
+			fixForeignOids(obj[i]);
+		}
+	} else if (isObject(obj)) {
+		for (const key of Object.keys(obj)) {
+			migrateForeignOid(oid, obj[key]);
+			fixForeignOids(obj[key]);
+		}
+	}
+}
+
+function migrateForeignOid(parentOid: ObjectIdentifier, child: any) {
+	const childOid = maybeGetOid(child);
+	if (childOid && !areOidsRelated(parentOid, childOid)) {
+		const { subId, id } = decomposeOid(childOid);
+		// reuse existing subId. if child is a foreign root, use its id as subId
+		assignOid(
+			child,
+			createSubOid(parentOid, () => subId || id),
+		);
+	}
+}

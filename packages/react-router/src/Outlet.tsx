@@ -1,9 +1,22 @@
-import { useContext } from 'react';
+import { ReactElement, ReactNode, useContext } from 'react';
 import { RouteLevelContext } from './context.js';
 import { useMatchingRouteForPath } from './hooks.js';
 import { RouteRenderer } from './Route.js';
+import { RouteMatch } from './types.js';
 
-export function Outlet() {
+export interface OutletProps {
+	/**
+	 * Supply children to override the default show/hide behavior of the outlet.
+	 * You must render a RouteRenderer, passing match and params as props, to
+	 * properly show a matched route.
+	 */
+	children?: (
+		match: RouteMatch | null,
+		params: Record<string, string> | undefined,
+	) => ReactElement | null;
+}
+
+export function Outlet({ children }: OutletProps) {
 	const { match: parent, params: upstreamParams } =
 		useContext(RouteLevelContext);
 
@@ -11,6 +24,10 @@ export function Outlet() {
 		parent?.remainingPath ?? '',
 		parent?.route.children ?? null,
 	);
+
+	if (children) {
+		return children(match, upstreamParams);
+	}
 
 	if (!match) return null;
 
