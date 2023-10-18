@@ -30,9 +30,10 @@ async function run({ output }) {
 	const schemaIsWIP = await getSchemaIsWIP(schemaModule.body);
 
 	if (schemaIsWIP) {
-		throw new Error(
-			'⛔ Your Verdant schema is WIP and cannot be deployed to users. Run `verdant generate` to upgrade to a production schema before deploying.',
+		console.error(
+			'⛔ Your Verdant schema is WIP and cannot be deployed to users. Run the `verdant` CLI tool to upgrade to a production schema before deploying.',
 		);
+		process.exit(1);
 	}
 
 	console.log('✅ Preflight checks passed. Verdant is ready to deploy.');

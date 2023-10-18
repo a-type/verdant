@@ -50,6 +50,7 @@ import {
 	setWipFlagOnSchemaString,
 	writeSchemaVersion,
 } from '../src/mutators/schema.js';
+import { execSync } from 'child_process';
 
 const v = yargs(hideBin(process.argv))
 	.option('schema', {
@@ -97,6 +98,11 @@ const v = yargs(hideBin(process.argv))
 			'Generate a client from a work-in-progress schema. This allows iterating on schema changes without having to use --force.',
 	})
 	.demandOption(['schema', 'output']).argv;
+
+function log(...messages) {
+	console.log('│ ');
+	console.log('│ ', ...messages);
+}
 
 run(v)
 	.then(() => {
@@ -206,12 +212,22 @@ async function run({
 
 	if (conflictWithHistorical || canonicalSchemaIsWIP) {
 		let selection;
+		let newSchemaVersion = version;
+		let migrationCreated = false;
 		if (!historicalSchemaExists) {
 			selection = await select({
 				message: `New schema version: ${version}. Choose a way to proceed:`,
 				options: [
-					{ value: 'wip', label: '🏗️  Start a new WIP version' },
-					{ value: 'publish', label: '📦 Publish a new version' },
+					{
+						value: 'wip',
+						label: `🏗️  Start a new WIP schema for version ${version + 1}`,
+					},
+					{
+						value: 'publish',
+						label: `📦 Publish a new production schema for version ${
+							version + 1
+						}`,
+					},
 					{ value: 'exit', label: '🚪 Exit (do nothing)' },
 				],
 			});
@@ -219,8 +235,11 @@ async function run({
 			selection = await select({
 				message: `A WIP schema for version ${version} already exists. Choose a way to proceed:`,
 				options: [
-					{ value: 'wip', label: `🏗️  Refresh WIP version ${version}` },
-					{ value: 'publish', label: `📦 Publish version ${version}` },
+					{ value: 'wip', label: `🏗️  Refresh current WIP version ${version}` },
+					{
+						value: 'publish',
+						label: `📦 Publish the production schema for version ${version}`,
+					},
 					{ value: 'exit', label: '🚪 Exit (do nothing)' },
 				],
 			});
@@ -228,12 +247,20 @@ async function run({
 			selection = await select({
 				message: `Schema version ${version} already exists and the schemas are different. Choose a way to proceed:`,
 				options: [
-					{ value: 'wip', label: `🏗️  Start a new WIP version ${version + 1}` },
-					{ value: 'publish', label: `📦 Publish new version ${version + 1}` },
+					{
+						value: 'wip',
+						label: `🏗️  Start a new WIP schema for version ${version + 1}`,
+					},
+					{
+						value: 'publish',
+						label: `📦 Publish a new production schema for version ${
+							version + 1
+						}`,
+					},
 					{ value: 'exit', label: '🚪 Exit (do nothing)' },
 					{
 						value: 'force',
-						label: `⚠️  Overwrite version ${version}`,
+						label: `⚠️  Overwrite production schema for version ${version}`,
 					},
 				],
 			});
@@ -251,7 +278,7 @@ async function run({
 
 		if (selection === 'force') {
 			const confirmOverwrite = await confirm({
-				message: `Are you sure you want to overwrite version ${version}? If you already deployed this version, user data will get corrupted.`,
+				message: `Are you sure you want to overwrite version ${version}? ⛔ If you already deployed this version, user data will get corrupted. ⛔`,
 				active: `I have not deployed version ${version} yet`,
 				inactive: `I have already deployed version ${version}`,
 			});
@@ -261,29 +288,32 @@ async function run({
 			}
 			if (!confirmOverwrite) {
 				outro(
-					`ℹ️ Run the command again and select either "Start a new WIP version" or "Publish a new version"`,
+					`ℹ️ Run the command again and select either "Start a new WIP version" or "Publish a new version" to start version ${
+						version + 1
+					}. If you really want to override version ${version}, you will have to lie to me.`,
 				);
 				process.exit(0);
 			}
 		} else if (historicalSchemaExists && !canonicalSchemaIsWIP) {
-			console.info(`🆙  Bumping your schema to v${version + 1}...`);
-			await writeSchemaVersion(schemaInputFilePath, version + 1);
+			newSchemaVersion = version + 1;
+			log(`🆙  Bumping your schema to v${newSchemaVersion}...`);
+			await writeSchemaVersion(schemaInputFilePath, newSchemaVersion);
 			historicalSchemaPath = path.resolve(
 				historicalSchemasDirectory,
-				`./v${version + 1}.ts`,
+				`./v${newSchemaVersion}.ts`,
 			);
 			rollbacks.push(async () => {
 				await writeSchemaVersion(schemaInputFilePath, version);
 			});
-			await upsertMigration({
-				version: version + 1,
+			migrationCreated = await upsertMigration({
+				version: newSchemaVersion,
 				historicalSchemasDirectory,
 				migrationsDirectory,
 				collectionNames,
 				commonjs,
 			});
 		} else {
-			await upsertMigration({
+			migrationCreated = await upsertMigration({
 				version,
 				historicalSchemasDirectory,
 				migrationsDirectory,
@@ -323,7 +353,34 @@ async function run({
 			path: compiledSchemaPath,
 		});
 
-		outro(`✨ Applied new${selection === 'wip' ? ' WIP' : ''} schema.`);
+		log(
+			`✨ Applied new${
+				selection === 'wip' ? ' WIP' : ''
+			} schema: version ${newSchemaVersion}`,
+		);
+
+		if (migrationCreated) {
+			const openResult = await confirm({
+				message: `A new migration was created for your schema changes. Open it in VS Code now?`,
+				active: `Yes`,
+				inactive: `No`,
+			});
+			if (!isCancel(openResult) && openResult) {
+				const migrationFile = path.resolve(
+					migrationsDirectory,
+					`./v${newSchemaVersion}.ts`,
+				);
+				try {
+					execSync(`code ${migrationFile}`);
+				} catch (err) {
+					log(
+						`💀 Failed to open VS Code. You\'ll have to open the file yourself: ${migrationFile}`,
+					);
+				}
+			}
+		}
+
+		outro('🌿 Done!');
 	} else {
 		// schemas are identical. we just need to refresh generated code.
 		const relativeSchemaPath = commonjs ? './schema' : './schema.js';
@@ -441,6 +498,8 @@ async function upsertMigration({
 
 		await updateMigrationIndex({ migrationsDirectory, commonjs });
 	}
+
+	return !migrationExists;
 }
 
 async function updateMigrationIndex({ migrationsDirectory, commonjs }) {

@@ -17,6 +17,7 @@
 		"dev": "concurrently \"pnpm run dev:app\" \"pnpm run dev:server\"",
 		"dev:app": "vite",
 		"dev:server": "tsx watch server.ts",
-		"generate": "verdant generate --schema ./src/schema.ts --output ./src/client"
+		"generate": "verdant --schema ./src/schema.ts --output ./src/client",
+		"preflight": "verdant-preflight --output ./src/client"
 	}
 }
