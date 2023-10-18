@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 const httpServer = createServer(app);
 
-const dbFileName = `tldraw-storage.sqlite`;
+const dbFileName = `storage.sqlite`;
 
 // 👋 Replace with a secure value from your environment variables!
 const lofiSecret = 'notsecret';

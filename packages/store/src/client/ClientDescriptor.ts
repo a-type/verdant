@@ -18,7 +18,11 @@ import {
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
-import { deleteAllDatabases } from '../idb.js';
+import {
+	deleteAllDatabases,
+	deleteDatabase,
+	getAllDatabaseNamesAndVersions,
+} from '../idb.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -104,6 +108,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 				storage = await this.initializeWIPDatabases(init);
 			} else {
 				storage = await this.initializeDatabases(init);
+				this.cleanupWIPDatabases(init);
 			}
 
 			this.resolveReady(storage);
@@ -170,7 +175,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		const schemaHash = hashObject(init.schema);
 		console.info(`WIP schema in use. Opening database with hash ${schemaHash}`);
 
-		const wipNamespace = `${init.namespace}_wip_${schemaHash}`;
+		const wipNamespace = `@@wip_${init.namespace}_${schemaHash}`;
 		const { db: metaDb } = await openWIPMetadataDatabase({
 			indexedDB: init.indexedDb,
 			log: init.log,
@@ -219,6 +224,21 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		);
 
 		return storage;
+	};
+
+	private cleanupWIPDatabases = async (init: ClientDescriptorOptions) => {
+		const databaseInfo = await getAllDatabaseNamesAndVersions(init.indexedDb);
+		const wipDatabases = databaseInfo
+			.filter((db) => db.name?.startsWith('@@wip_'))
+			.map((db) => db.name!);
+		// don't clear a current WIP database.
+		const wipDatabasesToDelete = wipDatabases.filter(
+			(db) =>
+				!db.startsWith(`@@wip_${init.namespace}_${hashObject(init.schema)}`),
+		);
+		for (const db of wipDatabasesToDelete) {
+			await deleteDatabase(db, init.indexedDb);
+		}
 	};
 
 	get current() {

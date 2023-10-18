@@ -105,3 +105,13 @@ export async function deleteAllDatabases(
 	]);
 	window.location.reload();
 }
+
+export function deleteDatabase(name: string, indexedDB = window.indexedDB) {
+	return storeRequestPromise(indexedDB.deleteDatabase(name));
+}
+
+export async function getAllDatabaseNamesAndVersions(
+	indexedDB: IDBFactory = window.indexedDB,
+) {
+	return indexedDB.databases();
+}
