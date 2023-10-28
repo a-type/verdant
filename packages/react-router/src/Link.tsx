@@ -104,6 +104,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 			href={to}
 			onClick={notRouterCompatible ? onClick : handleClick}
 			data-transitioning={pathAtRenderTime === to && transitioning}
+			data-active-exact={pathAtRenderTime === to}
 			{...newTabProps}
 			{...rest}
 		/>
