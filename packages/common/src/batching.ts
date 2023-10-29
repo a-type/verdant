@@ -54,6 +54,10 @@ export class Batcher<T, UserData = any> {
 		batch.discard();
 		this.batches.delete(key);
 	};
+
+	flushAll = () => {
+		return [...this.batches.values()].map((batch) => batch.flush());
+	};
 }
 
 export class Batch<T, UserData = any> {

@@ -79,10 +79,29 @@ export const person = collection({
 	},
 });
 
+export const post = collection({
+	name: 'post',
+	primaryKey: 'id',
+	fields: {
+		id: {
+			type: 'string',
+			default: () => Math.random().toString(36).slice(2, 9),
+		},
+		title: {
+			type: 'string',
+			indexed: true,
+		},
+		content: {
+			type: 'string',
+		},
+	},
+});
+
 export default schema({
-	version: 1,
+	version: 2,
 	collections: {
 		todos: todo,
 		people: person,
+		posts: post,
 	},
 });

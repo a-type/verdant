@@ -1,20 +1,19 @@
+import { closeDatabase, storeRequestPromise } from '../idb.js';
+
 const migrations = [version1, version2, version3, version4];
 
-export function openMetadataDatabase(
-	namespace: string,
-	{
-		indexedDB = window.indexedDB,
-		databaseName,
-		log,
-	}: {
-		indexedDB?: IDBFactory;
-		databaseName: string;
-		log?: (...args: any[]) => void;
-	},
-): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
+export function openMetadataDatabase({
+	indexedDB = window.indexedDB,
+	namespace,
+	log,
+}: {
+	indexedDB?: IDBFactory;
+	namespace: string;
+	log?: (...args: any[]) => void;
+}): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
 	return new Promise<{ wasInitialized: boolean; db: IDBDatabase }>(
 		(resolve, reject) => {
-			const request = indexedDB.open(databaseName, 4);
+			const request = indexedDB.open(`${namespace}_meta`, 4);
 			let wasInitialized = false;
 			request.onupgradeneeded = async (event) => {
 				const db = request.result;
@@ -38,6 +37,90 @@ export function openMetadataDatabase(
 			};
 		},
 	);
+}
+
+export async function openWIPMetadataDatabase({
+	wipNamespace,
+	namespace,
+	indexedDB,
+	log,
+}: {
+	indexedDB?: IDBFactory;
+	namespace: string;
+	wipNamespace: string;
+	log?: (...args: any[]) => void;
+}): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
+	const result = await openMetadataDatabase({
+		namespace: wipNamespace,
+		indexedDB,
+		log,
+	});
+
+	// this WIP database was already set up.
+	if (!result.wasInitialized) {
+		return result;
+	}
+
+	log?.('debug', 'Beginning copy of production metadata database to WIP');
+	// copy all data from production metadata database
+	const { db: prodDb } = await openMetadataDatabase({
+		namespace,
+		indexedDB,
+		log,
+	});
+
+	const tx = prodDb.transaction(
+		['baselines', 'operations', 'info'],
+		'readonly',
+	);
+	const [baselines, operations, info] = await Promise.all([
+		storeRequestPromise(tx.objectStore('baselines').getAll()),
+		storeRequestPromise(tx.objectStore('operations').getAll()),
+		storeRequestPromise(tx.objectStore('info').getAll()),
+	]);
+
+	const wipTx = result.db.transaction(
+		['baselines', 'operations', 'info'],
+		'readwrite',
+	);
+	const wipBaselines = wipTx.objectStore('baselines');
+	const wipOperations = wipTx.objectStore('operations');
+	const wipInfo = wipTx.objectStore('info');
+
+	for (const baseline of baselines) {
+		wipBaselines.put(baseline);
+	}
+	for (const operation of operations) {
+		wipOperations.put(operation);
+	}
+	for (const infoItem of info) {
+		wipInfo.put(infoItem);
+	}
+
+	await new Promise<void>((resolve, reject) => {
+		wipTx.oncomplete = () => {
+			resolve();
+		};
+		wipTx.onerror = (event) => {
+			reject(event);
+		};
+		wipTx.onabort = (event) => {
+			reject(event);
+		};
+	});
+
+	await closeDatabase(prodDb);
+
+	log?.(
+		'debug',
+		'Finished copy of production metadata database to WIP. Copied:',
+		baselines.length,
+		'baselines,',
+		operations.length,
+		'operations',
+	);
+
+	return result;
 }
 
 async function version1(db: IDBDatabase, tx: IDBTransaction) {

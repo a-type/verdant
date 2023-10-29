@@ -76,13 +76,20 @@ export class Client extends EventSubscriber<{
 		super();
 		this.meta = components.meta;
 		this.collectionNames = Object.keys(context.schema.collections);
-		this._sync = this.config.syncConfig
-			? new ServerSync(this.config.syncConfig, {
-					meta: this.meta,
-					onData: this.addData,
-					log: this.context.log,
-			  })
-			: new NoSync();
+		this._sync =
+			this.config.syncConfig && !context.schema.wip
+				? new ServerSync(this.config.syncConfig, {
+						meta: this.meta,
+						onData: this.addData,
+						log: this.context.log,
+				  })
+				: new NoSync();
+		if (context.schema.wip && this.config.syncConfig) {
+			context.log(
+				'warn',
+				'⚠️⚠️ Sync is disabled for WIP schemas. Commit your schema changes to start syncing again. ⚠️⚠️',
+			);
+		}
 
 		this._fileManager = new FileManager({
 			db: this.metaDb,
@@ -241,7 +248,7 @@ export class Client extends EventSubscriber<{
 	};
 
 	close = async () => {
-		await this.entities.flushPatches();
+		await this.entities.flushAllBatches();
 		this.sync.stop();
 		this.sync.dispose();
 

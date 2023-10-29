@@ -90,7 +90,7 @@ it(
 		let client = await createTestClient({
 			schema: v1Schema,
 			...clientInit,
-			// logId: 'client1',
+			logId: 'client1',
 		});
 
 		console.debug('📈 Version 1 client created');

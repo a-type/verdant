@@ -36,10 +36,12 @@
 	},
 	"dependencies": {
 		"cuid": "^2.1.8",
-		"uuid": "^8.3.2"
+		"uuid": "^8.3.2",
+		"object-hash": "^3.0.0"
 	},
 	"devDependencies": {
 		"@types/uuid": "^8.3.4",
+		"@types/object-hash": "^3.0.4",
 		"typescript": "^4.7.4",
 		"vitest": "^0.22.1"
 	}

@@ -1,5 +1,6 @@
 import { v4 } from 'uuid';
 import { assignOid, maybeGetOid } from './oids.js';
+import hash from 'object-hash';
 
 export function take<T extends object, Keys extends keyof T>(
 	obj: T,
@@ -86,7 +87,8 @@ export function cloneDeep<T>(obj: T, copyOids = true): T {
 
 // TODO: better hash
 export function hashObject(obj: any) {
-	return stableStringify(obj);
+	// hash the object into a unique string
+	return hash(obj);
 }
 
 export function isObject(obj: any) {

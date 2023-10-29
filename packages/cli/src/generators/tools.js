@@ -11,6 +11,7 @@ export function objectExpressionEntries(objectExpression) {
 /**
  * @param {import('estree').ObjectExpression} obj
  * @param {string} name
+ * @returns {import('estree').Property['value'] | undefined}
  */
 export function getObjectProperty(obj, name) {
 	if (!obj.properties) {

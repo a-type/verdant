@@ -511,6 +511,10 @@ export class EntityStore {
 		await this.operationBatcher.flush(this.currentBatchKey);
 	};
 
+	flushAllBatches = async () => {
+		await Promise.all(this.operationBatcher.flushAll());
+	};
+
 	private flushOperations = async (
 		operations: Operation[],
 		batchKey: string,

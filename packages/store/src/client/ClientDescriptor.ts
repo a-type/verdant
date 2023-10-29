@@ -1,13 +1,28 @@
-import { EventSubscriber, Migration, StorageSchema } from '@verdant-web/common';
+import {
+	EventSubscriber,
+	Migration,
+	StorageSchema,
+	hashObject,
+} from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManagerConfig } from '../files/FileManager.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { openMetadataDatabase } from '../metadata/openMetadataDatabase.js';
-import { openDocumentDatabase } from '../migration/openDatabase.js';
+import {
+	openMetadataDatabase,
+	openWIPMetadataDatabase,
+} from '../metadata/openMetadataDatabase.js';
+import {
+	openDocumentDatabase,
+	openWIPDocumentDatabase,
+} from '../migration/openDatabase.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
-import { deleteAllDatabases } from '../idb.js';
+import {
+	deleteAllDatabases,
+	deleteDatabase,
+	getAllDatabaseNamesAndVersions,
+} from '../idb.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -88,51 +103,13 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		}
 		this._initializing = true;
 		try {
-			const metaDbName = [init.namespace, 'meta'].join('_');
-			const { db: metaDb } = await openMetadataDatabase(this._namespace, {
-				indexedDB: init.indexedDb,
-				log: init.log,
-				databaseName: metaDbName,
-			});
-
-			const context: Omit<Context, 'documentDb'> = {
-				namespace: this._namespace,
-				metaDb,
-				schema: init.schema,
-				log: init.log || (() => {}),
-				undoHistory: init.undoHistory || new UndoHistory(),
-				entityEvents: new EventSubscriber(),
-				globalEvents: new EventSubscriber(),
-			};
-			const meta = new Metadata({
-				context,
-				disableRebasing: init.disableRebasing,
-			});
-
-			// verify schema integrity
-			await meta.updateSchema(init.schema, init.overrideSchemaConflict);
-
-			const documentDb = await openDocumentDatabase({
-				context,
-				version: init.schema.version,
-				meta,
-				migrations: init.migrations,
-				indexedDB: init.indexedDb,
-			});
-
-			const fullContext: Context = Object.assign(context, { documentDb });
-
-			const storage = new Client(
-				{
-					syncConfig: init.sync,
-					migrations: init.migrations,
-					files: init.files,
-				},
-				fullContext,
-				{
-					meta,
-				},
-			);
+			let storage: Client;
+			if (init.schema.wip) {
+				storage = await this.initializeWIPDatabases(init);
+			} else {
+				storage = await this.initializeDatabases(init);
+				this.cleanupWIPDatabases(init);
+			}
 
 			this.resolveReady(storage);
 			this._resolvedValue = storage;
@@ -142,6 +119,125 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 			throw err;
 		} finally {
 			this._initializing = false;
+		}
+	};
+
+	private initializeDatabases = async (init: ClientDescriptorOptions) => {
+		const { db: metaDb } = await openMetadataDatabase({
+			indexedDB: init.indexedDb,
+			log: init.log,
+			namespace: init.namespace,
+		});
+
+		const context: Omit<Context, 'documentDb'> = {
+			namespace: this._namespace,
+			metaDb,
+			schema: init.schema,
+			log: init.log || (() => {}),
+			undoHistory: init.undoHistory || new UndoHistory(),
+			entityEvents: new EventSubscriber(),
+			globalEvents: new EventSubscriber(),
+		};
+		const meta = new Metadata({
+			context,
+			disableRebasing: init.disableRebasing,
+		});
+
+		// verify schema integrity
+		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
+
+		const documentDb = await openDocumentDatabase({
+			context,
+			version: init.schema.version,
+			meta,
+			migrations: init.migrations,
+			indexedDB: init.indexedDb,
+		});
+
+		const fullContext: Context = Object.assign(context, { documentDb });
+
+		const storage = new Client(
+			{
+				syncConfig: init.sync,
+				migrations: init.migrations,
+				files: init.files,
+			},
+			fullContext,
+			{
+				meta,
+			},
+		);
+
+		return storage;
+	};
+
+	private initializeWIPDatabases = async (init: ClientDescriptorOptions) => {
+		const schemaHash = hashObject(init.schema);
+		console.info(`WIP schema in use. Opening database with hash ${schemaHash}`);
+
+		const wipNamespace = `@@wip_${init.namespace}_${schemaHash}`;
+		const { db: metaDb } = await openWIPMetadataDatabase({
+			indexedDB: init.indexedDb,
+			log: init.log,
+			namespace: init.namespace,
+			wipNamespace: wipNamespace,
+		});
+
+		const context: Omit<Context, 'documentDb'> = {
+			namespace: this._namespace,
+			metaDb,
+			schema: init.schema,
+			log: init.log || (() => {}),
+			undoHistory: init.undoHistory || new UndoHistory(),
+			entityEvents: new EventSubscriber(),
+			globalEvents: new EventSubscriber(),
+		};
+		const meta = new Metadata({
+			context,
+			disableRebasing: init.disableRebasing,
+		});
+
+		// verify schema integrity
+		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
+
+		const documentDb = await openWIPDocumentDatabase({
+			context,
+			version: init.schema.version,
+			meta,
+			migrations: init.migrations,
+			indexedDB: init.indexedDb,
+			wipNamespace,
+		});
+
+		const fullContext: Context = Object.assign(context, { documentDb });
+
+		const storage = new Client(
+			{
+				syncConfig: init.sync,
+				migrations: init.migrations,
+				files: init.files,
+			},
+			fullContext,
+			{
+				meta,
+			},
+		);
+
+		return storage;
+	};
+
+	private cleanupWIPDatabases = async (init: ClientDescriptorOptions) => {
+		const databaseInfo = await getAllDatabaseNamesAndVersions(init.indexedDb);
+		const wipDatabases = databaseInfo
+			.filter((db) => db.name?.startsWith('@@wip_'))
+			.map((db) => db.name!);
+		// don't clear a current WIP database.
+		const wipDatabasesToDelete = wipDatabases.filter(
+			(db) =>
+				!db.startsWith(`@@wip_${init.namespace}_${hashObject(init.schema)}`),
+		);
+		for (const db of wipDatabasesToDelete) {
+			await deleteDatabase(db, init.indexedDb);
 		}
 	};
 
