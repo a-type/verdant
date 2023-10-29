@@ -4,9 +4,9 @@ An IndexedDB-powered database and data sync solution for sustainable, human, loc
 
 ## [Read the documentation](https://verdant.dev)
 
-> ## Early software!
+> ## Status: Not Production Ready 🚧
 >
-> I'm still rapidly iterating and experimenting with Verdant in my own projects. Be aware that it's not ready for production usage yet and may change significantly in the near future, or include bugs which can cause data inconsistency!
+> While I'm using Verdant in my own apps, I've uncovered many unstable behaviors in real-world usage. I'm still actively replicating and fixing those bugs in my testing suites. Since bugs in distrubted client systems mean corrupted user data with little or no recourse for you as an app developer, I recommend not using Verdant for anything serious yet.
 
 ## What does it do?
 
