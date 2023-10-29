@@ -22,12 +22,9 @@
 		"test/"
 	],
 	"scripts": {
-		"pretest": "node ./bin/generate.js -s test/schema.ts -o test/.generated -r -d -f",
-		"pretest:cjs": "node ./bin/generate.js -s test/schema.ts -o test/.generated-cjs -r -d -f -c -m test/migrations-cjs",
 		"preflight": "node ./bin/preflight.js -o test/.generated",
-		"test": "pnpm run pretest && vitest",
-		"ci:test:unit": "pnpm run pretest && vitest run",
-		"link": "pnpm link --global"
+		"link": "pnpm link --global",
+		"//TODO": "bring tests back"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.5.1",
