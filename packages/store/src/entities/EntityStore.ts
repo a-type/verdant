@@ -115,7 +115,13 @@ export class EntityStore {
 		dropUnconfirmed = false,
 	) => {
 		// avoid writing to disposed db
-		if (this._disposed) return;
+		if (this._disposed) {
+			this.context.log(
+				'debug',
+				`EntityStore is disposed, not refreshing ${familyCache.oid} cache`,
+			);
+			return;
+		}
 
 		// metadata must be loaded from database to initialize family cache
 		const transaction = this.meta.createTransaction([
@@ -146,21 +152,39 @@ export class EntityStore {
 				{ transaction, mode: 'readwrite' },
 			),
 		]);
-		familyCache.reset(operations, baselines, dropUnconfirmed);
+		familyCache.reset({
+			operations,
+			baselines,
+			dropExistingUnconfirmed: dropUnconfirmed,
+		});
 	};
 
 	private openFamilyCache = async (oid: ObjectIdentifier) => {
 		const documentOid = getOidRoot(oid);
 		let familyCache = this.documentFamilyCaches.get(documentOid);
 		if (!familyCache) {
+			this.context.log('debug', 'opening family cache for', documentOid);
 			// metadata must be loaded from database to initialize family cache
 			familyCache = new DocumentFamilyCache({
 				oid: documentOid,
 				store: this,
 				context: this.context,
 			});
+
+			// PROBLEM: because the next line is async, it yields to
+			// queued promises which may need data from this cache,
+			// but the cache is empty. But if we move the set to
+			// after the async, we can clobber an existing cache
+			// with race conditions...
+			// So as an attempt to fix that, I've added a promise
+			// on DocumentFamilyCache which I manually resolve
+			// with setInitialized, then await initializedPromise
+			// further down even if there was a cache hit.
+			// Surely there is a better pattern for this.
+			// FIXME:
 			this.documentFamilyCaches.set(documentOid, familyCache);
 			await this.refreshFamilyCache(familyCache);
+			familyCache.setInitialized();
 
 			// this.unsubscribes.push(
 			// 	familyCache.subscribe('change:*', this.onEntityChange),
@@ -168,6 +192,7 @@ export class EntityStore {
 
 			// TODO: cleanup cache when all documents are disposed
 		}
+		await familyCache.initializedPromise;
 
 		return familyCache;
 	};
@@ -384,6 +409,10 @@ export class EntityStore {
 		baselines: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
+		if (this._disposed) {
+			this.log('warn', 'EntityStore is disposed, not adding data');
+			return;
+		}
 		// convert operations to tagged operations with confirmed = false
 		// while we process and store them. this is in-place so as to
 		// not allocate a bunch of objects...
@@ -636,7 +665,7 @@ export class EntityStore {
 		// );
 	};
 
-	destroy = () => {
+	destroy = async () => {
 		this._disposed = true;
 		for (const unsubscribe of this.unsubscribes) {
 			unsubscribe();
@@ -645,6 +674,7 @@ export class EntityStore {
 			cache.dispose();
 		}
 		this.documentFamilyCaches.clear();
+		await this.flushAllBatches();
 	};
 
 	private handleRebase = (baselines: DocumentBaseline[]) => {

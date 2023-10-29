@@ -20,6 +20,8 @@ export async function createTestClient({
 	transport = 'realtime',
 	onLog,
 	schema,
+	autoTransport = false,
+	log,
 }: {
 	server?: { port: number };
 	library: string;
@@ -31,7 +33,9 @@ export async function createTestClient({
 	files?: ClientDescriptorOptions['files'];
 	transport?: 'realtime' | 'pull';
 	onLog?: (messages: string) => void;
+	log?: (...args: any[]) => void;
 	schema?: any;
+	autoTransport?: boolean;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
@@ -45,18 +49,21 @@ export async function createTestClient({
 					initialTransport: transport,
 					// don't allow clients to downgrade to polling!
 					// polling sucks for testing lol
-					automaticTransportSelection: false,
+					automaticTransportSelection: autoTransport,
 					pullInterval: 300,
 			  }
 			: undefined,
-		log: logId
-			? (...args: any[]) => {
-					console.log(`[${logId}]`, ...args);
-					onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
-			  }
-			: onLog
-			? (...args: any[]) => onLog(args.map((a) => JSON.stringify(a)).join('\n'))
-			: undefined,
+		log:
+			log ||
+			(logId
+				? (...args: any[]) => {
+						console.log(`[${logId}]`, ...args);
+						onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
+				  }
+				: onLog
+				? (...args: any[]) =>
+						onLog(args.map((a) => JSON.stringify(a)).join('\n'))
+				: undefined),
 		files,
 		schema,
 	});

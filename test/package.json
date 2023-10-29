@@ -22,10 +22,11 @@
 		"pretest": "verdant generate -s ./schema.ts -o ./client -f",
 		"test": "vitest",
 		"ci:test:integration": "vitest run",
-		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts"
+		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
+		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts"
 	},
 	"devDependencies": {
-		"tsx": "^3.12.1"
+		"tsx": "^3.14.0"
 	},
 	"volta": {
 		"node": "18.13.0"

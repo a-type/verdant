@@ -1,5 +1,6 @@
 import { expect, Mock } from 'vitest';
 import { AnyEntity, Client, Query } from '../client/index.js';
+import { ClientWithCollections } from '@verdant-web/store';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
 	return new Promise<void>((resolve) => {
@@ -11,9 +12,12 @@ export async function waitForMockCall(mock: Mock, calls = 1) {
 	});
 }
 
-export async function waitForOnline(client: Client, online = true) {
+export async function waitForOnline(
+	client: Client | ClientWithCollections,
+	online = true,
+) {
 	return new Promise<void>((resolve) => {
-		if (client.sync.isConnected) {
+		if (client.sync.isConnected === online) {
 			resolve();
 			return;
 		}
@@ -23,7 +27,11 @@ export async function waitForOnline(client: Client, online = true) {
 	});
 }
 
-export function waitForPeerCount(client: Client, count: number, gte = false) {
+export function waitForPeerCount(
+	client: Client | ClientWithCollections,
+	count: number,
+	gte = false,
+) {
 	return new Promise<void>((resolve, reject) => {
 		if (client.sync.presence.peerIds.length === count) {
 			resolve();
@@ -156,7 +164,7 @@ export async function waitForEntityCondition<
 }
 
 export async function waitForPeerPresence(
-	client: Client,
+	client: Client | ClientWithCollections,
 	peerId: string,
 	predicate: (presence: any) => boolean = (presence) => {
 		return !!presence;

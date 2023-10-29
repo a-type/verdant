@@ -110,3 +110,4 @@ dist
 test-files
 
 *.sqlite-journal
+*.sqlite

@@ -14,6 +14,7 @@ import type { EntityStore } from './EntityStore.js';
 import { WeakRef } from './FakeWeakRef.js';
 import { Context } from '../context.js';
 import { TaggedOperation } from '../types.js';
+import { Resolvable } from '../utils/Resolvable.js';
 
 /**
  * Local operations: operations on this client that haven't
@@ -43,6 +44,14 @@ export class DocumentFamilyCache extends EventSubscriber<
 
 	private context;
 	private storeTools: StoreTools;
+
+	private _initialized = new Resolvable<boolean>();
+	get initializedPromise() {
+		return this._initialized.promise;
+	}
+	setInitialized = () => {
+		this._initialized.resolve(true);
+	};
 
 	constructor({
 		oid,
@@ -236,6 +245,14 @@ export class DocumentFamilyCache extends EventSubscriber<
 	};
 
 	computeView = (oid: ObjectIdentifier) => {
+		if (
+			this.baselinesMap.size === 0 &&
+			this.operationsMap.size === 0 &&
+			this.localOperationsMap.size === 0
+		) {
+			this.context.log('debug', `Entity ${oid} accessed with no data at all`);
+			return { view: null, deleted: true, lastTimestamp: null };
+		}
 		const confirmed = this.computeConfirmedView(oid);
 		const unconfirmedOperations = this.localOperationsMap.get(oid) || [];
 		if (confirmed.empty && !unconfirmedOperations.length) {
@@ -331,33 +348,57 @@ export class DocumentFamilyCache extends EventSubscriber<
 		this.entities.clear();
 	};
 
-	reset = (
-		operations: TaggedOperation[],
-		baselines: DocumentBaseline[],
+	reset = ({
+		operations,
+		baselines,
+		dropExistingUnconfirmed: dropUnconfirmed = false,
+		unconfirmedOperations,
+	}: {
+		operations: TaggedOperation[];
+		unconfirmedOperations?: Operation[];
+		baselines: DocumentBaseline[];
 		/**
 		 * Whether to drop operations which are only in-memory. Unconfirmed operations
 		 * will not be restored from storage until they are persisted, so it's not advisable
 		 * to use this unless the intention is to completely clear the entities.
 		 */
-		dropUnconfirmed = false,
-	) => {
-		const info = { isLocal: false, affectedOids: new Set<ObjectIdentifier>() };
-		this.baselinesMap = new Map(
-			baselines.map((baseline) => [baseline.oid, baseline]),
+		dropExistingUnconfirmed?: boolean;
+	}) => {
+		this.context.log(
+			'debug',
+			`Resetting cache for ${this.oid} with ${operations.length} ops and ${baselines.length} baselines, dropUnconfirmed=${dropUnconfirmed}`,
 		);
-		if (dropUnconfirmed) {
-			this.operationsMap = new Map();
-		} else {
-			// clear out all confirmed operations, leaving only unconfirmed
-			// which have been added in memory but not yet persisted in storage
-			for (const oid of this.operationsMap.keys()) {
-				this.operationsMap.set(
-					oid,
-					this.operationsMap.get(oid)?.filter((op) => !op.confirmed) ?? [],
-				);
+		const info = { isLocal: false, affectedOids: new Set<ObjectIdentifier>() };
+
+		// this.baselinesMap = new Map(
+		// 	baselines.map((baseline) => [baseline.oid, baseline]),
+		// );
+		// if (dropUnconfirmed) {
+		// 	this.operationsMap = new Map();
+		// } else {
+		// 	// clear out all confirmed operations, leaving only unconfirmed
+		// 	// which have been added in memory but not yet persisted in storage
+		// 	for (const oid of this.operationsMap.keys()) {
+		// 		this.operationsMap.set(
+		// 			oid,
+		// 			this.operationsMap.get(oid)?.filter((op) => !op.confirmed) ?? [],
+		// 		);
+		// 	}
+		// }
+
+		this.baselinesMap.clear();
+		this.insertBaselines(baselines, info);
+
+		this.operationsMap.clear();
+		this.insertOperations(operations, info);
+
+		if (unconfirmedOperations || dropUnconfirmed) {
+			this.localOperationsMap.clear();
+			if (unconfirmedOperations) {
+				this.insertLocalOperations(unconfirmedOperations);
 			}
 		}
-		this.insertOperations(operations, info);
+
 		for (const oid of this.entities.keys()) {
 			const entityRef = this.entities.get(oid);
 			const entity = entityRef?.deref();

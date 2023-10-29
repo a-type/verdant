@@ -248,16 +248,23 @@ export class Client extends EventSubscriber<{
 	};
 
 	close = async () => {
-		await this.entities.flushAllBatches();
 		this.sync.stop();
 		this.sync.dispose();
+		// this step does have the potential to flush
+		// changes to storage, so don't close metadata db yet
+		await this._entities.destroy();
 
 		this.meta.close();
 
-		this._entities.destroy();
-
-		await closeDatabase(this.documentDb);
-		await closeDatabase(this.metaDb);
+		// the idea here is to flush the microtask queue -
+		// we may have queued tasks related to queries that
+		// we want to settle before closing the databases
+		// to avoid invalid state errors
+		await new Promise<void>(async (resolve) => {
+			await closeDatabase(this.documentDb);
+			await closeDatabase(this.metaDb);
+			resolve();
+		});
 
 		this.context.log?.('Client closed');
 	};

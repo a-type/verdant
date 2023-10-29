@@ -216,6 +216,7 @@ export class WebSocketSync
 	};
 
 	dispose = () => {
+		this.socket?.removeEventListener('message', this.onMessage);
 		this.socket?.removeEventListener('close', this.onClose);
 		this.socket?.close();
 	};

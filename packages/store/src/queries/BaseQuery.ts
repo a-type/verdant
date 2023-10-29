@@ -182,7 +182,20 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 		// no status change needed if already in a 'running' status.
 
-		this._executionPromise = this.run().then(() => this._value);
+		this._executionPromise = this.run()
+			.then(() => this._value)
+			.catch((err) => {
+				if (err instanceof Error) {
+					if (
+						err.name === 'InvalidStateError' ||
+						err.name === 'InvalidAccessError'
+					) {
+						// possibly accessing db while it's closed. not much we can do.
+						return this._value;
+					}
+				}
+				throw err;
+			});
 		return this._executionPromise;
 	};
 	protected abstract run(): Promise<void>;
