@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.4
+
+### Patch Changes
+
+- aaa186f: Added data-active-exact parameter to Links
+
 ## 0.5.3
 
 ### Patch Changes
