@@ -39,17 +39,21 @@ async function connectAndSeedData(library = 'reset-1') {
 
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
+		id: 'produce',
 	});
 	const a_apples = await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Apples',
+		id: 'apples',
 	});
 	const a_oranges = await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
 		content: 'Oranges',
+		id: 'oranges',
 	});
 	const a_unknownItem = await clientA.items.put({
 		content: 'Unknown',
+		id: 'unknown',
 	});
 
 	await waitForQueryResult(clientB.items.get(a_apples.get('id')));
@@ -105,11 +109,13 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 
 	// add more data offline with A and B
 	const a_banana = await clientA.items.put({
+		id: 'banana',
 		categoryId: a_produceCategory.get('id'),
 		content: 'Bananas',
 	});
 
 	const b_pear = await clientB.items.put({
+		id: 'pear',
 		categoryId: a_produceCategory.get('id'),
 		content: 'Pears',
 	});

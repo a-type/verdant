@@ -353,6 +353,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 		baselines,
 		dropExistingUnconfirmed: dropUnconfirmed = false,
 		unconfirmedOperations,
+		dropAll,
 	}: {
 		operations: TaggedOperation[];
 		unconfirmedOperations?: Operation[];
@@ -363,6 +364,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 		 * to use this unless the intention is to completely clear the entities.
 		 */
 		dropExistingUnconfirmed?: boolean;
+		/**
+		 * Drop unconfirmed and confirmed data before resetting to incoming data.
+		 * This is dangerous due to race conditions. Only use when a full reset is
+		 * required.
+		 */
+		dropAll?: boolean;
 	}) => {
 		this.context.log(
 			'debug',
@@ -370,26 +377,18 @@ export class DocumentFamilyCache extends EventSubscriber<
 		);
 		const info = { isLocal: false, affectedOids: new Set<ObjectIdentifier>() };
 
-		// this.baselinesMap = new Map(
-		// 	baselines.map((baseline) => [baseline.oid, baseline]),
-		// );
-		// if (dropUnconfirmed) {
-		// 	this.operationsMap = new Map();
-		// } else {
-		// 	// clear out all confirmed operations, leaving only unconfirmed
-		// 	// which have been added in memory but not yet persisted in storage
-		// 	for (const oid of this.operationsMap.keys()) {
-		// 		this.operationsMap.set(
-		// 			oid,
-		// 			this.operationsMap.get(oid)?.filter((op) => !op.confirmed) ?? [],
-		// 		);
-		// 	}
-		// }
+		// NOTE: not clearing these maps... there are even more
+		// race conditions where we begin opening a cache, queue up a
+		// reset, then receive incoming operations before the reset
+		// actually hits this function, so those incoming ops are
+		// dropped.
+		// FIXME: include this in a future refactor of this
+		// whole system.
 
-		this.baselinesMap.clear();
+		if (dropAll) this.baselinesMap.clear();
 		this.insertBaselines(baselines, info);
 
-		this.operationsMap.clear();
+		if (dropAll) this.operationsMap.clear();
 		this.insertOperations(operations, info);
 
 		if (unconfirmedOperations || dropUnconfirmed) {

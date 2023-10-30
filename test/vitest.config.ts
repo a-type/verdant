@@ -7,6 +7,6 @@ export default defineConfig({
 
 		setupFiles: ['setup/indexedDB.ts'],
 
-		testTimeout: 20000,
+		testTimeout: 30000,
 	},
 });

@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForCondition,
+	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
@@ -23,37 +24,39 @@ it(
 		const clientB = await context.createTestClient({
 			library: 'sync-1',
 			user: 'User B',
-			logId: 'B',
+			// logId: 'B',
 		});
+		const log = context.log;
 
 		clientA.sync.start();
 		clientB.sync.start();
+		await waitForOnline(clientA);
+		await waitForOnline(clientB);
 
 		const a_itemA = await clientA.items.put({
 			comments: [],
 			content: 'Item A',
 		});
-		a_itemA.get('id');
 
 		await waitForPeerCount(clientA, 1, true);
-		console.log('🔺 --- Online ---');
+		log('🔺 --- Online ---');
 
 		const clientB_A = clientB.items.get(a_itemA.get('id'));
 		await waitForQueryResult(clientB_A);
-		const clientB_A2 = clientB.items.get(a_itemA.get('id'));
-		const b_itemA = await clientB_A2.resolved;
+		const b_itemA = await clientB_A.resolved;
 		expect(b_itemA).toBeTruthy();
 		assert(b_itemA);
+		log('🔺 --- Client B has item ---');
 
 		clientA.sync.stop();
 		clientB.sync.stop();
 
-		await waitForCondition(() => !clientA.sync.isConnected);
-		await waitForCondition(() => !clientB.sync.isConnected);
+		await waitForOnline(clientA, false);
+		await waitForOnline(clientB, false);
 
-		console.log('🔺 --- Offline ---');
+		log('🔺 --- Offline ---');
 
-		console.log('🔺 --- Client B push ---');
+		log('🔺 --- Client B push ---');
 
 		clientB
 			.batch()
@@ -66,7 +69,7 @@ it(
 			.flush();
 
 		await new Promise((resolve) => setTimeout(resolve, 100));
-		console.log('🔺 --- Client A push ---');
+		log('🔺 --- Client A push ---');
 
 		clientA
 			.batch()
@@ -81,8 +84,10 @@ it(
 		clientA.sync.start();
 		clientB.sync.start();
 
+		await waitForOnline(clientA);
+		await waitForOnline(clientB);
 		await waitForPeerCount(clientA, 1, true);
-		console.log('🔺 --- Online again ---');
+		log('🔺 --- Online again ---');
 
 		await waitForCondition(() => {
 			return a_itemA.get('comments').length === 2;
@@ -91,7 +96,7 @@ it(
 		expect(a_itemA.get('comments').get(0).get('content')).toBe('Goodbye world');
 		expect(a_itemA.get('comments').get(1).get('content')).toBe('Hello world');
 
-		console.log('🔺 --- Client A undo ---');
+		log('🔺 --- Client A undo ---');
 		clientA.undoHistory.undo();
 
 		await waitForCondition(() => {

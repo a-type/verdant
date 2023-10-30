@@ -113,6 +113,7 @@ export class EntityStore {
 	private refreshFamilyCache = async (
 		familyCache: DocumentFamilyCache,
 		dropUnconfirmed = false,
+		dropAll = false,
 	) => {
 		// avoid writing to disposed db
 		if (this._disposed) {
@@ -156,6 +157,7 @@ export class EntityStore {
 			operations,
 			baselines,
 			dropExistingUnconfirmed: dropUnconfirmed,
+			dropAll,
 		});
 	};
 
@@ -456,7 +458,7 @@ export class EntityStore {
 		await this.meta.insertRemoteOperations(operations);
 
 		if (reset) {
-			await this.refreshAllCaches(true);
+			await this.refreshAllCaches(true, true);
 		}
 
 		// recompute all affected documents for querying
@@ -695,9 +697,12 @@ export class EntityStore {
 		}
 	};
 
-	private refreshAllCaches = async (dropUnconfirmed = false) => {
+	private refreshAllCaches = async (
+		dropUnconfirmed = false,
+		dropAll = false,
+	) => {
 		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.refreshFamilyCache(cache, dropUnconfirmed);
+			await this.refreshFamilyCache(cache, dropUnconfirmed, dropAll);
 		}
 	};
 }

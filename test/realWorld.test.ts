@@ -13,10 +13,7 @@ import {
 } from './lib/waits.js';
 
 const context = createTestContext();
-
-function log(...msg: any[]) {
-	console.debug('⚠️ ', ...msg);
-}
+const log = context.log;
 
 it('maintains consistency in real world scenarios', async () => {
 	const LIBRARY = 'longevity';

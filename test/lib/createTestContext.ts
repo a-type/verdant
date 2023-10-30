@@ -5,13 +5,18 @@ import { startTestServer } from './testServer.js';
 export function createTestContext({
 	serverLog,
 	keepDb,
-}: { serverLog?: boolean; keepDb?: boolean } = {}) {
+	testLog,
+}: { serverLog?: boolean; keepDb?: boolean; testLog?: boolean } = {}) {
 	const context = {
 		clients: [],
+		log: (...args: any[]) => {
+			if (testLog) console.log('⭐⭐⭐', ...args);
+		},
 	} as unknown as {
 		server: UnwrapPromise<ReturnType<typeof startTestServer>>;
 		clients: UnwrapPromise<ReturnType<typeof createTestClient>>[];
 		createTestClient: typeof createTestClient;
+		log: (...args: any[]) => void;
 	};
 	beforeAll(async () => {
 		context.server = await startTestServer({ log: serverLog, keepDb });

@@ -14,7 +14,9 @@ const context = createTestContext({
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {
-	const logWatcher = vitest.fn();
+	const logWatcher = vitest.fn((...args) => {
+		// console.log('[A]', ...args);
+	});
 	const client = await context.createTestClient({
 		library: 'push-test',
 		user: 'User A',
@@ -36,15 +38,18 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	client.sync.start();
 
 	await waitForOnline(client);
+	context.log('Client 1 online');
 
 	clientB.sync.start();
 	await waitForOnline(clientB);
+	context.log('Client 2 online');
 
 	const orange = await clientB.items.put({
 		content: 'Oranges',
 	});
 
 	await waitForQueryResult(client.items.get(orange.get('id')));
+	context.log('Client 1 received oranges');
 
 	clientB.sync.stop();
 	// await waitForOnline(clientB, false);
@@ -87,22 +92,30 @@ it("doesn't receive back its own ops after pushing them", async () => {
 		content: 'Bananas',
 	});
 
+	context.log('Begin wait for no operations 1');
 	await waitAndAssertNoOperationsReturned();
+	context.log('End wait for no operations 1');
 
 	client.sync.stop();
-
-	await waitForOnline(client, false);
+	context.log('Client 1 offline');
 
 	client.items.put({
 		content: 'Pineapples',
 	});
+	await client.entities.flushAllBatches();
 
 	client.sync.start();
 
+	await waitForOnline(client);
+	context.log('Client 1 online again');
+
+	context.log('Begin wait for no operations 2');
 	await waitAndAssertNoOperationsReturned();
+	context.log('End wait for no operations 2');
 
 	clientB.sync.start();
 	await waitForOnline(clientB);
 
 	await waitForQueryResult(client.items.get(pears.get('id')));
+	context.log('Client 1 received pears');
 });
