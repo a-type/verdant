@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/store",
-	"version": "2.5.8",
+	"version": "2.6.0",
 	"access": "public",
 	"type": "module",
 	"main": "dist/cjs/index.js",
