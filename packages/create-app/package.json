@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/create-app",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Verdant app bootstrapper CLI",
 	"main": "dist/index.js",
 	"publishConfig": {
