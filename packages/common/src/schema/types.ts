@@ -14,7 +14,9 @@ export interface StorageInit<Schemas extends StorageCollectionSchema> {
 export type StorageSchema<
 	Collections extends {
 		[k: string]: StorageCollectionSchema;
-	} = any,
+	} = {
+		[k: string]: StorageCollectionSchema;
+	},
 > = { version: number; wip?: true; collections: Collections };
 
 export type SchemaCollectionName<Schema extends StorageSchema<any>> =
