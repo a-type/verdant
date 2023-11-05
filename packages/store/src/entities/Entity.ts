@@ -6,6 +6,7 @@ import {
 	decomposeOid,
 	EventSubscriber,
 	FileData,
+	FileRef,
 	isFileRef,
 	isObjectRef,
 	maybeGetOid,
@@ -402,6 +403,17 @@ export class Entity<
 		return result;
 	};
 
+	private getFileSnapshot(item: FileRef) {
+		const file = this.store.getFile(item.id);
+		if (file.url) {
+			return file.url;
+		} else if (file.loading || file.failed) {
+			return '<file not loaded>';
+		} else {
+			return null;
+		}
+	}
+
 	/**
 	 * Returns a copy of the entity and all sub-objects as
 	 * a plain object or array.
@@ -421,6 +433,8 @@ export class Entity<
 			snapshot = this.value.map((item, idx) => {
 				if (isObjectRef(item)) {
 					return this.getSubObject(item.id, idx)?.getSnapshot();
+				} else if (isFileRef(item)) {
+					return this.getFileSnapshot(item);
 				}
 				return item;
 			}) as Snapshot;
@@ -429,6 +443,8 @@ export class Entity<
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
 					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
+				} else if (isFileRef(value)) {
+					snapshot[key] = this.getFileSnapshot(value);
 				}
 			}
 		}
