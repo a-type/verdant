@@ -1,15 +1,36 @@
-import { makeDir } from './fs/makedir.js';
-import { readSchema } from './readSchema.js';
-import { writeSchemaTypings } from './typings.js';
+import { getClientImplementation } from './client.js';
+import { isCommonJS } from './env.js';
+import { writeTS } from './fs/write.js';
+import { getReactImplementation, getReactTypings } from './react.js';
+import { readSchema } from './schema.js';
+import { getAllTypings } from './typings.js';
 
-export async function codegen({
+export async function generateClientCode({
 	schema,
 	output,
+	react,
+	commonjs,
 }: {
 	schema: string;
 	output: string;
+	react?: boolean;
+	commonjs?: boolean;
 }) {
-	await makeDir(output);
 	const parsed = await readSchema({ path: schema });
-	await writeSchemaTypings({ schema: parsed, output });
+	const indexTypings = getAllTypings({ schema: parsed });
+	await writeTS(`${output}/index.d.ts`, indexTypings);
+	const indexImplementation = getClientImplementation({
+		schemaPath: './schema',
+		commonjs,
+	});
+	await writeTS(`${output}/index.js`, indexImplementation);
+	if (react) {
+		const reactTypings = getReactTypings({ schema: parsed, commonjs });
+		await writeTS(`${output}/react.d.ts`, reactTypings);
+		const reactImplementation = getReactImplementation({
+			schemaPath: './schema',
+			commonjs,
+		});
+		await writeTS(`${output}/react.js`, reactImplementation);
+	}
 }

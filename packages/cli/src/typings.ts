@@ -1,6 +1,5 @@
 import {
 	CollectionCompoundIndex,
-	CompoundIndexValue,
 	StorageCollectionSchema,
 	StorageFieldSchema,
 	StorageSchema,
@@ -11,17 +10,59 @@ import {
 } from '@verdant-web/common';
 import { pascalCase } from 'change-case';
 import { aliasBuilder, arrayBuilder, recordBuilder } from './typingBuilder.js';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import prettier from 'prettier';
 
-export async function writeSchemaTypings({
-	schema,
-	output,
-}: {
-	schema: StorageSchema;
-	output: string;
-}) {
+export function getAllTypings({ schema }: { schema: StorageSchema }) {
+	const schemaTypings = getSchemaTypings({ schema });
+	const clientTypings = getClientTypings({ schema });
+	return `${clientTypings}\n${schemaTypings}`;
+}
+
+export function getClientTypings({ schema }: { schema: StorageSchema }) {
+	const typings = `/** Generated types for Verdant client */
+import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions, CollectionQueries, StorageSchema } from '@verdant-web/store';
+
+export class Client<Presence = any, Profile = any> {
+  ${Object.entries(schema.collections)
+		.map(([plural, collection]) => {
+			const name = pascalCase(collection.name);
+			return `readonly ${plural}: CollectionQueries<${name}, ${name}Init, ${name}Filter>;`;
+		})
+		.join('\n')}
+
+  sync: BaseClient<Presence, Profile>['sync'];
+  undoHistory: BaseClient<Presence, Profile>['undoHistory'];
+  namespace: BaseClient<Presence, Profile>['namespace'];
+  entities: BaseClient<Presence, Profile>['entities'];
+  queryStore: BaseClient<Presence, Profile>['queryStore'];
+  batch: BaseClient<Presence, Profile>['batch'];
+  files: BaseClient<Presence, Profile>['files'];
+  close: BaseClient<Presence, Profile>['close'];
+  export: BaseClient<Presence, Profile>['export'];
+  import: BaseClient<Presence, Profile>['import'];
+  subscribe: BaseClient<Presence, Profile>['on'];
+  stats: BaseClient<Presence, Profile>['stats'];
+  __dangerous__resetLocal: BaseClient<Presence, Profile>['__dangerous__resetLocal'];
+}
+
+interface ClientInitOptions<Presence = any, Profile = any> extends Omit<ClientDescriptorOptions<Presence, Profile>, 'schema'> {
+  /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
+  schema?: StorageSchema;
+}
+
+export class ClientDescriptor<Presence = any, Profile = any> {
+  constructor(init: ClientInitOptions<Presence, Profile>);
+  open: () => Promise<Client<Presence, Profile>>;
+  close: () => Promise<void>;
+  readonly current: Client<Presence, Profile> | null;
+  readonly readyPromise: Promise<Client<Presence, Profile>>;
+  readonly schema: StorageSchema;
+  readonly namespace: string;
+}
+`;
+	return typings;
+}
+
+export function getSchemaTypings({ schema }: { schema: StorageSchema }) {
 	const types = Object.entries(schema.collections)
 		.map(([plural, collection]) => {
 			return getCollectionTypings(collection);
@@ -30,39 +71,36 @@ export async function writeSchemaTypings({
 			(acc, curr) => acc + '\n\n' + curr,
 			`import { ObjectEntity, ListEntity } from '@verdant-web/store';\n`,
 		);
-	await fs.writeFile(path.join(output, 'client.d.ts'), types);
+	return types;
 }
 
 export function getCollectionTypings(collection: StorageCollectionSchema) {
 	const name = pascalCase(collection.name);
-	return prettier.format(
-		`/** Generated types for ${name} */
+	return `/** Generated types for ${name} */
 
-${getEntityTypings({ name, collection })}
-${getInitTypings({ name, collection })}
-${getDestructuredTypings({ name, collection })}
-${getSnapshotTypings({ name, collection })}
+${getEntityTypings({ collection })}
+${getInitTypings({ collection })}
+${getDestructuredTypings({ collection })}
+${getSnapshotTypings({ collection })}
+
+/** Index filters for ${name} **/
+
 ${getFilterTypings({ name, collection })}
-`,
-		{
-			parser: 'babel',
-		},
-	);
+`;
 }
 
 function getTypings({
-	name,
 	collection,
 	suffix,
 	childSuffix = suffix,
 	optionals,
 }: {
-	name: string;
 	collection: StorageCollectionSchema;
 	suffix: string;
 	childSuffix?: string;
 	optionals: boolean;
 }) {
+	const name = pascalCase(collection.name);
 	let declarations = '';
 	const builder = recordBuilder();
 	Object.entries(collection.fields).forEach(([key, field]) => {
@@ -194,25 +232,20 @@ function getFieldTypings({
 	}
 }
 
-function getSnapshotTypings({
-	name,
+export function getSnapshotTypings({
 	collection,
 }: {
-	name: string;
 	collection: StorageCollectionSchema;
 }) {
-	return getTypings({ name, collection, suffix: 'Snapshot', optionals: false });
+	return getTypings({ collection, suffix: 'Snapshot', optionals: false });
 }
 
-function getInitTypings({
-	name,
+export function getInitTypings({
 	collection,
 }: {
-	name: string;
 	collection: StorageCollectionSchema;
 }) {
 	return getTypings({
-		name,
 		collection,
 		suffix: 'Init',
 		optionals: true,
@@ -220,14 +253,11 @@ function getInitTypings({
 }
 
 function getDestructuredTypings({
-	name,
 	collection,
 }: {
-	name: string;
 	collection: StorageCollectionSchema;
 }) {
 	return getTypings({
-		name,
 		collection,
 		suffix: 'Destructured',
 		// children point to entities
@@ -237,12 +267,11 @@ function getDestructuredTypings({
 }
 
 function getEntityTypings({
-	name,
 	collection,
 }: {
-	name: string;
 	collection: StorageCollectionSchema;
 }) {
+	const name = pascalCase(collection.name);
 	let types = `export type ${name} = ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>;`;
 	for (const [key, field] of Object.entries(collection.fields)) {
 		const fieldName = `${name}${pascalCase(key)}`;
