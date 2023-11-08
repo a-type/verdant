@@ -18,7 +18,7 @@ export function schema<
 	Schema extends StorageSchema<{
 		[key: string]: StorageCollectionSchema<any, any, any>;
 	}>,
->(input: Schema) {
+>(input: Schema): StorageSchema {
 	return input;
 }
 

@@ -4,7 +4,7 @@ import { people } from './people.js';
 import { posts } from './posts.js';
 
 export default schema({
-	version: 1,
+	version: 2,
 	collections: {
 		todos,
 		people,

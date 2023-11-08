@@ -492,3 +492,23 @@ function getCompoundFilterTypings({
 		name: `${name}CompoundFilter`,
 	};
 }
+
+export function getMigrationTypings({ schema }: { schema: StorageSchema }) {
+	const record = recordBuilder();
+	for (const collection of Object.values(schema.collections)) {
+		record.withField({
+			key: collection.name,
+			type: recordBuilder()
+				.withField({
+					key: 'init',
+					type: `${pascalCase(collection.name)}Init`,
+				})
+				.withField({
+					key: 'snapshot',
+					type: `${pascalCase(collection.name)}Snapshot`,
+				})
+				.build(),
+		});
+	}
+	return aliasBuilder('MigrationTypes', record.build()).build();
+}

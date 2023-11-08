@@ -10,6 +10,7 @@ export {
 	migrate,
 	migrationRange,
 	createDefaultMigration,
+	createMigration,
 } from './migration.js';
 export type {
 	Migration,

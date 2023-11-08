@@ -1,6 +1,8 @@
 /**
  * Recursively compares two objects by value, ignoring keys
  * if specified.
+ *
+ * Returns `true` if objects are the same
  */
 export function compareObjects(
 	a: any,
@@ -25,8 +27,8 @@ export function compareObjects(
 		}
 		return a.every((item, i) => compareObjects(item, b[i]));
 	}
-	const aKeys = Object.keys(a);
-	const bKeys = Object.keys(b);
+	const aKeys = Object.keys(a).filter((key) => !ignoreKeys?.includes(key));
+	const bKeys = Object.keys(b).filter((key) => !ignoreKeys?.includes(key));
 	if (aKeys.length !== bKeys.length) {
 		return false;
 	}

@@ -8,7 +8,8 @@ export function isNullable(field: StorageFieldSchema) {
 	return field.nullable;
 }
 
-export function hasDefault(field: StorageFieldSchema) {
+export function hasDefault(field: StorageFieldSchema | undefined) {
+	if (!field) return false;
 	if (field.type === 'map') return true;
 	if (field.type === 'array') return true;
 	if (field.type === 'file') return false;

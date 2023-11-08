@@ -191,7 +191,7 @@ async function run(args: typeof v) {
 			if (selection === 'wip' || selection === 'publish') {
 				try {
 					await bumpUserSchemaVersion({ path: schema });
-					log(`⬆️ Bumped schema version to ${userSchemaVersion + 1}`);
+					log(`⬆️  Bumped schema version to ${userSchemaVersion + 1}`);
 					newSchemaVersion = userSchemaVersion + 1;
 				} catch (err) {
 					console.error(err);
@@ -237,18 +237,6 @@ async function run(args: typeof v) {
 			wip: selection === 'wip',
 			commonjs,
 		});
-		migrationCreated = await upsertMigration({
-			version: userSchemaVersion,
-			migrationsOutput: tempMigrations,
-			commonjs,
-			relativeSchemasPath: path
-				.relative(
-					path.resolve(migrationsOutput),
-					path.resolve(output, 'schemaVersions'),
-				)
-				.replaceAll(path.win32.sep, path.posix.sep),
-			migrationsDirectory: migrationsOutput,
-		});
 
 		log(
 			`✨ Applied new${
@@ -258,6 +246,18 @@ async function run(args: typeof v) {
 	}
 
 	await generateClientCode({ schema, output: tempOutput, react, commonjs });
+	migrationCreated = await upsertMigration({
+		version: newSchemaVersion,
+		migrationsOutput: tempMigrations,
+		commonjs,
+		relativeSchemasPath: path
+			.relative(
+				path.resolve(migrationsOutput),
+				path.resolve(output, 'schemaVersions'),
+			)
+			.replaceAll(path.win32.sep, path.posix.sep),
+		migrationsDirectory: migrationsOutput,
+	});
 
 	// cleanup
 	await copy(tempOutput, output);

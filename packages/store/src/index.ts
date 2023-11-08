@@ -28,6 +28,7 @@ export {
 	schema,
 	createDefaultMigration,
 	migrate,
+	createMigration,
 } from '@verdant-web/common';
 export type {
 	StorageDocument,

@@ -8,7 +8,11 @@ import { fileExists } from './fs/exists.js';
 import path from 'path';
 import { compareObjects } from './compare.js';
 import { writeTS } from './fs/write.js';
-import { getInitTypings, getSnapshotTypings } from './typings.js';
+import {
+	getInitTypings,
+	getMigrationTypings,
+	getSnapshotTypings,
+} from './typings.js';
 
 /**
  * Runs a simple Node script which imports the schema and logs
@@ -100,6 +104,8 @@ ${Object.values(parsed.collections)
 			`${getSnapshotTypings({ collection })}${getInitTypings({ collection })}`,
 	)
 	.reduce((a, b) => a + '\n\n' + b, '')}
+
+	${getMigrationTypings({ schema: parsed })}
 `,
 	);
 	if (canonical) {
@@ -183,7 +189,7 @@ export async function bumpUserSchemaVersion({ path }: { path: string }) {
 }
 
 export async function doesCanonicalSchemaExist({ output }: { output: string }) {
-	return fileExists(`${output}/schema.js`);
+	return fileExists(path.join(output, 'schema.js'));
 }
 
 export async function isCanonicalSchemaWip({ output }: { output: string }) {
@@ -225,7 +231,7 @@ export async function compareUserSchemaToCanonical({
 	// we compare these objects deeply, but ignoring WIP flag as the user
 	// schema will not have this
 	return {
-		different: compareObjects(canonicalSchema, userSchema, {
+		different: !compareObjects(canonicalSchema, userSchema, {
 			ignoreKeys: ['wip'],
 		}),
 		novel: false,

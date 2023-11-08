@@ -56,7 +56,7 @@ function getMigration({
 	commonjs?: boolean;
 }): string {
 	function getSchemaImport(version: number) {
-		return `import v${version}Schema from '${pathPosix.join(
+		return `import v${version}Schema, { MigrationTypes as V${version}Types } from '${pathPosix.join(
 			relativeSchemasPath,
 			`v${version}${fileEnd}`,
 		)}';`;
@@ -65,11 +65,11 @@ function getMigration({
 	const fileEnd = commonjs ? '' : '.js';
 	if (version === 1) {
 		return `${getSchemaImport(1)}
-import { migrate } from '@verdant-web/store';
+import { createMigration } from '@verdant-web/store';
 
 // this is your first migration, so no logic is necessary! but you can
 // include logic here to seed initial data for users
-export default migrate(v1Schema, async ({ mutations }) => {
+export default createMigration<V1Types>(v1Schema, async ({ mutations }) => {
   // await mutations.post.create({ title: 'Welcome to my app!' });
 });
 `;
@@ -77,15 +77,15 @@ export default migrate(v1Schema, async ({ mutations }) => {
 
 	return `${getSchemaImport(version - 1)}
 ${getSchemaImport(version)}
-import { migrate } from '@verdant-web/store';
+import { createMigration } from '@verdant-web/store';
 
-export default migrate(v${
+export default createMigration<V${version - 1}Types, V${version}Types>(v${
 		version - 1
 	}Schema, v${version}Schema, async ({ migrate }) => {
   // add or modify migration logic here. you must provide migrations for
   // any collections that have changed field types or added new non-nullable
   // fields without defaults
-  // migrate('collectionName', async (old) => ({ /* new */ }));
+  // await migrate('collectionName', async (old) => ({ /* new */ }));
 });
 `;
 }

@@ -1,6 +1,7 @@
 import {
 	collection,
 	createDefaultMigration,
+	createMigration,
 	schema,
 } from '@verdant-web/common';
 // @ts-ignore
@@ -111,7 +112,7 @@ export function createTestStorage() {
 	const idb = new IDBFactory();
 	const storage = new ClientDescriptor({
 		schema: testSchema,
-		migrations: [createDefaultMigration(testSchema)],
+		migrations: [createMigration<{}>(testSchema)],
 		indexedDb: idb,
 		namespace: 'test',
 	}).open();
