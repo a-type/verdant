@@ -219,7 +219,7 @@ async function runMigrations({
 		for (const migration of toRun) {
 			// special case: if this is the version 1 migration, we have no pre-existing database
 			// to use for the migration.
-			let engine: MigrationEngine<any, any>;
+			let engine: MigrationEngine;
 			// migrations from 0 (i.e. initial migrations) don't attempt to open an existing db
 			if (migration.oldSchema.version === 0) {
 				engine = getInitialMigrationEngine({
@@ -536,7 +536,7 @@ function getMigrationEngine({
 	migration: Migration;
 	meta: Metadata;
 	context: Context;
-}): MigrationEngine<any, any> {
+}): MigrationEngine {
 	function getMigrationNow() {
 		return meta.time.zero(migration.version);
 	}
@@ -555,7 +555,7 @@ function getMigrationEngine({
 		meta,
 	});
 	const awaitables = new Array<Promise<any>>();
-	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
 		migrate: async (collection, strategy) => {
@@ -618,7 +618,7 @@ function getInitialMigrationEngine({
 	context: OpenDocumentDbContext;
 	migration: Migration;
 	meta: Metadata;
-}): MigrationEngine<any, any> {
+}): MigrationEngine {
 	function getMigrationNow() {
 		return meta.time.zero(migration.version);
 	}
@@ -639,7 +639,7 @@ function getInitialMigrationEngine({
 		newOids,
 		meta,
 	});
-	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
 		migrate: () => {

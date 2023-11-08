@@ -13,6 +13,7 @@ import {
 	getMigrationTypings,
 	getSnapshotTypings,
 } from './typings.js';
+import { posixify } from './fs/posixify.js';
 
 /**
  * Runs a simple Node script which imports the schema and logs
@@ -29,7 +30,7 @@ export async function readSchema({
 }): Promise<StorageSchema> {
 	const tempDir = await fs.mkdtemp('temp-');
 	// convert path relative to cwd to be relative to temp dir
-	path = pathTools.relative(tempDir, path);
+	path = pathTools.relative(tempDir, posixify(path));
 	const readFileContent = `import schema from '${path}';console.log(JSON.stringify(schema))`;
 	await fs.writeFile(`${tempDir}/readFile.ts`, readFileContent);
 	await esbuild.build({
@@ -39,6 +40,7 @@ export async function readSchema({
 		format: 'esm',
 		target: 'esnext',
 		platform: 'node',
+		allowOverwrite: true,
 		banner: {
 			js: `
       import path from 'path';
@@ -81,6 +83,7 @@ export async function writeSchema({
 		packages: 'external',
 		outfile: path.resolve(output, 'schemaVersions', `v${parsed.version}.js`),
 		format: 'esm',
+		allowOverwrite: true,
 		target: 'esnext',
 		platform: 'node',
 		banner: {
@@ -95,7 +98,7 @@ export async function writeSchema({
 		path.resolve(output, 'schemaVersions', `v${parsed.version}.d.ts`),
 		`
 import { StorageSchema } from '@verdant-web/common';
-const schema: StorageSchema;
+declare const schema: StorageSchema;
 export default schema;
 
 ${Object.values(parsed.collections)

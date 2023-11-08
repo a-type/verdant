@@ -5,7 +5,11 @@ export async function tempDir(base: string, cleanup = true) {
 	const dir = await fs.mkdtemp(base);
 	if (cleanup) {
 		process.on('exit', () => {
-			fsSync.rmdirSync(dir, { recursive: true });
+			try {
+				fsSync.rmdirSync(dir, { recursive: true });
+			} catch (err) {
+				// ignore
+			}
 		});
 	}
 	return dir;

@@ -1,9 +1,11 @@
+import { writeFile } from 'fs/promises';
 import { getClientImplementation } from './client.js';
 import { isCommonJS } from './env.js';
 import { writeTS } from './fs/write.js';
 import { getReactImplementation, getReactTypings } from './react.js';
 import { readSchema } from './schema.js';
 import { getAllTypings } from './typings.js';
+import path from 'path';
 
 export async function generateClientCode({
 	schema,
@@ -18,19 +20,25 @@ export async function generateClientCode({
 }) {
 	const parsed = await readSchema({ path: schema });
 	const indexTypings = getAllTypings({ schema: parsed });
-	await writeTS(`${output}/index.d.ts`, indexTypings);
+	await writeTS(path.join(output, `/index.d.ts`), indexTypings);
 	const indexImplementation = getClientImplementation({
 		schemaPath: './schema',
 		commonjs,
 	});
-	await writeTS(`${output}/index.js`, indexImplementation);
+	await writeTS(path.join(output, `/index.js`), indexImplementation);
 	if (react) {
 		const reactTypings = getReactTypings({ schema: parsed, commonjs });
-		await writeTS(`${output}/react.d.ts`, reactTypings);
+		await writeTS(path.join(output, `react.d.ts`), reactTypings);
 		const reactImplementation = getReactImplementation({
 			schemaPath: './schema',
 			commonjs,
 		});
-		await writeTS(`${output}/react.js`, reactImplementation);
+		await writeTS(path.join(output, `react.js`), reactImplementation);
 	}
+	await writeFile(
+		path.join(output, 'meta.json'),
+		JSON.stringify({
+			verdantCLI: 1,
+		}),
+	);
 }

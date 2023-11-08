@@ -2,15 +2,8 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"composite": true,
-		"outDir": "./dist/esm",
-		"rootDir": "."
+		"outDir": "./dist",
+		"rootDir": "./src"
 	},
-	"include": [
-		"src/**/*.ts",
-		"src/**/*.tsx",
-		"src/**/*.mts",
-		"./typings",
-		"./test/**/*.ts",
-		"./test/**/*.js"
-	]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"]
 }

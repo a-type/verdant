@@ -4,28 +4,20 @@
 	"description": "Schema management tools for verdant",
 	"type": "module",
 	"bin": {
-		"verdant": "bin/generate.js",
-		"verdant-preflight": "bin/preflight.js"
-	},
-	"exports": {
-		".": {
-			"import": "./dist/esm/index.js",
-			"require": "./dist/cjs/index.js"
-		}
+		"verdant": "dist/bin/index.js"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"files": [
-		"bin/",
-		"src/",
-		"test/"
+		"dist/",
+		"src/"
 	],
 	"scripts": {
 		"build": "tsc",
-		"preflight": "node ./bin/preflight.js -o test/.generated",
 		"link": "pnpm link --global",
-		"test": "tsx ./src/bin/generate.ts -s ./test2/schema.ts -o ./test2/.generated -d"
+		"test": "tsx ./src/bin/index.ts",
+		"test2": "tsx ./src/bin/index.ts -s ./test2/schema.ts -o ./test2/.generated"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.5.1",

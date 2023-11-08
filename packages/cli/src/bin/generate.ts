@@ -1,71 +1,24 @@
-import { hideBin } from 'yargs/helpers';
-import yargs from 'yargs/yargs';
+import { confirm, intro, isCancel, outro, select } from '@clack/prompts';
+import path from 'path';
 import { generateClientCode } from '../codegen.js';
-import { makeDir } from '../fs/makedir.js';
+import { isCommonJS } from '../env.js';
+import { openInCode } from '../fs/code.js';
 import { copy } from '../fs/copy.js';
+import { makeDir } from '../fs/makedir.js';
 import { rm } from '../fs/rm.js';
-import {
-	intro,
-	outro,
-	select,
-	confirm,
-	cancel,
-	isCancel,
-} from '@clack/prompts';
+import { tempDir } from '../fs/tempDir.js';
+import { upsertMigration } from '../migrations.js';
 import {
 	bumpUserSchemaVersion,
 	compareUserSchemaToCanonical,
 	writeSchema,
 } from '../schema.js';
-import { upsertMigration } from '../migrations.js';
-import { isCommonJS } from '../env.js';
-import { openInCode } from '../fs/code.js';
-import path from 'path';
-import pathPosix from 'path/posix';
-import { tempDir } from '../fs/tempDir.js';
+import { needsUpgrade, upgrade } from '../upgrade.js';
 
 function log(...messages: any[]) {
 	console.log('│ ');
 	console.log('│ ', ...messages);
 }
-
-const v = yargs(hideBin(process.argv))
-	.option('schema', {
-		alias: 's',
-		type: 'string',
-		description: 'Path to schema file',
-	})
-	.option('output', {
-		alias: 'o',
-		type: 'string',
-		description: 'Path to output directory',
-	})
-	.option('migrations', {
-		alias: 'm',
-		type: 'string',
-		description:
-			'Path to migrations directory. Default is adjacent to output directory.',
-	})
-	.option('react', {
-		alias: 'r',
-		type: 'boolean',
-		description: 'Generate React hooks and typings',
-	})
-	.option('debug', {
-		alias: 'd',
-		type: 'boolean',
-		description: 'Debug mode - retains temp files',
-	})
-	.demandOption(['schema', 'output']).argv;
-
-run(v)
-	.then(() => {
-		process.exit(0);
-	})
-	.catch((e) => {
-		console.error(e);
-		process.exit(1);
-	});
 
 /**
  * The CLI helps manage schema versions and generate client code.
@@ -86,16 +39,21 @@ run(v)
  * a non-0 code, the temp directory is left in place for debugging if
  * debug = true.
  */
-async function run(args: typeof v) {
+export async function generate({
+	schema,
+	output,
+	react = false,
+	debug = false,
+	migrations: migrationsOutput = path.resolve(output, '../migrations'),
+}: {
+	schema: string;
+	output: string;
+	react?: boolean;
+	debug?: boolean;
+	migrations?: string;
+}) {
 	intro('🌿 Verdant CLI');
 
-	const {
-		schema,
-		output,
-		react = false,
-		debug = false,
-		migrations: migrationsOutput = path.resolve(output, '../migrations'),
-	} = await args;
 	// setup temp layer
 	await makeDir(output);
 	await makeDir(migrationsOutput);
@@ -111,6 +69,29 @@ async function run(args: typeof v) {
 	await makeDir(tempMigrations);
 
 	const commonjs = await isCommonJS();
+
+	const upgradeNeeded = await needsUpgrade({ output });
+	if (upgradeNeeded) {
+		try {
+			log(
+				'ℹ️  Your generated code needs an upgrade to the latest CLI version.',
+			);
+			log(
+				'   This upgrade will increase the type safety of mutations and let you break your schema into modules and utilize reusable schema fields from libraries.',
+			);
+			log(
+				'   This upgrade will modify your existing migrations to use new migration tools. You will need to check them to be sure everything is correct.',
+			);
+			log('   Learn more at https://verdant.so/docs/cli#upgrading');
+			await upgrade({ output, migrations: migrationsOutput, commonjs });
+		} catch (err) {
+			console.error(
+				`Your generated code needs an upgrade to the latest version, but the upgrade failed.`,
+			);
+			console.error(err);
+			process.exit(1);
+		}
+	}
 
 	const {
 		different: userSchemaDifferent,
