@@ -13,6 +13,7 @@ import {
 	createOid,
 	decomposeOid,
 	diffToPatches,
+	getIndexValues,
 	getOidRoot,
 	hasOid,
 	initialToPatches,
@@ -379,12 +380,10 @@ async function runMigrations({
 					.filter((s): s is [string, any] => !!s)
 					.map(([oid, snapshot]) => {
 						if (!snapshot) return [oid, undefined];
-						const view = assignIndexValues(
+						const view = getIndexValues(
 							migration.newSchema.collections[collection],
 							snapshot,
 						);
-						// TODO: remove the need for this by only storing index values!
-						assignOidPropertiesToAllSubObjects(view);
 						return [oid, view];
 					});
 
@@ -397,7 +396,10 @@ async function runMigrations({
 				await Promise.all(
 					views.map(([oid, view]) => {
 						if (view) {
-							return putView(writeStore, view);
+							return putView(writeStore, view).catch((err) => {
+								view;
+								throw err;
+							});
 						} else {
 							const { id } = decomposeOid(oid);
 							return deleteView(writeStore, id);
@@ -488,7 +490,6 @@ function getMigrationQueries({
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: meta.time.now(migration.oldSchema.version),
 				});
-				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findOne: async (filter: CollectionFilter) => {
@@ -502,7 +503,6 @@ function getMigrationQueries({
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: meta.time.now(migration.oldSchema.version),
 				});
-				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findAll: async (filter: CollectionFilter) => {
@@ -519,7 +519,6 @@ function getMigrationQueries({
 						}),
 					),
 				);
-				// docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
 				return docs;
 			},
 		};

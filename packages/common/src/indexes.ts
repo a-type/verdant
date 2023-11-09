@@ -2,6 +2,7 @@ import {
 	StorageCollectionSchema,
 	StorageSyntheticIndexSchema,
 	CollectionCompoundIndex,
+	isIndexed,
 } from './index.js';
 
 // unlikely to be used unicode character
@@ -112,14 +113,42 @@ export function computeCompoundIndices(
 ): any {
 	return Object.entries(schema.compounds || {}).reduce<
 		Record<string, CompoundIndexValue>
-	>((acc, [indexKey, index]) => {
-		acc[indexKey] = createCompoundIndexValue(
-			...(index as CollectionCompoundIndex<any, any>).of.map(
-				(key) => doc[key] as string | number,
-			),
-		);
-		return acc;
-	}, {} as Record<string, CompoundIndexValue>);
+	>(
+		(acc, [indexKey, index]) => {
+			acc[indexKey] = createCompoundIndexValue(
+				...(index as CollectionCompoundIndex<any, any>).of.map(
+					(key) => doc[key] as string | number,
+				),
+			);
+			return acc;
+		},
+		{} as Record<string, CompoundIndexValue>,
+	);
+}
+
+function computeIndexedFields(schema: StorageCollectionSchema, doc: any) {
+	return Object.entries(schema.fields).reduce<Record<string, any>>(
+		(acc, [key, field]) => {
+			if (isIndexed(field)) {
+				acc[key] = sanitizeIndexValue(doc[key]);
+			}
+			return acc;
+		},
+		{},
+	);
+}
+
+export function getIndexValues(
+	schema: StorageCollectionSchema<any, any, any>,
+	doc: any,
+) {
+	return {
+		[schema.primaryKey]: doc[schema.primaryKey],
+		...computeIndexedFields(schema, doc),
+		...computeSynthetics(schema, doc),
+		...computeCompoundIndices(schema, doc),
+		'@@@snapshot': JSON.stringify(doc),
+	};
 }
 
 export function assignIndexValues(

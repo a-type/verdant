@@ -9,6 +9,7 @@ import {
 	DocumentBaseline,
 	EventSubscriber,
 	generateId,
+	getIndexValues,
 	getOidRoot,
 	getUndoOperations,
 	groupBaselinesByRootOid,
@@ -219,10 +220,11 @@ export class EntityStore {
 
 		const snapshot = entity?.getSnapshot();
 		if (snapshot) {
-			const stored = cloneDeep(snapshot);
+			let stored = cloneDeep(snapshot);
 			assignIndexValues(this.schema.collections[collection], stored);
 			// IMPORTANT! this property must be assigned
 			assignOidPropertiesToAllSubObjects(stored);
+			stored = getIndexValues(this.schema.collections[collection], snapshot);
 			try {
 				const tx = this.db.transaction(collection, 'readwrite');
 				const store = tx.objectStore(collection);

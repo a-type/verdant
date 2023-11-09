@@ -104,10 +104,11 @@ type EntityEvents = {
 type BaseEntityValue = { [Key: string]: any } | any[];
 
 export class Entity<
-	Init = any,
-	KeyValue extends BaseEntityValue = any,
-	Snapshot extends any = DataFromInit<Init>,
-> implements
+		Init = any,
+		KeyValue extends BaseEntityValue = any,
+		Snapshot extends any = DataFromInit<Init>,
+	>
+	implements
 		ObjectEntity<Init, KeyValue, Snapshot>,
 		ListEntity<Init, KeyValue, Snapshot>
 {
@@ -406,11 +407,11 @@ export class Entity<
 	private getFileSnapshot(item: FileRef) {
 		const file = this.store.getFile(item.id);
 		if (file.url) {
-			return file.url;
+			return { id: item.id, url: file.url };
 		} else if (file.loading || file.failed) {
-			return '<file not loaded>';
+			return { id: item.id, url: undefined };
 		} else {
-			return null;
+			return { id: item.id, url: null };
 		}
 	}
 
