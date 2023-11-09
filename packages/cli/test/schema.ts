@@ -10,7 +10,7 @@ export const todo = collection({
 		},
 		content: {
 			type: 'string',
-			indexed: true,
+			default: '',
 		},
 		done: {
 			type: 'boolean',
@@ -41,10 +41,13 @@ export const todo = collection({
 			},
 		},
 	},
-	synthetics: {
+	indexes: {
 		example: {
 			type: 'string',
 			compute: (doc) => doc.content,
+		},
+		content: {
+			field: 'content',
 		},
 	},
 	compounds: {
@@ -98,7 +101,7 @@ export const post = collection({
 });
 
 export default schema({
-	version: 2,
+	version: 4,
 	collections: {
 		todos: todo,
 		people: person,

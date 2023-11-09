@@ -31,7 +31,13 @@ export async function readSchema({
 	const tempDir = await fs.mkdtemp('temp-');
 	// convert path relative to cwd to be relative to temp dir
 	path = pathTools.relative(tempDir, posixify(path));
-	const readFileContent = `import schema from '${path}';console.log(JSON.stringify(schema))`;
+	const readFileContent = `import schema from '${path}';console.log(
+		JSON.stringify(
+			schema,
+			// convert all functions to "FUNCTION"
+			(key, value) => (typeof value === 'function' ? 'FUNCTION' : value),
+		)
+	)`;
 	await fs.writeFile(`${tempDir}/readFile.ts`, readFileContent);
 	await esbuild.build({
 		entryPoints: [`${tempDir}/readFile.ts`],

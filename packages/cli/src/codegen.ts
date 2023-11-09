@@ -1,6 +1,5 @@
 import { writeFile } from 'fs/promises';
 import { getClientImplementation } from './client.js';
-import { isCommonJS } from './env.js';
 import { writeTS } from './fs/write.js';
 import { getReactImplementation, getReactTypings } from './react.js';
 import { readSchema } from './schema.js';
@@ -12,11 +11,13 @@ export async function generateClientCode({
 	output,
 	react,
 	commonjs,
+	migrationsOutput,
 }: {
 	schema: string;
 	output: string;
 	react?: boolean;
 	commonjs?: boolean;
+	migrationsOutput: string;
 }) {
 	const parsed = await readSchema({ path: schema });
 	const indexTypings = getAllTypings({ schema: parsed });
@@ -24,6 +25,7 @@ export async function generateClientCode({
 	const indexImplementation = getClientImplementation({
 		schemaPath: './schema',
 		commonjs,
+		migrationsOutput,
 	});
 	await writeTS(path.join(output, `/index.js`), indexImplementation);
 	if (react) {

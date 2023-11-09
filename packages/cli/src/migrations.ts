@@ -20,13 +20,20 @@ export async function upsertMigration({
 	/** The actual location of existing migrations */
 	migrationsDirectory: string;
 }) {
+	const fileName = `v${version}.ts`;
+	const exists = await fileExists(
+		pathSystem.join(migrationsDirectory, fileName),
+	);
+	if (exists) {
+		return false;
+	}
+
+	const migrationPath = pathSystem.join(migrationsOutput, fileName);
 	const migration = getMigration({
 		version,
 		relativeSchemasPath,
 		commonjs,
 	});
-	const migrationPath = pathSystem.join(migrationsOutput, `v${version}.ts`);
-	const exists = await fileExists(migrationPath);
 	await writeTS(migrationPath, migration);
 	const allMigrations = await fs.readdir(migrationsDirectory, {
 		withFileTypes: true,
@@ -43,7 +50,7 @@ export async function upsertMigration({
 		commonjs,
 	});
 	await writeTS(pathSystem.join(migrationsOutput, 'index.ts'), migrationIndex);
-	return !exists;
+	return true;
 }
 
 function getMigration({

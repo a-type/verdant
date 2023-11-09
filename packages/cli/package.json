@@ -16,8 +16,8 @@
 	"scripts": {
 		"build": "tsc",
 		"link": "pnpm link --global",
-		"test": "tsx ./src/bin/index.ts",
-		"test2": "tsx ./src/bin/index.ts -s ./test2/schema.ts -o ./test2/.generated"
+		"run": "tsx ./src/bin/index.ts",
+		"test": "vitest"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.5.1",

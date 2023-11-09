@@ -1,18 +1,22 @@
 export function getClientImplementation({
-  schemaPath,
-  commonjs
+	schemaPath,
+	migrationsOutput,
+	commonjs,
 }: {
-  schemaPath: string,
-  commonjs?: boolean,
+	schemaPath: string;
+	migrationsOutput: string;
+	commonjs?: boolean;
 }) {
-  return `import schema from '${schemaPath}${commonjs ? '' : '.js'}';
+	return `import schema from '${schemaPath}${commonjs ? '' : '.js'}';
+import * as migrations from '${migrationsOutput}/index${commonjs ? '' : '.js'}';
 import { ClientDescriptor as StorageDescriptor } from '@verdant-web/store';
 export * from '@verdant-web/store';
 
 export class ClientDescriptor extends StorageDescriptor {
   constructor(init) {
     const defaultedSchema = init.schema || schema;
-    super({ ...init, schema: defaultedSchema });
+    const defaultedMigrations = init.migrations || migrations;
+    super({ ...init, schema: defaultedSchema, migrations: defaultedMigrations });
   }
 };
 `;

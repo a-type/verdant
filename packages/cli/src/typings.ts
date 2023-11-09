@@ -21,7 +21,7 @@ export function getAllTypings({ schema }: { schema: StorageSchema }) {
 
 export function getClientTypings({ schema }: { schema: StorageSchema }) {
 	const typings = `/** Generated types for Verdant client */
-import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions, CollectionQueries, StorageSchema } from '@verdant-web/store';
+import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions, CollectionQueries, StorageSchema, Migration } from '@verdant-web/store';
 
 export class Client<Presence = any, Profile = any> {
   ${Object.entries(schema.collections)
@@ -46,9 +46,11 @@ export class Client<Presence = any, Profile = any> {
   __dangerous__resetLocal: BaseClient<Presence, Profile>['__dangerous__resetLocal'];
 }
 
-interface ClientInitOptions<Presence = any, Profile = any> extends Omit<ClientDescriptorOptions<Presence, Profile>, 'schema'> {
+interface ClientInitOptions<Presence = any, Profile = any> extends Omit<ClientDescriptorOptions<Presence, Profile>, 'schema' | 'migrations'> {
   /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
   schema?: StorageSchema;
+	/** WARNING: overriding the migrations is dangerous and almost definitely not what you want. */
+	migrations?: Migration[];
 }
 
 export class ClientDescriptor<Presence = any, Profile = any> {
@@ -362,16 +364,18 @@ function getFilterTypings({
 			}),
 		);
 	});
-	Object.entries(collection.synthetics || {}).forEach(([key, field]) => {
-		filters.push(
-			...getFieldFilterTypings({
-				field,
-				key,
-				name: `${name}${pascalCase(key)}`,
-				collection,
-			}),
-		);
-	});
+	Object.entries({ ...collection.synthetics, ...collection.indexes }).forEach(
+		([key, field]) => {
+			filters.push(
+				...getFieldFilterTypings({
+					field,
+					key,
+					name: `${name}${pascalCase(key)}`,
+					collection,
+				}),
+			);
+		},
+	);
 	Object.entries(collection.compounds || {}).forEach(([key, index]) => {
 		filters.push(
 			getCompoundFilterTypings({

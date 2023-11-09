@@ -1,15 +1,10 @@
-import {
-	ClientDescriptor,
-	createDefaultMigration,
-} from './.generated/index.js';
-import schema from './schema.js';
+import { ClientDescriptor } from './.generated/index.js';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './.generated/react.js';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
 		namespace: 'test',
-		migrations: [createDefaultMigration(schema)],
 	});
 
 	return desc.open();

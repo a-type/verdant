@@ -226,7 +226,13 @@ export async function generate({
 		);
 	}
 
-	await generateClientCode({ schema, output: tempOutput, react, commonjs });
+	await generateClientCode({
+		schema,
+		output: tempOutput,
+		react,
+		commonjs,
+		migrationsOutput,
+	});
 	migrationCreated = await upsertMigration({
 		version: newSchemaVersion,
 		migrationsOutput: tempMigrations,
