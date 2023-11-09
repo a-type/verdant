@@ -3,6 +3,7 @@ import {
 	StorageSyntheticIndexSchema,
 	CollectionCompoundIndex,
 	isIndexed,
+	StorageDirectSyntheticSchema,
 } from './index.js';
 
 // unlikely to be used unicode character
@@ -97,12 +98,23 @@ function expandArrayIndex(fields: IndexableFieldValue[]): string[] {
 	);
 }
 
+export function isDirectSynthetic(
+	index: any,
+): index is StorageDirectSyntheticSchema<any> {
+	return !!index.field;
+}
+
 export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
 	const result: Record<string, any> = {};
-	for (const [name, property] of Object.entries(schema.synthetics || {})) {
-		result[name] = sanitizeIndexValue(
-			(property as StorageSyntheticIndexSchema<any>).compute(obj),
-		);
+	for (const [name, property] of Object.entries(
+		schema.indexes || schema.synthetics || {},
+	)) {
+		const index = property as StorageSyntheticIndexSchema<any>;
+		if (isDirectSynthetic(index)) {
+			result[name] = sanitizeIndexValue(obj[index.field]);
+		} else {
+			result[name] = sanitizeIndexValue(index.compute(obj));
+		}
 	}
 	return result;
 }

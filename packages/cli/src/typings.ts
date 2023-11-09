@@ -1,10 +1,12 @@
 import {
 	CollectionCompoundIndex,
+	IndexValueTag,
 	StorageCollectionSchema,
 	StorageFieldSchema,
 	StorageSchema,
 	StorageSyntheticIndexSchema,
 	hasDefault,
+	isDirectSynthetic,
 	isIndexed,
 	isNullable,
 } from '@verdant-web/common';
@@ -356,6 +358,7 @@ function getFilterTypings({
 				field,
 				key,
 				name: `${name}${pascalCase(key)}`,
+				collection,
 			}),
 		);
 	});
@@ -365,6 +368,7 @@ function getFilterTypings({
 				field,
 				key,
 				name: `${name}${pascalCase(key)}`,
+				collection,
 			}),
 		);
 	});
@@ -384,31 +388,51 @@ function getFilterTypings({
 		.join(' | ')};`;
 }
 
+function getFieldOrIndexType({
+	fieldOrIndex,
+	collection,
+}: {
+	fieldOrIndex: StorageFieldSchema | StorageSyntheticIndexSchema<any>;
+	collection: StorageCollectionSchema;
+}): IndexValueTag {
+	if (isDirectSynthetic(fieldOrIndex)) {
+		return getFieldOrIndexType({
+			fieldOrIndex: collection.fields[fieldOrIndex.field],
+			collection,
+		});
+	}
+	if (
+		fieldOrIndex.type === 'object' ||
+		fieldOrIndex.type === 'array' ||
+		fieldOrIndex.type === 'map' ||
+		fieldOrIndex.type === 'any' ||
+		fieldOrIndex.type === 'file'
+	) {
+		throw new Error(
+			`Cannot create filter typings for field or index type ${fieldOrIndex.type}`,
+		);
+	}
+	return fieldOrIndex.type;
+}
+
 function getFieldFilterTypings({
 	field,
 	name,
 	key,
+	collection,
 }: {
 	field: StorageFieldSchema | StorageSyntheticIndexSchema<any>;
+	collection: StorageCollectionSchema;
 	name: string;
 	key: string;
 }) {
-	if (
-		field.type === 'object' ||
-		field.type === 'array' ||
-		field.type === 'map' ||
-		field.type === 'any' ||
-		field.type === 'file'
-	) {
-		throw new Error(
-			`Cannot create filter typings for field type ${field.type}`,
-		);
-	}
+	const fieldType = getFieldOrIndexType({ fieldOrIndex: field, collection });
+
 	let filters = [
 		{
 			typing: `export interface ${name}MatchFilter {
   where: "${key}";
-  equals: ${field.type};
+  equals: ${fieldType};
   order?: "asc" | "desc";
       };`,
 			name: `${name}MatchFilter`,
@@ -416,16 +440,16 @@ function getFieldFilterTypings({
 		{
 			typing: `export interface ${name}RangeFilter {
         where: "${key}";
-        gte?: ${field.type};
-        gt?: ${field.type};
-        lte?: ${field.type};
-        lt?: ${field.type};
+        gte?: ${fieldType};
+        gt?: ${fieldType};
+        lte?: ${fieldType};
+        lt?: ${fieldType};
         order?: "asc" | "desc";
       };`,
 			name: `${name}RangeFilter`,
 		},
 	];
-	if (field.type === 'string' || field.type === 'string[]') {
+	if (fieldType === 'string' || fieldType === 'string[]') {
 		filters.push({
 			typing: `export interface ${name}StartsWithFilter {
         where: "${key}";
