@@ -11,13 +11,12 @@ export async function generateClientCode({
 	output,
 	react,
 	commonjs,
-	migrationsOutput,
 }: {
 	schema: string;
 	output: string;
 	react?: boolean;
 	commonjs?: boolean;
-	migrationsOutput: string;
+	relativeMigrationsPath?: string;
 }) {
 	const parsed = await readSchema({ path: schema });
 	const indexTypings = getAllTypings({ schema: parsed });
@@ -25,7 +24,6 @@ export async function generateClientCode({
 	const indexImplementation = getClientImplementation({
 		schemaPath: './schema',
 		commonjs,
-		migrationsOutput,
 	});
 	await writeTS(path.join(output, `/index.js`), indexImplementation);
 	if (react) {

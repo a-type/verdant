@@ -35,9 +35,13 @@ export async function upsertMigration({
 		commonjs,
 	});
 	await writeTS(migrationPath, migration);
-	const allMigrations = await fs.readdir(migrationsDirectory, {
+	const existingMigrations = await fs.readdir(migrationsDirectory, {
 		withFileTypes: true,
 	});
+	const newMigrations = await fs.readdir(migrationsOutput, {
+		withFileTypes: true,
+	});
+	const allMigrations = [...existingMigrations, ...newMigrations];
 	const migrationIndex = getMigrationIndex({
 		migrationNames: allMigrations
 			.filter(

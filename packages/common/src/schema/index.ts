@@ -13,6 +13,7 @@ export function collection<
 	Synthetics extends StorageSyntheticIndices<Fields>,
 	Compounds extends CollectionCompoundIndices<Fields, Synthetics>,
 >(input: StorageCollectionSchema<Fields, Synthetics, Compounds>) {
+	// back compat - copy synthetics in with indexes
 	const indexes = { ...input.synthetics, ...input.indexes };
 	// add all indexed fields into the synthetic indices (back compat)
 	for (const [key, field] of Object.entries(input.fields)) {

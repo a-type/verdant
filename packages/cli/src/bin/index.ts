@@ -4,7 +4,7 @@ import { generate } from './generate.js';
 import { preflight } from './preflight.js';
 import { compileSchema } from './compileSchema.js';
 
-const v = yargs(hideBin(process.argv))
+yargs(hideBin(process.argv))
 	.command(
 		'$0',
 		'Generate client code',
@@ -35,6 +35,11 @@ const v = yargs(hideBin(process.argv))
 					alias: 'd',
 					type: 'boolean',
 					description: 'Debug mode - retains temp files',
+				})
+				.option('generate', {
+					type: 'boolean',
+					description:
+						'Use CLI in non-interactive mode and just generate (or regenerate) current schema code',
 				})
 				.demandOption(['schema', 'output']);
 		},

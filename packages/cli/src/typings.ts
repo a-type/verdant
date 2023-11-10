@@ -364,18 +364,16 @@ function getFilterTypings({
 			}),
 		);
 	});
-	Object.entries({ ...collection.synthetics, ...collection.indexes }).forEach(
-		([key, field]) => {
-			filters.push(
-				...getFieldFilterTypings({
-					field,
-					key,
-					name: `${name}${pascalCase(key)}`,
-					collection,
-				}),
-			);
-		},
-	);
+	Object.entries(collection.indexes ?? {}).forEach(([key, field]) => {
+		filters.push(
+			...getFieldFilterTypings({
+				field,
+				key,
+				name: `${name}${pascalCase(key)}`,
+				collection,
+			}),
+		);
+	});
 	Object.entries(collection.compounds || {}).forEach(([key, index]) => {
 		filters.push(
 			getCompoundFilterTypings({

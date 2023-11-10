@@ -170,12 +170,9 @@ export interface DeprecatedMigrationTools<
 }
 
 export interface MigrationEngine {
-	migrate: (
-		collection: string,
-		strategy: MigrationStrategy<any, any>,
-	) => Promise<void>;
-	queries: DeprecatedMigrationQueries<StorageSchema>;
-	mutations: DeprecatedMigrationMutations<StorageSchema>;
+	migrate: (collection: string, strategy: (val: any) => any) => Promise<void>;
+	queries: MigrationQueries<any>;
+	mutations: MigrationMutations<any>;
 	/** OIDs of any new documents created during the migration */
 	newOids: string[];
 	/** Promises that should be resolved before completing the migration */
@@ -403,21 +400,12 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 	collection: Coll | undefined,
 ): MigrationIndexDescription[] {
 	if (!collection) return [];
-	const fields = Object.keys(collection.fields)
-		.filter((key) => collection.fields[key].indexed)
-		.map((key) => ({
-			name: key,
-			multiEntry: collection.fields[key].type === 'array',
-			synthetic: false,
-			compound: false,
-		}));
 
 	return [
-		...fields,
-		...Object.keys(collection.synthetics || {}).map((key) => ({
+		...Object.keys(collection.indexes || {}).map((key) => ({
 			name: key,
 			multiEntry: ['array', 'string[]', 'number[]', 'boolean[]'].includes(
-				collection.synthetics[key].type,
+				collection.indexes[key].type,
 			),
 			synthetic: true,
 			compound: false,
@@ -426,7 +414,7 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 			name: key,
 			multiEntry: collection.compounds[key].of.some(
 				(fieldName: string) =>
-					(collection.fields[fieldName] || collection.synthetics[fieldName])
+					(collection.fields[fieldName] || collection.indexes[fieldName])
 						.type === 'array',
 			),
 			synthetic: false,
@@ -543,7 +531,8 @@ export function createMigration(
 	maybeProcedure?: MigrationProcedure<SchemaDocuments, SchemaDocuments>,
 ): any {
 	const isProcedureSecondArgument =
-		typeof maybeNewSchemaOrProcedure === 'function';
+		typeof maybeNewSchemaOrProcedure === 'function' ||
+		maybeNewSchemaOrProcedure === undefined;
 	const oldSchema = isProcedureSecondArgument ? emptySchema : maybeOldSchema;
 	const newSchema = isProcedureSecondArgument
 		? maybeOldSchema

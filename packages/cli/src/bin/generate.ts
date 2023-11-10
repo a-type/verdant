@@ -14,6 +14,7 @@ import {
 	writeSchema,
 } from '../schema.js';
 import { needsUpgrade, upgrade } from '../upgrade.js';
+import { posixRelative } from '../fs/posixRelative.js';
 
 function log(...messages: any[]) {
 	console.log('│ ');
@@ -45,12 +46,14 @@ export async function generate({
 	react = false,
 	debug = false,
 	migrations: migrationsOutput = path.resolve(output, '../migrations'),
+	generate: cliGeneratePassed,
 }: {
 	schema: string;
 	output: string;
 	react?: boolean;
 	debug?: boolean;
 	migrations?: string;
+	generate?: boolean;
 }) {
 	intro('🌿 Verdant CLI');
 
@@ -103,86 +106,100 @@ export async function generate({
 		output,
 	});
 
-	let selection: 'wip' | 'publish' | 'exit' | 'force' | 'regenerate' | symbol;
+	let selection:
+		| 'wip'
+		| 'publish'
+		| 'exit'
+		| 'force'
+		| 'regenerate'
+		| symbol
+		| undefined = cliGeneratePassed ? 'publish' : undefined;
+	const isNonInteractive = !!cliGeneratePassed;
 	let newSchemaVersion = userSchemaVersion;
-	if (userSchemaNovel) {
-		// first schema with this new version (might also be first schema)
-		selection = await select({
-			message: `New schema version ${userSchemaVersion}. Choose a way to proceed:`,
-			options: [
-				{
-					value: 'wip',
-					label: `🏗️  Start a new WIP schema for version ${userSchemaVersion}`,
-				},
-				{
-					value: 'publish',
-					label: `📦  Publish a new schema version ${userSchemaVersion}`,
-				},
-				{
-					value: 'exit',
-					label: `🚪 Exit (do nothing)`,
-				},
-			],
-		});
-	} else if (userSchemaDifferent) {
-		if (canonicalIsWip) {
-			selection = await select({
-				message: `A WIP schema for version ${userSchemaVersion} is in progress. Choose a way to proceed:`,
-				options: [
-					{
-						value: 'wip',
-						label: `🏗️  Refresh current WIP version ${userSchemaVersion}`,
-					},
-					{
-						value: 'publish',
-						label: `📦  Publish the final schema for version ${userSchemaVersion}`,
-					},
-					{
-						value: 'exit',
-						label: `🚪 Exit (do nothing)`,
-					},
-				],
-			});
-		} else {
-			selection = await select({
-				message: `Schema version ${userSchemaVersion} already exists and yours is different. Choose a way to proceed:`,
-				options: [
-					{
-						value: 'wip',
-						label: `🏗️  Start a new WIP schema for version ${
-							userSchemaVersion + 1
-						}`,
-					},
-					{
-						value: 'publish',
-						label: `📦  Publish a new schema version ${userSchemaVersion + 1}`,
-					},
-					{
-						value: 'exit',
-						label: `🚪 Exit (do nothing)`,
-					},
-					{
-						value: 'force',
-						label: `⚠️  Overwrite production schema for version ${userSchemaVersion}`,
-					},
-				],
-			});
 
-			// for new schemas, we bump the version in the user's schema file first thing
-			if (selection === 'wip' || selection === 'publish') {
-				try {
-					await bumpUserSchemaVersion({ path: schema });
-					log(`⬆️  Bumped schema version to ${userSchemaVersion + 1}`);
-					newSchemaVersion = userSchemaVersion + 1;
-				} catch (err) {
-					console.error(err);
-					process.exit(1);
+	// no param selection was given, so we need to prompt the user
+	if (!selection) {
+		if (userSchemaNovel) {
+			// first schema with this new version (might also be first schema)
+			selection = await select({
+				message: `New schema version ${userSchemaVersion}. Choose a way to proceed:`,
+				options: [
+					{
+						value: 'wip',
+						label: `🏗️  Start a new WIP schema for version ${userSchemaVersion}`,
+					},
+					{
+						value: 'publish',
+						label: `📦  Publish a new schema version ${userSchemaVersion}`,
+					},
+					{
+						value: 'exit',
+						label: `🚪 Exit (do nothing)`,
+					},
+				],
+			});
+		} else if (userSchemaDifferent) {
+			if (canonicalIsWip) {
+				selection = await select({
+					message: `A WIP schema for version ${userSchemaVersion} is in progress. Choose a way to proceed:`,
+					options: [
+						{
+							value: 'wip',
+							label: `🏗️  Refresh current WIP version ${userSchemaVersion}`,
+						},
+						{
+							value: 'publish',
+							label: `📦  Publish the final schema for version ${userSchemaVersion}`,
+						},
+						{
+							value: 'exit',
+							label: `🚪 Exit (do nothing)`,
+						},
+					],
+				});
+			} else {
+				selection = await select({
+					message: `Schema version ${userSchemaVersion} already exists and yours is different. Choose a way to proceed:`,
+					options: [
+						{
+							value: 'wip',
+							label: `🏗️  Start a new WIP schema for version ${
+								userSchemaVersion + 1
+							}`,
+						},
+						{
+							value: 'publish',
+							label: `📦  Publish a new schema version ${
+								userSchemaVersion + 1
+							}`,
+						},
+						{
+							value: 'exit',
+							label: `🚪 Exit (do nothing)`,
+						},
+						{
+							value: 'force',
+							label: `⚠️  Overwrite production schema for version ${userSchemaVersion}`,
+						},
+					],
+				});
+
+				// for new schemas, we bump the version in the user's schema file first thing
+				if (selection === 'wip' || selection === 'publish') {
+					try {
+						await bumpUserSchemaVersion({ path: schema });
+						log(`⬆️  Bumped schema version to ${userSchemaVersion + 1}`);
+						newSchemaVersion = userSchemaVersion + 1;
+					} catch (err) {
+						console.error(err);
+						process.exit(1);
+					}
 				}
 			}
+		} else {
+			selection = 'regenerate';
+			log(`Your schema is up-to-date. Regenerating client code...`);
 		}
-	} else {
-		selection = 'regenerate';
-		log(`Your schema is up-to-date. Regenerating client code...`);
 	}
 
 	if (isCancel(selection) || selection === 'exit') {
@@ -190,7 +207,7 @@ export async function generate({
 		process.exit(0);
 	}
 
-	if (selection === 'force') {
+	if (selection === 'force' && !isNonInteractive) {
 		const confirmOverwrite = await confirm({
 			message: `Are you sure you want to overwrite version ${userSchemaVersion}? ⛔ If you already deployed this version, user data will get corrupted. ⛔`,
 			active: `I have not deployed version ${userSchemaVersion} yet`,
@@ -231,18 +248,16 @@ export async function generate({
 		output: tempOutput,
 		react,
 		commonjs,
-		migrationsOutput,
+		relativeMigrationsPath: posixRelative(output, migrationsOutput),
 	});
 	migrationCreated = await upsertMigration({
 		version: newSchemaVersion,
 		migrationsOutput: tempMigrations,
 		commonjs,
-		relativeSchemasPath: path
-			.relative(
-				path.resolve(migrationsOutput),
-				path.resolve(output, 'schemaVersions'),
-			)
-			.replaceAll(path.win32.sep, path.posix.sep),
+		relativeSchemasPath: posixRelative(
+			migrationsOutput,
+			path.resolve(output, 'schemaVersions'),
+		),
 		migrationsDirectory: migrationsOutput,
 	});
 
@@ -253,7 +268,7 @@ export async function generate({
 		await rm(tempLayer);
 	}
 
-	if (migrationCreated) {
+	if (migrationCreated && !isNonInteractive) {
 		const openResult = await confirm({
 			message: `A new migration was created for your schema changes. Open it in VS Code now?`,
 			active: `Yes`,

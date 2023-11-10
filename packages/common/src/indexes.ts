@@ -106,9 +106,7 @@ export function isDirectSynthetic(
 
 export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
 	const result: Record<string, any> = {};
-	for (const [name, property] of Object.entries(
-		schema.indexes || schema.synthetics || {},
-	)) {
+	for (const [name, property] of Object.entries(schema.indexes || {})) {
 		const index = property as StorageSyntheticIndexSchema<any>;
 		if (isDirectSynthetic(index)) {
 			result[name] = sanitizeIndexValue(obj[index.field]);

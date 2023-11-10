@@ -3,11 +3,12 @@ import { fileExists } from './fs/exists.js';
 import { readFile, readdir, unlink } from 'fs/promises';
 import { writeSchema } from './schema.js';
 import { writeTS } from './fs/write.js';
+import { isEmpty } from './fs/isEmpty.js';
 
 export async function needsUpgrade({ output }: { output: string }) {
 	const metaPath = path.join(output, 'meta.json');
 	if (!(await fileExists(metaPath))) {
-		return true;
+		return !(await isEmpty(output));
 	}
 	const meta = JSON.parse(await readFile(metaPath, 'utf8'));
 	return meta.verdantCLI !== 1;

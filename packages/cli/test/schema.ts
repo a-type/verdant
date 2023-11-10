@@ -101,7 +101,7 @@ export const post = collection({
 });
 
 export default schema({
-	version: 4,
+	version: 1,
 	collections: {
 		todos: todo,
 		people: person,

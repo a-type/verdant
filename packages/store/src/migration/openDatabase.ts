@@ -567,15 +567,6 @@ function getMigrationEngine({
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
 					const original = cloneDeep(doc);
-					// remove any indexes before computing the diff
-					// const collectionSpec = migration.oldSchema.collections[collection];
-					// const indexKeys = [
-					// 	...Object.keys(collectionSpec.synthetics || {}),
-					// 	...Object.keys(collectionSpec.compounds || {}),
-					// ];
-					// indexKeys.forEach((key) => {
-					// 	delete doc[key];
-					// });
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
 					if (newValue) {
