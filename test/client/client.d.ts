@@ -6,6 +6,7 @@ import type {
   CollectionQueries,
   StorageSchema,
   Migration,
+  EntityFile,
 } from "@verdant-web/store";
 export * from "@verdant-web/store";
 
@@ -56,7 +57,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
   readonly namespace: string;
 }
 
-import { ObjectEntity, ListEntity } from "@verdant-web/store";
+import { ObjectEntity, ListEntity, EntityFile } from "@verdant-web/store";
 
 /** Generated types for Item */
 
@@ -92,7 +93,7 @@ export type ItemInit = {
   purchased?: boolean;
   categoryId?: string | null;
   comments?: ItemCommentsInit;
-  image?: string | null;
+  image?: File | null;
 };
 
 export type ItemTagsInit = string[];
@@ -109,7 +110,7 @@ export type ItemDestructured = {
   purchased: boolean;
   categoryId: string | null;
   comments: ItemComments;
-  image: string | null;
+  image: EntityFile | null;
 };
 
 export type ItemTagsDestructured = string[];

@@ -47,6 +47,7 @@ export async function generate({
 	debug = false,
 	migrations: migrationsOutput = path.resolve(output, '../migrations'),
 	generate: cliGeneratePassed,
+	javascript = false,
 }: {
 	schema: string;
 	output: string;
@@ -54,6 +55,7 @@ export async function generate({
 	debug?: boolean;
 	migrations?: string;
 	generate?: boolean;
+	javascript?: boolean;
 }) {
 	intro('🌿 Verdant CLI');
 
@@ -249,6 +251,7 @@ export async function generate({
 		react,
 		commonjs,
 		relativeMigrationsPath: posixRelative(output, migrationsOutput),
+		javascript,
 	});
 	migrationCreated = await upsertMigration({
 		version: newSchemaVersion,
@@ -259,6 +262,7 @@ export async function generate({
 			path.resolve(output, 'schemaVersions'),
 		),
 		migrationsDirectory: migrationsOutput,
+		javascript,
 	});
 
 	// cleanup

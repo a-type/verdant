@@ -21,7 +21,7 @@ export function getAllTypings({ schema }: { schema: StorageSchema }) {
 
 export function getClientTypings({ schema }: { schema: StorageSchema }) {
 	const typings = `/** Generated types for Verdant client */
-import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions as BaseClientDescriptorOptions, CollectionQueries, StorageSchema, Migration } from '@verdant-web/store';
+import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions as BaseClientDescriptorOptions, CollectionQueries, StorageSchema, Migration, EntityFile } from '@verdant-web/store';
 export * from '@verdant-web/store';
 
 export class Client<Presence = any, Profile = any> {
@@ -74,7 +74,7 @@ export function getSchemaTypings({ schema }: { schema: StorageSchema }) {
 		})
 		.reduce(
 			(acc, curr) => acc + '\n\n' + curr,
-			`import { ObjectEntity, ListEntity } from '@verdant-web/store';\n`,
+			`import { ObjectEntity, ListEntity, EntityFile } from '@verdant-web/store';\n`,
 		);
 	return types;
 }
@@ -98,12 +98,12 @@ function getTypings({
 	collection,
 	suffix,
 	childSuffix = suffix,
-	optionals,
+	mode,
 }: {
 	collection: StorageCollectionSchema;
 	suffix: string;
 	childSuffix?: string;
-	optionals: boolean;
+	mode: 'init' | 'snapshot' | 'destructured';
 }) {
 	const name = pascalCase(collection.name);
 	let declarations = '';
@@ -115,7 +115,7 @@ function getTypings({
 			field,
 			suffix,
 			childSuffix,
-			optionals,
+			mode,
 		});
 		builder.withField({
 			key,
@@ -135,14 +135,15 @@ function getFieldTypings({
 	field,
 	suffix,
 	childSuffix = suffix,
-	optionals,
+	mode,
 }: {
 	name: string;
 	field: StorageFieldSchema;
 	suffix: string;
 	childSuffix?: string;
-	optionals: boolean;
+	mode: 'init' | 'snapshot' | 'destructured';
 }): { alias: string; optional?: boolean; declarations: string } {
+	const optionals = mode === 'init';
 	const optional = optionals && (isNullable(field) || hasDefault(field));
 	switch (field.type) {
 		case 'string':
@@ -156,7 +157,13 @@ function getFieldTypings({
 			};
 		case 'file':
 			return {
-				alias: `string${field.nullable ? ' | null' : ''}`,
+				alias: `${
+					mode === 'init'
+						? 'File'
+						: mode === 'destructured'
+						? 'EntityFile'
+						: 'string'
+				}${field.nullable ? ' | null' : ''}`,
 				optional,
 				declarations: '',
 			};
@@ -170,7 +177,7 @@ function getFieldTypings({
 					field: subfield,
 					suffix,
 					childSuffix,
-					optionals,
+					mode,
 				});
 				objBuilder.withField({
 					key,
@@ -196,7 +203,7 @@ function getFieldTypings({
 				field: field.items,
 				suffix,
 				childSuffix,
-				optionals,
+				mode,
 			});
 			const baseList = aliasBuilder(
 				name + suffix,
@@ -216,7 +223,7 @@ function getFieldTypings({
 				field: field.values,
 				suffix,
 				childSuffix,
-				optionals,
+				mode,
 			});
 			const baseMap = recordBuilder()
 				.withField({
@@ -242,7 +249,7 @@ export function getSnapshotTypings({
 }: {
 	collection: StorageCollectionSchema;
 }) {
-	return getTypings({ collection, suffix: 'Snapshot', optionals: false });
+	return getTypings({ collection, suffix: 'Snapshot', mode: 'snapshot' });
 }
 
 export function getInitTypings({
@@ -253,7 +260,7 @@ export function getInitTypings({
 	return getTypings({
 		collection,
 		suffix: 'Init',
-		optionals: true,
+		mode: 'init',
 	});
 }
 
@@ -267,7 +274,7 @@ function getDestructuredTypings({
 		suffix: 'Destructured',
 		// children point to entities
 		childSuffix: '',
-		optionals: false,
+		mode: 'destructured',
 	});
 }
 

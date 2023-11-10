@@ -130,6 +130,9 @@ ${Object.values(parsed.collections)
 			`${output}/schema.d.ts`,
 			`export * from './schemaVersions/v${parsed.version}${
 				commonjs ? '' : '.js'
+			}';
+			export { default } from './schemaVersions/v${parsed.version}${
+				commonjs ? '' : '.js'
 			}';`,
 		);
 	}

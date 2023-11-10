@@ -10,22 +10,47 @@ export async function generateClientCode({
 	schema,
 	output,
 	react,
-	commonjs,
+	commonjs = false,
+	javascript = false,
+	relativeMigrationsPath,
 }: {
 	schema: string;
 	output: string;
 	react?: boolean;
 	commonjs?: boolean;
-	relativeMigrationsPath?: string;
+	relativeMigrationsPath: string;
+	javascript?: boolean;
 }) {
 	const parsed = await readSchema({ path: schema });
 	const indexTypings = getAllTypings({ schema: parsed });
-	await writeTS(path.join(output, `/index.d.ts`), indexTypings);
 	const indexImplementation = getClientImplementation({
 		schemaPath: './schema',
 		commonjs,
+		relativeMigrationsPath,
+		javascript,
 	});
-	await writeTS(path.join(output, `/index.js`), indexImplementation);
+
+	// the index needs to be TS for TS projects and JS for JS
+	// projects, because it's importing migrations which will
+	// be in the appropriate language, and JS can't import TS.
+	if (javascript) {
+		await writeTS(path.join(output, `/index.js`), indexImplementation);
+		await writeTS(path.join(output, 'index.d.ts'), indexTypings);
+	} else {
+		await writeTS(path.join(output, `/client.d.ts`), indexTypings);
+		await writeTS(
+			path.join(output, `/client.js`),
+			`export * from '@verdant-web/store';`,
+		);
+		await writeTS(
+			path.join(output, './index.ts'),
+			`import { ClientDescriptorOptions } from './client${
+				commonjs ? '' : '.js'
+			}';
+			export * from './client${commonjs ? '' : '.js'}';\n` + indexImplementation,
+		);
+	}
+
 	if (react) {
 		const reactTypings = getReactTypings({ schema: parsed, commonjs });
 		await writeTS(path.join(output, `react.d.ts`), reactTypings);

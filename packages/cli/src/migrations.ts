@@ -1,6 +1,6 @@
 import pathSystem from 'path';
 import pathPosix from 'path/posix';
-import { writeTS } from './fs/write.js';
+import { writeTSAsJS, writeTS } from './fs/write.js';
 import * as fs from 'fs/promises';
 import { fileExists } from './fs/exists.js';
 import path from 'path';
@@ -11,6 +11,7 @@ export async function upsertMigration({
 	commonjs,
 	relativeSchemasPath,
 	migrationsDirectory,
+	javascript = false,
 }: {
 	version: number;
 	/** Wherever this should emit to (usually a temp dir) */
@@ -19,8 +20,9 @@ export async function upsertMigration({
 	relativeSchemasPath: string;
 	/** The actual location of existing migrations */
 	migrationsDirectory: string;
+	javascript?: boolean;
 }) {
-	const fileName = `v${version}.ts`;
+	const fileName = javascript ? `v${version}.js` : `v${version}.ts`;
 	const exists = await fileExists(
 		pathSystem.join(migrationsDirectory, fileName),
 	);
@@ -28,13 +30,20 @@ export async function upsertMigration({
 		return false;
 	}
 
-	const migrationPath = pathSystem.join(migrationsOutput, fileName);
 	const migration = getMigration({
 		version,
 		relativeSchemasPath,
 		commonjs,
 	});
-	await writeTS(migrationPath, migration);
+	if (javascript) {
+		await writeTSAsJS(
+			pathSystem.join(migrationsOutput, fileName),
+			migration,
+			commonjs,
+		);
+	} else {
+		await writeTS(pathSystem.join(migrationsOutput, fileName), migration);
+	}
 	const existingMigrations = await fs.readdir(migrationsDirectory, {
 		withFileTypes: true,
 	});
@@ -53,7 +62,18 @@ export async function upsertMigration({
 			.map((file) => path.basename(file.name, '.ts')),
 		commonjs,
 	});
-	await writeTS(pathSystem.join(migrationsOutput, 'index.ts'), migrationIndex);
+	if (javascript) {
+		await writeTSAsJS(
+			pathSystem.join(migrationsOutput, 'index.js'),
+			migrationIndex,
+			commonjs,
+		);
+	} else {
+		await writeTS(
+			pathSystem.join(migrationsOutput, 'index.ts'),
+			migrationIndex,
+		);
+	}
 	return true;
 }
 

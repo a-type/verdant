@@ -41,6 +41,11 @@ yargs(hideBin(process.argv))
 					description:
 						'Use CLI in non-interactive mode and just generate (or regenerate) current schema code',
 				})
+				.option('javascript', {
+					type: 'boolean',
+					alias: 'js',
+					description: 'Generate JavaScript instead of TypeScript',
+				})
 				.demandOption(['schema', 'output']);
 		},
 		(argv) => {

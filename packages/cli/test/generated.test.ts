@@ -1,13 +1,15 @@
 import { ClientDescriptor } from './.generated/index.js';
-import migrations from './migrations/index.js';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './.generated/react.js';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
 		namespace: 'test',
-		migrations,
 		indexedDb: new IDBFactory(),
+		sync: {
+			defaultProfile: { foo: 'bar' },
+			initialPresence: { baz: 1 },
+		},
 	});
 
 	return desc.open();
@@ -16,6 +18,17 @@ function makeClient() {
 describe('generated client', () => {
 	it('should expose model accessors which produce usable models', async () => {
 		const client = await makeClient();
+
+		client.sync.presence.update({
+			baz: 3,
+		});
+		client.sync.presence.update({
+			// @ts-expect-error
+			nonce: 3,
+		});
+		client.sync.presence.self.profile.foo;
+		// @ts-expect-error
+		client.sync.presence.self.profile.nonce;
 
 		const item = await client.todos.put({
 			attachments: [],

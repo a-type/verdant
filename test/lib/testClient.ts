@@ -4,7 +4,6 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 } from '../client/index.js';
-import defaultMigrations from '../migrations/index.js';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 
@@ -15,7 +14,7 @@ export async function createTestClient({
 	type = ReplicaType.Realtime,
 	logId,
 	indexedDb = new IDBFactory(),
-	migrations = defaultMigrations,
+	migrations,
 	files,
 	transport = 'realtime',
 	onLog,

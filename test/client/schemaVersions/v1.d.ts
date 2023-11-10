@@ -26,7 +26,7 @@ export type ItemInit = {
   purchased?: boolean;
   categoryId?: string | null;
   comments?: ItemCommentsInit;
-  image?: string | null;
+  image?: File | null;
 };
 
 export type ItemTagsInit = string[];
