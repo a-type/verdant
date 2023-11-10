@@ -157,7 +157,7 @@ export function getIndexValues(
 		...computeIndexedFields(schema, doc),
 		...computeSynthetics(schema, doc),
 		...computeCompoundIndices(schema, doc),
-		'@@@snapshot': JSON.stringify(doc),
+		'@@@snapshot': doc,
 	};
 }
 
