@@ -17,6 +17,8 @@ import { collection, schema } from '@verdant-web/store';
 
 const todoItems = collection({
 	name: 'todoItem',
+	// your primary key must be a field in your collection,
+	// and you must not rewrite it after creating a document.
 	primaryKey: 'id',
 	fields: {
 		id: {
@@ -33,7 +35,7 @@ const todoItems = collection({
 			type: 'boolean',
 		},
 	},
-	synthetics: {},
+	indexes: {},
 	compounds: {},
 });
 
@@ -65,7 +67,7 @@ Each collection needs the following:
 
 Additionally, you can add complex indexes for querying the collection:
 
-- `synthetics`: freeform indexes which process the document into one indexed value whenever it changes.
+- `indexes`: freeform indexes which process the document into one indexed value (or an array of values) whenever it changes.
 - `compounds`: multi-value indexes which let you query multiple field values at once. Advanced feature.
 
 See more on indexes [here](./querying.md).
@@ -80,7 +82,6 @@ Defines a string field, as you'd expect.
 
 Other options:
 
-- `indexed: true`: adds a simple index on this string field you can use in queries to find documents.
 - `nullable: true`: allows `null` as a valid value for this field.
 - `default: string | (() => string)`: define a default value, or a function that returns a default value at create time.
 
@@ -90,7 +91,6 @@ Defines a number field, as you'd expect.
 
 Other options:
 
-- `indexed: true`: adds a simple index on this number field you can use in queries to find documents.
 - `nullable: true`: allows `null` as a valid value for this field.
 - `default: number | (() => number)`: define a default value, or a function that returns a default value at create time.
 
@@ -100,7 +100,6 @@ Defines a boolean field, as you'd expect.
 
 Other options:
 
-- `indexed: true`: adds a simple index on this boolean field you can use in queries to find documents.
 - `nullable: true`: allows `null` as a valid value for this field.
 - `default: boolean | (() => boolean)`: define a default value, or a function that returns a default value at create time.
 
@@ -146,3 +145,7 @@ Opts out of schema checking for a field. An `any` field can have nested data and
 Other options:
 
 - `default: any | (() => any)`: define a default value for this field
+
+## Indexing Fields
+
+In earlier versions of Verdant, you could index a field by adding `indexed: true` to it. To consolidate indexing, Verdant now requires all indexes to be specified in `indexes` or `compounds`. There's a new index definition to easily index a single field (with typechecking): `{ field: 'fieldName' }`, which you can use instead.

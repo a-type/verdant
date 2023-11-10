@@ -6,30 +6,53 @@ sidebar_position: 4
 
 By default you can retrieve lists of all documents in a collection, or just one by its primary key.
 
-To do more complex queries, you must index fields or create new indexes.
+To do more complex queries, you must create new indexes. Indexes are values that get re-computed from your document's data every time it's changed.
 
-#### Indexing existing fields
+## Indexes
 
-For field types which support indexing (string, number), add `indexed: true` to index that field. This enables quick lookup by specific value, or by range.
-
-#### Synthetic indexes
-
-`synthetics` are additional indexes which are computed from the data in a document. For example, if you _did_ want to index the boolean field `done`, you could create a synthetic index which converts it to a string:
+`indexes` are simple indexes which are computed from the data in a document. For example, if you want to index the field `done`, you could create an index for it:
 
 ```ts
-synthetics: {
-  indexableDone: {
-    type: 'string',
-    compute: (item) => item.done.toString()
-  }
+indexes: {
+	done: {
+		field: 'done';
+	}
+}
+```
+
+### Indexes with computation
+
+You can process your document's data into an index value. This is an important and powerful concept which is the heart of making queries in Verdant in the same way that SQL is for relational databases.
+
+To make a computed index, supply a `type` and `compute` property.
+
+```ts
+indexes: {
+	likesWithMaxOf50: {
+		type: 'number',
+		compute: (post) => Math.min(post.likes, 50)
+	}
 }
 ```
 
 This field won't be present on a todo item in your code, but it will be queryable.
 
-You can use any synchronous logic you want to create synthetic indexes. But you should keep them deterministic!
+You can use any synchronous logic you want to create synthetic indexes. But you should keep them deterministic! A non-deterministic index value will change whether a document matches a query every time you write to it.
 
-##### Using synthetic indexes for text search
+#### Valid types of indexes
+
+Indexes have different acceptable types from fields. Here's all the types you can use:
+
+- `string`
+- `number`
+- `boolean`
+- `string[]`
+- `number[]`
+- `boolean[]`
+
+Basically, any primitive value or list of primitive values.
+
+#### Using synthetic indexes for text search
 
 You can do some basic text search using a simple synthetic index. The easiest version looks like this:
 
