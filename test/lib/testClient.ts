@@ -4,7 +4,7 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 } from '../client/index.js';
-import defaultMigrations from '../migrations/migrations.js';
+import defaultMigrations from '../migrations/index.js';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 

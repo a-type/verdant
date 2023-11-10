@@ -2,7 +2,8 @@
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"composite": true,
-		"rootDir": "."
+		"rootDir": ".",
+		"esModuleInterop": true
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
 }

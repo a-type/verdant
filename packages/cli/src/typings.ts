@@ -21,7 +21,8 @@ export function getAllTypings({ schema }: { schema: StorageSchema }) {
 
 export function getClientTypings({ schema }: { schema: StorageSchema }) {
 	const typings = `/** Generated types for Verdant client */
-import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions, CollectionQueries, StorageSchema, Migration } from '@verdant-web/store';
+import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions as BaseClientDescriptorOptions, CollectionQueries, StorageSchema, Migration } from '@verdant-web/store';
+export * from '@verdant-web/store';
 
 export class Client<Presence = any, Profile = any> {
   ${Object.entries(schema.collections)
@@ -46,7 +47,7 @@ export class Client<Presence = any, Profile = any> {
   __dangerous__resetLocal: BaseClient<Presence, Profile>['__dangerous__resetLocal'];
 }
 
-interface ClientInitOptions<Presence = any, Profile = any> extends Omit<ClientDescriptorOptions<Presence, Profile>, 'schema' | 'migrations'> {
+export interface ClientDescriptorOptions<Presence = any, Profile = any> extends Omit<BaseClientDescriptorOptions<Presence, Profile>, 'schema' | 'migrations'> {
   /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
   schema?: StorageSchema;
 	/** WARNING: overriding the migrations is dangerous and almost definitely not what you want. */
