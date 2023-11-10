@@ -9,6 +9,8 @@ function makeClient() {
 		sync: {
 			defaultProfile: { foo: 'bar' },
 			initialPresence: { baz: 1 },
+			authEndpoint: 'http://localhost:3000/auth',
+			autoStart: false,
 		},
 	});
 
