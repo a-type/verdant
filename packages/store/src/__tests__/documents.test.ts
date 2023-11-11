@@ -480,4 +480,23 @@ describe('storage documents', () => {
 
 		expect(item1.get('attachments').get(0).get('name')).toBe('attachment 1');
 	});
+
+	it('should not allow modifying the primary key', async () => {
+		const storage = await createTestStorage();
+		const item1 = await storage.todos.put({
+			content: 'item 1',
+			done: false,
+			tags: ['tag 1'],
+			category: 'general',
+			attachments: [
+				{
+					name: 'attachment 1',
+				},
+			],
+		});
+
+		expect(() => {
+			item1.set('id', 'foo');
+		}).toThrowErrorMatchingInlineSnapshot('"Cannot set readonly key id"');
+	});
 });

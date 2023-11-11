@@ -320,6 +320,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 		oid: ObjectIdentifier,
 		schema: StorageFieldSchema,
 		parent?: Entity,
+		readonlyKeys?: string[],
 	): Entity => {
 		let entityRef = this.entities.get(oid);
 		let entity = entityRef?.deref();
@@ -330,6 +331,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 				fieldSchema: schema,
 				store: this.storeTools,
 				parent,
+				readonlyKeys,
 			});
 
 			// immediately add to cache and queue a removal if nobody subscribed
