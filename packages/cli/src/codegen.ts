@@ -6,6 +6,7 @@ import { readSchema } from './schema.js';
 import { getAllTypings } from './typings.js';
 import path from 'path';
 import { rmIfExists } from './fs/rm.js';
+import { validateSchema } from './validate.js';
 
 export async function generateClientCode({
 	schema,
@@ -23,6 +24,7 @@ export async function generateClientCode({
 	javascript?: boolean;
 }) {
 	const parsed = await readSchema({ path: schema });
+	validateSchema(parsed);
 	const indexTypings = getAllTypings({ schema: parsed });
 	const indexImplementation = getClientImplementation({
 		schemaPath: './schema',

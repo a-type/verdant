@@ -28,7 +28,8 @@
 		"change-case": "^4.1.2",
 		"esbuild": "^0.19.5",
 		"prettier": "^3.0.3",
-		"yargs": "^17.6.0"
+		"yargs": "^17.6.0",
+		"zod": "^3.22.4"
 	},
 	"devDependencies": {
 		"@types/estree": "^1.0.1",
