@@ -4,7 +4,7 @@ import { createHooks } from './hooks.js';
 
 describe('generated hooks', () => {
 	it('should create singular and plural hooks for all collections', () => {
-		const author = collection({
+		const authors = collection({
 			name: 'author',
 			primaryKey: 'id',
 			fields: {
@@ -19,9 +19,8 @@ describe('generated hooks', () => {
 			compounds: {},
 			synthetics: {},
 		});
-		const tally = collection({
+		const tallies = collection({
 			name: 'tally',
-			pluralName: 'tallies',
 			primaryKey: 'id',
 			fields: {
 				id: {
@@ -38,8 +37,8 @@ describe('generated hooks', () => {
 		const testSchema = schema({
 			version: 1,
 			collections: {
-				author,
-				tally,
+				authors,
+				tallies,
 			},
 		});
 

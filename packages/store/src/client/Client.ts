@@ -142,13 +142,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		for (const [name, _collection] of Object.entries(
 			context.schema.collections,
 		)) {
-			const collection = _collection as SchemaCollection<any, any>;
-			const collectionName = collection.pluralName ?? collection.name + 's';
-			// TODO: untangle this requirement
-			assert(
-				collectionName === name,
-				`The key of the collection in the schema must be the plural of the name (expected: "${collectionName}")`,
-			);
+			const collectionName = name;
 			(this as any)[collectionName] = new CollectionQueries({
 				collection: collectionName,
 				cache: this._queryCache,

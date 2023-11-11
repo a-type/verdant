@@ -2,7 +2,6 @@ import { collection } from '@verdant-web/common';
 
 export const people = collection({
 	name: 'person',
-	pluralName: 'people',
 	primaryKey: 'id',
 	fields: {
 		id: {

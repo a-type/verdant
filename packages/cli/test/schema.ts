@@ -62,7 +62,6 @@ export const todo = collection({
 
 export const person = collection({
 	name: 'person',
-	pluralName: 'people',
 	primaryKey: 'id',
 	fields: {
 		id: {

@@ -382,8 +382,8 @@ export function createHooks<Presence = any, Profile = any>(
 	};
 
 	const collectionNames = Object.keys(schema.collections);
-	for (const name of collectionNames) {
-		const collection = schema.collections[name];
+	for (const pluralName of collectionNames) {
+		const collection = schema.collections[pluralName];
 		const getOneHookName = `use${capitalize(collection.name)}`;
 		hooks[getOneHookName] = function useIndividual(
 			id: string,
@@ -391,7 +391,7 @@ export function createHooks<Presence = any, Profile = any>(
 		) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].get(id);
+				return skip ? null : storage[pluralName].get(id);
 			}, [id, skip]);
 			const data = useLiveQuery(liveQuery);
 
@@ -403,7 +403,7 @@ export function createHooks<Presence = any, Profile = any>(
 		) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].get(id);
+				return skip ? null : storage[pluralName].get(id);
 			}, [id, skip]);
 			const data = useLiveQuery(liveQuery, true);
 			const status = useLiveQueryStatus(liveQuery);
@@ -423,7 +423,7 @@ export function createHooks<Presence = any, Profile = any>(
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].findOne({ index, key });
+				return skip ? null : storage[pluralName].findOne({ index, key });
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery);
 			return data;
@@ -439,7 +439,7 @@ export function createHooks<Presence = any, Profile = any>(
 		} = {}) {
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
-				return skip ? null : storage[name].findOne({ index, key });
+				return skip ? null : storage[pluralName].findOne({ index, key });
 			}, [index, skip]);
 			const data = useLiveQuery(liveQuery, true);
 			const status = useLiveQueryStatus(liveQuery);
@@ -447,9 +447,7 @@ export function createHooks<Presence = any, Profile = any>(
 			return { data, status };
 		};
 
-		const getAllHookName = `useAll${capitalize(
-			collection.pluralName || collection.name + 's',
-		)}`;
+		const getAllHookName = `useAll${capitalize(pluralName)}`;
 		hooks[getAllHookName] = function useAll({
 			index,
 			skip,
@@ -463,7 +461,7 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAll({ index, key })),
+				() => (skip ? null : storage[pluralName].findAll({ index, key })),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery);
@@ -482,7 +480,7 @@ export function createHooks<Presence = any, Profile = any>(
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[name].findAll({ index, key })),
+				() => (skip ? null : storage[pluralName].findAll({ index, key })),
 				[index, skip],
 			);
 			const data = useLiveQuery(liveQuery, true) || [];
@@ -491,9 +489,7 @@ export function createHooks<Presence = any, Profile = any>(
 			return { data, status };
 		};
 
-		const getAllPaginatedHookName = `useAll${capitalize(
-			collection.pluralName || collection.name + 's',
-		)}Paginated`;
+		const getAllPaginatedHookName = `useAll${capitalize(pluralName)}Paginated`;
 		hooks[getAllPaginatedHookName] = function useAllPaginated({
 			index,
 			skip,
@@ -514,7 +510,7 @@ export function createHooks<Presence = any, Profile = any>(
 				() =>
 					skip
 						? null
-						: storage[name].findPage({
+						: storage[pluralName].findPage({
 								index,
 								pageSize,
 								page: 0,
@@ -546,9 +542,7 @@ export function createHooks<Presence = any, Profile = any>(
 
 			return [data, tools] as const;
 		};
-		const getAllInfiniteHookName = `useAll${capitalize(
-			collection.pluralName || collection.name + 's',
-		)}Infinite`;
+		const getAllInfiniteHookName = `useAll${capitalize(pluralName)}Infinite`;
 		hooks[getAllInfiniteHookName] = function useAllInfinite({
 			index,
 			skip,
@@ -569,7 +563,7 @@ export function createHooks<Presence = any, Profile = any>(
 				() =>
 					skip
 						? null
-						: storage[name].findAllInfinite({
+						: storage[pluralName].findAllInfinite({
 								index,
 								pageSize,
 								key: key || getAllInfiniteHookName,

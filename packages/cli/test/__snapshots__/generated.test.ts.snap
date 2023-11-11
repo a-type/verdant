@@ -420,7 +420,6 @@ var todo = collection({
 });
 var person = collection({
   name: \\"person\\",
-  pluralName: \\"people\\",
   primaryKey: \\"id\\",
   fields: {
     id: {
