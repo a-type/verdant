@@ -48,6 +48,7 @@ export async function generate({
 	migrations: migrationsOutput = path.resolve(output, '../migrations'),
 	generate: cliGeneratePassed,
 	javascript = false,
+	module,
 }: {
 	schema: string;
 	output: string;
@@ -56,6 +57,7 @@ export async function generate({
 	migrations?: string;
 	generate?: boolean;
 	javascript?: boolean;
+	module?: string;
 }) {
 	intro('🌿 Verdant CLI');
 
@@ -73,7 +75,7 @@ export async function generate({
 	await makeDir(tempOutput);
 	await makeDir(tempMigrations);
 
-	const commonjs = await isCommonJS();
+	const commonjs = module === undefined ? await isCommonJS() : module === 'cjs';
 
 	const upgradeNeeded = await needsUpgrade({ output });
 	if (upgradeNeeded) {

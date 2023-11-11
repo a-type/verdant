@@ -46,6 +46,12 @@ yargs(hideBin(process.argv))
 					alias: 'js',
 					description: 'Generate JavaScript instead of TypeScript',
 				})
+				.option('module', {
+					type: 'string',
+					description:
+						'What JS module system to use in generated files. Default reads local package.json to detect value.',
+					choices: ['cjs', 'esm'],
+				})
 				.demandOption(['schema', 'output']);
 		},
 		(argv) => {
