@@ -24,7 +24,8 @@
 		"test": "vitest",
 		"ci:test:integration": "vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
-		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts"
+		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts",
+		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"tsx": "^3.14.0"

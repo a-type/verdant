@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getInitTypings } from './typings.js';
+import {
+	getFilterTypings,
+	getInitTypings,
+	getDestructuredTypings,
+} from './typings.js';
 
 describe('generated typings', () => {
 	describe('init typings', () => {
@@ -35,6 +39,53 @@ describe('generated typings', () => {
 			).toMatchInlineSnapshot(`
 				"export type TestInit = {id?: string, text?: string | null, num?: number, required: string};
 				"
+			`);
+		});
+	});
+
+	describe('destructured typings', () => {
+		it('makes map values optional', () => {
+			expect(
+				getDestructuredTypings({
+					collection: {
+						name: 'test',
+						primaryKey: 'id',
+						fields: {
+							id: {
+								type: 'string',
+							},
+							map: {
+								type: 'map',
+								values: {
+									type: 'string',
+								},
+							},
+						},
+					},
+				}),
+			).toMatchInlineSnapshot(`
+				"export type TestDestructured = {id: string, map: TestMap};
+
+				export type TestMapDestructured = {[key: string]: TestMapValue | undefined};"
+			`);
+		});
+	});
+
+	describe('filter typings', () => {
+		it('generates "never" for no indexes', () => {
+			expect(
+				getFilterTypings({
+					collection: {
+						name: 'test',
+						primaryKey: 'id',
+						fields: {
+							id: { type: 'string' },
+						},
+					},
+					name: 'Test',
+				}),
+			).toMatchInlineSnapshot(`
+				"export type TestFilter = never;"
 			`);
 		});
 	});

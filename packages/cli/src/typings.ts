@@ -228,7 +228,13 @@ function getFieldTypings({
 			const baseMap = recordBuilder()
 				.withField({
 					key: '[key: string]',
-					type: valueName + childSuffix,
+					type:
+						valueName +
+						childSuffix +
+						// map values are optional in destructured type,
+						// indicating to the user that they can't rely on
+						// any particular value being present at a key.
+						(mode === 'destructured' ? ' | undefined' : ''),
 				})
 				.build();
 			return {
@@ -264,7 +270,7 @@ export function getInitTypings({
 	});
 }
 
-function getDestructuredTypings({
+export function getDestructuredTypings({
 	collection,
 }: {
 	collection: StorageCollectionSchema;
@@ -278,7 +284,7 @@ function getDestructuredTypings({
 	});
 }
 
-function getEntityTypings({
+export function getEntityTypings({
 	collection,
 }: {
 	collection: StorageCollectionSchema;
@@ -353,7 +359,7 @@ function getEntityFieldTypings({
 	}
 }
 
-function getFilterTypings({
+export function getFilterTypings({
 	collection,
 	name,
 }: {
@@ -392,6 +398,9 @@ function getFilterTypings({
 			}),
 		);
 	});
+	if (filters.length === 0) {
+		return `export type ${name}Filter = never;`;
+	}
 	return `${filters.map((filter) => filter.typing).join('\n')}
   export type ${name}Filter = ${filters
 		.map((filter) => filter.name)

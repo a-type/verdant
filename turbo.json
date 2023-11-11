@@ -28,6 +28,10 @@
 		},
 		"link": {
 			"cache": false
+		},
+		"typecheck": {
+			"outputs": [],
+			"inputs": ["**/*.tsx", "**/*.ts", "tsconfig.json"]
 		}
 	}
 }

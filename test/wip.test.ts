@@ -2,6 +2,7 @@ import {
 	Migration,
 	ReplicaType,
 	createDefaultMigration,
+	createMigration,
 	migrate,
 	schema,
 } from '@verdant-web/common';
@@ -105,12 +106,12 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		...baseClientOptions,
 		schema: wipSchema,
 		migrations: [
-			createDefaultMigration(defaultSchema),
-			migrate(defaultSchema, wipSchema, async ({ migrate }) => {
+			createMigration(defaultSchema),
+			createMigration(defaultSchema, wipSchema, async ({ migrate }) => {
 				await migrate('items', ({ comments, ...old }) => ({
 					...old,
 					// no idea what's up with this typing
-					comments: comments.map((c) => c.content) as unknown as never,
+					comments: comments.map((c: any) => c.content) as unknown as never,
 				}));
 			}),
 		],

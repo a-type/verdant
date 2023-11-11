@@ -32,7 +32,8 @@
 		"ci:test:unit": "vitest run",
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
-		"link": "pnpm link --global"
+		"link": "pnpm link --global",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"cuid": "^2.1.8",

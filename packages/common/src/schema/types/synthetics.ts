@@ -1,5 +1,6 @@
 import {
 	StorageBooleanFieldSchema,
+	StorageFieldSchema,
 	StorageFieldsSchema,
 	StorageNumberFieldSchema,
 	StorageStringFieldSchema,
@@ -41,15 +42,19 @@ export type StorageDirectSyntheticSchema<Fields extends StorageFieldsSchema> = {
 	field: DirectIndexableFieldName<Fields>;
 };
 
-export type DirectIndexableFieldName<Fields extends StorageFieldsSchema> = {
-	[K in keyof Fields]: Fields[K] extends StorageStringFieldSchema
+type DirectIndexableFields<Fields extends StorageFieldsSchema> = {
+	[K in keyof Fields as Fields[K] extends StorageStringFieldSchema
 		? K
 		: Fields[K] extends StorageNumberFieldSchema
 		? K
 		: Fields[K] extends StorageBooleanFieldSchema
 		? K
-		: never;
-}[keyof Fields];
+		: never]: any;
+};
+export type DirectIndexableFieldName<Fields extends StorageFieldsSchema> =
+	keyof DirectIndexableFields<Fields> extends never
+		? string
+		: keyof DirectIndexableFields<Fields>;
 
 export type StorageSyntheticIndices<Fields extends StorageFieldsSchema> =
 	Record<string, StorageSyntheticIndexSchema<Fields>>;

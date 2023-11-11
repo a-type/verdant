@@ -1,6 +1,8 @@
 import { ClientDescriptor } from './.generated/index.js';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './.generated/react.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
@@ -15,6 +17,10 @@ function makeClient() {
 	});
 
 	return desc.open();
+}
+
+async function readFile(file: string) {
+	return fs.readFile(path.join(__dirname, file), 'utf8');
 }
 
 describe('generated client', () => {
@@ -60,6 +66,16 @@ describe('generated client', () => {
 			{ name: 'new', test: 1 },
 		]);
 	});
+	it('should produce consistent output code', async () => {
+		expect(await readFile('.generated/client.js')).toMatchSnapshot();
+		expect(await readFile('.generated/client.d.ts')).toMatchSnapshot();
+		expect(await readFile('.generated/index.ts')).toMatchSnapshot();
+		expect(await readFile('.generated/schemaVersions/v1.js')).toMatchSnapshot();
+		expect(
+			await readFile('.generated/schemaVersions/v1.d.ts'),
+		).toMatchSnapshot();
+		expect(await readFile('.generated/meta.json')).toMatchSnapshot();
+	});
 });
 
 describe('generated react hooks', () => {
@@ -99,5 +115,10 @@ describe('generated react hooks', () => {
 		// 	index: { where: 'content', equals: '' },
 		// 	skip: false,
 		// });
+	});
+
+	it('should produce consistent output code', async () => {
+		expect(await readFile('.generated/react.js')).toMatchSnapshot();
+		expect(await readFile('.generated/react.d.ts')).toMatchSnapshot();
 	});
 });

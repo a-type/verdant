@@ -16,7 +16,8 @@
 		"ci:version": "pnpm changeset version",
 		"ci:publish": "pnpm changeset publish --access=public",
 		"link": "pnpm link --global",
-		"benchmark": "pnpm run --filter @verdant-web/test benchmark"
+		"benchmark": "pnpm run --filter @verdant-web/test benchmark",
+		"typecheck": "turbo run typecheck"
 	},
 	"repository": "https://github.com/a-type/verdant",
 	"author": "Grant Forrest <gaforres@gmail.com>",

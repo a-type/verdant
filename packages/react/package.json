@@ -26,7 +26,8 @@
 		"prepublish": "pnpm run build",
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"link": "pnpm link --global"
+		"link": "pnpm link --global",
+		"typecheck": "tsc --noEmit"
 	},
 	"peerDependencies": {
 		"@verdant-web/store": "^2.6.0",

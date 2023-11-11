@@ -23,7 +23,7 @@ import migrations from '${path.join(
 export * from '@verdant-web/store';
 
 export class ClientDescriptor${
-		javascript ? '' : '<Presence, Profile>'
+		javascript ? '' : '<Presence = unknown, Profile = unknown>'
 	} extends StorageDescriptor${javascript ? '' : '<Presence, Profile>'} {
   constructor(init${
 		javascript ? '' : `: ClientDescriptorOptions<Presence, Profile>`

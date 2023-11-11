@@ -1,10 +1,11 @@
-import { writeFile } from 'fs/promises';
+import { unlink, writeFile } from 'fs/promises';
 import { getClientImplementation } from './client.js';
 import { writeTS } from './fs/write.js';
 import { getReactImplementation, getReactTypings } from './react.js';
 import { readSchema } from './schema.js';
 import { getAllTypings } from './typings.js';
 import path from 'path';
+import { rmIfExists } from './fs/rm.js';
 
 export async function generateClientCode({
 	schema,
@@ -36,6 +37,8 @@ export async function generateClientCode({
 	if (javascript) {
 		await writeTS(path.join(output, `/index.js`), indexImplementation);
 		await writeTS(path.join(output, 'index.d.ts'), indexTypings);
+		// remove any existing .ts index files
+		await rmIfExists(path.join(output, 'index.ts'));
 	} else {
 		await writeTS(path.join(output, `/client.d.ts`), indexTypings);
 		await writeTS(
@@ -49,6 +52,9 @@ export async function generateClientCode({
 			}';
 			export * from './client${commonjs ? '' : '.js'}';\n` + indexImplementation,
 		);
+		// remove any existing .js index files
+		await rmIfExists(path.join(output, 'index.js'));
+		await rmIfExists(path.join(output, 'index.d.ts'));
 	}
 
 	if (react) {

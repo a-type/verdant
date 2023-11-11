@@ -19,7 +19,8 @@
 		"exec": "tsx ./src/bin/index.ts",
 		"test": "pnpm run pretest && vitest",
 		"ci:test:unit": "pnpm run pretest && vitest run",
-		"pretest": "pnpm run exec -s ./test/schema.ts -o ./test/.generated -r --generate"
+		"pretest": "pnpm run exec -s ./test/schema.ts -o ./test/.generated -r --generate",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.5.1",

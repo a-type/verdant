@@ -34,7 +34,8 @@
 		"build:bundle": "esbuild src/vanilla.ts --bundle --format=cjs --outfile=dist/bundle/index.js --sourcemap --minify --platform=browser",
 		"build": "pnpm run build:lib && pnpm run build:bundle",
 		"prepublish": "pnpm run build",
-		"link": "pnpm link --global"
+		"link": "pnpm link --global",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@verdant-web/common": "workspace:*",

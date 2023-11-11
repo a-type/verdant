@@ -10,8 +10,8 @@ export function getReactTypings({
 }) {
 	return `
 import { Context, ComponentType, ReactNode } from 'react';
-import type { Client, ClientDescriptor, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityFile } from '@verdant-web/store';
-import {
+import type {
+	Client, ClientDescriptor, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityFile,
   ${Object.values(schema.collections)
 		.map((v) => v.name)
 		.map((n) => pascalCase(n))

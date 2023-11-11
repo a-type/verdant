@@ -85,7 +85,9 @@ export type NestedStorageFieldSchema =
 	| StorageMapFieldSchema<any>
 	| StorageFileFieldSchema;
 
-export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
+export type StorageFieldsSchema = {
+	[key: string]: StorageFieldSchema;
+};
 
 export type NestedStorageFieldsSchema = Record<
 	string,
