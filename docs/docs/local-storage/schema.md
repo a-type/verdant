@@ -51,11 +51,15 @@ This schema creates 1 document type, `todoItem`, and defines some fields. It als
 
 The TypeScript types for `collection` should enforce proper schema shape, but the docs below explain what each part means.
 
+> Note: for now I recommend you define collections at the top level, like shown above, or even split them into their own modules. There's a problem with TypeScript typings if you define collections inline inside `schema()`.
+
 ## Requirements for a schema
 
 Each schema needs a `version`. Whenever a change is made to the schema, the version must be incremented. Otherwise, Verdant will crash with an error.
 
 Schemas also have a map of `collections`. These define what kinds of documents are stored in your database.
+
+Your schema can be multiple files, but the entry file (which you provide to the CLI) must have a default export which is a `schema()`.
 
 ## Requirements for a collection
 
