@@ -12,12 +12,12 @@ import { assert } from '@verdant-web/common';
 const context = createTestContext();
 
 it('can sync multiple clients even if they go offline', async () => {
-	const { server, createTestClient } = context;
+	const { server, createTestClient, log } = context;
 	const clientA = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User A',
-		logId: 'A',
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
@@ -33,7 +33,7 @@ it('can sync multiple clients even if they go offline', async () => {
 	});
 
 	// seed data offline with A
-	console.info('🔺 --- Client A offline seed ---');
+	log('🔺 --- Client A offline seed ---');
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
 	});
@@ -65,9 +65,9 @@ it('can sync multiple clients even if they go offline', async () => {
 	clientB.sync.start();
 	clientC.sync.start();
 
-	console.info('🔺--- Going online ---');
+	log('🔺--- Going online ---');
 	await waitForPeerCount(clientA, 2);
-	console.info('🔺--- All clients online ---');
+	log('🔺--- All clients online ---');
 
 	// add some data to B
 	const b_deliCategory = await clientB.categories.put({ name: 'Deli' });
@@ -110,17 +110,17 @@ it('can sync multiple clients even if they go offline', async () => {
 		expect((await matchingItemsQuery.resolved).length).toBe(itemCount);
 	}
 
-	console.info('🔺--- Checking produce on B ---');
+	log('🔺--- Checking produce on B ---');
 	await expectCategoryToExist(clientB, 'Produce', 2);
-	console.info('🔺--- Checking produce on C ---');
+	log('🔺--- Checking produce on C ---');
 	await expectCategoryToExist(clientC, 'Produce', 2);
 
-	console.info('🔺--- Checking deli on A ---');
+	log('🔺--- Checking deli on A ---');
 	await expectCategoryToExist(clientA, 'Deli', 1);
-	console.info('🔺--- Checking deli on C ---');
+	log('🔺--- Checking deli on C ---');
 	await expectCategoryToExist(clientC, 'Deli', 1);
 
-	console.info('🔺--- Realtime sync actions ---');
+	log('🔺--- Realtime sync actions ---');
 	const c_steakItem = await clientC.items.get(b_steakItem.get('id')).resolved;
 	expect(c_steakItem).toBeTruthy();
 	assert(c_steakItem);
@@ -159,7 +159,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		(await clientC.items.get(a_unknownItem.get('id')).resolved)!,
 	);
 
-	console.info('🔺--- Offline sync actions ---');
+	log('🔺--- Offline sync actions ---');
 	// go offline on two clients and push different items to the comments
 	// array. both items should end up synced.
 	clientA.sync.stop();
@@ -178,7 +178,7 @@ it('can sync multiple clients even if they go offline', async () => {
 	await clientA.entities.flushPatches();
 	await clientB.entities.flushPatches();
 
-	console.info('🔺--- Going online again ---');
+	log('🔺--- Going online again ---');
 	clientA.sync.start();
 	clientB.sync.start();
 

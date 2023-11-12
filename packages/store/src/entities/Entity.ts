@@ -20,7 +20,6 @@ import {
 } from '@verdant-web/common';
 import { EntityFile } from '../files/EntityFile.js';
 import { processValueFiles } from '../files/utils.js';
-import { WeakRef } from './FakeWeakRef.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
@@ -40,6 +39,7 @@ export interface CacheTools {
 		parent?: Entity,
 	): Entity;
 	hasOid(oid: ObjectIdentifier): boolean;
+	weakRef<T extends WeakKey>(value: T): WeakRef<T>;
 }
 
 export interface StoreTools {
@@ -221,11 +221,11 @@ export class Entity<
 		this.oid = oid;
 		const { collection } = decomposeOid(oid);
 		this.collection = collection;
-		this.parent = parent && new WeakRef(parent);
 		this.store = store;
 		this.fieldSchema = fieldSchema;
 		this.readonlyKeys = readonlyKeys;
 		this.cache = cache;
+		this.parent = parent && this.cache.weakRef(parent);
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
 		this._deleted = deleted;

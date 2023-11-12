@@ -53,7 +53,9 @@ async function createTestClient({
 	return client as ClientWithCollections;
 }
 
-async function closeAllDatabases(indexedDB: IDBFactory) {}
+function log(...args: any[]) {
+	// console.log(...args);
+}
 
 // Using the ungenerated client to be more dynamic with the schema
 // This means a lot of ts-ignore because the inner typings are
@@ -94,7 +96,7 @@ it(
 			logId: 'client1',
 		});
 
-		console.debug('📈 Version 1 client created');
+		log('📈 Version 1 client created');
 
 		await client.items.put({
 			id: '1',
@@ -111,7 +113,6 @@ it(
 		});
 
 		await client.close();
-		await closeAllDatabases(indexedDb);
 		await new Promise<void>((resolve) => resolve());
 
 		const v2Item = collection({
@@ -163,7 +164,7 @@ it(
 			...clientInit,
 		});
 
-		console.debug('📈 Version 2 client created');
+		log('📈 Version 2 client created');
 
 		// check our test items
 		let item1 = await client.items.get('1').resolved;
@@ -314,7 +315,7 @@ it(
 			...clientInit,
 		});
 
-		console.debug('📈 Version 3 client created');
+		log('📈 Version 3 client created');
 
 		// check our test items
 		item1 = await client.items.get('1').resolved;
@@ -440,7 +441,7 @@ it(
 			...clientInit,
 		});
 
-		console.debug('📈 Version 4 client created');
+		log('📈 Version 4 client created');
 
 		// check our test items
 		let defaultList = await client.lists.get('uncategorized').resolved;
@@ -646,7 +647,7 @@ it('supports skip migrations in real life', async () => {
 		// logId: 'client1',
 	});
 
-	console.debug('📈 Version 1 client created');
+	log('📈 Version 1 client created');
 
 	await client.items.put({
 		id: '1',
@@ -816,7 +817,7 @@ it('supports skip migrations in real life', async () => {
 		...clientInit,
 	});
 
-	console.debug('📈 Version 4 client created');
+	log('📈 Version 4 client created');
 
 	const defaultList = await client.lists.get('uncategorized').resolved;
 	expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`

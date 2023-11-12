@@ -65,6 +65,7 @@ export async function createTestClient({
 				: undefined),
 		files,
 		schema,
+		EXPERIMENTAL_weakRefs: true,
 	});
 	const client = await desc.open();
 	return client;

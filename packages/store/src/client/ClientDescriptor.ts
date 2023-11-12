@@ -23,6 +23,7 @@ import {
 	deleteDatabase,
 	getAllDatabaseNamesAndVersions,
 } from '../idb.js';
+import { FakeWeakRef } from '../FakeWeakRef.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -58,6 +59,14 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * Configuration for file management
 	 */
 	files?: FileManagerConfig;
+	/**
+	 * Enables experimental WeakRef usage to cull documents
+	 * from cache that aren't being used. This is a performance
+	 * optimization which has been tested under all Verdant's test
+	 * suites but I still want to keep testing it in the real world
+	 * before turning it on.
+	 */
+	EXPERIMENTAL_weakRefs?: boolean;
 }
 
 /**
@@ -141,6 +150,13 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			weakRef: (value) => {
+				if (init.EXPERIMENTAL_weakRefs) {
+					return new WeakRef(value);
+				} else {
+					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
+				}
+			},
 		};
 		const meta = new Metadata({
 			context,
@@ -195,6 +211,13 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			weakRef: (value) => {
+				if (init.EXPERIMENTAL_weakRefs) {
+					return new WeakRef(value);
+				} else {
+					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
+				}
+			},
 		};
 		const meta = new Metadata({
 			context,

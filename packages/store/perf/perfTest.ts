@@ -76,6 +76,7 @@ function createClient() {
 		schema: testSchema,
 		migrations: [createMigration<{}>(testSchema)],
 		namespace: 'test' + Math.random().toFixed(10).slice(2),
+		EXPERIMENTAL_weakRefs: true,
 	}).open();
 	return storage as Promise<ClientWithCollections>;
 }

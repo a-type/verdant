@@ -11,7 +11,6 @@ import {
 } from '@verdant-web/common';
 import { Entity, refreshEntity, StoreTools } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
-import { WeakRef } from './FakeWeakRef.js';
 import { Context } from '../context.js';
 import { TaggedOperation } from '../types.js';
 import { Resolvable } from '../utils/Resolvable.js';
@@ -76,6 +75,10 @@ export class DocumentFamilyCache extends EventSubscriber<
 			now: store.meta.now,
 		};
 		this.context = context;
+	}
+
+	get weakRef() {
+		return this.context.weakRef;
 	}
 
 	insertLocalOperations = (operations: Operation[]) => {
@@ -335,7 +338,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			});
 
 			// immediately add to cache and queue a removal if nobody subscribed
-			this.entities.set(oid, new WeakRef(entity));
+			this.entities.set(oid, this.context.weakRef(entity));
 		}
 
 		return entity as any;

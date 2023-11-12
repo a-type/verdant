@@ -58,7 +58,6 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		migrations: [createDefaultMigration(defaultSchema)],
 		user: 'a',
 		indexedDb: new IDBFactory(),
-		logId: 'a',
 	};
 	const client = await createTestClient(baseClientOptions);
 

@@ -14,7 +14,7 @@ let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
 	: never;
 beforeAll(async () => {
-	server = await startTestServer({ log: true, disableRebasing: true });
+	server = await startTestServer({ log: false, disableRebasing: true });
 });
 
 afterAll(() => {
@@ -46,7 +46,6 @@ it('the server allows retrieving a document snapshot', async () => {
 		server,
 		library,
 		user: 'User B',
-		logId: 'B',
 	});
 
 	// seed data into library

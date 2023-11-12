@@ -10,7 +10,7 @@ import {
 import * as fs from 'fs';
 
 const context = createTestContext({
-	serverLog: true,
+	// serverLog: true,
 });
 
 afterAll(() => {
@@ -18,7 +18,7 @@ afterAll(() => {
 	try {
 		fs.rmdirSync('./test-files', { recursive: true });
 	} catch (e) {
-		console.log(e);
+		// console.log(e);
 	}
 });
 
@@ -31,14 +31,14 @@ it(
 		const clientA = await context.createTestClient({
 			library: 'file-sync-1',
 			user: 'User A',
-			logId: 'A',
+			// logId: 'A',
 		});
 		clientA.sync.start();
 
 		const clientB = await context.createTestClient({
 			library: 'file-sync-1',
 			user: 'User B',
-			logId: 'B',
+			// logId: 'B',
 		});
 		clientB.sync.start();
 
@@ -49,14 +49,14 @@ it(
 
 		const b_itemQuery = clientB.items.get(a_item.get('id'));
 		await waitForQueryResult(b_itemQuery);
-		console.log(`⭐️ item ${a_item.get('id')} synced to B`);
+		context.log(`⭐️ item ${a_item.get('id')} synced to B`);
 		const b_item = await b_itemQuery.resolved;
 		assert(!!b_item);
 		await waitForEntityCondition(b_item, () => !!b_item.get('image'));
-		console.log('⭐️ image synced to B');
+		context.log('⭐️ image synced to B');
 		const file = b_item.get('image')!;
 		await waitForCondition(() => !file.loading);
-		console.log('⭐️ image loaded');
+		context.log('⭐️ image loaded');
 		expect(file.failed).toBe(false);
 		expect(file.url).toBeTruthy();
 
@@ -64,12 +64,12 @@ it(
 		// this isn't the same as the original file, but it's good enough to know
 		// something was delivered...
 		const response = await fetch(file.url!);
-		console.log('⭐️ image fetched');
+		context.log('⭐️ image fetched');
 		const blob = await response.blob();
 		const text = await blob.text();
-		console.log(`⭐️ image blob: ${text}`);
+		context.log(`⭐️ image blob: ${text}`);
 		if (blob.size !== 13) {
-			context.log('⚠️ Unexpected blob', blob.size, text);
+			console.error('⚠️ Unexpected blob', blob.size, text);
 		}
 		expect(blob.size).toBe(13);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
