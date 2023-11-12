@@ -6,6 +6,7 @@ import {
 	decomposeOid,
 	EventSubscriber,
 	FileData,
+	FileRef,
 	isFileRef,
 	isObjectRef,
 	maybeGetOid,
@@ -103,10 +104,11 @@ type EntityEvents = {
 type BaseEntityValue = { [Key: string]: any } | any[];
 
 export class Entity<
-	Init = any,
-	KeyValue extends BaseEntityValue = any,
-	Snapshot extends any = DataFromInit<Init>,
-> implements
+		Init = any,
+		KeyValue extends BaseEntityValue = any,
+		Snapshot extends any = DataFromInit<Init>,
+	>
+	implements
 		ObjectEntity<Init, KeyValue, Snapshot>,
 		ListEntity<Init, KeyValue, Snapshot>
 {
@@ -120,6 +122,7 @@ export class Entity<
 	protected readonly cache: CacheTools;
 	protected _deleted = false;
 	protected parent: WeakRef<Entity<any, any>> | undefined;
+	protected readonly readonlyKeys: (keyof Init)[];
 
 	private cachedSnapshot: any = null;
 	private cachedDestructure: KeyValue | null = null;
@@ -205,6 +208,7 @@ export class Entity<
 		cache,
 		parent,
 		onAllUnsubscribed,
+		readonlyKeys = [],
 	}: {
 		oid: ObjectIdentifier;
 		store: StoreTools;
@@ -212,6 +216,7 @@ export class Entity<
 		cache: CacheTools;
 		parent?: Entity<any, any>;
 		onAllUnsubscribed?: () => void;
+		readonlyKeys?: (keyof Init)[];
 	}) {
 		this.oid = oid;
 		const { collection } = decomposeOid(oid);
@@ -219,6 +224,7 @@ export class Entity<
 		this.parent = parent && new WeakRef(parent);
 		this.store = store;
 		this.fieldSchema = fieldSchema;
+		this.readonlyKeys = readonlyKeys;
 		this.cache = cache;
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
@@ -402,6 +408,17 @@ export class Entity<
 		return result;
 	};
 
+	private getFileSnapshot(item: FileRef) {
+		const file = this.store.getFile(item.id);
+		if (file.url) {
+			return { id: item.id, url: file.url };
+		} else if (file.loading || file.failed) {
+			return { id: item.id, url: undefined };
+		} else {
+			return { id: item.id, url: null };
+		}
+	}
+
 	/**
 	 * Returns a copy of the entity and all sub-objects as
 	 * a plain object or array.
@@ -421,6 +438,8 @@ export class Entity<
 			snapshot = this.value.map((item, idx) => {
 				if (isObjectRef(item)) {
 					return this.getSubObject(item.id, idx)?.getSnapshot();
+				} else if (isFileRef(item)) {
+					return this.getFileSnapshot(item);
 				}
 				return item;
 			}) as Snapshot;
@@ -429,6 +448,8 @@ export class Entity<
 			for (const [key, value] of Object.entries(snapshot)) {
 				if (isObjectRef(value)) {
 					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
+				} else if (isFileRef(value)) {
+					snapshot[key] = this.getFileSnapshot(value);
 				}
 			}
 		}
@@ -451,6 +472,9 @@ export class Entity<
 		return Object.values(this.getAll());
 	};
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
+		if (this.readonlyKeys.includes(key)) {
+			throw new Error(`Cannot set readonly key ${key.toString()}`);
+		}
 		this.addPatches(
 			this.store.patchCreator.createSet(
 				this.oid,
@@ -480,6 +504,9 @@ export class Entity<
 		}
 	};
 	private getDeleteMode = (key: any) => {
+		if (this.readonlyKeys.includes(key)) {
+			return false;
+		}
 		// 'any' is always deletable, and map values can be removed completely
 		if (this.fieldSchema.type === 'any' || this.fieldSchema.type === 'map') {
 			return 'delete';
@@ -532,6 +559,9 @@ export class Entity<
 			);
 		}
 		for (const [key, field] of Object.entries(value)) {
+			if (this.readonlyKeys.includes(key as any)) {
+				throw new Error(`Cannot set readonly key ${key.toString()}`);
+			}
 			const fieldSchema = this.getChildFieldSchema(key);
 			if (fieldSchema) {
 				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
@@ -718,6 +748,10 @@ export class Entity<
 	find = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
 		return this.getAsWrapped().find(predicate);
 	};
+
+	includes = (item: ListItemValue<KeyValue>) => {
+		return this.has(item);
+	};
 }
 
 export interface BaseEntity<
@@ -786,6 +820,7 @@ export interface ListEntity<
 	find(
 		predicate: (value: ListItemValue<Value>) => boolean,
 	): ListItemValue<Value> | undefined;
+	includes(value: ListItemValue<Value>): boolean;
 }
 
 export type AnyEntity<

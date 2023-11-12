@@ -8,6 +8,24 @@ export function isNullable(field: StorageFieldSchema) {
 	return field.nullable;
 }
 
+export function hasDefault(field: StorageFieldSchema | undefined) {
+	if (!field) return false;
+	if (field.type === 'map') return true;
+	if (field.type === 'array') return true;
+	if (field.type === 'file') return false;
+	if (field.type === 'object') return true;
+	return field.default !== undefined;
+}
+
+export function isIndexed(field: StorageFieldSchema) {
+	if (field.type === 'map') return false;
+	if (field.type === 'object') return false;
+	if (field.type === 'array') return false;
+	if (field.type === 'file') return false;
+	if (field.type === 'any') return false;
+	return field.indexed;
+}
+
 export function addFieldDefaults(
 	collection: StorageCollectionSchema,
 	value: any,

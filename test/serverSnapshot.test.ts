@@ -62,10 +62,6 @@ it('the server allows retrieving a document snapshot', async () => {
 		content: 'Apples',
 		image: createTestFile(),
 	});
-	const b_oranges = await clientB.items.put({
-		categoryId: a_produceCategory.get('id'),
-		content: 'Oranges',
-	});
 
 	// we want these in separate batches just for extra testing
 	clientA

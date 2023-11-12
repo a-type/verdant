@@ -7,14 +7,12 @@ export * from './types/filters.js';
 export * from './types/shapes.js';
 export * from './types/synthetics.js';
 
-export interface StorageInit<Schemas extends StorageCollectionSchema> {
-	collections: Record<string, Schemas>;
-}
-
 export type StorageSchema<
 	Collections extends {
 		[k: string]: StorageCollectionSchema;
-	} = any,
+	} = {
+		[k: string]: StorageCollectionSchema;
+	},
 > = { version: number; wip?: true; collections: Collections };
 
 export type SchemaCollectionName<Schema extends StorageSchema<any>> =

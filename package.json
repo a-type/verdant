@@ -16,12 +16,13 @@
 		"ci:version": "pnpm changeset version",
 		"ci:publish": "pnpm changeset publish --access=public",
 		"link": "pnpm link --global",
-		"benchmark": "pnpm run --filter @verdant-web/test benchmark"
+		"benchmark": "pnpm run --filter @verdant-web/test benchmark",
+		"typecheck": "turbo run typecheck"
 	},
 	"repository": "https://github.com/a-type/verdant",
 	"author": "Grant Forrest <gaforres@gmail.com>",
 	"devDependencies": {
-		"@changesets/cli": "^2.25.0",
+		"@changesets/cli": "^2.26.2",
 		"@types/node": "16.11.7",
 		"turbo": "^1.9.1",
 		"typescript": "^4.7.4",

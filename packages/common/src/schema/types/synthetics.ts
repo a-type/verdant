@@ -1,4 +1,10 @@
-import { StorageFieldsSchema } from './fields.js';
+import {
+	StorageBooleanFieldSchema,
+	StorageFieldSchema,
+	StorageFieldsSchema,
+	StorageNumberFieldSchema,
+	StorageStringFieldSchema,
+} from './fields.js';
 import { ShapeFromFields } from './shapes.js';
 
 export type StorageStringSyntheticSchema<Fields extends StorageFieldsSchema> = {
@@ -32,6 +38,23 @@ export type StorageBooleanArraySyntheticSchema<
 	type: 'boolean[]';
 	compute: (value: ShapeFromFields<Fields>) => boolean[];
 };
+export type StorageDirectSyntheticSchema<Fields extends StorageFieldsSchema> = {
+	field: DirectIndexableFieldName<Fields>;
+};
+
+type DirectIndexableFields<Fields extends StorageFieldsSchema> = {
+	[K in keyof Fields as Fields[K] extends StorageStringFieldSchema
+		? K
+		: Fields[K] extends StorageNumberFieldSchema
+		? K
+		: Fields[K] extends StorageBooleanFieldSchema
+		? K
+		: never]: any;
+};
+export type DirectIndexableFieldName<Fields extends StorageFieldsSchema> =
+	keyof DirectIndexableFields<Fields> extends never
+		? string
+		: keyof DirectIndexableFields<Fields>;
 
 export type StorageSyntheticIndices<Fields extends StorageFieldsSchema> =
 	Record<string, StorageSyntheticIndexSchema<Fields>>;
@@ -42,4 +65,10 @@ export type StorageSyntheticIndexSchema<Fields extends StorageFieldsSchema> =
 	| StorageBooleanSyntheticSchema<Fields>
 	| StorageStringArraySyntheticSchema<Fields>
 	| StorageNumberArraySyntheticSchema<Fields>
-	| StorageBooleanArraySyntheticSchema<Fields>;
+	| StorageBooleanArraySyntheticSchema<Fields>
+	| StorageDirectSyntheticSchema<Fields>;
+
+export type IndexValueTag = Exclude<
+	StorageSyntheticIndexSchema<any>,
+	StorageDirectSyntheticSchema<any>
+>['type'];

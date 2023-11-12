@@ -13,18 +13,19 @@ import { startTestServer } from './lib/testServer.js';
 import { IDBFactory } from 'fake-indexeddb';
 import { waitForCondition } from './lib/waits.js';
 
+const fuzzCollectionSchema = collection({
+	name: 'fuzz',
+	fields: {
+		id: { type: 'string' },
+		data: { type: 'any' },
+	},
+	primaryKey: 'id',
+});
+
 const fuzzSchema = schema({
 	version: 1,
 	collections: {
-		fuzz: collection({
-			name: 'fuzz',
-			pluralName: 'fuzz',
-			primaryKey: 'id',
-			fields: {
-				id: { type: 'string' },
-				data: { type: 'any' },
-			},
-		}),
+		fuzz: fuzzCollectionSchema,
 	},
 });
 

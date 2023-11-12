@@ -1,11 +1,13 @@
 export type StorageStringFieldSchema = {
 	type: 'string';
+	/** @deprecated - add an index to indexes with this field name. */
 	indexed?: boolean;
 	nullable?: boolean;
 	default?: string | (() => string);
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';
+	/** @deprecated - add an index to indexes with this field name. */
 	indexed?: boolean;
 	nullable?: boolean;
 	default?: number | (() => number);
@@ -14,6 +16,7 @@ export type StorageBooleanFieldSchema = {
 	type: 'boolean';
 	nullable?: boolean;
 	default?: boolean | (() => boolean);
+	/** @deprecated - add an index to indexes with this field name. */
 	indexed?: boolean;
 };
 export type StorageArrayFieldSchema = {
@@ -66,18 +69,25 @@ export type NestedStorageNumberFieldSchema = {
 	nullable?: boolean;
 	default?: number | (() => number);
 };
+export type NestedStorageBooleanFieldSchema = {
+	type: 'boolean';
+	nullable?: boolean;
+	default: boolean | (() => boolean);
+};
 
 export type NestedStorageFieldSchema =
 	| NestedStorageStringFieldSchema
 	| NestedStorageNumberFieldSchema
-	| StorageBooleanFieldSchema
+	| NestedStorageBooleanFieldSchema
 	| StorageArrayFieldSchema
 	| StorageObjectFieldSchema
 	| StorageAnyFieldSchema
 	| StorageMapFieldSchema<any>
 	| StorageFileFieldSchema;
 
-export type StorageFieldsSchema = Record<string, StorageFieldSchema>;
+export type StorageFieldsSchema = {
+	[key: string]: StorageFieldSchema;
+};
 
 export type NestedStorageFieldsSchema = Record<
 	string,

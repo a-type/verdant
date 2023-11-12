@@ -65,13 +65,17 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
  * Storage creation promise and exposes some metadata which can
  * be useful immediately.
  */
-export class ClientDescriptor<Presence = any, Profile = any> {
-	private readonly _readyPromise: Promise<Client>;
+export class ClientDescriptor<
+	Presence = any,
+	Profile = any,
+	ClientImpl extends Client = Client,
+> {
+	private readonly _readyPromise: Promise<ClientImpl>;
 	// assertions because these are defined by plucking them from
 	// Promise initializer
-	private resolveReady!: (storage: Client) => void;
+	private resolveReady!: (storage: ClientImpl) => void;
 	private rejectReady!: (err: Error) => void;
-	private _resolvedValue: Client | undefined;
+	private _resolvedValue: ClientImpl | undefined;
 	private _initializing = false;
 	private _namespace: string;
 
@@ -103,7 +107,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 		}
 		this._initializing = true;
 		try {
-			let storage: Client;
+			let storage: ClientImpl;
 			if (init.schema.wip) {
 				storage = await this.initializeWIPDatabases(init);
 			} else {
@@ -166,7 +170,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 			{
 				meta,
 			},
-		);
+		) as ClientImpl;
 
 		return storage;
 	};
@@ -221,7 +225,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
 			{
 				meta,
 			},
-		);
+		) as ClientImpl;
 
 		return storage;
 	};

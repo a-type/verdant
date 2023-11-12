@@ -48,15 +48,19 @@ export interface SyncTransport {
 	readonly status: 'active' | 'paused';
 }
 
-export interface Sync extends SyncTransport {
+export interface Sync<Presence = any, Profile = any> extends SyncTransport {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
 	uploadFile(data: FileData): Promise<FileUploadResult>;
 	getFile(fileId: string): Promise<FilePullResult>;
+	readonly presence: PresenceManager<Profile, Presence>;
 }
 
-export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
+export class NoSync<Presence = any, Profile = any>
+	extends EventSubscriber<SyncEvents>
+	implements Sync<Presence, Profile>
+{
 	readonly mode = 'pull';
 
 	public send(): void {}
@@ -76,9 +80,9 @@ export class NoSync extends EventSubscriber<SyncEvents> implements Sync {
 	public readonly status = 'paused';
 	public readonly pullInterval = 0;
 
-	public readonly presence = new PresenceManager({
-		initialPresence: {},
-		defaultProfile: {},
+	public readonly presence = new PresenceManager<Profile, Presence>({
+		initialPresence: {} as any,
+		defaultProfile: {} as any,
 	});
 
 	uploadFile = async () => {
@@ -152,11 +156,11 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	useBroadcastChannel?: boolean;
 }
 
-export class ServerSync<Profile = any, Presence = any>
+export class ServerSync<Presence = any, Profile = any>
 	extends EventSubscriber<
 		SyncEvents & { syncingChange: (syncing: boolean) => void }
 	>
-	implements Sync
+	implements Sync<Presence, Profile>
 {
 	private webSocketSync: WebSocketSync;
 	private pushPullSync: PushPullSync;
@@ -173,7 +177,7 @@ export class ServerSync<Profile = any, Presence = any>
 
 	private meta: Metadata;
 
-	readonly presence;
+	readonly presence: PresenceManager<Profile, Presence>;
 
 	private log;
 
@@ -208,7 +212,7 @@ export class ServerSync<Profile = any, Presence = any>
 		this.meta = meta;
 		this.onData = onData;
 		this.log = log || (() => {});
-		this.presence = new PresenceManager<Profile, Presence>({
+		this.presence = new PresenceManager({
 			initialPresence,
 			defaultProfile,
 			updateBatchTimeout: presenceUpdateBatchTimeout,

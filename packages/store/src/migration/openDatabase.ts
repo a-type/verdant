@@ -13,6 +13,7 @@ import {
 	createOid,
 	decomposeOid,
 	diffToPatches,
+	getIndexValues,
 	getOidRoot,
 	hasOid,
 	initialToPatches,
@@ -219,7 +220,7 @@ async function runMigrations({
 		for (const migration of toRun) {
 			// special case: if this is the version 1 migration, we have no pre-existing database
 			// to use for the migration.
-			let engine: MigrationEngine<any, any>;
+			let engine: MigrationEngine;
 			// migrations from 0 (i.e. initial migrations) don't attempt to open an existing db
 			if (migration.oldSchema.version === 0) {
 				engine = getInitialMigrationEngine({
@@ -379,12 +380,10 @@ async function runMigrations({
 					.filter((s): s is [string, any] => !!s)
 					.map(([oid, snapshot]) => {
 						if (!snapshot) return [oid, undefined];
-						const view = assignIndexValues(
+						const view = getIndexValues(
 							migration.newSchema.collections[collection],
 							snapshot,
 						);
-						// TODO: remove the need for this by only storing index values!
-						assignOidPropertiesToAllSubObjects(view);
 						return [oid, view];
 					});
 
@@ -397,7 +396,10 @@ async function runMigrations({
 				await Promise.all(
 					views.map(([oid, view]) => {
 						if (view) {
-							return putView(writeStore, view);
+							return putView(writeStore, view).catch((err) => {
+								view;
+								throw err;
+							});
 						} else {
 							const { id } = decomposeOid(oid);
 							return deleteView(writeStore, id);
@@ -488,7 +490,6 @@ function getMigrationQueries({
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: meta.time.now(migration.oldSchema.version),
 				});
-				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findOne: async (filter: CollectionFilter) => {
@@ -502,7 +503,6 @@ function getMigrationQueries({
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: meta.time.now(migration.oldSchema.version),
 				});
-				// removeOidsFromAllSubObjects(doc);
 				return doc;
 			},
 			findAll: async (filter: CollectionFilter) => {
@@ -519,7 +519,6 @@ function getMigrationQueries({
 						}),
 					),
 				);
-				// docs.forEach((doc) => removeOidsFromAllSubObjects(doc));
 				return docs;
 			},
 		};
@@ -536,7 +535,7 @@ function getMigrationEngine({
 	migration: Migration;
 	meta: Metadata;
 	context: Context;
-}): MigrationEngine<any, any> {
+}): MigrationEngine {
 	function getMigrationNow() {
 		return meta.time.zero(migration.version);
 	}
@@ -555,7 +554,7 @@ function getMigrationEngine({
 		meta,
 	});
 	const awaitables = new Array<Promise<any>>();
-	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
 		migrate: async (collection, strategy) => {
@@ -568,15 +567,6 @@ function getMigrationEngine({
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
 					const original = cloneDeep(doc);
-					// remove any indexes before computing the diff
-					// const collectionSpec = migration.oldSchema.collections[collection];
-					// const indexKeys = [
-					// 	...Object.keys(collectionSpec.synthetics || {}),
-					// 	...Object.keys(collectionSpec.compounds || {}),
-					// ];
-					// indexKeys.forEach((key) => {
-					// 	delete doc[key];
-					// });
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
 					if (newValue) {
@@ -618,7 +608,7 @@ function getInitialMigrationEngine({
 	context: OpenDocumentDbContext;
 	migration: Migration;
 	meta: Metadata;
-}): MigrationEngine<any, any> {
+}): MigrationEngine {
 	function getMigrationNow() {
 		return meta.time.zero(migration.version);
 	}
@@ -639,7 +629,7 @@ function getInitialMigrationEngine({
 		newOids,
 		meta,
 	});
-	const engine: MigrationEngine<StorageSchema, StorageSchema> = {
+	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
 		migrate: () => {

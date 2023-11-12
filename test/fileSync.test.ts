@@ -68,6 +68,9 @@ it(
 		const blob = await response.blob();
 		const text = await blob.text();
 		console.log(`⭐️ image blob: ${text}`);
+		if (blob.size !== 13) {
+			context.log('⚠️ Unexpected blob', blob.size, text);
+		}
 		expect(blob.size).toBe(13);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
 		// basically the file isn't encoded into the form data correctly.

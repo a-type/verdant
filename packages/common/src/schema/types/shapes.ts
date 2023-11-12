@@ -1,25 +1,24 @@
-import {
-	StorageCollectionSchema,
-	StoragePropertySchema,
-} from './collection.js';
+import { StorageCollectionSchema } from './collection.js';
 import {
 	NestedStorageFieldsSchema,
 	StorageArrayFieldSchema,
+	StorageFieldSchema,
 	StorageFieldsSchema,
 	StorageMapFieldSchema,
 	StorageObjectFieldSchema,
 } from './fields.js';
 
-type StoragePropertyIsNullable<T extends StoragePropertySchema<any>> =
-	T extends { nullable?: boolean }
-		? T['nullable'] extends boolean
-			? true
-			: false
-		: T['type'] extends 'any'
+type StoragePropertyIsNullable<T extends StorageFieldSchema> = T extends {
+	nullable?: boolean;
+}
+	? T['nullable'] extends boolean
 		? true
-		: false;
+		: false
+	: T['type'] extends 'any'
+	? true
+	: false;
 
-export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
+export type BaseShapeFromProperty<T extends StorageFieldSchema> =
 	T['type'] extends 'string'
 		? string
 		: T['type'] extends 'number'
@@ -38,7 +37,7 @@ export type BaseShapeFromProperty<T extends StoragePropertySchema<any>> =
 		? File
 		: never;
 
-export type ShapeFromProperty<T extends StoragePropertySchema<any>> =
+export type ShapeFromProperty<T extends StorageFieldSchema> =
 	StoragePropertyIsNullable<T> extends true
 		? BaseShapeFromProperty<T> | null
 		: BaseShapeFromProperty<T>;
@@ -53,7 +52,7 @@ export type StorageDocument<
 	Collection extends StorageCollectionSchema<any, any, any>,
 > = ShapeFromFields<Collection['fields']>;
 
-type StoragePropertyIsOptional<T extends StoragePropertySchema<any>> =
+type StoragePropertyIsOptional<T extends StorageFieldSchema> =
 	StoragePropertyIsNullable<T> extends true
 		? true
 		: T extends { default?: any }

@@ -34,7 +34,7 @@ export type ClientWithCollections = Client & {
 	[key: string]: CollectionQueries<any, any, any>;
 };
 
-export class Client extends EventSubscriber<{
+export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	/**
 	 * Called when a change from a future version of the application has
 	 * been witnessed. These changes are not applied but it indicates
@@ -54,7 +54,7 @@ export class Client extends EventSubscriber<{
 
 	readonly collectionNames: string[];
 
-	private _sync!: Sync;
+	private _sync!: Sync<Presence, Profile>;
 
 	get sync() {
 		return this._sync;
@@ -78,12 +78,12 @@ export class Client extends EventSubscriber<{
 		this.collectionNames = Object.keys(context.schema.collections);
 		this._sync =
 			this.config.syncConfig && !context.schema.wip
-				? new ServerSync(this.config.syncConfig, {
+				? new ServerSync<Presence, Profile>(this.config.syncConfig, {
 						meta: this.meta,
 						onData: this.addData,
 						log: this.context.log,
 				  })
-				: new NoSync();
+				: new NoSync<Presence, Profile>();
 		if (context.schema.wip && this.config.syncConfig) {
 			context.log(
 				'warn',
@@ -142,13 +142,7 @@ export class Client extends EventSubscriber<{
 		for (const [name, _collection] of Object.entries(
 			context.schema.collections,
 		)) {
-			const collection = _collection as SchemaCollection<any, any>;
-			const collectionName = collection.pluralName ?? collection.name + 's';
-			// TODO: untangle this requirement
-			assert(
-				collectionName === name,
-				`The key of the collection in the schema must be the plural of the name (expected: "${collectionName}")`,
-			);
+			const collectionName = name;
 			(this as any)[collectionName] = new CollectionQueries({
 				collection: collectionName,
 				cache: this._queryCache,

@@ -1,7 +1,7 @@
 import { schema, collection } from '@verdant-web/store';
 import cuid from 'cuid';
 
-const item = collection({
+const items = collection({
 	name: 'item',
 	primaryKey: 'id',
 	fields: {
@@ -30,10 +30,9 @@ const item = collection({
 	},
 });
 
-const category = collection({
+const categories = collection({
 	name: 'category',
 	primaryKey: 'id',
-	pluralName: 'categories',
 	fields: {
 		id: {
 			type: 'string',
@@ -47,5 +46,5 @@ const category = collection({
 
 export default schema({
 	version: 1,
-	collections: { item, category },
+	collections: { items, categories },
 });

@@ -9,6 +9,7 @@ import {
 	DocumentBaseline,
 	EventSubscriber,
 	generateId,
+	getIndexValues,
 	getOidRoot,
 	getUndoOperations,
 	groupBaselinesByRootOid,
@@ -18,6 +19,7 @@ import {
 	Operation,
 	removeOidsFromAllSubObjects,
 	StorageCollectionSchema,
+	StorageObjectFieldSchema,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
@@ -98,16 +100,22 @@ export class EntityStore {
 		this.context = context;
 	};
 
-	private getDocumentSchema = (oid: ObjectIdentifier) => {
+	private getDocumentSchema = (
+		oid: ObjectIdentifier,
+	): { schema: StorageObjectFieldSchema | null; readonlyKeys: string[] } => {
 		const { collection } = decomposeOid(oid);
 		if (!this.schema.collections[collection]) {
 			this.log('warn', `Missing schema for collection: ${collection}`);
-			return null;
+			return { schema: null, readonlyKeys: [] };
 		}
+		const schema = this.schema.collections[collection];
 		return {
-			type: 'object',
-			properties: this.schema.collections[collection].fields as any,
-		} as const;
+			readonlyKeys: [schema.primaryKey],
+			schema: {
+				type: 'object',
+				properties: schema.fields as any,
+			} as const,
+		};
 	};
 
 	private refreshFamilyCache = async (
@@ -219,10 +227,10 @@ export class EntityStore {
 
 		const snapshot = entity?.getSnapshot();
 		if (snapshot) {
-			const stored = cloneDeep(snapshot);
-			assignIndexValues(this.schema.collections[collection], stored);
-			// IMPORTANT! this property must be assigned
-			assignOidPropertiesToAllSubObjects(stored);
+			const stored = getIndexValues(
+				this.schema.collections[collection],
+				snapshot,
+			);
 			try {
 				const tx = this.db.transaction(collection, 'readwrite');
 				const store = tx.objectStore(collection);
@@ -248,11 +256,11 @@ export class EntityStore {
 
 	get = async (oid: ObjectIdentifier) => {
 		const familyCache = await this.openFamilyCache(oid);
-		const schema = this.getDocumentSchema(oid);
+		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
 		if (!schema) {
 			return null;
 		}
-		return familyCache.getEntity(oid, schema);
+		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
 	};
 
 	/**
@@ -263,11 +271,11 @@ export class EntityStore {
 	getCached = (oid: ObjectIdentifier) => {
 		const cache = this.documentFamilyCaches.get(oid);
 		if (cache) {
-			const schema = this.getDocumentSchema(oid);
+			const { schema, readonlyKeys } = this.getDocumentSchema(oid);
 			if (!schema) {
 				return null;
 			}
-			return cache.getEntity(oid, schema);
+			return cache.getEntity(oid, schema, undefined, readonlyKeys);
 		}
 		return null;
 	};
@@ -295,7 +303,7 @@ export class EntityStore {
 		// only holding it in memory would introduce lag before it shows up
 		// in other queries.
 		await this.submitOperations(operations, options);
-		const schema = this.getDocumentSchema(oid);
+		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
 		if (!schema) {
 			throw new Error(
 				`Cannot create a document in the ${
@@ -303,7 +311,7 @@ export class EntityStore {
 				} collection; it is not defined in the current schema version.`,
 			);
 		}
-		return familyCache.getEntity(oid, schema);
+		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
 	};
 
 	private addOperationsToOpenCaches = async (

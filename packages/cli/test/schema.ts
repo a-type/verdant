@@ -1,4 +1,4 @@
-import { collection, schema } from '@verdant-web/common';
+import { collection, schema } from '@verdant-web/store';
 
 export const todo = collection({
 	name: 'todo',
@@ -10,7 +10,7 @@ export const todo = collection({
 		},
 		content: {
 			type: 'string',
-			indexed: true,
+			default: '',
 		},
 		done: {
 			type: 'boolean',
@@ -41,10 +41,13 @@ export const todo = collection({
 			},
 		},
 	},
-	synthetics: {
+	indexes: {
 		example: {
 			type: 'string',
 			compute: (doc) => doc.content,
+		},
+		content: {
+			field: 'content',
 		},
 	},
 	compounds: {
@@ -59,7 +62,6 @@ export const todo = collection({
 
 export const person = collection({
 	name: 'person',
-	pluralName: 'people',
 	primaryKey: 'id',
 	fields: {
 		id: {
@@ -98,7 +100,7 @@ export const post = collection({
 });
 
 export default schema({
-	version: 2,
+	version: 1,
 	collections: {
 		todos: todo,
 		people: person,

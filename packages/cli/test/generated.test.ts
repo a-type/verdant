@@ -1,23 +1,42 @@
-import {
-	ClientDescriptor,
-	createDefaultMigration,
-} from './.generated/index.js';
-import schema from './schema.js';
+import { ClientDescriptor } from './.generated/index.js';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './.generated/react.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
 		namespace: 'test',
-		migrations: [createDefaultMigration(schema)],
+		indexedDb: new IDBFactory(),
+		sync: {
+			defaultProfile: { foo: 'bar' },
+			initialPresence: { baz: 1 },
+			authEndpoint: 'http://localhost:3000/auth',
+			autoStart: false,
+		},
 	});
 
 	return desc.open();
 }
 
+async function readFile(file: string) {
+	return fs.readFile(path.join(__dirname, file), 'utf8');
+}
+
 describe('generated client', () => {
 	it('should expose model accessors which produce usable models', async () => {
 		const client = await makeClient();
+
+		client.sync.presence.update({
+			baz: 3,
+		});
+		client.sync.presence.update({
+			// @ts-expect-error
+			nonce: 3,
+		});
+		client.sync.presence.self.profile.foo;
+		// @ts-expect-error
+		client.sync.presence.self.profile.nonce;
 
 		const item = await client.todos.put({
 			attachments: [],
@@ -46,6 +65,16 @@ describe('generated client', () => {
 		expect(item.get('attachments').getSnapshot()).toEqual([
 			{ name: 'new', test: 1 },
 		]);
+	});
+	it('should produce consistent output code', async () => {
+		expect(await readFile('.generated/client.js')).toMatchSnapshot();
+		expect(await readFile('.generated/client.d.ts')).toMatchSnapshot();
+		expect(await readFile('.generated/index.ts')).toMatchSnapshot();
+		expect(await readFile('.generated/schemaVersions/v1.js')).toMatchSnapshot();
+		expect(
+			await readFile('.generated/schemaVersions/v1.d.ts'),
+		).toMatchSnapshot();
+		expect(await readFile('.generated/meta.json')).toMatchSnapshot();
 	});
 });
 
@@ -86,5 +115,10 @@ describe('generated react hooks', () => {
 		// 	index: { where: 'content', equals: '' },
 		// 	skip: false,
 		// });
+	});
+
+	it('should produce consistent output code', async () => {
+		expect(await readFile('.generated/react.js')).toMatchSnapshot();
+		expect(await readFile('.generated/react.d.ts')).toMatchSnapshot();
 	});
 });

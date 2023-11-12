@@ -7,6 +7,7 @@ import {
 	createDefaultMigration,
 	migrate,
 	ClientWithCollections,
+	createMigration,
 } from '@verdant-web/store';
 import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
@@ -295,11 +296,11 @@ it(
 		});
 
 		migrations.push(
-			migrate(v2Schema, v3Schema, async ({ migrate }) => {
+			createMigration(v2Schema, v3Schema, async ({ migrate }) => {
 				await migrate('items', ({ tags, ...rest }) => {
 					return {
 						...rest,
-						tags: tags.map((tag) => ({
+						tags: tags.map((tag: any) => ({
 							name: tag,
 							color: 'red',
 						})),
@@ -404,30 +405,34 @@ it(
 		});
 
 		migrations.push(
-			migrate(v3Schema, v4Schema, async ({ migrate, queries, mutations }) => {
-				await migrate('lists', async (old) => {
-					const items = await queries.items.findAll({
-						where: 'listId',
-						equals: old.id,
+			createMigration(
+				v3Schema,
+				v4Schema,
+				async ({ migrate, queries, mutations }) => {
+					await migrate('lists', async (old) => {
+						const items = await queries.items.findAll({
+							where: 'listId',
+							equals: old.id,
+						});
+						return {
+							...old,
+							items,
+						};
 					});
-					return {
-						...old,
-						items,
-					};
-				});
 
-				// we have to create a list for non-assigned items and assign them
-				// so they're not lost!
-				// FIXME: allow querying directly for listId=null
-				const unassignedItems = (await queries.items.findAll()).filter(
-					(item) => !item.listId,
-				);
-				await mutations.lists.put({
-					id: 'uncategorized',
-					name: 'Uncategorized',
-					items: unassignedItems,
-				});
-			}),
+					// we have to create a list for non-assigned items and assign them
+					// so they're not lost!
+					// FIXME: allow querying directly for listId=null
+					const unassignedItems = (await queries.items.findAll()).filter(
+						(item) => !item.listId,
+					);
+					await mutations.lists.put({
+						id: 'uncategorized',
+						name: 'Uncategorized',
+						items: unassignedItems,
+					});
+				},
+			),
 		);
 
 		client = await createTestClient({
@@ -535,15 +540,7 @@ it(
 			},
 		});
 
-		migrations.push(
-			migrate(
-				v4Schema,
-				v5Schema,
-				async ({ migrate, queries, mutations, withDefaults }) => {
-					await migrate('lists', (old) => withDefaults('lists', old));
-				},
-			),
-		);
+		migrations.push(createMigration(v4Schema, v5Schema));
 
 		client = await createTestClient({
 			schema: v5Schema,
@@ -796,7 +793,7 @@ it('supports skip migrations in real life', async () => {
 	 * ⭐ The skip migration
 	 */
 	migrations.push(
-		migrate(v1Schema, v4Schema, async ({ mutations, queries }) => {
+		createMigration(v1Schema, v4Schema, async ({ mutations, queries }) => {
 			const items = await queries.items.findAll();
 			await mutations.lists.put({
 				id: 'uncategorized',
@@ -805,7 +802,7 @@ it('supports skip migrations in real life', async () => {
 					contents: i.contents || 'empty',
 					id: i.id,
 					listId: null,
-					tags: i.tags.map((t) => ({
+					tags: i.tags.map((t: any) => ({
 						name: t,
 						color: 'red',
 					})),

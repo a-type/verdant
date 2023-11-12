@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<title>Verdant Vanilla</title>
@@ -30,15 +30,13 @@
 							value: {
 								type: 'number',
 								default: 0,
-							}
-						}
-					}
-				}
+							},
+						},
+					},
+				},
 			};
 
-			const migrations = [
-				Verdant.migrate(schema, () => {}),
-			];
+			const migrations = [Verdant.createMigration(schema)];
 
 			const clientDescriptor = new Verdant.ClientDescriptor({
 				namespace: 'vanilla',
@@ -47,10 +45,10 @@
 			});
 
 			/**
-				* This custom Counter element uses the supplied "id" attribute
-				* to create or get a counter, and supplies a UI to manipulate
-				* it.
-				*/
+			 * This custom Counter element uses the supplied "id" attribute
+			 * to create or get a counter, and supplies a UI to manipulate
+			 * it.
+			 */
 			customElements.define(
 				'x-counter',
 				class Counter extends HTMLElement {
@@ -94,12 +92,16 @@
 
 					connectedCallback() {
 						// bind the buttons to the increment and decrement methods
-						this.shadowRoot.getElementById('increment').addEventListener('click', () => {
-							this.increment();
-						});
-						this.shadowRoot.getElementById('decrement').addEventListener('click', () => {
-							this.decrement();
-						});
+						this.shadowRoot
+							.getElementById('increment')
+							.addEventListener('click', () => {
+								this.increment();
+							});
+						this.shadowRoot
+							.getElementById('decrement')
+							.addEventListener('click', () => {
+								this.decrement();
+							});
 
 						// if the id attribute changed, load the new counter.
 						const id = this.getAttribute('id');
@@ -114,9 +116,9 @@
 					}
 
 					/**
-						* Loads the counter from the database, or creates it if it doesn't
-						* exist.
-						*/
+					 * Loads the counter from the database, or creates it if it doesn't
+					 * exist.
+					 */
 					loadCounter = async (id) => {
 						// we have to wait for the client to open before we can use it.
 						// if the client is already open, this will immediately resolve.
@@ -131,22 +133,23 @@
 						this.unsubscribe = this.counter.subscribe('change', this.update);
 						// immediately update the UI to initialize
 						this.update();
-					}
+					};
 
 					increment = () => {
 						this.counter.set('value', this.counter.get('value') + 1);
-					}
+					};
 
-					decrement= () => {
+					decrement = () => {
 						this.counter.set('value', this.counter.get('value') - 1);
-					}
+					};
 
 					update = async () => {
 						if (!this.counter) return;
 
-						this.shadowRoot.getElementById('value').innerText = this.counter.get('value');
-					}
-				}
+						this.shadowRoot.getElementById('value').innerText =
+							this.counter.get('value');
+					};
+				},
 			);
 
 			console.log('Initialized!');

@@ -1,8 +1,4 @@
-import {
-	collection,
-	createDefaultMigration,
-	schema,
-} from '@verdant-web/common';
+import { collection, createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';
@@ -111,7 +107,7 @@ export function createTestStorage() {
 	const idb = new IDBFactory();
 	const storage = new ClientDescriptor({
 		schema: testSchema,
-		migrations: [createDefaultMigration(testSchema)],
+		migrations: [createMigration<{}>(testSchema)],
 		indexedDb: idb,
 		namespace: 'test',
 	}).open();

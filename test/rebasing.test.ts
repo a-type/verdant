@@ -9,7 +9,7 @@ import {
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
-import migrations from './migrations/migrations.js';
+import migrations from './migrations/index.js';
 
 const cleanupClients: Client[] = [];
 

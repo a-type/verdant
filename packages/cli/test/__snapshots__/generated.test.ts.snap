@@ -1,0 +1,796 @@
+// Vitest Snapshot v1
+
+exports[`generated client > should produce consistent output code 1`] = `
+"export * from \\"@verdant-web/store\\";
+"
+`;
+
+exports[`generated client > should produce consistent output code 2`] = `
+"/** Generated types for Verdant client */
+import type {
+  Client as BaseClient,
+  ClientDescriptor as BaseClientDescriptor,
+  ClientDescriptorOptions as BaseClientDescriptorOptions,
+  CollectionQueries,
+  StorageSchema,
+  Migration,
+  EntityFile,
+} from \\"@verdant-web/store\\";
+export * from \\"@verdant-web/store\\";
+
+export class Client<Presence = any, Profile = any> {
+  readonly todos: CollectionQueries<Todo, TodoInit, TodoFilter>;
+  readonly people: CollectionQueries<Person, PersonInit, PersonFilter>;
+  readonly posts: CollectionQueries<Post, PostInit, PostFilter>;
+
+  sync: BaseClient<Presence, Profile>[\\"sync\\"];
+  undoHistory: BaseClient<Presence, Profile>[\\"undoHistory\\"];
+  namespace: BaseClient<Presence, Profile>[\\"namespace\\"];
+  entities: BaseClient<Presence, Profile>[\\"entities\\"];
+  queryStore: BaseClient<Presence, Profile>[\\"queryStore\\"];
+  batch: BaseClient<Presence, Profile>[\\"batch\\"];
+  files: BaseClient<Presence, Profile>[\\"files\\"];
+  close: BaseClient<Presence, Profile>[\\"close\\"];
+  export: BaseClient<Presence, Profile>[\\"export\\"];
+  import: BaseClient<Presence, Profile>[\\"import\\"];
+  subscribe: BaseClient<Presence, Profile>[\\"on\\"];
+  stats: BaseClient<Presence, Profile>[\\"stats\\"];
+  __dangerous__resetLocal: BaseClient<
+    Presence,
+    Profile
+  >[\\"__dangerous__resetLocal\\"];
+}
+
+export interface ClientDescriptorOptions<Presence = any, Profile = any>
+  extends Omit<
+    BaseClientDescriptorOptions<Presence, Profile>,
+    \\"schema\\" | \\"migrations\\"
+  > {
+  /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
+  schema?: StorageSchema;
+  /** WARNING: overriding the migrations is dangerous and almost definitely not what you want. */
+  migrations?: Migration[];
+}
+
+export class ClientDescriptor<Presence = any, Profile = any> {
+  constructor(init: ClientInitOptions<Presence, Profile>);
+  open: () => Promise<Client<Presence, Profile>>;
+  close: () => Promise<void>;
+  readonly current: Client<Presence, Profile> | null;
+  readonly readyPromise: Promise<Client<Presence, Profile>>;
+  readonly schema: StorageSchema;
+  readonly namespace: string;
+}
+
+import { ObjectEntity, ListEntity, EntityFile } from \\"@verdant-web/store\\";
+
+/** Generated types for Todo */
+
+export type Todo = ObjectEntity<TodoInit, TodoDestructured, TodoSnapshot>;
+export type TodoId = string;
+export type TodoContent = string;
+export type TodoDone = boolean;
+export type TodoTags = ListEntity<
+  TodoTagsInit,
+  TodoTagsDestructured,
+  TodoTagsSnapshot
+>;
+export type TodoTagsItem = string;
+export type TodoCategory = string;
+export type TodoAttachments = ListEntity<
+  TodoAttachmentsInit,
+  TodoAttachmentsDestructured,
+  TodoAttachmentsSnapshot
+>;
+export type TodoAttachmentsItem = ObjectEntity<
+  TodoAttachmentsItemInit,
+  TodoAttachmentsItemDestructured,
+  TodoAttachmentsItemSnapshot
+>;
+export type TodoAttachmentsItemName = string;
+export type TodoAttachmentsItemTest = number;
+export type TodoInit = {
+  id?: string;
+  content?: string;
+  done: boolean;
+  tags?: TodoTagsInit;
+  category?: string | null;
+  attachments?: TodoAttachmentsInit;
+};
+
+export type TodoTagsInit = string[];
+export type TodoAttachmentsItemInit = { name: string; test?: number };
+export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
+export type TodoDestructured = {
+  id: string;
+  content: string;
+  done: boolean;
+  tags: TodoTags;
+  category: string | null;
+  attachments: TodoAttachments;
+};
+
+export type TodoTagsDestructured = string[];
+export type TodoAttachmentsItemDestructured = { name: string; test: number };
+export type TodoAttachmentsDestructured = TodoAttachmentsItem[];
+export type TodoSnapshot = {
+  id: string;
+  content: string;
+  done: boolean;
+  tags: TodoTagsSnapshot;
+  category: string | null;
+  attachments: TodoAttachmentsSnapshot;
+};
+
+export type TodoTagsSnapshot = string[];
+export type TodoAttachmentsItemSnapshot = { name: string; test: number };
+export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
+
+/** Index filters for Todo **/
+
+export interface TodoExampleMatchFilter {
+  where: \\"example\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoExampleRangeFilter {
+  where: \\"example\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoExampleStartsWithFilter {
+  where: \\"example\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoContentMatchFilter {
+  where: \\"content\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoContentRangeFilter {
+  where: \\"content\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoContentStartsWithFilter {
+  where: \\"content\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoTagsSortedByDoneCompoundFilter {
+  where: \\"tagsSortedByDone\\";
+  match: {
+    tags: string;
+    done?: boolean;
+  };
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface TodoCategorySortedByDoneCompoundFilter {
+  where: \\"categorySortedByDone\\";
+  match: {
+    category: string | null;
+    done?: boolean;
+  };
+  order?: \\"asc\\" | \\"desc\\";
+}
+export type TodoFilter =
+  | TodoExampleMatchFilter
+  | TodoExampleRangeFilter
+  | TodoExampleStartsWithFilter
+  | TodoContentMatchFilter
+  | TodoContentRangeFilter
+  | TodoContentStartsWithFilter
+  | TodoTagsSortedByDoneCompoundFilter
+  | TodoCategorySortedByDoneCompoundFilter;
+
+/** Generated types for Person */
+
+export type Person = ObjectEntity<
+  PersonInit,
+  PersonDestructured,
+  PersonSnapshot
+>;
+export type PersonId = string;
+export type PersonName = string;
+export type PersonPosts = ListEntity<
+  PersonPostsInit,
+  PersonPostsDestructured,
+  PersonPostsSnapshot
+>;
+export type PersonPostsItem = string;
+export type PersonInit = { id?: string; name: string; posts?: PersonPostsInit };
+
+export type PersonPostsInit = string[];
+export type PersonDestructured = {
+  id: string;
+  name: string;
+  posts: PersonPosts;
+};
+
+export type PersonPostsDestructured = string[];
+export type PersonSnapshot = {
+  id: string;
+  name: string;
+  posts: PersonPostsSnapshot;
+};
+
+export type PersonPostsSnapshot = string[];
+
+/** Index filters for Person **/
+
+export interface PersonNameMatchFilter {
+  where: \\"name\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PersonNameRangeFilter {
+  where: \\"name\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PersonNameStartsWithFilter {
+  where: \\"name\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PersonNameMatchFilter {
+  where: \\"name\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PersonNameRangeFilter {
+  where: \\"name\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PersonNameStartsWithFilter {
+  where: \\"name\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export type PersonFilter =
+  | PersonNameMatchFilter
+  | PersonNameRangeFilter
+  | PersonNameStartsWithFilter
+  | PersonNameMatchFilter
+  | PersonNameRangeFilter
+  | PersonNameStartsWithFilter;
+
+/** Generated types for Post */
+
+export type Post = ObjectEntity<PostInit, PostDestructured, PostSnapshot>;
+export type PostId = string;
+export type PostTitle = string;
+export type PostContent = string;
+export type PostInit = { id?: string; title: string; content: string };
+
+export type PostDestructured = { id: string; title: string; content: string };
+
+export type PostSnapshot = { id: string; title: string; content: string };
+
+/** Index filters for Post **/
+
+export interface PostTitleMatchFilter {
+  where: \\"title\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PostTitleRangeFilter {
+  where: \\"title\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PostTitleStartsWithFilter {
+  where: \\"title\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PostTitleMatchFilter {
+  where: \\"title\\";
+  equals: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PostTitleRangeFilter {
+  where: \\"title\\";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export interface PostTitleStartsWithFilter {
+  where: \\"title\\";
+  startsWith: string;
+  order?: \\"asc\\" | \\"desc\\";
+}
+export type PostFilter =
+  | PostTitleMatchFilter
+  | PostTitleRangeFilter
+  | PostTitleStartsWithFilter
+  | PostTitleMatchFilter
+  | PostTitleRangeFilter
+  | PostTitleStartsWithFilter;
+"
+`;
+
+exports[`generated client > should produce consistent output code 3`] = `
+"import { ClientDescriptorOptions } from \\"./client.js\\";
+export * from \\"./client.js\\";
+import schema from \\"./schema.js\\";
+import { ClientDescriptor as StorageDescriptor } from \\"./client.js\\";
+import migrations from \\"../migrations/index.js\\";
+export * from \\"@verdant-web/store\\";
+
+export class ClientDescriptor<
+  Presence = unknown,
+  Profile = unknown,
+> extends StorageDescriptor<Presence, Profile> {
+  constructor(init: ClientDescriptorOptions<Presence, Profile>) {
+    const defaultedSchema = init.schema || schema;
+    const defaultedMigrations = init.migrations || migrations;
+    super({
+      ...init,
+      schema: defaultedSchema,
+      migrations: defaultedMigrations,
+    });
+  }
+}
+"
+`;
+
+exports[`generated client > should produce consistent output code 4`] = `
+"/** @generated - do not modify this file. */
+
+// test/schema.ts
+import { collection, schema } from \\"@verdant-web/store\\";
+var todo = collection({
+  name: \\"todo\\",
+  primaryKey: \\"id\\",
+  fields: {
+    id: {
+      type: \\"string\\",
+      default: () => Math.random().toString(36).slice(2, 9)
+    },
+    content: {
+      type: \\"string\\",
+      default: \\"\\"
+    },
+    done: {
+      type: \\"boolean\\"
+    },
+    tags: {
+      type: \\"array\\",
+      items: {
+        type: \\"string\\"
+      }
+    },
+    category: {
+      type: \\"string\\",
+      nullable: true
+    },
+    attachments: {
+      type: \\"array\\",
+      items: {
+        type: \\"object\\",
+        properties: {
+          name: {
+            type: \\"string\\"
+          },
+          test: {
+            type: \\"number\\",
+            default: 1
+          }
+        }
+      }
+    }
+  },
+  indexes: {
+    example: {
+      type: \\"string\\",
+      compute: (doc) => doc.content
+    },
+    content: {
+      field: \\"content\\"
+    }
+  },
+  compounds: {
+    tagsSortedByDone: {
+      of: [\\"tags\\", \\"done\\"]
+    },
+    categorySortedByDone: {
+      of: [\\"category\\", \\"done\\"]
+    }
+  }
+});
+var person = collection({
+  name: \\"person\\",
+  primaryKey: \\"id\\",
+  fields: {
+    id: {
+      type: \\"string\\",
+      default: () => Math.random().toString(36).slice(2, 9)
+    },
+    name: {
+      type: \\"string\\",
+      indexed: true
+    },
+    posts: {
+      type: \\"array\\",
+      items: {
+        type: \\"string\\"
+      }
+    }
+  }
+});
+var post = collection({
+  name: \\"post\\",
+  primaryKey: \\"id\\",
+  fields: {
+    id: {
+      type: \\"string\\",
+      default: () => Math.random().toString(36).slice(2, 9)
+    },
+    title: {
+      type: \\"string\\",
+      indexed: true
+    },
+    content: {
+      type: \\"string\\"
+    }
+  }
+});
+var schema_default = schema({
+  version: 1,
+  collections: {
+    todos: todo,
+    people: person,
+    posts: post
+  }
+});
+export {
+  schema_default as default,
+  person,
+  post,
+  todo
+};
+"
+`;
+
+exports[`generated client > should produce consistent output code 5`] = `
+"import { StorageSchema } from \\"@verdant-web/common\\";
+declare const schema: StorageSchema;
+export default schema;
+
+export type TodoSnapshot = {
+  id: string;
+  content: string;
+  done: boolean;
+  tags: TodoTagsSnapshot;
+  category: string | null;
+  attachments: TodoAttachmentsSnapshot;
+};
+
+export type TodoTagsSnapshot = string[];
+export type TodoAttachmentsItemSnapshot = { name: string; test: number };
+export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
+export type TodoInit = {
+  id?: string;
+  content?: string;
+  done: boolean;
+  tags?: TodoTagsInit;
+  category?: string | null;
+  attachments?: TodoAttachmentsInit;
+};
+
+export type TodoTagsInit = string[];
+export type TodoAttachmentsItemInit = { name: string; test?: number };
+export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
+
+export type PersonSnapshot = {
+  id: string;
+  name: string;
+  posts: PersonPostsSnapshot;
+};
+
+export type PersonPostsSnapshot = string[];
+export type PersonInit = { id?: string; name: string; posts?: PersonPostsInit };
+
+export type PersonPostsInit = string[];
+
+export type PostSnapshot = { id: string; title: string; content: string };
+export type PostInit = { id?: string; title: string; content: string };
+
+export type MigrationTypes = {
+  todo: { init: TodoInit; snapshot: TodoSnapshot };
+  person: { init: PersonInit; snapshot: PersonSnapshot };
+  post: { init: PostInit; snapshot: PostSnapshot };
+};
+"
+`;
+
+exports[`generated client > should produce consistent output code 6`] = `"{\\"verdantCLI\\":1}"`;
+
+exports[`generated react hooks > should produce consistent output code 1`] = `
+"import { createHooks as baseCreateHooks } from \\"@verdant-web/react\\";
+import schema from \\"./schema.js\\";
+
+export function createHooks() {
+  return baseCreateHooks(schema);
+}
+"
+`;
+
+exports[`generated react hooks > should produce consistent output code 2`] = `
+"import { Context, ComponentType, ReactNode } from \\"react\\";
+import type {
+  Client,
+  ClientDescriptor,
+  Schema,
+  QueryStatus,
+  UserInfo,
+  ObjectEntity,
+  ListEntity,
+  Entity,
+  AccessibleEntityProperty,
+  EntityShape,
+  AnyEntity,
+  EntityDestructured,
+  EntityFile,
+  Todo,
+  TodoFilter,
+  Person,
+  PersonFilter,
+  Post,
+  PostFilter,
+} from \\"./index.js\\";
+
+type HookConfig<F> = {
+  index?: F;
+  skip?: boolean;
+  key?: string;
+};
+
+export interface GeneratedHooks<Presence, Profile> {
+  /**
+   * Render this context Provider at the top level of your
+   * React tree to provide a Client to all hooks.
+   */
+  Provider: ComponentType<{
+    value: ClientDescriptor<Schema>;
+    children: ReactNode;
+    sync?: boolean;
+  }>;
+  /**
+   * Direct access to the React Context, if needed.
+   */
+  Context: Context<ClientDescriptor<Schema>>;
+  /** @deprecated use useClient instead */
+  useStorage: () => Client<Presence, Profile>;
+  useClient: () => Client<Presence, Profile>;
+  useUnsuspendedClient: () => Client<Presence, Profile> | null;
+  useSelf: () => UserInfo<Profile, Presence>;
+  usePeerIds: () => string[];
+  usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
+  useFindPeer: (
+    query: (peer: UserInfo<Profile, Presence>) => boolean,
+    options?: { includeSelf: boolean },
+  ) => UserInfo<Profile, Presence> | null;
+  useFindPeers: (
+    query: (peer: UserInfo<Profile, Presence>) => boolean,
+    options?: { includeSelf: boolean },
+  ) => UserInfo<Profile, Presence>[];
+  useSyncStatus: () => boolean;
+  useWatch<T extends AnyEntity<any, any, any> | null>(
+    entity: T,
+  ): EntityDestructured<T>;
+  useWatch<
+    T extends AnyEntity<any, any, any> | null,
+    P extends keyof EntityShape<T>,
+  >(
+    entity: T,
+    prop: P,
+  ): EntityDestructured<T>[P];
+  useWatch<T extends EntityFile | null>(file: T): string | null;
+  useUndo(): () => void;
+  useRedo(): () => void;
+  useCanUndo(): boolean;
+  useCanRedo(): boolean;
+  /**
+   * This non-blocking hook declaratively controls sync on/off state.
+   * Render it anywhere in your tree and pass it a boolean to turn sync on/off.
+   * Since it doesn't trigger Suspense, you can do this in, say, a top-level
+   * route component.
+   *
+   * It must still be rendered within your Provider.
+   */
+  useSync(isOn: boolean): void;
+
+  useTodo(id: string, config?: { skip?: boolean }): Todo | null;
+  useTodoUnsuspended(
+    id: string,
+    config?: { skip?: boolean },
+  ): { data: Todo | null; status: QueryStatus };
+  useOneTodo: <Config extends HookConfig<TodoFilter>>(
+    config?: Config,
+  ) => Todo | null;
+  useOneTodosUnsuspended: <Config extends HookConfig<TodoFilter>>(
+    config?: Config,
+  ) => { data: Todo | null; status: QueryStatus };
+  useAllTodos: <Config extends HookConfig<TodoFilter>>(
+    config?: Config,
+  ) => Todo[];
+  useAllTodosUnsuspended: <Config extends HookConfig<TodoFilter>>(
+    config?: Config,
+  ) => { data: Todo[]; status: QueryStatus };
+  useAllTodosPaginated: <
+    Config extends HookConfig<TodoFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Todo[],
+    {
+      next: () => void;
+      previous: () => void;
+      setPage: (page: number) => void;
+      hasNext: boolean;
+      hasPrevious: boolean;
+      status: QueryStatus;
+    },
+  ];
+  useAllTodosInfinite: <
+    Config extends HookConfig<TodoFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Todo[],
+    { loadMore: () => void; hasMore: boolean; status: QueryStatus },
+  ];
+
+  usePerson(id: string, config?: { skip?: boolean }): Person | null;
+  usePersonUnsuspended(
+    id: string,
+    config?: { skip?: boolean },
+  ): { data: Person | null; status: QueryStatus };
+  useOnePerson: <Config extends HookConfig<PersonFilter>>(
+    config?: Config,
+  ) => Person | null;
+  useOnePeopleUnsuspended: <Config extends HookConfig<PersonFilter>>(
+    config?: Config,
+  ) => { data: Person | null; status: QueryStatus };
+  useAllPeople: <Config extends HookConfig<PersonFilter>>(
+    config?: Config,
+  ) => Person[];
+  useAllPeopleUnsuspended: <Config extends HookConfig<PersonFilter>>(
+    config?: Config,
+  ) => { data: Person[]; status: QueryStatus };
+  useAllPeoplePaginated: <
+    Config extends HookConfig<PersonFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Person[],
+    {
+      next: () => void;
+      previous: () => void;
+      setPage: (page: number) => void;
+      hasNext: boolean;
+      hasPrevious: boolean;
+      status: QueryStatus;
+    },
+  ];
+  useAllPeopleInfinite: <
+    Config extends HookConfig<PersonFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Person[],
+    { loadMore: () => void; hasMore: boolean; status: QueryStatus },
+  ];
+
+  usePost(id: string, config?: { skip?: boolean }): Post | null;
+  usePostUnsuspended(
+    id: string,
+    config?: { skip?: boolean },
+  ): { data: Post | null; status: QueryStatus };
+  useOnePost: <Config extends HookConfig<PostFilter>>(
+    config?: Config,
+  ) => Post | null;
+  useOnePostsUnsuspended: <Config extends HookConfig<PostFilter>>(
+    config?: Config,
+  ) => { data: Post | null; status: QueryStatus };
+  useAllPosts: <Config extends HookConfig<PostFilter>>(
+    config?: Config,
+  ) => Post[];
+  useAllPostsUnsuspended: <Config extends HookConfig<PostFilter>>(
+    config?: Config,
+  ) => { data: Post[]; status: QueryStatus };
+  useAllPostsPaginated: <
+    Config extends HookConfig<PostFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Post[],
+    {
+      next: () => void;
+      previous: () => void;
+      setPage: (page: number) => void;
+      hasNext: boolean;
+      hasPrevious: boolean;
+      status: QueryStatus;
+    },
+  ];
+  useAllPostsInfinite: <
+    Config extends HookConfig<PostFilter> & {
+      pageSize?: number;
+      suspend?: false;
+    },
+  >(
+    config?: Config,
+  ) => [
+    Post[],
+    { loadMore: () => void; hasMore: boolean; status: QueryStatus },
+  ];
+}
+
+type HookName = \`use\${string}\`;
+type HookWithoutClient<
+  Hook extends <TArgs extends any[], TRet>(
+    client: Client,
+    ...args: Targs
+  ) => TRet,
+> = (...args: TArgs) => TRet;
+export function createHooks<
+  Presence = any,
+  Profile = any,
+  Mutations extends {
+    [N: HookName]: (client: Client<Presence, Profile>, ...args: any[]) => any;
+  } = never,
+>(
+  mutations?: Mutations,
+): GeneratedHooks<Presence, Profile> & {
+  withMutations: <
+    Mutations extends {
+      [Name: HookName]: (
+        client: Client<Presence, Profile>,
+        ...args: any[]
+      ) => unknown;
+    },
+  >(
+    mutations: Mutations,
+  ) => GeneratedHooks<Presence, Profile> & {
+    [MutHook in keyof Mutations]: HookWithoutClient<Mutations[MutHook]>;
+  };
+};
+"
+`;

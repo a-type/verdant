@@ -2,6 +2,8 @@ import {
 	StorageCollectionSchema,
 	StorageSyntheticIndexSchema,
 	CollectionCompoundIndex,
+	isIndexed,
+	StorageDirectSyntheticSchema,
 } from './index.js';
 
 // unlikely to be used unicode character
@@ -96,12 +98,21 @@ function expandArrayIndex(fields: IndexableFieldValue[]): string[] {
 	);
 }
 
+export function isDirectSynthetic(
+	index: any,
+): index is StorageDirectSyntheticSchema<any> {
+	return !!index.field;
+}
+
 export function computeSynthetics(schema: StorageCollectionSchema, obj: any) {
 	const result: Record<string, any> = {};
-	for (const [name, property] of Object.entries(schema.synthetics || {})) {
-		result[name] = sanitizeIndexValue(
-			(property as StorageSyntheticIndexSchema<any>).compute(obj),
-		);
+	for (const [name, property] of Object.entries(schema.indexes || {})) {
+		const index = property as StorageSyntheticIndexSchema<any>;
+		if (isDirectSynthetic(index)) {
+			result[name] = sanitizeIndexValue(obj[index.field]);
+		} else {
+			result[name] = sanitizeIndexValue(index.compute(obj));
+		}
 	}
 	return result;
 }
@@ -112,14 +123,42 @@ export function computeCompoundIndices(
 ): any {
 	return Object.entries(schema.compounds || {}).reduce<
 		Record<string, CompoundIndexValue>
-	>((acc, [indexKey, index]) => {
-		acc[indexKey] = createCompoundIndexValue(
-			...(index as CollectionCompoundIndex<any, any>).of.map(
-				(key) => doc[key] as string | number,
-			),
-		);
-		return acc;
-	}, {} as Record<string, CompoundIndexValue>);
+	>(
+		(acc, [indexKey, index]) => {
+			acc[indexKey] = createCompoundIndexValue(
+				...(index as CollectionCompoundIndex<any, any>).of.map(
+					(key) => doc[key] as string | number,
+				),
+			);
+			return acc;
+		},
+		{} as Record<string, CompoundIndexValue>,
+	);
+}
+
+function computeIndexedFields(schema: StorageCollectionSchema, doc: any) {
+	return Object.entries(schema.fields).reduce<Record<string, any>>(
+		(acc, [key, field]) => {
+			if (isIndexed(field)) {
+				acc[key] = sanitizeIndexValue(doc[key]);
+			}
+			return acc;
+		},
+		{},
+	);
+}
+
+export function getIndexValues(
+	schema: StorageCollectionSchema<any, any, any>,
+	doc: any,
+) {
+	return {
+		[schema.primaryKey]: doc[schema.primaryKey],
+		...computeIndexedFields(schema, doc),
+		...computeSynthetics(schema, doc),
+		...computeCompoundIndices(schema, doc),
+		'@@@snapshot': doc,
+	};
 }
 
 export function assignIndexValues(

@@ -2,3 +2,5 @@
 test/migrations/
 .generated-cjs/
 test/migrations-cjs/
+temp-*
+test2/migrations/
