@@ -263,10 +263,9 @@ describe('computing a range of oids for a whole object set', () => {
 	}
 	it('should include the root object and any possible sub object oid', () => {
 		const [start, end] = getOidSubIdRange('test/a');
-		expect(start).toEqual('test/a');
+		expect(start).toEqual('test/a:');
 		expect(end).toEqual('test/a:\uffff');
 		expect(start < end).toBe(true);
-		expect(isWithin('test/a', start, end)).toBe(true);
 		expect(isWithin('test/a:0', start, end)).toBe(true);
 		expect(isWithin('test/a:1', start, end)).toBe(true);
 		expect(isWithin('test/a:zzzzzzzzzzzzzzzzzzzzzzz', start, end)).toBe(true);
@@ -274,6 +273,8 @@ describe('computing a range of oids for a whole object set', () => {
 		expect(isWithin('test1/a', start, end)).toBe(false);
 		expect(isWithin('test/b', start, end)).toBe(false);
 		expect(isWithin('test/ ', start, end)).toBe(false);
+		expect(isWithin('test/a1', start, end)).toBe(false);
+		expect(isWithin('test/a1:3', start, end)).toBe(false);
 	});
 });
 
