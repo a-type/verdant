@@ -35,7 +35,9 @@
 		"build": "pnpm run build:lib && pnpm run build:bundle",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"perf:build": "esbuild perf/perfTest.ts --bundle --format=cjs --outfile=perf/perfTest.js --sourcemap --platform=browser",
+		"perf": "pnpm perf:build && node ./perf/run.mjs"
 	},
 	"dependencies": {
 		"@verdant-web/common": "workspace:*",
@@ -48,6 +50,8 @@
 		"fake-indexeddb": "^4.0.0",
 		"jsdom": "^20.0.0",
 		"typescript": "^4.8.3",
-		"vitest": "^0.22.1"
+		"vitest": "^0.22.1",
+		"open-cli": "^7.2.0",
+		"puppeteer": "^21.5.1"
 	}
 }

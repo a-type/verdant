@@ -437,11 +437,12 @@ export function getOidRoot(oid: ObjectIdentifier) {
 
 /**
  * Returns an inclusive range of OIDs that represent
- * a root object and all of its sub-objects.
+ * all of an OID's possible sub-objects.
  */
-export function getOidRange(oid: ObjectIdentifier) {
+export function getOidSubIdRange(oid: ObjectIdentifier) {
 	const root = getOidRoot(oid);
-	return [root, `${root}${RANDOM_SEPARATOR}\uffff`];
+	const lastSubId = createSubOid(root, () => '\uffff');
+	return [`${root}${RANDOM_SEPARATOR}`, lastSubId];
 }
 
 export function getRoots(oids: ObjectIdentifier[]) {

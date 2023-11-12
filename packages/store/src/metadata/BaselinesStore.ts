@@ -1,6 +1,7 @@
 import {
 	DocumentBaseline,
-	getOidRange,
+	getOidSubIdRange,
+	getOidRoot,
 	ObjectIdentifier,
 } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
@@ -38,8 +39,14 @@ export class BaselinesStore extends IDBService {
 		return this.iterate(
 			'baselines',
 			(store) => {
-				const [start, end] = getOidRange(oid);
-				return store.openCursor(IDBKeyRange.bound(start, end, false, false));
+				const root = getOidRoot(oid);
+				const [start, end] = getOidSubIdRange(oid);
+				return [
+					// first the root itself
+					store.openCursor(IDBKeyRange.only(root)),
+					// then the range of its possible subdocuments
+					store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+				];
 			},
 			iterator,
 			mode,
@@ -54,9 +61,13 @@ export class BaselinesStore extends IDBService {
 		const result = await this.runAll<DocumentBaseline[]>(
 			'baselines',
 			(store) => {
-				return docOids.map((oid) => {
-					const [start, end] = getOidRange(oid);
-					return store.getAll(IDBKeyRange.bound(start, end, false, false));
+				return docOids.flatMap((oid) => {
+					const root = getOidRoot(oid);
+					const [start, end] = getOidSubIdRange(oid);
+					return [
+						store.get(root),
+						store.getAll(IDBKeyRange.bound(start, end, false, false)),
+					];
 				});
 			},
 			mode,

@@ -103,13 +103,14 @@ const testSchema = schema({
 	},
 });
 
-export function createTestStorage() {
+export function createTestStorage(disableRebasing = false) {
 	const idb = new IDBFactory();
 	const storage = new ClientDescriptor({
 		schema: testSchema,
 		migrations: [createMigration<{}>(testSchema)],
 		indexedDb: idb,
 		namespace: 'test',
+		disableRebasing,
 	}).open();
 	return storage as Promise<ClientWithCollections>;
 }

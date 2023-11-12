@@ -36,7 +36,7 @@ export class IDBService {
 
 	iterate = async <T>(
 		storeName: string,
-		getRequest: (store: IDBObjectStore) => IDBRequest,
+		getRequest: (store: IDBObjectStore) => IDBRequest | IDBRequest[],
 		iterator: (value: T, store: IDBObjectStore) => void,
 		mode: 'readonly' | 'readwrite' = 'readonly',
 		transaction?: IDBTransaction,
@@ -44,8 +44,26 @@ export class IDBService {
 		const tx = transaction || this.db.transaction(storeName, mode);
 		const store = tx.objectStore(storeName);
 		const request = getRequest(store);
+		if (Array.isArray(request)) {
+			return Promise.all(
+				request.map((req) => {
+					return new Promise<void>((resolve, reject) => {
+						req.onsuccess = () => {
+							const cursor = req.result;
+							if (cursor) {
+								iterator(cursor.value, store);
+								cursor.continue();
+							} else {
+								resolve();
+							}
+						};
+						req.onerror = reject;
+					});
+				}),
+			).then(() => undefined);
+		}
 		return new Promise<void>((resolve, reject) => {
-			request.onsuccess = (event) => {
+			request.onsuccess = () => {
 				const cursor = request.result;
 				if (cursor) {
 					iterator(cursor.value, store);

@@ -10,7 +10,7 @@ import {
 	createSubOid,
 	decomposeOid,
 	getOid,
-	getOidRange,
+	getOidSubIdRange,
 	getOidRoot,
 	hasOid,
 	maybeGetOidProperty,
@@ -262,7 +262,7 @@ describe('computing a range of oids for a whole object set', () => {
 		return oid >= start && oid <= end;
 	}
 	it('should include the root object and any possible sub object oid', () => {
-		const [start, end] = getOidRange('test/a');
+		const [start, end] = getOidSubIdRange('test/a');
 		expect(start).toEqual('test/a');
 		expect(end).toEqual('test/a:\uffff');
 		expect(start < end).toBe(true);
