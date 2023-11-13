@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/common",
-	"version": "1.15.0",
+	"version": "1.15.1",
 	"access": "public",
 	"type": "module",
 	"main": "dist/cjs/index.js",
