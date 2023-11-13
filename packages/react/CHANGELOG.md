@@ -1,5 +1,23 @@
 # @lo-fi/react
 
+## 23.0.0
+
+### Minor Changes
+
+- 64e411b: Updated how plural names are used in collections. If you've named your collection keys as the plural, this won't affect you. However, if your collections were keyed by something that didn't match with your plural name, the names of the keys you use to access queries and of your generated React hooks will change.
+
+  To migrate, remove all `pluralName` usage in your schema, and assign your collections to the plural name of your model in the `collections` part of your schema.
+
+### Patch Changes
+
+- Updated dependencies [64e411b]
+- Updated dependencies [e6ac22a]
+- Updated dependencies [ab178e2]
+- Updated dependencies [a73d381]
+- Updated dependencies [6dab424]
+  - @verdant-web/store@2.7.0
+  - @verdant-web/common@1.15.0
+
 ## 22.0.0
 
 ### Patch Changes

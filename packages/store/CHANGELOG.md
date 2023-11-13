@@ -1,5 +1,35 @@
 # @lo-fi/web
 
+## 2.7.0
+
+### Minor Changes
+
+- 64e411b: Updated how plural names are used in collections. If you've named your collection keys as the plural, this won't affect you. However, if your collections were keyed by something that didn't match with your plural name, the names of the keys you use to access queries and of your generated React hooks will change.
+
+  To migrate, remove all `pluralName` usage in your schema, and assign your collections to the plural name of your model in the `collections` part of your schema.
+
+- a73d381: Rewrites the CLI to fully evaluate schema code, rather than just parsing it as a Typescript AST.
+
+  This allows schemas to import other modules and use any plain TS logic desired to define the final schema.
+
+  Schemas are now bundled and compiled to JS before storing historical copies. The primary schema is now just a pointer to its historical version.
+
+  Migrations now use the new `createMigration` function universally. Migrations are now generated with typings supplied by compiled historical schemas. This should make migration typings more consistent and reliable.
+
+  This change also deprecates fields with `index: true` in favor of a new `indexes` part of a collection schema, which allows direct field pass-through indexes. This consolidates indexes in one place (or, two, with compounds...) and generally makes the typing simpler.
+
+  Deleted a lot of extraneous TS typings.
+
+  Store now only writes index values as top-level fields in the object written to IndexedDB. A snapshot of the object is still provided in a sub-key for future use. This should not be a noticeable change; Verdant had already phased out using the snapshot value in favor of regenerating the view from operations on first load of a document.
+
+### Patch Changes
+
+- e6ac22a: Attempting to modify the primary key of a document now throws an error
+- ab178e2: Fix a serious bug with deleting documents whose IDs are substrings of other document IDs
+- 6dab424: Added an EXPERIMENTAL_weakRefs flag to client initialization which turns on WeakRef usage for all entities in cache. This helps to evict unused entities from memory safely. However, while it passes the full (extensive) Verdant test suite, I still want to test this in real life for a while before making it the default.
+- Updated dependencies [a73d381]
+  - @verdant-web/common@1.15.0
+
 ## 2.6.0
 
 ### Minor Changes
