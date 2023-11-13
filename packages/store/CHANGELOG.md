@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 2.7.1
+
+### Patch Changes
+
+- f847ec1: Hotfix for old apps using legacy "." formatted OIDs (I gotta migrate those...)
+- Updated dependencies [f847ec1]
+  - @verdant-web/common@1.15.1
+
 ## 2.7.0
 
 ### Minor Changes

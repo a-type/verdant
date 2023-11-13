@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.15.1
+
+### Patch Changes
+
+- f847ec1: Hotfix for old apps using legacy "." formatted OIDs (I gotta migrate those...)
+
 ## 1.15.0
 
 ### Minor Changes

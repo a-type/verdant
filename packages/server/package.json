@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/server",
-	"version": "1.8.11",
+	"version": "1.8.12",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
