@@ -26,5 +26,5 @@ export interface Context {
 		 */
 		futureSeen: (timestamp: string) => void;
 	}>;
-	weakRef<T extends symbol | object>(value: T): WeakRef<T>;
+	weakRef<T extends object>(value: T): WeakRef<T>;
 }
