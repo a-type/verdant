@@ -100,7 +100,18 @@ function getMigrationSchemaVersions(contents: string) {
 	if (!matches) {
 		return [];
 	}
-	return matches.map((match) => parseInt(match.slice(10, -15))).sort();
+	return matches
+		.map((match) => {
+			// extract "v{int}" from match string
+			const version = match.match(/v(\d+)Schema/)?.[1];
+			if (!version) {
+				return '';
+			}
+			return version;
+		})
+		.filter(Boolean)
+		.map((v) => parseInt(v, 10))
+		.sort();
 }
 
 function withMigrationTypesImports(contents: string) {
