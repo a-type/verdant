@@ -5,7 +5,7 @@
  * to using a simple object reference.
  */
 
-export class FakeWeakRef<T extends WeakKey> {
+export class FakeWeakRef<T extends symbol | object> {
 	constructor(value: T) {
 		this.value = value;
 	}
