@@ -1,5 +1,13 @@
 # @verdant-web/cli
 
+## 4.0.1
+
+### Patch Changes
+
+- be96681: Fix error with upgrading migrations from older CLI versions
+- 465f400: Fix validation problem with compound indexes
+- 15ad587: Fix generated migration typings
+
 ## 4.0.0
 
 ### Major Changes
