@@ -47,9 +47,9 @@ export class BaselinesStore extends IDBService {
 				// if (isLegacyDotOid(oid)) {
 					const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
 					return [
-						store.get(root),
-						store.getAll(IDBKeyRange.bound(start, end, false, false)),
-						store.getAll(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
+						store.openCursor(IDBKeyRange.only(root)),
+						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+						store.openCursor(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
 					]
 				// } else {
 				// 	return [
