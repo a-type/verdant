@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 2.7.4
+
+### Patch Changes
+
+- 14fbf29: Yet another patch for legacy behavior. Don't let this worry you too much, this pretty much only affects my apps.
+- 8b9a3cd: Don't worry about this one
+
 ## 2.7.3
 
 ### Patch Changes
