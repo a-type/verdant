@@ -39,7 +39,7 @@ export interface CacheTools {
 		parent?: Entity,
 	): Entity;
 	hasOid(oid: ObjectIdentifier): boolean;
-	weakRef<T extends WeakKey>(value: T): WeakRef<T>;
+	weakRef<T extends symbol | object>(value: T): WeakRef<T>;
 }
 
 export interface StoreTools {
