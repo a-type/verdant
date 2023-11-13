@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 2.7.2
+
+### Patch Changes
+
+- 633bb00: Another legacy document hotfix
+- Updated dependencies [633bb00]
+  - @verdant-web/common@1.15.2
+
 ## 2.7.1
 
 ### Patch Changes

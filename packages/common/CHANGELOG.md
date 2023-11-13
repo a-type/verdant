@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.15.2
+
+### Patch Changes
+
+- 633bb00: Another legacy document hotfix
+
 ## 1.15.1
 
 ### Patch Changes
