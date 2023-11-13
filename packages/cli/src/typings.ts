@@ -498,7 +498,10 @@ function getCompoundFilterTypings({
     match: {
       ${index.of
 				.map((field, index) => {
-					const value = collection.fields[field];
+					const value =
+						collection.fields[field] ||
+						collection.indexes?.[field] ||
+						collection.synthetics?.[field];
 					if (!value)
 						throw new Error(
 							`Cannot find field ${field} in collection ${collection.name} when evaluating compound index ${name}`,
