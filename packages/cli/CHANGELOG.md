@@ -1,5 +1,12 @@
 # @verdant-web/cli
 
+## 4.0.2
+
+### Patch Changes
+
+- 85e34fe: Fix another compound index problem with the CLI
+- 1db7857: Fix CLI always wanting to upgrade
+
 ## 4.0.1
 
 ### Patch Changes
