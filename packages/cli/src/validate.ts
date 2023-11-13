@@ -130,9 +130,29 @@ export function validateSchema(schema: StorageSchema) {
 		for (const [name, index] of Object.entries(collection.compounds ?? {})) {
 			for (const fieldName of index.of) {
 				if (!collection.fields[fieldName]) {
-					throw new Error(
-						`Collection ${collection.name} has a compound index named "${name}" that references a field named "${fieldName}" that does not exist.`,
-					);
+					const matchingIndex = allIndexes[fieldName];
+					if (
+						!matchingIndex ||
+						isDirectSynthetic(matchingIndex) ||
+						![
+							'string',
+							'boolean',
+							'number',
+							'string[]',
+							'boolean[]',
+							'number[]',
+						].includes((matchingIndex as any).type)
+					) {
+						if (isDirectSynthetic(matchingIndex)) {
+							throw new Error(
+								`Collection ${collection.name} has a compound index named "${name}" that references an index named "${fieldName}" which indexes field ${matchingIndex.field}. This is not allowed. Instead, reference the field directly.`,
+							);
+						} else {
+							throw new Error(
+								`Collection ${collection.name} has a compound index named "${name}" that references a field named "${fieldName}" that does not exist.`,
+							);
+						}
+					}
 				}
 			}
 		}
