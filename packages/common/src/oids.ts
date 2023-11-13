@@ -439,13 +439,14 @@ export function getOidRoot(oid: ObjectIdentifier) {
  * Returns an inclusive range of OIDs that represent
  * all of an OID's possible sub-objects.
  */
-export function getOidSubIdRange(oid: ObjectIdentifier, legacyDot: boolean) {
+export function getOidSubIdRange(oid: ObjectIdentifier) {
 	const root = getOidRoot(oid);
 	const lastSubId = createSubOid(root, () => '\uffff');
-	if (legacyDot) {
-		return [`${root}.`, lastSubId];
-	}
 	return [`${root}${RANDOM_SEPARATOR}`, lastSubId];
+}
+export function getLegacyDotOidSubIdRange(oid: ObjectIdentifier) {
+	const root = getOidRoot(oid);
+	return [`${root}.`, `${root}.\uffff`];
 }
 
 export function getRoots(oids: ObjectIdentifier[]) {

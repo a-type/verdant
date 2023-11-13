@@ -4,6 +4,7 @@ import {
 	getOidRoot,
 	ObjectIdentifier,
 	isLegacyDotOid,
+	getLegacyDotOidSubIdRange,
 } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
 
@@ -41,15 +42,25 @@ export class BaselinesStore extends IDBService {
 			'baselines',
 			(store) => {
 				const root = getOidRoot(oid);
+				const [start, end] = getOidSubIdRange(oid);
 				// FIXME: get rid of legacy dot OIDs...
-				const isDot = isLegacyDotOid(oid);
-				const [start, end] = getOidSubIdRange(oid, isDot);
-				return [
-					// first the root itself
-					store.openCursor(IDBKeyRange.only(root)),
-					// then the range of its possible subdocuments
-					store.openCursor(IDBKeyRange.bound(start, end, false, false)),
-				];
+				if (isLegacyDotOid(oid)) {
+					return [
+						// first the root itself
+						store.openCursor(IDBKeyRange.only(root)),
+						// then the range of its possible subdocuments
+						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+						// then the range of its possible subdocuments
+						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+					];
+				} else {
+					return [
+						// first the root itself
+						store.openCursor(IDBKeyRange.only(root)),
+						// then the range of its possible subdocuments
+						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+					];
+				}
 			},
 			iterator,
 			mode,
@@ -66,13 +77,21 @@ export class BaselinesStore extends IDBService {
 			(store) => {
 				return docOids.flatMap((oid) => {
 					const root = getOidRoot(oid);
+					const [start, end] = getOidSubIdRange(oid);
 					// FIXME: get rid of legacy dot OIDs...
-					const isDot = isLegacyDotOid(oid);
-					const [start, end] = getOidSubIdRange(oid, isDot);
-					return [
-						store.get(root),
-						store.getAll(IDBKeyRange.bound(start, end, false, false)),
-					];
+					if (isLegacyDotOid(oid)) {
+						const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
+						return [
+							store.get(root),
+							store.getAll(IDBKeyRange.bound(start, end, false, false)),
+							store.getAll(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
+						]
+					} else {
+						return [
+							store.get(root),
+							store.getAll(IDBKeyRange.bound(start, end, false, false)),
+						];
+					}
 				});
 			},
 			mode,

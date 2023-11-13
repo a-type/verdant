@@ -18,6 +18,7 @@ import {
 	normalizeFirstLevel,
 	ObjectIdentifier,
 	removeOidPropertiesFromAllSubObjects,
+	getLegacyDotOidSubIdRange,
 } from './oids.js';
 
 describe('normalizing an object', () => {
@@ -262,7 +263,7 @@ describe('computing a range of oids for a whole object set', () => {
 		return oid >= start && oid <= end;
 	}
 	it('should include the root object and any possible sub object oid', () => {
-		const [start, end] = getOidSubIdRange('test/a', false);
+		const [start, end] = getOidSubIdRange('test/a');
 		expect(start).toEqual('test/a:');
 		expect(end).toEqual('test/a:\uffff');
 		expect(start < end).toBe(true);
@@ -277,19 +278,22 @@ describe('computing a range of oids for a whole object set', () => {
 		expect(isWithin('test/a1:3', start, end)).toBe(false);
 	});
 	it('should accommodate legacy dot style oids', () => {
-		const [start, end] = getOidSubIdRange('test/a.foo:barrrr', false);
-		expect(start).toEqual('test/a:');
-		expect(end).toEqual('test/a:\uffff');
+		const [start, end] = getLegacyDotOidSubIdRange('test/a.foo:barrrr');
+		expect(start).toEqual('test/a.');
+		expect(end).toEqual('test/a.\uffff');
 		expect(start < end).toBe(true);
-		expect(isWithin('test/a:0', start, end)).toBe(true);
-		expect(isWithin('test/a:1', start, end)).toBe(true);
-		expect(isWithin('test/a:zzzzzzzzzzzzzzzzzzzzzzz', start, end)).toBe(true);
-		expect(isWithin('test/a:\uffff', start, end)).toBe(true);
+		expect(isWithin('test/a.foo:0', start, end)).toBe(true);
+		expect(isWithin('test/a.foo:1', start, end)).toBe(true);
+		expect(isWithin('test/a.bar:zzzzzzzzzzzzzzzzzzzzzzz', start, end)).toBe(
+			true,
+		);
+		expect(isWithin('test/a.aff:\uffff', start, end)).toBe(true);
 		expect(isWithin('test1/a', start, end)).toBe(false);
 		expect(isWithin('test/b', start, end)).toBe(false);
 		expect(isWithin('test/ ', start, end)).toBe(false);
 		expect(isWithin('test/a1', start, end)).toBe(false);
 		expect(isWithin('test/a1:3', start, end)).toBe(false);
+		expect(isWithin('test/a.foo:barrrr', start, end)).toBe(true);
 	});
 });
 
