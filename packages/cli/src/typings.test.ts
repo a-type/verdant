@@ -3,6 +3,7 @@ import {
 	getFilterTypings,
 	getInitTypings,
 	getDestructuredTypings,
+	getMigrationTypings,
 } from './typings.js';
 
 describe('generated typings', () => {
@@ -87,6 +88,36 @@ describe('generated typings', () => {
 			).toMatchInlineSnapshot(`
 				"export type TestFilter = never;"
 			`);
+		});
+	});
+
+	describe('migration typings', () => {
+		it('should generate types mapped to collection plurals', () => {
+			expect(
+				getMigrationTypings({
+					schema: {
+						version: 1,
+						collections: {
+							todos: {
+								name: 'todo',
+								primaryKey: 'id',
+								fields: {
+									id: { type: 'string' },
+									text: { type: 'string' },
+								},
+							},
+							lists: {
+								name: 'list',
+								primaryKey: 'id',
+								fields: {
+									id: { type: 'string' },
+									name: { type: 'string' },
+								},
+							},
+						},
+					},
+				}),
+			).toMatchInlineSnapshot('"export type MigrationTypes = {todos: {init: TodoInit, snapshot: TodoSnapshot}, lists: {init: ListInit, snapshot: ListSnapshot}};"');
 		});
 	});
 });

@@ -538,9 +538,9 @@ function getCompoundFilterTypings({
 
 export function getMigrationTypings({ schema }: { schema: StorageSchema }) {
 	const record = recordBuilder();
-	for (const collection of Object.values(schema.collections)) {
+	for (const [name, collection] of Object.entries(schema.collections)) {
 		record.withField({
-			key: collection.name,
+			key: name,
 			type: recordBuilder()
 				.withField({
 					key: 'init',

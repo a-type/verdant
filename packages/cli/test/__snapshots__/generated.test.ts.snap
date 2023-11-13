@@ -517,9 +517,9 @@ export type PostSnapshot = { id: string; title: string; content: string };
 export type PostInit = { id?: string; title: string; content: string };
 
 export type MigrationTypes = {
-  todo: { init: TodoInit; snapshot: TodoSnapshot };
-  person: { init: PersonInit; snapshot: PersonSnapshot };
-  post: { init: PostInit; snapshot: PostSnapshot };
+  todos: { init: TodoInit; snapshot: TodoSnapshot };
+  people: { init: PersonInit; snapshot: PersonSnapshot };
+  posts: { init: PostInit; snapshot: PostSnapshot };
 };
 "
 `;
