@@ -439,9 +439,12 @@ export function getOidRoot(oid: ObjectIdentifier) {
  * Returns an inclusive range of OIDs that represent
  * all of an OID's possible sub-objects.
  */
-export function getOidSubIdRange(oid: ObjectIdentifier) {
+export function getOidSubIdRange(oid: ObjectIdentifier, legacyDot: boolean) {
 	const root = getOidRoot(oid);
 	const lastSubId = createSubOid(root, () => '\uffff');
+	if (legacyDot) {
+		return [`${root}.`, lastSubId];
+	}
 	return [`${root}${RANDOM_SEPARATOR}`, lastSubId];
 }
 
@@ -490,4 +493,9 @@ function migrateForeignOid(parentOid: ObjectIdentifier, child: any) {
 			createSubOid(parentOid, () => subId || id),
 		);
 	}
+}
+
+export function isLegacyDotOid(oid: ObjectIdentifier) {
+	const partBeforeRandomSep = oid.split(RANDOM_SEPARATOR)[0];
+	return partBeforeRandomSep.includes('.');
 }
