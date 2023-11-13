@@ -41,6 +41,7 @@ export async function upgrade({
 			schemaPath,
 			output,
 			commonjs,
+			canonical: false,
 		});
 	}
 	await writeSchema({
