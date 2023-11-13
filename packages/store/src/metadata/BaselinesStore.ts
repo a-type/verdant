@@ -45,14 +45,12 @@ export class BaselinesStore extends IDBService {
 				const [start, end] = getOidSubIdRange(oid);
 				// FIXME: get rid of legacy dot OIDs...
 				// if (isLegacyDotOid(oid)) {
+					const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
 					return [
-						// first the root itself
-						store.openCursor(IDBKeyRange.only(root)),
-						// then the range of its possible subdocuments
-						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
-						// then the range of its possible subdocuments
-						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
-					];
+						store.get(root),
+						store.getAll(IDBKeyRange.bound(start, end, false, false)),
+						store.getAll(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
+					]
 				// } else {
 				// 	return [
 				// 		// first the root itself
