@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileExists } from './fs/exists.js';
-import { readFile, readdir, unlink } from 'fs/promises';
+import { readFile, readdir, unlink, writeFile } from 'fs/promises';
 import { writeSchema } from './schema.js';
 import { writeTS } from './fs/write.js';
 import { isEmpty } from './fs/isEmpty.js';
@@ -93,6 +93,10 @@ export async function upgrade({
 	for (const schema of schemas) {
 		await unlink(path.join(schemasDir, schema.name));
 	}
+
+	// update meta.json
+	const metaPath = path.join(output, 'meta.json');
+	await writeFile(metaPath, JSON.stringify({ verdantCLI: 1 }, null, 2));
 }
 
 function getMigrationSchemaVersions(contents: string) {
