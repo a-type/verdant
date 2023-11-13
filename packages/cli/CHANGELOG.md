@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.0.3
+
+### Patch Changes
+
+- 6b65690: Fix CLI upgrade writing to canonical schema
+
 ## 4.0.2
 
 ### Patch Changes
