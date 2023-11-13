@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.7.3
+
+### Patch Changes
+
+- 0a4b2a1: Yet another legacy ID patch
+
 ## 2.7.2
 
 ### Patch Changes

@@ -30,7 +30,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"peerDependencies": {
-		"@verdant-web/store": "^2.7.2",
+		"@verdant-web/store": "^2.7.3",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
