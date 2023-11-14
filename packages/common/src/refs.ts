@@ -14,3 +14,11 @@ export function compareRefs(a: any, b: any) {
 }
 
 export type Ref = ObjectRef | FileRef;
+
+export function makeObjectRef(oid: string): ObjectRef {
+	return { '@@type': 'ref', id: oid };
+}
+
+export function makeFileRef(oid: string): FileRef {
+	return { '@@type': 'file', id: oid };
+}

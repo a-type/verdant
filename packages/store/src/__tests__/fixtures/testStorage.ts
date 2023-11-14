@@ -103,8 +103,10 @@ const testSchema = schema({
 	},
 });
 
-export function createTestStorage(disableRebasing = false) {
-	const idb = new IDBFactory();
+export function createTestStorage({
+	idb = new IDBFactory(),
+	disableRebasing = false,
+}: { idb?: IDBFactory; disableRebasing?: boolean } = {}) {
 	const storage = new ClientDescriptor({
 		schema: testSchema,
 		migrations: [createMigration<{}>(testSchema)],
