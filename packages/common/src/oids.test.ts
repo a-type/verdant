@@ -19,6 +19,9 @@ import {
 	ObjectIdentifier,
 	removeOidPropertiesFromAllSubObjects,
 	getLegacyDotOidSubIdRange,
+	replaceLegacyOidsInJsonString,
+	MATCH_LEGACY_OID_JSON_STRING,
+	replaceLegacyOidsInObject,
 } from './oids.js';
 
 describe('normalizing an object', () => {
@@ -450,4 +453,83 @@ describe('handling legacy OIDs', () => {
 			),
 		).toBe(true);
 	});
+	it.each([
+		['items/clabgyjfh00003968qycsq3ld.inputs.#:baz', true],
+		// include more unicode chars
+		['items/clabgyjfh00003968qycsq3ld\ufea3.inputs\u39fc.#:baz!!!', true],
+		// not matching new oids
+		['items/clabgyjfh00003968qycsq3ld', false],
+		['items/clabgyjfh00003968qycsq3ld:baz', false],
+		['items/clabgyjfh00003968qycsq3ld:baz1111', false],
+	])('matches legacy oids', (oid, match) => {
+		expect(MATCH_LEGACY_OID_JSON_STRING.test('"' + oid + '"'), oid).toBe(match);
+		// regex are stateful 🙄
+		MATCH_LEGACY_OID_JSON_STRING.lastIndex = 0;
+	});
+	it.each([
+		[
+			{ op: 'delete', oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz' },
+			{ op: 'delete', oid: 'items/clabgyjfh00003968qycsq3ld:baz' },
+		],
+		[
+			{
+				op: 'list-push',
+				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
+				value: {
+					'@@type': 'ref',
+					id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
+				},
+			},
+			{
+				op: 'list-push',
+				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
+				value: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
+			},
+		],
+		[
+			{
+				op: 'list-remove',
+				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
+				value: {
+					'@@type': 'ref',
+					id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
+				},
+			},
+			{
+				op: 'list-remove',
+				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
+				value: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
+			},
+		],
+		[
+			{
+				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
+				timestamp: '2021-03-04T21:00:00.000Z',
+				snapshot: {
+					foo: 1,
+					bar: {
+						'@@type': 'ref',
+						id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
+					},
+				},
+			},
+			{
+				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
+				timestamp: '2021-03-04T21:00:00.000Z',
+				snapshot: {
+					foo: 1,
+					bar: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
+				},
+			},
+		],
+		[
+			{ oid: 'test thing/what if.boo.blah so what:fajsdfj' },
+			{ oid: 'test thing/what if:fajsdfj' },
+		],
+	])(
+		'should replace legacy OIDs in a JSON string with new OIDs',
+		(from, to) => {
+			expect(replaceLegacyOidsInObject(from), JSON.stringify(from)).toEqual(to);
+		},
+	);
 });

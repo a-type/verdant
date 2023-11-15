@@ -500,3 +500,20 @@ export function isLegacyDotOid(oid: ObjectIdentifier) {
 	const partBeforeRandomSep = oid.split(RANDOM_SEPARATOR)[0];
 	return partBeforeRandomSep.includes('.');
 }
+
+export function convertLegacyOid(oid: ObjectIdentifier) {
+	const { collection, id, subId } = decomposeOid(oid);
+	return createOid(collection, id, subId);
+}
+
+export const MATCH_LEGACY_OID_JSON_STRING = /"[^"]+\/[^"]+?(\.[^"]+)+\:[^"]+"/g;
+export function replaceLegacyOidsInJsonString(string: string) {
+	// replace every match of a legacy OID, converting to a new OID
+	return string.replaceAll(MATCH_LEGACY_OID_JSON_STRING, (match) => {
+		const legacyOid = match.slice(1, match.length - 1);
+		return `"${convertLegacyOid(legacyOid)}"`;
+	});
+}
+export function replaceLegacyOidsInObject(obj: any) {
+	return JSON.parse(replaceLegacyOidsInJsonString(JSON.stringify(obj)));
+}

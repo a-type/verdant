@@ -1,6 +1,6 @@
 // fixes primary key for document baselines to include libraryId
 
-export default `
+export const sql = `
   ALTER TABLE
     DocumentBaseline RENAME TO DocumentBaselineOld;
 

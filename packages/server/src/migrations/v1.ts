@@ -1,4 +1,4 @@
-export default `
+export const sql = `
 ALTER TABLE
   ReplicaInfo RENAME TO ReplicaInfoOld;
 

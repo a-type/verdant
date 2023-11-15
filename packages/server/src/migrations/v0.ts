@@ -1,4 +1,4 @@
-export default `
+export const sql = `
 CREATE TABLE IF NOT EXISTS ReplicaInfo (
   id TEXT PRIMARY KEY NOT NULL,
   libraryId TEXT NOT NULL,

@@ -358,6 +358,9 @@ importers:
       typescript:
         specifier: ^4.7.4
         version: 4.8.3
+      vitest:
+        specifier: ^0.22.1
+        version: 0.22.1(jsdom@20.0.0)
 
   packages/store:
     dependencies:

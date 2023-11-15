@@ -2,6 +2,7 @@ import { collection, createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';
+import { METADATA_VERSION_KEY } from '../../client/ClientDescriptor.js';
 
 export const todoCollection = collection({
 	name: 'todo',
@@ -106,13 +107,19 @@ const testSchema = schema({
 export function createTestStorage({
 	idb = new IDBFactory(),
 	disableRebasing = false,
-}: { idb?: IDBFactory; disableRebasing?: boolean } = {}) {
+	metadataVersion,
+}: {
+	idb?: IDBFactory;
+	disableRebasing?: boolean;
+	metadataVersion?: number;
+} = {}) {
 	const storage = new ClientDescriptor({
 		schema: testSchema,
 		migrations: [createMigration<{}>(testSchema)],
 		indexedDb: idb,
 		namespace: 'test',
 		disableRebasing,
+		[METADATA_VERSION_KEY]: metadataVersion,
 	}).open();
 	return storage as Promise<ClientWithCollections>;
 }

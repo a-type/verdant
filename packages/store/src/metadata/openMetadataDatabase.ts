@@ -1,19 +1,22 @@
+import { replaceLegacyOidsInObject } from '@verdant-web/common';
 import { closeDatabase, storeRequestPromise } from '../idb.js';
 
-const migrations = [version1, version2, version3, version4];
+const migrations = [version1, version2, version3, version4, version5];
 
 export function openMetadataDatabase({
 	indexedDB = window.indexedDB,
 	namespace,
 	log,
+	metadataVersion = 5,
 }: {
 	indexedDB?: IDBFactory;
 	namespace: string;
 	log?: (...args: any[]) => void;
+	metadataVersion?: number;
 }): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
 	return new Promise<{ wasInitialized: boolean; db: IDBDatabase }>(
 		(resolve, reject) => {
-			const request = indexedDB.open(`${namespace}_meta`, 4);
+			const request = indexedDB.open(`${namespace}_meta`, metadataVersion);
 			let wasInitialized = false;
 			request.onupgradeneeded = async (event) => {
 				const db = request.result;
@@ -23,6 +26,11 @@ export function openMetadataDatabase({
 				for (const migration of toRun) {
 					await migration(db, tx);
 				}
+
+				await new Promise((resolve, reject) => {
+					tx.addEventListener('complete', resolve);
+					tx.addEventListener('error', reject);
+				});
 
 				if (!event.oldVersion) {
 					wasInitialized = true;
@@ -44,16 +52,19 @@ export async function openWIPMetadataDatabase({
 	namespace,
 	indexedDB,
 	log,
+	metadataVersion,
 }: {
 	indexedDB?: IDBFactory;
 	namespace: string;
 	wipNamespace: string;
 	log?: (...args: any[]) => void;
+	metadataVersion?: number;
 }): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
 	const result = await openMetadataDatabase({
 		namespace: wipNamespace,
 		indexedDB,
 		log,
+		metadataVersion,
 	});
 
 	// this WIP database was already set up.
@@ -67,6 +78,7 @@ export async function openWIPMetadataDatabase({
 		namespace,
 		indexedDB,
 		log,
+		metadataVersion,
 	});
 
 	const tx = prodDb.transaction(
@@ -194,4 +206,55 @@ async function version4(db: IDBDatabase, tx: IDBTransaction) {
 	});
 	files.createIndex('remote', 'remote');
 	files.createIndex('deletedAt', 'deletedAt');
+}
+
+async function version5(db: IDBDatabase, tx: IDBTransaction) {
+	// rewrites all baselines and operations to replace legacy OIDs
+	// with new ones.
+	const operations = tx.objectStore('operations');
+	await new Promise<void>((resolve, reject) => {
+		const cursorReq = operations.openCursor();
+		cursorReq.onsuccess = () => {
+			const cursor = cursorReq.result;
+			if (cursor) {
+				const converted = replaceLegacyOidsInObject(cursor.value);
+				// conversion may change the primary key, so we need to put the
+				// object back to the store
+				if (converted.oid_timestamp !== cursor.primaryKey) {
+					cursor.delete();
+					operations.put(converted);
+				} else {
+					cursor.update(converted);
+				}
+				cursor.continue();
+			} else {
+				resolve();
+			}
+		};
+		cursorReq.onerror = (event) => {
+			reject(cursorReq.error);
+		};
+	});
+	const baselines = tx.objectStore('baselines');
+	await new Promise<void>((resolve, reject) => {
+		const cursorReq = baselines.openCursor();
+		cursorReq.onsuccess = () => {
+			const cursor = cursorReq.result;
+			if (cursor) {
+				const converted = replaceLegacyOidsInObject(cursor.value);
+				if (converted.oid !== cursor.primaryKey) {
+					cursor.delete();
+					baselines.put(converted);
+				} else {
+					cursor.update(converted);
+				}
+				cursor.continue();
+			} else {
+				resolve();
+			}
+		};
+		cursorReq.onerror = (event) => {
+			reject(cursorReq.error);
+		};
+	});
 }
