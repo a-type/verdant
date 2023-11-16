@@ -45,6 +45,17 @@ export class Baselines {
 	};
 
 	set = (libraryId: string, baseline: DocumentBaseline) => {
+		if (!baseline.snapshot) {
+			return this.db
+				.prepare(
+					`
+			DELETE FROM DocumentBaseline
+			WHERE libraryId = ? AND oid = ?
+		`,
+				)
+				.run(libraryId, baseline.oid);
+		}
+
 		return this.db
 			.prepare(
 				`

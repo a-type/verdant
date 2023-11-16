@@ -3,6 +3,7 @@ import { Client, Item, Query } from './client/index.js';
 import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForCondition,
+	waitForEntityCondition,
 	waitForMockCall,
 	waitForPeerCount,
 	waitForQueryResult,
@@ -36,6 +37,9 @@ it('can sync multiple clients even if they go offline', async () => {
 	log('🔺 --- Client A offline seed ---');
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
+		metadata: {
+			color: 'green',
+		},
 	});
 	await clientA.items.put({
 		categoryId: a_produceCategory.get('id'),
@@ -52,7 +56,7 @@ it('can sync multiple clients even if they go offline', async () => {
 	const a_unknownItemChanged = vitest.fn();
 	a_unknownItem.subscribe('change', a_unknownItemChanged);
 
-	await clientA.entities.flushPatches();
+	await clientA.entities.flushAllBatches();
 
 	// bring all clients online - but A must come up first to populate data.
 	clientA.sync.start();
@@ -141,6 +145,26 @@ it('can sync multiple clients even if they go offline', async () => {
 	b_unknownItem.get('tags').add('tag3');
 	b_unknownItem.get('tags').add('tag1');
 
+	// test deleting something attached to a document, then undoing that
+	const b_produce = await clientB.categories.findOne({
+		index: {
+			where: 'name',
+			equals: 'Produce',
+		},
+	}).resolved;
+	assert(b_produce);
+	await clientB
+		.batch()
+		.run(() => {
+			b_produce.delete('metadata');
+		})
+		.flush();
+	await waitForEntityCondition(
+		a_produceCategory,
+		(cat) => !cat.get('metadata'),
+	);
+	clientB.undoHistory.undo();
+
 	async function waitForTags(item: Item) {
 		await waitForCondition(() => {
 			return (
@@ -157,6 +181,10 @@ it('can sync multiple clients even if they go offline', async () => {
 	await waitForTags(b_unknownItem);
 	await waitForTags(
 		(await clientC.items.get(a_unknownItem.get('id')).resolved)!,
+	);
+	await waitForEntityCondition(
+		a_produceCategory,
+		(cat) => cat.get('metadata')?.get('color') === 'green',
 	);
 
 	log('🔺--- Offline sync actions ---');
@@ -175,8 +203,8 @@ it('can sync multiple clients even if they go offline', async () => {
 	});
 
 	// simulate being online long enough to propagate batch operations
-	await clientA.entities.flushPatches();
-	await clientB.entities.flushPatches();
+	await clientA.entities.flushAllBatches();
+	await clientB.entities.flushAllBatches();
 
 	log('🔺--- Going online again ---');
 	clientA.sync.start();

@@ -74,6 +74,15 @@ const categories = collection({
 			type: 'string',
 			indexed: true,
 		},
+		metadata: {
+			type: 'object',
+			nullable: true,
+			properties: {
+				color: {
+					type: 'string',
+				},
+			},
+		},
 	},
 });
 

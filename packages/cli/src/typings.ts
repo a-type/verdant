@@ -193,7 +193,7 @@ function getFieldTypings({
 					declarations +
 					'\n' +
 					aliasBuilder(name + suffix, objBuilder.build())
-						.nullable(!!field.nullable)
+						.nullable(mode !== 'destructured' && !!field.nullable)
 						.build(),
 			};
 		case 'array':
@@ -209,7 +209,7 @@ function getFieldTypings({
 				name + suffix,
 				arrayBuilder(itemTypings.alias).build(),
 			)
-				.nullable(!!field.nullable)
+				.nullable(mode !== 'destructured' && !!field.nullable)
 				.build();
 			return {
 				alias: name + childSuffix,
@@ -322,7 +322,9 @@ function getEntityFieldTypings({
 			const baseList = aliasBuilder(
 				name,
 				`ListEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
-			).build();
+			)
+				.nullable(!!field.nullable)
+				.build();
 			return [baseList, itemTypings].join('\n');
 		case 'object':
 			const subtypes = new Array<string>();
@@ -334,13 +336,15 @@ function getEntityFieldTypings({
 				aliasBuilder(
 					name,
 					`ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
-				).build(),
+				)
+					.nullable(!!field.nullable)
+					.build(),
 				...subtypes,
 			].join('\n');
 		case 'any':
 			return aliasBuilder(name, 'any').build();
 		case 'file':
-			return aliasBuilder(name, 'string').build();
+			return aliasBuilder(name, 'string').nullable(!!field.nullable).build();
 		case 'map':
 			const valueName = `${name}Value`;
 			const valueTypings = getEntityFieldTypings({

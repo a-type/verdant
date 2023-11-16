@@ -85,7 +85,7 @@ export type ItemCommentsItem = ObjectEntity<
 export type ItemCommentsItemId = string;
 export type ItemCommentsItemContent = string;
 export type ItemCommentsItemAuthorId = string;
-export type ItemImage = string;
+export type ItemImage = string | null;
 export type ItemInit = {
   id?: string;
   content?: string;
@@ -214,11 +214,33 @@ export type Category = ObjectEntity<
 >;
 export type CategoryId = string;
 export type CategoryName = string;
-export type CategoryInit = { id?: string; name: string };
+export type CategoryMetadata = ObjectEntity<
+  CategoryMetadataInit,
+  CategoryMetadataDestructured,
+  CategoryMetadataSnapshot
+> | null;
+export type CategoryMetadataColor = string;
+export type CategoryInit = {
+  id?: string;
+  name: string;
+  metadata?: CategoryMetadataInit;
+};
 
-export type CategoryDestructured = { id: string; name: string };
+export type CategoryMetadataInit = { color: string } | null;
+export type CategoryDestructured = {
+  id: string;
+  name: string;
+  metadata: CategoryMetadata;
+};
 
-export type CategorySnapshot = { id: string; name: string };
+export type CategoryMetadataDestructured = { color: string };
+export type CategorySnapshot = {
+  id: string;
+  name: string;
+  metadata: CategoryMetadataSnapshot;
+};
+
+export type CategoryMetadataSnapshot = { color: string } | null;
 
 /** Index filters for Category **/
 

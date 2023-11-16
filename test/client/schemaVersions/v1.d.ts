@@ -37,10 +37,22 @@ export type ItemCommentsItemInit = {
 };
 export type ItemCommentsInit = ItemCommentsItemInit[];
 
-export type CategorySnapshot = { id: string; name: string };
-export type CategoryInit = { id?: string; name: string };
+export type CategorySnapshot = {
+  id: string;
+  name: string;
+  metadata: CategoryMetadataSnapshot;
+};
+
+export type CategoryMetadataSnapshot = { color: string } | null;
+export type CategoryInit = {
+  id?: string;
+  name: string;
+  metadata?: CategoryMetadataInit;
+};
+
+export type CategoryMetadataInit = { color: string } | null;
 
 export type MigrationTypes = {
-  item: { init: ItemInit; snapshot: ItemSnapshot };
-  category: { init: CategoryInit; snapshot: CategorySnapshot };
+  items: { init: ItemInit; snapshot: ItemSnapshot };
+  categories: { init: CategoryInit; snapshot: CategorySnapshot };
 };
