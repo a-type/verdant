@@ -27,6 +27,11 @@ export class Heartbeat extends EventSubscriber<{
 		this.deadlineLength = deadlineLength;
 		if (typeof window !== 'undefined' && restartOnTabFocus) {
 			window.addEventListener('pageshow', () => this.start(true));
+			document.addEventListener('visibilitychange', () => {
+				if (document.visibilityState === 'visible') {
+					this.start(true);
+				}
+			});
 		}
 	}
 
