@@ -28,7 +28,7 @@ describe('mutations', () => {
 	// the underlying system will check only operations for possible OIDs
 	// to delete.
 	it('should only delete entities related to specified id (rebasing disabled)', async () => {
-		const client = await createTestStorage(true);
+		const client = await createTestStorage({ disableRebasing: true });
 
 		const itemA = await client.todos.put({
 			id: '1',
