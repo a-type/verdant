@@ -1,5 +1,17 @@
 # @lo-fi/server
 
+## 1.8.14
+
+### Patch Changes
+
+- 7bfad6f: Fix null snapshot migration on server
+- b0c78bf: ⚠️⚠️ This version requires updating the client and server simultaneously if your app still has legacy OIDs applied to documents. Hopefully that just means me. Does anyone else use Verdant? Anyway, this one removes those legacy OIDs completely so I don't have to worry about them anymore.
+
+  Sorry for not really being semver-conscious here, but I really doubt it affects anyone at this point. You'd have to have been using Verdant before May 26, 2023 for this to matter to you.
+
+- Updated dependencies [b0c78bf]
+  - @verdant-web/common@1.15.3
+
 ## 1.8.14-next.1
 
 ### Patch Changes
