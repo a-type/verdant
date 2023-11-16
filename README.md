@@ -2,12 +2,6 @@
 
 An IndexedDB-powered database and data sync solution for sustainable, human, local-first web apps.
 
-# ⚠️⚠️⚠️ DO NOT USE FOR NOW ⚠️⚠️⚠️
-
-Look, I never know when people find my stuff online. Seems at least some word is getting out. But I just pushed a release tonight which I thought was well tested, but is actually really broken for larger data sets. Like, data loss broken.
-
-So please feel free to tinker, but don't use this for anything serious until I find the root cause.
-
 ## [Read the documentation](https://verdant.dev)
 
 > ## Status: Not Production Ready 🚧
