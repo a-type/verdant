@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.7.6
+
+### Patch Changes
+
+- 52e9a59: Improve typings for entity.update
+
 ## 2.7.5
 
 ### Patch Changes
