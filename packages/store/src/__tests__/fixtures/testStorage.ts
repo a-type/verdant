@@ -2,7 +2,7 @@ import { collection, createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';
-import { METADATA_VERSION_KEY } from '../../client/ClientDescriptor.js';
+import { METADATA_VERSION_KEY } from '../../client/constants.js';
 
 export const todoCollection = collection({
 	name: 'todo',

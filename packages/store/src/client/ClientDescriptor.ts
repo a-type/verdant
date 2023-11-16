@@ -24,6 +24,7 @@ import {
 	getAllDatabaseNamesAndVersions,
 } from '../idb.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
+import { METADATA_VERSION_KEY } from './constants.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -71,8 +72,6 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	// not for public use
 	[METADATA_VERSION_KEY]?: number;
 }
-
-export const METADATA_VERSION_KEY = Symbol('metadataVersion');
 
 /**
  * Since storage initialization is async, this class wraps the core
