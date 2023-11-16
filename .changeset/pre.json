@@ -11,6 +11,7 @@
     "@verdant-web/store": "2.7.5"
   },
   "changesets": [
+    "fuzzy-items-behave",
     "green-boxes-agree"
   ]
 }

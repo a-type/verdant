@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.8.14-next.1
+
+### Patch Changes
+
+- 7bfad6fd: Fix null snapshot migration on server
+
 ## 1.8.14-next.0
 
 ### Patch Changes
