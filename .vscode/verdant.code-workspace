@@ -1,0 +1,55 @@
+{
+	"folders": [
+		{
+			"name": "Store",
+			"path": "../packages/store"
+		},
+		{
+			"name": "Server",
+			"path": "../packages/server"
+		},
+		{
+			"name": "Common",
+			"path": "../packages/common"
+		},
+		{
+			"name": "CLI",
+			"path": "../packages/cli"
+		},
+		{
+			"name": "React",
+			"path": "../packages/react"
+		},
+		{
+			"name": "Starter Kit",
+			"path": "../packages/create-app"
+		},
+		{
+			"name": "Integration Tests",
+			"path": "../tests"
+		},
+		{
+			"name": "Router",
+			"path": "../packages/react-router"
+		},
+		{
+			"name": "Docs",
+			"path": "../docs"
+		},
+		{
+			"name": "Examples",
+			"path": "../examples"
+		},
+		{
+			"name": "Scratchpad",
+			"path": "../scratchpad"
+		},
+		{
+			"name": "Scale Test",
+			"path": "../scaleTest"
+		}
+	],
+	"settings": {
+		"vitest.commandLine": "pnpm exec vitest"
+	}
+}
