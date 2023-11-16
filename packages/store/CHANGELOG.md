@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.7.5
+
+### Patch Changes
+
+- dcd429c: Improve push-based sync reconnect behavior on app reopen
+
 ## 2.7.4
 
 ### Patch Changes
