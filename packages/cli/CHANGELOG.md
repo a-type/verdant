@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.0.4
+
+### Patch Changes
+
+- 4309702: Fix filter typings for array indexes
+
 ## 4.0.3
 
 ### Patch Changes
