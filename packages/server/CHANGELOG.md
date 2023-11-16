@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 1.9.0
+
+### Minor Changes
+
+- 6cab5a4: Server: delete empty snapshots and don't store new empty snapshots. This shouldn't have any effect on behavior. Client: fixed a rare bug with initializing a client for the first time. CLI: fixed typings for deletable fields.
+
 ## 1.8.15
 
 ### Patch Changes
