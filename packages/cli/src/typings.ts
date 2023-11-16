@@ -445,7 +445,10 @@ function getFieldFilterTypings({
 	name: string;
 	key: string;
 }) {
-	const fieldType = getFieldOrIndexType({ fieldOrIndex: field, collection });
+	let fieldType = getFieldOrIndexType({ fieldOrIndex: field, collection });
+	if (fieldType.endsWith('[]')) {
+		fieldType = fieldType.slice(0, -2) as IndexValueTag;
+	}
 
 	let filters = [
 		{
