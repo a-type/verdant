@@ -62,6 +62,7 @@ export async function waitForQueryResult(
 		return !!value && (Array.isArray(value) ? value.length > 0 : true);
 	},
 	timeoutMs = 15000,
+	debug?: boolean,
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (query.status !== 'initial' && predicate(query.current)) {
@@ -70,9 +71,12 @@ export async function waitForQueryResult(
 		}
 
 		const timeout = setTimeout(() => {
+			if (debug) {
+				debugger;
+			}
 			reject(new Error('Timed out waiting for query ' + query.key));
 		}, timeoutMs);
-		const unsubscribe = query.subscribe((result) => {
+		const unsubscribe = query.subscribe('change', (result) => {
 			if (predicate(query.current)) {
 				unsubscribe();
 				clearTimeout(timeout);

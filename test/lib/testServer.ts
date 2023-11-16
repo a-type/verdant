@@ -84,6 +84,7 @@ export async function startTestServer({
 	return {
 		port,
 		server,
+		dbFileName,
 		cleanup: async () => {
 			try {
 				await server.close();

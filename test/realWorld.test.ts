@@ -12,7 +12,10 @@ import {
 	waitForQueryResult,
 } from './lib/waits.js';
 
-const context = createTestContext();
+const context = createTestContext({
+	// testLog: true,
+	// serverLog: true,
+});
 const log = context.log;
 
 it('maintains consistency in real world scenarios', async () => {
@@ -36,6 +39,7 @@ it('maintains consistency in real world scenarios', async () => {
 			// 		console.log(`[A${schema.version}]`, ...messages);
 			// 	}
 			// },
+			// logId: 'A',
 			// try to keep it realistic
 			autoTransport: true,
 		}) as any;

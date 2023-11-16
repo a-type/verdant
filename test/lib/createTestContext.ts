@@ -38,6 +38,8 @@ export function createTestContext({
 		);
 	}, 20 * 1000);
 
+	(global as any).testContext = context;
+
 	return context as Required<typeof context>;
 }
 
