@@ -24,6 +24,7 @@ import {
 	getAllDatabaseNamesAndVersions,
 } from '../idb.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
+import { METADATA_VERSION_KEY } from './constants.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -67,6 +68,9 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * before turning it on.
 	 */
 	EXPERIMENTAL_weakRefs?: boolean;
+
+	// not for public use
+	[METADATA_VERSION_KEY]?: number;
 }
 
 /**
@@ -136,10 +140,12 @@ export class ClientDescriptor<
 	};
 
 	private initializeDatabases = async (init: ClientDescriptorOptions) => {
+		const metadataVersion = init[METADATA_VERSION_KEY];
 		const { db: metaDb } = await openMetadataDatabase({
 			indexedDB: init.indexedDb,
 			log: init.log,
 			namespace: init.namespace,
+			metadataVersion,
 		});
 
 		const context: Omit<Context, 'documentDb'> = {

@@ -6,6 +6,7 @@ import {
 	Operation,
 	ReplicaType,
 	ServerMessage,
+	replaceLegacyOidsInObject,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';

@@ -1,13 +1,17 @@
 import type { Database } from 'better-sqlite3';
-import v0Sql from './migrations/v0.sql.js';
-import v1Sql from './migrations/v1.sql.js';
-import v2Sql from './migrations/v2.sql.js';
-import v3Sql from './migrations/v3.sql.js';
-import v4Sql from './migrations/v4.sql.js';
+import * as v0 from './migrations/v0.js';
+import * as v1 from './migrations/v1.js';
+import * as v2 from './migrations/v2.js';
+import * as v3 from './migrations/v3.js';
+import * as v4 from './migrations/v4.js';
+import * as v5 from './migrations/v5.js';
 
-const allMigrations = [v0Sql, v1Sql, v2Sql, v3Sql, v4Sql];
+export const allMigrations: {
+	sql?: string;
+	procedure?: (db: Database) => void;
+}[] = [v0, v1, v2, v3, v4, v5];
 
-export function migrations(db: Database) {
+export function migrations(db: Database, upTo: number = allMigrations.length) {
 	// create the versions table if it doesn't exist
 	db.prepare(
 		`
@@ -27,24 +31,29 @@ export function migrations(db: Database) {
 		.get() as { version: number } | undefined;
 	const version = versionResult?.version ?? 0;
 
-	const sqlToRun = allMigrations.slice(version);
+	const toRun = allMigrations.slice(version, upTo);
 
-	if (sqlToRun.length === 0) return;
+	if (toRun.length === 0) {
+		console.info('No migrations to run');
+		return;
+	}
 
-	console.info(
-		'Running migrations from ',
-		version,
-		'to',
-		allMigrations.length - 1,
-	);
+	console.info('Running migrations from ', version, 'to', upTo);
 
 	const run = db.transaction(() => {
-		sqlToRun.forEach((sql) => db.exec(sql));
+		for (const { sql, procedure } of toRun) {
+			if (sql) {
+				db.exec(sql);
+			}
+			if (procedure) {
+				procedure(db);
+			}
+		}
 		db.prepare(
 			`
 			INSERT INTO versions (version) VALUES (?);
 		`,
-		).run(allMigrations.length);
+		).run(upTo);
 	});
 
 	run();

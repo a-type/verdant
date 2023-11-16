@@ -1,0 +1,17 @@
+{
+  "mode": "exit",
+  "tag": "next",
+  "initialVersions": {
+    "@verdant-web/cli": "4.0.4",
+    "@verdant-web/common": "1.15.2",
+    "@verdant-web/create-app": "0.1.2",
+    "@verdant-web/react": "23.0.2",
+    "@verdant-web/react-router": "0.5.4",
+    "@verdant-web/server": "1.8.13",
+    "@verdant-web/store": "2.7.5"
+  },
+  "changesets": [
+    "fuzzy-items-behave",
+    "green-boxes-agree"
+  ]
+}

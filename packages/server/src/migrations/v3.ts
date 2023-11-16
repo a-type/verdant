@@ -1,6 +1,6 @@
 // add the FileMetadata table
 
-export default `
+export const sql = `
   CREATE TABLE IF NOT EXISTS FileMetadata (
     libraryId TEXT NOT NULL,
     fileId TEXT NOT NULL,
