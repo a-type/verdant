@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.15.4
+
+### Patch Changes
+
+- 7b3e213: Another legacy OID fix
+
 ## 1.15.3
 
 ### Patch Changes
