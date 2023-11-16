@@ -176,7 +176,11 @@ export function decomposeOid(oid: ObjectIdentifier): {
 	subId?: string;
 } {
 	const [core, random] = oid.split(RANDOM_SEPARATOR);
-	const [collection, idOrLegacyPathId] = core.split('/');
+	let [collection, idOrLegacyPathId, ...others] = core.split('/');
+	// if there's more than one slash... something went wrong, but we can just bolt the rest on.
+	if (others.length) {
+		idOrLegacyPathId += '/' + others.join('/');
+	}
 	let id;
 	if (idOrLegacyPathId.includes('.')) {
 		id = idOrLegacyPathId.slice(0, idOrLegacyPathId.indexOf('.'));
