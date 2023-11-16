@@ -84,7 +84,7 @@ it('can store and cleanup local files', async () => {
 	// file should be gone - check in indexeddb
 	// NOTE: this is brittle, relies on implementation details
 	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDb.open('files-1_User A_meta', 4);
+		const request = indexedDb.open('files-1_User A_meta', 5);
 		request.onsuccess = () => resolve(request.result);
 		request.onerror = () => reject(request.error);
 		request.onupgradeneeded = (ev) => {

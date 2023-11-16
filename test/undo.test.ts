@@ -11,6 +11,7 @@ import { assert } from '@verdant-web/common';
 const context = createTestContext({
 	// serverLog: true,
 	// keepDb: true,
+	// testLog: true,
 });
 
 it(
