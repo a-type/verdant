@@ -533,7 +533,7 @@ export class Entity<
 	remove = this.delete.bind(this);
 
 	update = (
-		value: Partial<Snapshot>,
+		value: DeepPartial<Init>,
 		{
 			replaceSubObjects = false,
 			merge = true,
@@ -771,6 +771,14 @@ export interface BaseEntity<
 	readonly hasSubscribers: boolean;
 }
 
+type DeepPartial<T> = {
+	[P in keyof T]?: T[P] extends Array<infer U>
+		? Array<DeepPartial<U>>
+		: T[P] extends ReadonlyArray<infer U>
+		? ReadonlyArray<DeepPartial<U>>
+		: DeepPartial<T[P]>;
+};
+
 export interface ObjectEntity<
 	Init,
 	Value extends BaseEntityValue,
@@ -782,7 +790,7 @@ export interface ObjectEntity<
 	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
 	delete(key: DeletableKeys<Value>): void;
 	update(
-		value: Partial<Snapshot>,
+		value: DeepPartial<Init>,
 		options?: { replaceSubObjects?: boolean; merge?: boolean },
 	): void;
 	readonly isList: false;
