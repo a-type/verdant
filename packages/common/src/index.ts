@@ -25,3 +25,4 @@ export * from './undo.js';
 export * from './batching.js';
 export * from './files.js';
 export type { Ref } from './refs.js';
+export { makeObjectRef, makeFileRef, isRef, compareRefs } from './refs.js';

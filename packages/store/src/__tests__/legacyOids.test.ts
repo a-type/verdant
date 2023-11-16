@@ -5,8 +5,8 @@ import {
 	OperationPatch,
 	createCompoundIndexValue,
 	getIndexValues,
+	makeObjectRef,
 } from '@verdant-web/common';
-import { makeObjectRef } from '../../../common/src/refs.js';
 import { storeRequestPromise } from '../idb.js';
 import { openMetadataDatabase } from '../metadata/openMetadataDatabase.js';
 import { createTestStorage, todoCollection } from './fixtures/testStorage.js';
