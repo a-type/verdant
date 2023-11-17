@@ -461,6 +461,11 @@ describe('handling legacy OIDs', () => {
 		['items/clabgyjfh00003968qycsq3ld', false],
 		['items/clabgyjfh00003968qycsq3ld:baz', false],
 		['items/clabgyjfh00003968qycsq3ld:baz1111', false],
+		// not matching anything else
+		[
+			'PREPARE SOUS VIDE BATH: Fill container or pot with water. Set the temperature to 130F/54.4C – 132F/55.5C (for very moist and tender) and allow water to heat to that temperature.Tip: start with hot tap water instead of cold water to reduce heating time. Note 4 for other temperatures.',
+			false,
+		],
 	])('matches legacy oids', (oid, match) => {
 		expect(MATCH_LEGACY_OID_JSON_STRING.test('"' + oid + '"'), oid).toBe(match);
 		// regex are stateful 🙄
@@ -523,8 +528,8 @@ describe('handling legacy OIDs', () => {
 			},
 		],
 		[
-			{ oid: 'test thing/what if.boo.blah so what:fajsdfj' },
-			{ oid: 'test thing/what if:fajsdfj' },
+			{ oid: 'test/what if.boo.blah so what:fajsdfj' },
+			{ oid: 'test/what if:fajsdfj' },
 		],
 	])(
 		'should replace legacy OIDs in a JSON string with new OIDs',

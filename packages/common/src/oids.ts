@@ -510,7 +510,7 @@ export function convertLegacyOid(oid: ObjectIdentifier) {
 	return createOid(collection, id, subId);
 }
 
-export const MATCH_LEGACY_OID_JSON_STRING = /"[^"]+\/[^"]+?(\.[^"]+)+\:[^"]+"/g;
+export const MATCH_LEGACY_OID_JSON_STRING = /"\w+\/[^"]+?(\.[^"]+)+\:[\S]+?"/g;
 export function replaceLegacyOidsInJsonString(string: string) {
 	// replace every match of a legacy OID, converting to a new OID
 	return string.replaceAll(MATCH_LEGACY_OID_JSON_STRING, (match) => {
