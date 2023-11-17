@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.15.5
+
+### Patch Changes
+
+- c686e0f: Another legacy OID hotfix. These things are pesky! Good thing you didn't use this library before May 2023 like I did.
+
 ## 1.15.4
 
 ### Patch Changes

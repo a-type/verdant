@@ -1,5 +1,12 @@
 # @lo-fi/server
 
+## 1.9.1
+
+### Patch Changes
+
+- Updated dependencies [c686e0f]
+  - @verdant-web/common@1.15.5
+
 ## 1.9.0
 
 ### Minor Changes
