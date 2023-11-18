@@ -19,7 +19,7 @@
 		"exec": "tsx ./src/bin/index.ts",
 		"test": "pnpm run pretest && vitest",
 		"ci:test:unit": "pnpm run pretest && vitest run",
-		"pretest": "pnpm run exec -s ./test/schema.ts -o ./test/.generated -r --generate --module=esm",
+		"pretest": "pnpm run exec -s ./test/schema.ts -o ./test/.generated -r --select=publish --module=esm",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

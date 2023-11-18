@@ -21,6 +21,8 @@ function log(...messages: any[]) {
 	console.log('│ ', ...messages);
 }
 
+type CLIOption = 'wip' | 'publish' | 'exit' | 'force' | 'regenerate' | symbol;
+
 /**
  * The CLI helps manage schema versions and generate client code.
  *
@@ -46,16 +48,16 @@ export async function generate({
 	react = false,
 	debug = false,
 	migrations: migrationsOutput = path.resolve(output, '../migrations'),
-	generate: cliGeneratePassed,
 	javascript = false,
 	module,
+	select: selectedOption,
 }: {
 	schema: string;
 	output: string;
 	react?: boolean;
 	debug?: boolean;
 	migrations?: string;
-	generate?: boolean;
+	select?: string;
 	javascript?: boolean;
 	module?: string;
 }) {
@@ -110,15 +112,9 @@ export async function generate({
 		output,
 	});
 
-	let selection:
-		| 'wip'
-		| 'publish'
-		| 'exit'
-		| 'force'
-		| 'regenerate'
-		| symbol
-		| undefined = cliGeneratePassed ? 'publish' : undefined;
-	const isNonInteractive = !!cliGeneratePassed;
+	let selection: CLIOption | undefined =
+		(selectedOption as CLIOption) ?? undefined;
+	const isNonInteractive = !!selectedOption;
 	let newSchemaVersion = userSchemaVersion;
 
 	// no param selection was given, so we need to prompt the user
@@ -229,6 +225,11 @@ export async function generate({
 			);
 			process.exit(0);
 		}
+	} else if (selection === 'force') {
+		log(
+			`❌  Cannot force overwrite in non-interactive mode. Run again in interactive mode.`,
+		);
+		process.exit(1);
 	}
 
 	let migrationCreated = false;

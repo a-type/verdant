@@ -36,10 +36,11 @@ yargs(hideBin(process.argv))
 					type: 'boolean',
 					description: 'Debug mode - retains temp files',
 				})
-				.option('generate', {
-					type: 'boolean',
+				.option('select', {
+					type: 'string',
 					description:
-						'Use CLI in non-interactive mode and just generate (or regenerate) current schema code',
+						'Use CLI in non-interactive mode and pre-select an option',
+					choices: ['publish', 'wip', 'regenerate'],
 				})
 				.option('javascript', {
 					type: 'boolean',
