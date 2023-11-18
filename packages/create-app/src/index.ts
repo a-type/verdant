@@ -127,11 +127,13 @@ installSpinner.stop('Dependencies installed');
 installSpinner.start('Generating client code...');
 
 // exec pnpm generate in the new directory
-await execAsync('pnpm generate -f', {
+await execAsync('pnpm generate --select=wip', {
 	cwd: destinationDir,
 });
 
-installSpinner.stop('Client code generated');
+installSpinner.stop(
+	'Your first Verdant schema has been created in WIP mode. You can try out your app immediately! Edit your schema and run `pnpm generate` to generate a new version.',
+);
 
 if (templateName === 'full') {
 	note(

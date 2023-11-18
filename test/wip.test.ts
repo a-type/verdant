@@ -209,3 +209,58 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		}
 	`);
 });
+
+it('can start a WIP schema from no pre-existing client', async () => {
+	// create a WIP schema with some proposed changes.
+	// these changes are destructive. if not discarded correctly
+	// they should cause problems for the final schema.
+	const wipSchema = schema({
+		...defaultSchema,
+		collections: {
+			...defaultSchema.collections,
+			items: {
+				...defaultSchema.collections.items,
+				fields: {
+					...defaultSchema.collections.items.fields,
+					comments: {
+						type: 'array',
+						items: {
+							type: 'string',
+						},
+					},
+				},
+			},
+		},
+		version: 1,
+		wip: true,
+	});
+
+	const wipClient = await createTestClient({
+		library: 'wip-from-scratch',
+		user: 'A',
+		indexedDb: new IDBFactory(),
+		schema: wipSchema,
+		migrations: [createMigration(wipSchema)],
+	});
+
+	// make some changes
+	await wipClient.items.put({ id: '1', content: 'test item' });
+	await wipClient.categories.put({
+		name: 'cat 1',
+	});
+
+	expect(await wipClient.items.findAll().resolved).toHaveLength(1);
+	expect(await wipClient.categories.findAll().resolved).toHaveLength(1);
+
+	// then it can go to v1, which will have no data
+	const client = await createTestClient({
+		library: 'wip-from-scratch',
+		user: 'A',
+		indexedDb: new IDBFactory(),
+		schema: defaultSchema,
+		migrations: [createMigration(defaultSchema)],
+	});
+
+	expect(await client.items.findAll().resolved).toHaveLength(0);
+	expect(await client.categories.findAll().resolved).toHaveLength(0);
+});
