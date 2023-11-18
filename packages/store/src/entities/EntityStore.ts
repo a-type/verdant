@@ -28,6 +28,8 @@ import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
 import { TaggedOperation } from '../types.js';
+import { Entity } from './Entity.js';
+import { EntityCache } from './EntityCache.js';
 
 const DEFAULT_BATCH_KEY = '@@default';
 
@@ -38,7 +40,8 @@ export interface OperationBatch {
 }
 
 export class EntityStore {
-	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
+	// private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
+	private entities = new EntityCache();
 
 	public meta;
 	private operationBatcher;
@@ -167,48 +170,46 @@ export class EntityStore {
 			dropExistingUnconfirmed: dropUnconfirmed,
 			dropAll,
 		});
+		familyCache.setInitialized();
 	};
 
-	private openFamilyCache = async (oid: ObjectIdentifier) => {
-		const documentOid = getOidRoot(oid);
-		let familyCache = this.documentFamilyCaches.get(documentOid);
-		if (!familyCache) {
-			this.context.log('debug', 'opening family cache for', documentOid);
-			// metadata must be loaded from database to initialize family cache
-			familyCache = new DocumentFamilyCache({
-				oid: documentOid,
-				store: this,
+	private openDocument = async (
+		oid: ObjectIdentifier,
+		{
+			initialLocalOperations = [],
+		}: {
+			initialLocalOperations?: Operation[];
+		} = {},
+	) => {
+		assert(
+			oid === getOidRoot(oid),
+			`Only root documents may be opened, got ${oid}`,
+		);
+		const entity = this.entities.getOr(oid, () => {
+			const { schema, readonlyKeys } = this.getDocumentSchema(oid);
+			if (!schema) {
+				throw new Error(
+					`Tried to open document from unknown collection: ${oid}`,
+				);
+			}
+			const documentFamilyCache = new DocumentFamilyCache({
 				context: this.context,
+				oid,
+				store: this,
 			});
-
-			// PROBLEM: because the next line is async, it yields to
-			// queued promises which may need data from this cache,
-			// but the cache is empty. But if we move the set to
-			// after the async, we can clobber an existing cache
-			// with race conditions...
-			// So as an attempt to fix that, I've added a promise
-			// on DocumentFamilyCache which I manually resolve
-			// with setInitialized, then await initializedPromise
-			// further down even if there was a cache hit.
-			// Surely there is a better pattern for this.
-			// FIXME:
-			this.documentFamilyCaches.set(documentOid, familyCache);
-			await this.refreshFamilyCache(familyCache);
-			familyCache.setInitialized();
-
-			// this.unsubscribes.push(
-			// 	familyCache.subscribe('change:*', this.onEntityChange),
-			// );
-
-			// TODO: cleanup cache when all documents are disposed
-		}
-		await familyCache.initializedPromise;
-
-		return familyCache;
-	};
-
-	private onEntityChange = async (oid: ObjectIdentifier) => {
-		// queueMicrotask(() => this.writeDocumentToStorage(oid));
+			if (initialLocalOperations.length) {
+				documentFamilyCache.insertLocalOperations(initialLocalOperations);
+			}
+			return new Entity({
+				oid,
+				fieldSchema: schema,
+				readonlyKeys,
+				cache: documentFamilyCache,
+				readyPromise: this.refreshFamilyCache(documentFamilyCache),
+			});
+		});
+		await entity.readyPromise;
+		return entity;
 	};
 
 	private writeDocumentToStorage = async (oid: ObjectIdentifier) => {
@@ -255,12 +256,7 @@ export class EntityStore {
 	};
 
 	get = async (oid: ObjectIdentifier) => {
-		const familyCache = await this.openFamilyCache(oid);
-		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-		if (!schema) {
-			return null;
-		}
-		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
+		return this.openDocument(oid);
 	};
 
 	/**
@@ -269,15 +265,7 @@ export class EntityStore {
 	 * entity would be cached if it has been retrieved by a live query.
 	 */
 	getCached = (oid: ObjectIdentifier) => {
-		const cache = this.documentFamilyCaches.get(oid);
-		if (cache) {
-			const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-			if (!schema) {
-				return null;
-			}
-			return cache.getEntity(oid, schema, undefined, readonlyKeys);
-		}
-		return null;
+		return this.entities.getUnresolved(oid) ?? null;
 	};
 
 	/**
@@ -296,33 +284,25 @@ export class EntityStore {
 
 		assignOid(processed, oid);
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
-		const familyCache = await this.openFamilyCache(oid);
-		familyCache.insertLocalOperations(operations);
 		// don't enqueue these, submit as distinct operation.
 		// we do this so it can be immediately queryable from storage...
 		// only holding it in memory would introduce lag before it shows up
 		// in other queries.
 		await this.submitOperations(operations, options);
-		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-		if (!schema) {
-			throw new Error(
-				`Cannot create a document in the ${
-					decomposeOid(oid).collection
-				} collection; it is not defined in the current schema version.`,
-			);
-		}
-		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
+		return this.openDocument(oid, {
+			initialLocalOperations: operations,
+		});
 	};
 
-	private addOperationsToOpenCaches = async (
+	private addOperationsToInMemoryEntities = async (
 		operations: Operation[],
 		info: { isLocal: boolean; confirmed?: boolean },
 	) => {
 		const operationsByOid = groupPatchesByRootOid(operations);
 		const oids = Object.keys(operationsByOid);
 		oids.forEach((oid) => {
-			const familyCache = this.documentFamilyCaches.get(oid);
-			if (familyCache) {
+			const entity = this.entities.getUnresolved(oid);
+			if (entity) {
 				this.log(
 					'adding',
 					info.confirmed ? 'confirmed' : 'unconfirmed',
@@ -331,35 +311,36 @@ export class EntityStore {
 					operationsByOid[oid].length,
 				);
 				if (info.isLocal) {
-					familyCache.insertLocalOperations(operationsByOid[oid]);
+					entity.cache.insertLocalOperations(operationsByOid[oid]);
 				} else {
-					familyCache.insertOperations(operationsByOid[oid], info);
+					entity.cache.insertOperations(operationsByOid[oid], info);
 				}
 			}
 		});
 	};
 
-	private addBaselinesToOpenCaches = async (
+	private addBaselinesToInMemoryEntities = async (
 		baselines: DocumentBaseline[],
 		info: { isLocal: boolean },
 	) => {
 		const baselinesByOid = groupBaselinesByRootOid(baselines);
 		const oids = Object.keys(baselinesByOid);
 		oids.forEach((oid) => {
-			const cache = this.documentFamilyCaches.get(oid);
-			if (cache) {
+			const entity = this.entities.getUnresolved(oid);
+			if (entity) {
 				this.log(
 					'adding',
 					'baselines to cache',
 					oid,
 					baselinesByOid[oid].length,
 				);
-				cache.insertBaselines(baselinesByOid[oid], info);
+				entity.cache.insertBaselines(baselinesByOid[oid], info);
 			}
 		});
 	};
 
-	private addDataToOpenCaches = ({
+	// FIXME: redundant with 2 above?
+	private addDataToInMemoryEntities = ({
 		baselines,
 		operations,
 		reset,
@@ -380,9 +361,9 @@ export class EntityStore {
 			),
 		);
 		for (const oid of allDocumentOids) {
-			const familyCache = this.documentFamilyCaches.get(oid);
-			if (familyCache) {
-				familyCache.addData({
+			const entity = this.entities.getUnresolved(oid);
+			if (entity) {
+				entity.cache.addData({
 					operations: operationsByDocumentOid[oid] || [],
 					baselines: baselinesByDocumentOid[oid] || [],
 					reset,
@@ -454,7 +435,7 @@ export class EntityStore {
 			);
 		} else {
 			// first, synchronously add data to any open caches for immediate change propagation
-			allDocumentOids = this.addDataToOpenCaches({
+			allDocumentOids = this.addDataToInMemoryEntities({
 				operations: taggedOperations,
 				baselines,
 				reset,
@@ -466,7 +447,7 @@ export class EntityStore {
 		await this.meta.insertRemoteOperations(operations);
 
 		if (reset) {
-			await this.refreshAllCaches(true, true);
+			await this.refreshAllEntities(true, true);
 		}
 
 		// recompute all affected documents for querying
@@ -486,7 +467,7 @@ export class EntityStore {
 
 	addLocalOperations = async (operations: Operation[]) => {
 		this.log('Adding local operations', operations.length);
-		this.addOperationsToOpenCaches(operations, {
+		this.addOperationsToInMemoryEntities(operations, {
 			isLocal: true,
 			confirmed: false,
 		});
@@ -589,7 +570,7 @@ export class EntityStore {
 		await this.meta.insertLocalOperation(operations);
 
 		// confirm the operations
-		this.addDataToOpenCaches({ operations, baselines: [] });
+		this.addDataToInMemoryEntities({ operations, baselines: [] });
 
 		// recompute all affected documents for querying
 		const allDocumentOids = Array.from(
@@ -616,8 +597,11 @@ export class EntityStore {
 		const inverseOps: Operation[] = [];
 		const getNow = () => this.meta.now;
 		for (const [oid, patches] of Object.entries(grouped)) {
-			const familyCache = await this.openFamilyCache(oid);
-			let { view, deleted } = familyCache.computeConfirmedView(oid);
+			const documentRoot = await this.get(getOidRoot(oid));
+			// FIXME: indirection from entity to cache - can this
+			// be simplified? keeping in mind this may not be getting
+			// inverse for the root document entity...
+			let { view, deleted } = documentRoot.cache.computeConfirmedView(oid);
 			const inverse = getUndoOperations(oid, view, patches, getNow);
 			inverseOps.unshift(...inverse);
 		}
@@ -668,7 +652,7 @@ export class EntityStore {
 	reset = async () => {
 		this.context.log('warn', 'Resetting local database');
 		await this.resetStoredDocuments();
-		await this.refreshAllCaches(true);
+		await this.refreshAllEntities(true);
 		// this.context.entityEvents.emit(
 		// 	'collectionsChanged',
 		// 	Object.keys(this.schema.collections),
@@ -680,10 +664,7 @@ export class EntityStore {
 		for (const unsubscribe of this.unsubscribes) {
 			unsubscribe();
 		}
-		for (const cache of this.documentFamilyCaches.values()) {
-			cache.dispose();
-		}
-		this.documentFamilyCaches.clear();
+		this.entities.clear();
 		await this.flushAllBatches();
 	};
 
@@ -691,7 +672,7 @@ export class EntityStore {
 		this.log('debug', 'Reacting to rebases', baselines.length);
 		// update any open caches with new baseline. this will automatically
 		// drop operations before the baseline.
-		this.addBaselinesToOpenCaches(baselines, { isLocal: true });
+		this.addBaselinesToInMemoryEntities(baselines, { isLocal: true });
 	};
 
 	private resetStoredDocuments = async () => {
@@ -705,12 +686,14 @@ export class EntityStore {
 		}
 	};
 
-	private refreshAllCaches = async (
+	private refreshAllEntities = async (
 		dropUnconfirmed = false,
 		dropAll = false,
 	) => {
-		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.refreshFamilyCache(cache, dropUnconfirmed, dropAll);
-		}
+		await Promise.all(
+			this.entities.map(async (entity) => {
+				await this.refreshFamilyCache(entity.cache, dropUnconfirmed, dropAll);
+			}),
+		);
 	};
 }

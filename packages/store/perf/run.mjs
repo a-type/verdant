@@ -10,6 +10,8 @@ const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 puppeteer
 	.launch({
 		headless: 'new',
+		ignoreDefaultArgs: ['--disable-extensions'],
+		args: ['--js-flags=--expose-gc'],
 	})
 	.then(async (browser) => {
 		console.log('Beginning perf test run');
@@ -31,6 +33,11 @@ puppeteer
 		});
 
 		clearInterval(interval);
+
+		// trigger GC and wait for it to finish
+		await page.evaluate(() => {
+			window.gc();
+		});
 
 		const prototype = await page.evaluateHandle(() => {
 			return Object.prototype;

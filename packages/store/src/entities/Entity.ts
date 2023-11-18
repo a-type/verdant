@@ -20,6 +20,9 @@ import {
 } from '@verdant-web/common';
 import { EntityFile } from '../files/EntityFile.js';
 import { processValueFiles } from '../files/utils.js';
+import { EntityCache } from './EntityCache.js';
+import { WeakSubscriber } from './WeakSubscriber.js';
+import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
 
 export const ADD_OPERATIONS = '@@addOperations';
 export const DELETE = '@@delete';
@@ -33,13 +36,10 @@ export interface CacheTools {
 		deleted: boolean;
 		lastTimestamp: number | null;
 	};
-	getEntity(
-		oid: ObjectIdentifier,
-		schema: StorageFieldSchema,
-		parent?: Entity,
-	): Entity;
 	hasOid(oid: ObjectIdentifier): boolean;
 	weakRef<T extends object>(value: T): WeakRef<T>;
+	storeTools: StoreTools;
+	events: WeakSubscriber<[EntityChangeInfo]>;
 }
 
 export interface StoreTools {
@@ -112,14 +112,17 @@ export class Entity<
 		ObjectEntity<Init, KeyValue, Snapshot>,
 		ListEntity<Init, KeyValue, Snapshot>
 {
+	// TODO: make private.
+	readonly cache: DocumentFamilyCache;
+
 	// if current is null, the entity was deleted.
 	protected _current: any | null = null;
 
+	private _childCache = new EntityCache();
+
 	readonly oid: ObjectIdentifier;
 	readonly collection: string;
-	protected readonly store: StoreTools;
 	protected readonly fieldSchema;
-	protected readonly cache: CacheTools;
 	protected _deleted = false;
 	protected parent: WeakRef<Entity<any, any>> | undefined;
 	protected readonly readonlyKeys: (keyof Init)[];
@@ -201,30 +204,32 @@ export class Entity<
 		return this.oid;
 	}
 
+	readyPromise: Promise<void>;
+
 	constructor({
 		oid,
-		store,
 		fieldSchema,
 		cache,
 		parent,
 		onAllUnsubscribed,
 		readonlyKeys = [],
+		readyPromise,
 	}: {
 		oid: ObjectIdentifier;
-		store: StoreTools;
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
-		cache: CacheTools;
+		cache: DocumentFamilyCache;
 		parent?: Entity<any, any>;
 		onAllUnsubscribed?: () => void;
 		readonlyKeys?: (keyof Init)[];
+		readyPromise: Promise<void>;
 	}) {
 		this.oid = oid;
 		const { collection } = decomposeOid(oid);
 		this.collection = collection;
-		this.store = store;
 		this.fieldSchema = fieldSchema;
 		this.readonlyKeys = readonlyKeys;
 		this.cache = cache;
+		this.readyPromise = readyPromise;
 		this.parent = parent && this.cache.weakRef(parent);
 		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
 		this._current = view;
@@ -236,6 +241,8 @@ export class Entity<
 				onAllUnsubscribed?.();
 			}
 		});
+		this.cache.events.subscribe(oid, this[REFRESH]);
+		this.cache.events.subscribe('*', this[REFRESH]);
 
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');
@@ -304,7 +311,7 @@ export class Entity<
 	};
 
 	protected addPatches = (patches: Operation[]) => {
-		this.store.addLocalOperations(patches);
+		this.cache.storeTools.addLocalOperations(patches);
 	};
 
 	protected cloneCurrent = () => {
@@ -322,7 +329,17 @@ export class Entity<
 		// this is a failure case, but trying to be graceful about it...
 		// @ts-ignore
 		// if (!fieldSchema) return null;
-		return this.cache.getEntity(oid, fieldSchema, this);
+		return this._childCache.getOr(
+			oid,
+			() =>
+				new Entity({
+					oid,
+					fieldSchema,
+					cache: this.cache,
+					parent: this,
+					readyPromise: this.readyPromise,
+				}),
+		);
 	};
 
 	protected wrapValue = <Key extends keyof KeyValue>(
@@ -339,7 +356,7 @@ export class Entity<
 				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
 			);
 		} else if (isFileRef(value)) {
-			const file = this.store.getFile(value.id);
+			const file = this.cache.storeTools.getFile(value.id);
 			if (file) {
 				file.subscribe('change', () => {
 					this[DEEP_CHANGE](this, {
@@ -374,7 +391,7 @@ export class Entity<
 		if (fieldSchema) {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
 		}
-		return processValueFiles(value, this.store.addFile);
+		return processValueFiles(value, this.cache.storeTools.addFile);
 	};
 
 	get = <Key extends keyof KeyValue>(key: Key): KeyValue[Key] => {
@@ -409,7 +426,7 @@ export class Entity<
 	};
 
 	private getFileSnapshot(item: FileRef) {
-		const file = this.store.getFile(item.id);
+		const file = this.cache.storeTools.getFile(item.id);
 		if (file.url) {
 			return { id: item.id, url: file.url };
 		} else if (file.loading || file.failed) {
@@ -476,7 +493,7 @@ export class Entity<
 			throw new Error(`Cannot set readonly key ${key.toString()}`);
 		}
 		this.addPatches(
-			this.store.patchCreator.createSet(
+			this.cache.storeTools.patchCreator.createSet(
 				this.oid,
 				key as string | number,
 				this.processInputValue(value, key),
@@ -486,7 +503,11 @@ export class Entity<
 	delete = (key: any) => {
 		if (Array.isArray(this.value)) {
 			this.addPatches(
-				this.store.patchCreator.createListDelete(this.oid, key as number, 1),
+				this.cache.storeTools.patchCreator.createListDelete(
+					this.oid,
+					key as number,
+					1,
+				),
 			);
 		} else {
 			// the key must be deletable - i.e. optional in the schema
@@ -497,9 +518,13 @@ export class Entity<
 				);
 			}
 			if (deleteMode === 'delete') {
-				this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
+				this.addPatches(
+					this.cache.storeTools.patchCreator.createRemove(this.oid, key),
+				);
 			} else {
-				this.addPatches(this.store.patchCreator.createSet(this.oid, key, null));
+				this.addPatches(
+					this.cache.storeTools.patchCreator.createSet(this.oid, key, null),
+				);
 			}
 		}
 	};
@@ -567,9 +592,12 @@ export class Entity<
 				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
 			}
 		}
-		const withoutFiles = processValueFiles(value, this.store.addFile);
+		const withoutFiles = processValueFiles(
+			value,
+			this.cache.storeTools.addFile,
+		);
 		this.addPatches(
-			this.store.patchCreator.createDiff(
+			this.cache.storeTools.patchCreator.createDiff(
 				this.getSnapshot(),
 				assignOid(withoutFiles, this.oid),
 				{
@@ -612,7 +640,7 @@ export class Entity<
 
 	push = (value: ListItemInit<Init>) => {
 		this.addPatches(
-			this.store.patchCreator.createListPush(
+			this.cache.storeTools.patchCreator.createListPush(
 				this.oid,
 				this.processInputValue(value, this.value.length),
 			),
@@ -620,7 +648,7 @@ export class Entity<
 	};
 	insert = (index: number, value: ListItemInit<Init>) => {
 		this.addPatches(
-			this.store.patchCreator.createListInsert(
+			this.cache.storeTools.patchCreator.createListInsert(
 				this.oid,
 				index,
 				this.processInputValue(value, index),
@@ -629,25 +657,37 @@ export class Entity<
 	};
 	move = (from: number, to: number) => {
 		this.addPatches(
-			this.store.patchCreator.createListMoveByIndex(this.oid, from, to),
+			this.cache.storeTools.patchCreator.createListMoveByIndex(
+				this.oid,
+				from,
+				to,
+			),
 		);
 	};
 	moveItem = (item: ListItemValue<KeyValue>, to: number) => {
 		const itemRef = this.getItemRefValue(item);
 		if (isObjectRef(itemRef)) {
 			this.addPatches(
-				this.store.patchCreator.createListMoveByRef(this.oid, itemRef, to),
+				this.cache.storeTools.patchCreator.createListMoveByRef(
+					this.oid,
+					itemRef,
+					to,
+				),
 			);
 		} else {
 			const index = this.value.indexOf(itemRef);
 			this.addPatches(
-				this.store.patchCreator.createListMoveByIndex(this.oid, index, to),
+				this.cache.storeTools.patchCreator.createListMoveByIndex(
+					this.oid,
+					index,
+					to,
+				),
 			);
 		}
 	};
 	removeAll = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.patchCreator.createListRemove(
+			this.cache.storeTools.patchCreator.createListRemove(
 				this.oid,
 				this.getItemRefValue(item),
 			),
@@ -655,7 +695,7 @@ export class Entity<
 	};
 	removeFirst = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.patchCreator.createListRemove(
+			this.cache.storeTools.patchCreator.createListRemove(
 				this.oid,
 				this.getItemRefValue(item),
 				'first',
@@ -664,7 +704,7 @@ export class Entity<
 	};
 	removeLast = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.patchCreator.createListRemove(
+			this.cache.storeTools.patchCreator.createListRemove(
 				this.oid,
 				this.getItemRefValue(item),
 				'last',
@@ -673,7 +713,7 @@ export class Entity<
 	};
 	add = (item: ListItemValue<KeyValue>) => {
 		this.addPatches(
-			this.store.patchCreator.createListAdd(
+			this.cache.storeTools.patchCreator.createListAdd(
 				this.oid,
 				this.processInputValue(item, this.value.length),
 			),

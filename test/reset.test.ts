@@ -139,6 +139,8 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 		1000,
 	);
 	const b_pearQuery = clientB.items.get(b_pear.get('id'));
+	// pear was created while offline and B lost the re-initialize
+	// race, so pear should be deleted after B syncs
 	await waitForQueryResult(b_pearQuery, (val) => !val);
 	expect(b_pearQuery.current).toBe(null);
 

@@ -9,11 +9,17 @@ import {
 	Operation,
 	StorageFieldSchema,
 } from '@verdant-web/common';
-import { Entity, refreshEntity, StoreTools } from './Entity.js';
+import {
+	Entity,
+	EntityChangeInfo,
+	refreshEntity,
+	StoreTools,
+} from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
 import { Context } from '../context.js';
 import { TaggedOperation } from '../types.js';
 import { Resolvable } from '../utils/Resolvable.js';
+import { WeakSubscriber } from './WeakSubscriber.js';
 
 /**
  * Local operations: operations on this client that haven't
@@ -29,20 +35,14 @@ import { Resolvable } from '../utils/Resolvable.js';
  * because new incoming operations are synchronously applied to
  * cached entities while storage goes on async.
  */
-export class DocumentFamilyCache extends EventSubscriber<
-	Record<`change:${string}`, () => void> & {
-		'change:*': (oid: ObjectIdentifier) => void;
-	}
-> {
+export class DocumentFamilyCache {
 	readonly oid: ObjectIdentifier;
 	private operationsMap: Map<ObjectIdentifier, TaggedOperation[]>;
 	private localOperationsMap: Map<ObjectIdentifier, Operation[]>;
 	private baselinesMap: Map<ObjectIdentifier, DocumentBaseline>;
 
-	private entities: Map<ObjectIdentifier, WeakRef<Entity>> = new Map();
-
 	private context;
-	private storeTools: StoreTools;
+	storeTools: StoreTools;
 
 	private _initialized = new Resolvable<boolean>();
 	get initializedPromise() {
@@ -51,6 +51,8 @@ export class DocumentFamilyCache extends EventSubscriber<
 	setInitialized = () => {
 		this._initialized.resolve(true);
 	};
+
+	events = new WeakSubscriber<[EntityChangeInfo]>();
 
 	constructor({
 		oid,
@@ -61,7 +63,6 @@ export class DocumentFamilyCache extends EventSubscriber<
 		store: EntityStore;
 		context: Context;
 	}) {
-		super();
 		this.oid = oid;
 		this.operationsMap = new Map();
 		this.localOperationsMap = new Map();
@@ -91,13 +92,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			this.localOperationsMap.set(oid, existingOperations);
 		}
 		for (const oid of oidSet) {
-			const entityRef = this.entities.get(oid);
-			const entity = entityRef?.deref();
-			if (entity) {
-				refreshEntity(entity, { isLocal: true });
-				this.emit(`change:${oid}`);
-				this.emit('change:*', oid);
-			}
+			this.events.emit(oid, { isLocal: true });
 		}
 	};
 
@@ -191,23 +186,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 		// for reset scenario, don't immediately update entities;
 		// we will update all of them in one go.
 		this.insertOperations(operations, info);
-		if (reset) {
-			for (const entityRef of this.entities.values()) {
-				const entity = entityRef.deref();
-				if (entity) {
-					refreshEntity(entity, info);
-				}
-			}
-		} else {
-			for (const oid of info.affectedOids) {
-				const entityRef = this.entities.get(oid);
-				const entity = entityRef?.deref();
-				if (entity) {
-					refreshEntity(entity, info);
-					this.emit(`change:${oid}`);
-					this.emit('change:*', oid);
-				}
-			}
+
+		for (const oid of info.affectedOids) {
+			this.events.emit(oid, info);
 		}
 	};
 
@@ -319,39 +300,11 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return this.storeTools.time.getWallClockTime(logicalTimestamp);
 	};
 
-	getEntity = (
-		oid: ObjectIdentifier,
-		schema: StorageFieldSchema,
-		parent?: Entity,
-		readonlyKeys?: string[],
-	): Entity => {
-		let entityRef = this.entities.get(oid);
-		let entity = entityRef?.deref();
-		if (!entity) {
-			entity = new Entity({
-				oid,
-				cache: this,
-				fieldSchema: schema,
-				store: this.storeTools,
-				parent,
-				readonlyKeys,
-			});
-
-			// immediately add to cache and queue a removal if nobody subscribed
-			this.entities.set(oid, this.context.weakRef(entity));
-		}
-
-		return entity as any;
-	};
-
 	hasOid = (oid: ObjectIdentifier) => {
 		return this.operationsMap.has(oid) || this.baselinesMap.has(oid);
 	};
 
-	dispose = () => {
-		this.entities.forEach((entity) => entity.deref()?.dispose());
-		this.entities.clear();
-	};
+	dispose = () => {};
 
 	reset = ({
 		operations,
@@ -403,14 +356,6 @@ export class DocumentFamilyCache extends EventSubscriber<
 			}
 		}
 
-		for (const oid of this.entities.keys()) {
-			const entityRef = this.entities.get(oid);
-			const entity = entityRef?.deref();
-			if (entity) {
-				refreshEntity(entity, info);
-				this.emit(`change:${oid}`);
-				this.emit('change:*', oid);
-			}
-		}
+		this.events.emit('*', info);
 	};
 }

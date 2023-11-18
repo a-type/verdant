@@ -12,21 +12,16 @@ import { isObject, assert } from './utils.js';
  * on its own and associating it back to its parent.
  *
  * An OID is structured as such:
- * <collection>/<root id>[/<key paths>]:<random>
+ * <collection>/<root id>:<random>
  *
  * OIDs have a few characteristics:
  * - They include the collection name of the parent document
  * - They include the primary key of the parent document
- * - They include the key path of the object within the document
  * - They include a random sequence to identify different objects which
  *   exist at the same key path
  *
  * Collection name and document key are used to link any isolated
  * object back to its parent document.
- *
- * The key path is used for authorization - to associate the object
- * (or an operation related to it by OID) with the field it inhabits
- * to utilize authorization rules from that field in the schema.
  *
  * The random sequence allows the application to encode different
  * identities for objects at the same position in a document for
