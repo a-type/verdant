@@ -260,7 +260,7 @@ export class EntityStore {
 		if (!schema) {
 			return null;
 		}
-		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
+		return familyCache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
 	};
 
 	/**
@@ -275,7 +275,7 @@ export class EntityStore {
 			if (!schema) {
 				return null;
 			}
-			return cache.getEntity(oid, schema, undefined, readonlyKeys);
+			return cache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
 		}
 		return null;
 	};
@@ -311,7 +311,7 @@ export class EntityStore {
 				} collection; it is not defined in the current schema version.`,
 			);
 		}
-		return familyCache.getEntity(oid, schema, undefined, readonlyKeys);
+		return familyCache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
 	};
 
 	private addOperationsToOpenCaches = async (

@@ -19,6 +19,7 @@ export const todo = collection({
 			type: 'array',
 			items: {
 				type: 'string',
+				options: ['work', 'home', 'other'],
 			},
 		},
 		category: {

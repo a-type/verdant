@@ -16,6 +16,7 @@ const items = collection({
 			type: 'array',
 			items: {
 				type: 'string',
+				options: ['a', 'b', 'c'],
 			},
 		},
 		purchased: {
@@ -51,7 +52,7 @@ const items = collection({
 			nullable: true,
 		},
 	},
-	synthetics: {
+	indexes: {
 		purchasedYesNo: {
 			type: 'string',
 			compute(item) {

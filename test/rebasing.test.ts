@@ -49,7 +49,7 @@ it('an offline client rebases everything', async () => {
 		content: 'Oranges',
 		categoryId: produce.get('id'),
 	});
-	oranges.get('tags').push('orange');
+	oranges.get('tags').push('a');
 	oranges.get('comments').push({
 		content: 'Do not eat the peel',
 		authorId: 'Anon',

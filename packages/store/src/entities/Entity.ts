@@ -17,6 +17,7 @@ import {
 	StorageFieldsSchema,
 	TimestampProvider,
 	traverseCollectionFieldsAndApplyDefaults,
+	validateEntityField,
 } from '@verdant-web/common';
 import { EntityFile } from '../files/EntityFile.js';
 import { processValueFiles } from '../files/utils.js';
@@ -33,11 +34,12 @@ export interface CacheTools {
 		deleted: boolean;
 		lastTimestamp: number | null;
 	};
-	getEntity(
-		oid: ObjectIdentifier,
-		schema: StorageFieldSchema,
-		parent?: Entity,
-	): Entity;
+	getEntity(params: {
+		oid: ObjectIdentifier;
+		fieldSchema: StorageFieldSchema;
+		parent?: Entity;
+		fieldKey?: string | number;
+	}): Entity;
 	hasOid(oid: ObjectIdentifier): boolean;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 }
@@ -116,6 +118,7 @@ export class Entity<
 	protected _current: any | null = null;
 
 	readonly oid: ObjectIdentifier;
+	readonly fieldPath: string[];
 	readonly collection: string;
 	protected readonly store: StoreTools;
 	protected readonly fieldSchema;
@@ -209,6 +212,7 @@ export class Entity<
 		parent,
 		onAllUnsubscribed,
 		readonlyKeys = [],
+		fieldPath = [],
 	}: {
 		oid: ObjectIdentifier;
 		store: StoreTools;
@@ -217,12 +221,14 @@ export class Entity<
 		parent?: Entity<any, any>;
 		onAllUnsubscribed?: () => void;
 		readonlyKeys?: (keyof Init)[];
+		fieldPath?: string[];
 	}) {
 		this.oid = oid;
 		const { collection } = decomposeOid(oid);
 		this.collection = collection;
 		this.store = store;
 		this.fieldSchema = fieldSchema;
+		this.fieldPath = fieldPath;
 		this.readonlyKeys = readonlyKeys;
 		this.cache = cache;
 		this.parent = parent && this.cache.weakRef(parent);
@@ -322,7 +328,12 @@ export class Entity<
 		// this is a failure case, but trying to be graceful about it...
 		// @ts-ignore
 		// if (!fieldSchema) return null;
-		return this.cache.getEntity(oid, fieldSchema, this);
+		return this.cache.getEntity({
+			oid,
+			fieldSchema,
+			parent: this,
+			fieldKey: key,
+		});
 	};
 
 	protected wrapValue = <Key extends keyof KeyValue>(
@@ -373,6 +384,15 @@ export class Entity<
 		const fieldSchema = this.getChildFieldSchema(key);
 		if (fieldSchema) {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
+		}
+		const validationError = validateEntityField(fieldSchema, value, [
+			...this.fieldPath,
+			key,
+		]);
+		if (validationError) {
+			// TODO: is it a good idea to throw an error here? a runtime error won't be that helpful,
+			// but also we don't really want invalid data supplied.
+			throw new Error(validationError);
 		}
 		return processValueFiles(value, this.store.addFile);
 	};

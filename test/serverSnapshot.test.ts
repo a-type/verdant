@@ -81,7 +81,7 @@ it('the server allows retrieving a document snapshot', async () => {
 				authorId: 'me',
 				content: 'Yum again',
 			});
-			a_apples.get('tags').push('fruit');
+			a_apples.get('tags').push('a');
 		})
 		.flush();
 	clientA

@@ -12,7 +12,7 @@ export type ItemSnapshot = {
   image: string | null;
 };
 
-export type ItemTagsSnapshot = string[];
+export type ItemTagsSnapshot = ("a" | "b" | "c")[];
 export type ItemCommentsItemSnapshot = {
   id: string;
   content: string;
@@ -29,7 +29,7 @@ export type ItemInit = {
   image?: File | null;
 };
 
-export type ItemTagsInit = string[];
+export type ItemTagsInit = ("a" | "b" | "c")[];
 export type ItemCommentsItemInit = {
   id?: string;
   content?: string;

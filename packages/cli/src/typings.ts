@@ -21,7 +21,7 @@ export function getAllTypings({ schema }: { schema: StorageSchema }) {
 
 export function getClientTypings({ schema }: { schema: StorageSchema }) {
 	const typings = `/** Generated types for Verdant client */
-import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions as BaseClientDescriptorOptions, CollectionQueries, StorageSchema, Migration, EntityFile } from '@verdant-web/store';
+import type { Client as BaseClient, ClientDescriptor as BaseClientDescriptor, ClientDescriptorOptions as BaseClientDescriptorOptions, CollectionQueries, StorageSchema, Migration } from '@verdant-web/store';
 export * from '@verdant-web/store';
 
 export class Client<Presence = any, Profile = any> {
@@ -36,13 +36,13 @@ export class Client<Presence = any, Profile = any> {
   undoHistory: BaseClient<Presence, Profile>['undoHistory'];
   namespace: BaseClient<Presence, Profile>['namespace'];
   entities: BaseClient<Presence, Profile>['entities'];
-  queryStore: BaseClient<Presence, Profile>['queryStore'];
+  // queryStore: BaseClient<Presence, Profile>['queryStore'];
   batch: BaseClient<Presence, Profile>['batch'];
-  files: BaseClient<Presence, Profile>['files'];
+  // files: BaseClient<Presence, Profile>['files'];
   close: BaseClient<Presence, Profile>['close'];
   export: BaseClient<Presence, Profile>['export'];
   import: BaseClient<Presence, Profile>['import'];
-  subscribe: BaseClient<Presence, Profile>['on'];
+  subscribe: BaseClient<Presence, Profile>['subscribe'];
   stats: BaseClient<Presence, Profile>['stats'];
   __dangerous__resetLocal: BaseClient<Presence, Profile>['__dangerous__resetLocal'];
 }
@@ -55,7 +55,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> extends 
 }
 
 export class ClientDescriptor<Presence = any, Profile = any> {
-  constructor(init: ClientInitOptions<Presence, Profile>);
+  constructor(init: ClientDescriptorOptions<Presence, Profile>);
   open: () => Promise<Client<Presence, Profile>>;
   close: () => Promise<void>;
   readonly current: Client<Presence, Profile> | null;
@@ -147,6 +147,16 @@ function getFieldTypings({
 	const optional = optionals && (isNullable(field) || hasDefault(field));
 	switch (field.type) {
 		case 'string':
+			if (field.options) {
+				return {
+					alias: `(${
+						field.options.map((s) => `'${s}'`).join(' | ') +
+						(isNullable(field) ? ' | null' : '')
+					})`,
+					optional,
+					declarations: '',
+				};
+			}
 		case 'number':
 		case 'boolean':
 		case 'any':
@@ -310,6 +320,13 @@ function getEntityFieldTypings({
 }): string {
 	switch (field.type) {
 		case 'string':
+			if (field.options) {
+				return aliasBuilder(
+					name,
+					'(' + field.options.map((s) => `'${s}'`).join(' | ') + ')',
+				).build();
+			}
+			return aliasBuilder(name, field.type).build();
 		case 'number':
 		case 'boolean':
 			return aliasBuilder(name, field.type).build();

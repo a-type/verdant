@@ -45,6 +45,15 @@ describe('generated client', () => {
 			done: false,
 		});
 
+		try {
+			// @ts-expect-error
+			item.get('tags').push('not a tag');
+			expect(true, 'That tag should not have been allowed').toBe(false);
+		} catch (e) {
+			// pass
+		}
+		item.get('tags').push('work');
+
 		expect(item.get('content')).toBe('test');
 
 		const query = client.todos.findAll({

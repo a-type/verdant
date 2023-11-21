@@ -140,10 +140,10 @@ it('can sync multiple clients even if they go offline', async () => {
 	expect(b_unknownItem).toBeTruthy();
 	assert(b_unknownItem);
 
-	a_unknownItem.get('tags').add('tag1');
-	a_unknownItem.get('tags').add('tag2');
-	b_unknownItem.get('tags').add('tag3');
-	b_unknownItem.get('tags').add('tag1');
+	a_unknownItem.get('tags').add('a');
+	a_unknownItem.get('tags').add('b');
+	b_unknownItem.get('tags').add('c');
+	b_unknownItem.get('tags').add('a');
 
 	// test deleting something attached to a document, then undoing that
 	const b_produce = await clientB.categories.findOne({
@@ -168,14 +168,14 @@ it('can sync multiple clients even if they go offline', async () => {
 	async function waitForTags(item: Item) {
 		await waitForCondition(() => {
 			return (
-				item.get('tags').has('tag1') &&
-				item.get('tags').has('tag2') &&
-				item.get('tags').has('tag3')
+				item.get('tags').has('a') &&
+				item.get('tags').has('b') &&
+				item.get('tags').has('c')
 			);
 		});
-		expect(item.get('tags').has('tag1')).toBe(true);
-		expect(item.get('tags').has('tag2')).toBe(true);
-		expect(item.get('tags').has('tag3')).toBe(true);
+		expect(item.get('tags').has('a')).toBe(true);
+		expect(item.get('tags').has('b')).toBe(true);
+		expect(item.get('tags').has('c')).toBe(true);
 	}
 	await waitForTags(a_unknownItem);
 	await waitForTags(b_unknownItem);

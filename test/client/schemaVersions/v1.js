@@ -17,7 +17,8 @@ var items = collection({
     tags: {
       type: "array",
       items: {
-        type: "string"
+        type: "string",
+        options: ["a", "b", "c"]
       }
     },
     purchased: {
@@ -53,7 +54,7 @@ var items = collection({
       nullable: true
     }
   },
-  synthetics: {
+  indexes: {
     purchasedYesNo: {
       type: "string",
       compute(item) {

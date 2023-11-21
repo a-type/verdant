@@ -4,6 +4,8 @@ export type StorageStringFieldSchema = {
 	indexed?: boolean;
 	nullable?: boolean;
 	default?: string | (() => string);
+	/** Limit the values to a certain set of options */
+	options?: string[];
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';

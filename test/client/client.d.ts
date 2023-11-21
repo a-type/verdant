@@ -6,7 +6,6 @@ import type {
   CollectionQueries,
   StorageSchema,
   Migration,
-  EntityFile,
 } from "@verdant-web/store";
 export * from "@verdant-web/store";
 
@@ -22,13 +21,13 @@ export class Client<Presence = any, Profile = any> {
   undoHistory: BaseClient<Presence, Profile>["undoHistory"];
   namespace: BaseClient<Presence, Profile>["namespace"];
   entities: BaseClient<Presence, Profile>["entities"];
-  queryStore: BaseClient<Presence, Profile>["queryStore"];
+  // queryStore: BaseClient<Presence, Profile>['queryStore'];
   batch: BaseClient<Presence, Profile>["batch"];
-  files: BaseClient<Presence, Profile>["files"];
+  // files: BaseClient<Presence, Profile>['files'];
   close: BaseClient<Presence, Profile>["close"];
   export: BaseClient<Presence, Profile>["export"];
   import: BaseClient<Presence, Profile>["import"];
-  subscribe: BaseClient<Presence, Profile>["on"];
+  subscribe: BaseClient<Presence, Profile>["subscribe"];
   stats: BaseClient<Presence, Profile>["stats"];
   __dangerous__resetLocal: BaseClient<
     Presence,
@@ -48,7 +47,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any>
 }
 
 export class ClientDescriptor<Presence = any, Profile = any> {
-  constructor(init: ClientInitOptions<Presence, Profile>);
+  constructor(init: ClientDescriptorOptions<Presence, Profile>);
   open: () => Promise<Client<Presence, Profile>>;
   close: () => Promise<void>;
   readonly current: Client<Presence, Profile> | null;
@@ -69,7 +68,7 @@ export type ItemTags = ListEntity<
   ItemTagsDestructured,
   ItemTagsSnapshot
 >;
-export type ItemTagsItem = string;
+export type ItemTagsItem = "a" | "b" | "c";
 export type ItemPurchased = boolean;
 export type ItemCategoryId = string;
 export type ItemComments = ListEntity<
@@ -96,7 +95,7 @@ export type ItemInit = {
   image?: File | null;
 };
 
-export type ItemTagsInit = string[];
+export type ItemTagsInit = ("a" | "b" | "c")[];
 export type ItemCommentsItemInit = {
   id?: string;
   content?: string;
@@ -113,7 +112,7 @@ export type ItemDestructured = {
   image: EntityFile | null;
 };
 
-export type ItemTagsDestructured = string[];
+export type ItemTagsDestructured = ("a" | "b" | "c")[];
 export type ItemCommentsItemDestructured = {
   id: string;
   content: string;
@@ -130,7 +129,7 @@ export type ItemSnapshot = {
   image: string | null;
 };
 
-export type ItemTagsSnapshot = string[];
+export type ItemTagsSnapshot = ("a" | "b" | "c")[];
 export type ItemCommentsItemSnapshot = {
   id: string;
   content: string;

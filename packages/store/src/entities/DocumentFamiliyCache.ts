@@ -319,12 +319,19 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return this.storeTools.time.getWallClockTime(logicalTimestamp);
 	};
 
-	getEntity = (
-		oid: ObjectIdentifier,
-		schema: StorageFieldSchema,
-		parent?: Entity,
-		readonlyKeys?: string[],
-	): Entity => {
+	getEntity = ({
+		oid,
+		fieldSchema: schema,
+		parent,
+		readonlyKeys,
+		fieldKey,
+	}: {
+		oid: ObjectIdentifier;
+		fieldSchema: StorageFieldSchema;
+		parent?: Entity;
+		readonlyKeys?: string[];
+		fieldKey?: string;
+	}): Entity => {
 		let entityRef = this.entities.get(oid);
 		let entity = entityRef?.deref();
 		if (!entity) {
@@ -335,6 +342,9 @@ export class DocumentFamilyCache extends EventSubscriber<
 				store: this.storeTools,
 				parent,
 				readonlyKeys,
+				fieldPath: fieldKey
+					? [...(parent?.fieldPath ?? []), fieldKey]
+					: undefined,
 			});
 
 			// immediately add to cache and queue a removal if nobody subscribed
