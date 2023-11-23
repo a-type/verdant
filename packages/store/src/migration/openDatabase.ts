@@ -458,15 +458,16 @@ function getMigrationMutations({
 				);
 				return doc;
 			},
-			delete: (id: string) => {
-				const oid = createOid(collectionName, id);
-				return meta.insertLocalOperation([
-					{
+			delete: async (id: string) => {
+				const rootOid = createOid(collectionName, id);
+				const allOids = await meta.getAllDocumentRelatedOids(rootOid);
+				return meta.insertLocalOperation(
+					allOids.map((oid) => ({
 						oid,
 						timestamp: getMigrationNow(),
 						data: { op: 'delete' },
-					},
-				]);
+					})),
+				);
 			},
 		};
 		return acc;
@@ -553,10 +554,21 @@ function getMigrationEngine({
 		newOids,
 		meta,
 	});
+	const deleteCollection = async (collection: string) => {
+		const allOids = await meta.getAllCollectionRelatedOids(collection);
+		return meta.insertLocalOperation(
+			allOids.map((oid) => ({
+				oid,
+				timestamp: getMigrationNow(),
+				data: { op: 'delete' },
+			})),
+		);
+	};
 	const awaitables = new Array<Promise<any>>();
 	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
+		deleteCollection,
 		migrate: async (collection, strategy) => {
 			const docs = await queries[collection].findAll();
 
@@ -632,6 +644,11 @@ function getInitialMigrationEngine({
 	const engine: MigrationEngine = {
 		log: context.log,
 		newOids,
+		deleteCollection: () => {
+			throw new Error(
+				'Calling deleteCollection() in initial migrations is not supported! Use initial migrations to seed initial data using mutations.',
+			);
+		},
 		migrate: () => {
 			throw new Error(
 				'Calling migrate() in initial migrations is not supported! Use initial migrations to seed initial data using mutations.',

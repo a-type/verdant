@@ -503,6 +503,18 @@ it(
 			}
 		`);
 
+		// breaking the surface API a bit, I also want to check to see
+		// that we created delete operations for every existing item
+		// when dropping the table.
+		const localItemDeletes: any[] = [];
+		await client.meta.operations.iterateOverAllLocalOperations((op) => {
+			if (op.oid.startsWith('items') && op.data.op === 'delete') {
+				localItemDeletes.push(op);
+			}
+		}, {});
+		// 13 is the number of total nested objects in our 3 items
+		expect(localItemDeletes).toHaveLength(13);
+
 		await client.close();
 
 		const v5List = collection({

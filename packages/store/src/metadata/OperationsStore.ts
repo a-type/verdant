@@ -136,6 +136,37 @@ export class OperationsStore extends IDBService {
 		});
 	};
 
+	iterateOverAllOperationsForCollection = async (
+		collection: string,
+		iterator: (patch: StoredClientOperation, store: IDBObjectStore) => void,
+		{
+			after,
+			to,
+			mode,
+			transaction: providedTx,
+		}: {
+			after?: string;
+			to?: string;
+			mode?: 'readwrite' | 'readonly';
+			transaction?: IDBTransaction;
+		},
+	): Promise<void> => {
+		const transaction = providedTx || this.db.transaction('operations', mode);
+
+		return this.iterate(
+			'operations',
+			(store) => {
+				return store.openCursor(
+					IDBKeyRange.bound(collection, collection + '\uffff', false, false),
+					'next',
+				);
+			},
+			iterator,
+			mode,
+			transaction,
+		);
+	};
+
 	iterateOverAllLocalOperations = async (
 		iterator: (patch: ClientOperation, store: IDBObjectStore) => void,
 		{

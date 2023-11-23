@@ -141,6 +141,32 @@ export class Metadata extends EventSubscriber<{
 		return Array.from(oids);
 	};
 
+	getAllCollectionRelatedOids = async (oid: ObjectIdentifier) => {
+		const oids = new Set<ObjectIdentifier>();
+		const transaction = this.db.transaction(
+			['baselines', 'operations'],
+			'readwrite',
+		);
+		await Promise.all([
+			this.baselines.iterateOverAllForCollection(
+				oid,
+				(baseline) => {
+					oids.add(baseline.oid);
+				},
+				{ transaction },
+			),
+			this.operations.iterateOverAllOperationsForCollection(
+				oid,
+				(patch) => {
+					oids.add(patch.oid);
+				},
+				{ transaction },
+			),
+		]);
+
+		return Array.from(oids);
+	};
+
 	getDocumentSnapshot = async (
 		oid: ObjectIdentifier,
 		options: { to?: string } = {},

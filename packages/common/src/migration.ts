@@ -177,6 +177,8 @@ export interface MigrationEngine {
 	newOids: string[];
 	/** Promises that should be resolved before completing the migration */
 	awaitables: Promise<any>[];
+	/** Deletes all documents in a collection - used for removed collections */
+	deleteCollection: (collection: string) => Promise<void>;
 	log: (...messages: any[]) => void;
 }
 /** @deprecated */
@@ -597,6 +599,11 @@ export function createMigration(
 				for (const name of autoMigratedCollections) {
 					await engine.migrate(name, autoMigration(name));
 					migratedCollections.push(name);
+				}
+
+				// delete all documents in deleted collections
+				for (const name of removedCollections) {
+					await engine.deleteCollection(name);
 				}
 
 				const unmigrated = changedCollections.filter(

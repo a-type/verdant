@@ -45,12 +45,12 @@ export class BaselinesStore extends IDBService {
 				const [start, end] = getOidSubIdRange(oid);
 				// FIXME: get rid of legacy dot OIDs...
 				// if (isLegacyDotOid(oid)) {
-					const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
-					return [
-						store.openCursor(IDBKeyRange.only(root)),
-						store.openCursor(IDBKeyRange.bound(start, end, false, false)),
-						store.openCursor(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
-					]
+				const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
+				return [
+					store.openCursor(IDBKeyRange.only(root)),
+					store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+					store.openCursor(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
+				];
 				// } else {
 				// 	return [
 				// 		// first the root itself
@@ -59,6 +59,29 @@ export class BaselinesStore extends IDBService {
 				// 		store.openCursor(IDBKeyRange.bound(start, end, false, false)),
 				// 	];
 				// }
+			},
+			iterator,
+			mode,
+			transaction,
+		);
+	};
+
+	iterateOverAllForCollection = async (
+		collection: string,
+		iterator: (baseline: DocumentBaseline, store: IDBObjectStore) => void,
+		{
+			mode = 'readonly',
+			transaction,
+		}: { mode?: 'readwrite' | 'readonly'; transaction?: IDBTransaction } = {},
+	) => {
+		return this.iterate(
+			'baselines',
+			(store) => {
+				return [
+					store.openCursor(
+						IDBKeyRange.bound(collection, collection + '\uffff', false, false),
+					),
+				];
 			},
 			iterator,
 			mode,
@@ -78,12 +101,12 @@ export class BaselinesStore extends IDBService {
 					const [start, end] = getOidSubIdRange(oid);
 					// FIXME: get rid of legacy dot OIDs...
 					// if (isLegacyDotOid(oid)) {
-						const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
-						return [
-							store.get(root),
-							store.getAll(IDBKeyRange.bound(start, end, false, false)),
-							store.getAll(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
-						]
+					const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(oid);
+					return [
+						store.get(root),
+						store.getAll(IDBKeyRange.bound(start, end, false, false)),
+						store.getAll(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
+					];
 					// } else {
 					// 	return [
 					// 		store.get(root),
