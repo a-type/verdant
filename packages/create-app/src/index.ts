@@ -95,6 +95,7 @@ const copyConfig = {
 	replace: {
 		'{{todo}}': name,
 		'.env-template': '.env',
+		'.gitignore-template': '.gitignore',
 	},
 	gitingore: true,
 	exclude: dontCopy,
