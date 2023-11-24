@@ -251,7 +251,7 @@ Time to try that for ourselves: run `pnpm dev`.
 
 At `localhost:3000`, you'll see your app! Click on an option and it will stay selected even if you reload the page. If you feel like it, set this tutorial aside and come back tomorrow and it should be back to no selection.
 
-![A screenshot of 5 mood selector buttons. The "same" one is selected.](/static/images/tutorial-mood/app-1.png)
+![A screenshot of 5 mood selector buttons. The "same" one is selected.](/images/tutorial-mood/app-1.png)
 
 ## Time for a schema revision!
 
@@ -568,7 +568,7 @@ Two, the version of `useWatch` when you pass something that isn't `| null` lets 
 
 Finally, if we try out our app again, that pesky delay is gone.
 
-![](/static/images/tutorial-mood/fast-update.mp4)
+![](/images/tutorial-mood/fast-update.mp4)
 
 Clicking on a mood now updates and re-renders all components that display that entry everywhere in the app, immediately, without needing to wait for data to reach IndexedDB or be queried again.
 
