@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.2.0
+
+### Minor Changes
+
+- 2853187: Update Verdant packages before running starter kit
+
 ## 0.1.2
 
 ### Patch Changes
