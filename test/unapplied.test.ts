@@ -7,7 +7,12 @@ import {
 } from './lib/waits.js';
 import defaultMigrations from './migrations/index.js';
 import defaultSchema from './schema.js';
-import { schema, collection, migrate } from '@verdant-web/store';
+import {
+	schema,
+	collection,
+	migrate,
+	createMigration,
+} from '@verdant-web/store';
 
 const context = createTestContext();
 
@@ -27,7 +32,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		library: 'unapplied-1',
 		user: 'User B',
 		indexedDb,
-		logId: 'B1',
 	});
 
 	const bHasSeenFuture = vitest.fn();
@@ -116,7 +120,7 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		user: 'User B',
 		migrations: [
 			...defaultMigrations,
-			migrate(defaultSchema, v2Schema, async (tools) => {
+			createMigration(defaultSchema, v2Schema, async (tools) => {
 				await tools.migrate('items', (item) => {
 					// expect that the new field has not yet been applied to this snapshot -
 					// the snapshot should represent the item from v1 only
@@ -130,7 +134,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		],
 		schema: v2Schema,
 		indexedDb,
-		logId: 'B2',
 	});
 
 	// B should now be able to query the changed items
