@@ -138,7 +138,7 @@ export async function generate({
 					},
 				],
 			});
-		} else if (userSchemaDifferent) {
+		} else if (userSchemaDifferent || canonicalIsWip) {
 			if (canonicalIsWip) {
 				selection = await select({
 					message: `A WIP schema for version ${userSchemaVersion} is in progress. Choose a way to proceed:`,
