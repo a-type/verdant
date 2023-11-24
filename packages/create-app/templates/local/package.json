@@ -11,7 +11,8 @@
 		"build": "turbo run build",
 		"test": "turbo run test",
 		"prisma": "pnpm --filter @{{todo}}/prisma run prisma",
-		"generate": "pnpm --filter @{{todo}}/verdant run generate"
+		"generate": "pnpm --filter @{{todo}}/verdant run generate",
+		"preflight": "pnpm --filter @{{todo}}/verdant run preflight"
 	},
 	"devDependencies": {
 		"turbo": "^1.6.1"

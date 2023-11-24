@@ -5,7 +5,9 @@
 	"main": "src/index.ts",
 	"type": "module",
 	"scripts": {
-		"generate": "verdant -s ./src/schema.ts -o ./src/client -r"
+		"generate": "verdant -s ./src/schema.ts -o ./src/client -r",
+		"preflight": "verdant preflight -s ./src/schema.ts -o ./src/client",
+		"build": "pnpm run preflight"
 	},
 	"peerDependencies": {
 		"react": "^18.2.0"
