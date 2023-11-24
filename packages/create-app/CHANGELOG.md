@@ -1,5 +1,15 @@
 # @verdant-web/create-app
 
+## 0.3.0
+
+### Minor Changes
+
+- fc2b3f8: Add preflight to app build step
+
+### Patch Changes
+
+- 725d80f: Add gitignore to create app
+
 ## 0.2.0
 
 ### Minor Changes
