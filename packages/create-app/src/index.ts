@@ -124,6 +124,12 @@ await execAsync('pnpm i', {
 
 installSpinner.stop('Dependencies installed');
 
+installSpinner.start('Updating Verdant to latest...');
+
+await execAsync('pnpm --recursive update "@verdant-web/*" --latest', {
+	cwd: destinationDir,
+});
+
 installSpinner.start('Generating client code...');
 
 // exec pnpm generate in the new directory

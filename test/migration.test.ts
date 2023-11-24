@@ -4,7 +4,6 @@ import {
 	collection,
 	StorageDescriptor,
 	Migration,
-	createDefaultMigration,
 	migrate,
 	ClientWithCollections,
 	createMigration,
@@ -21,6 +20,7 @@ async function createTestClient({
 	user,
 	type = ReplicaType.Realtime,
 	logId,
+	disableRebasing,
 	indexedDb = new IDBFactory(),
 }: {
 	schema: any;
@@ -30,6 +30,7 @@ async function createTestClient({
 	user: string;
 	type?: ReplicaType;
 	logId?: string;
+	disableRebasing?: boolean;
 	indexedDb?: IDBFactory;
 }): Promise<ClientWithCollections> {
 	const desc = new StorageDescriptor({
@@ -48,6 +49,7 @@ async function createTestClient({
 			? (...args: any[]) => console.log(`[${logId}]`, ...args)
 			: undefined,
 		indexedDb,
+		disableRebasing,
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;
@@ -80,7 +82,7 @@ it(
 			},
 		});
 
-		let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
+		let migrations: Migration<any>[] = [createMigration(v1Schema)];
 
 		const clientInit = {
 			migrations,
@@ -438,6 +440,8 @@ it(
 
 		client = await createTestClient({
 			schema: v4Schema,
+			// disable rebasing so we get predictable metadata
+			disableRebasing: true,
 			...clientInit,
 		});
 
@@ -513,7 +517,7 @@ it(
 			}
 		}, {});
 		// 13 is the number of total nested objects in our 3 items
-		expect(localItemDeletes).toHaveLength(13);
+		expect(localItemDeletes).toHaveLength(11);
 
 		await client.close();
 
@@ -644,7 +648,7 @@ it('supports skip migrations in real life', async () => {
 		},
 	});
 
-	let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
+	let migrations: Migration<any>[] = [createMigration(v1Schema)];
 
 	const clientInit = {
 		migrations,
@@ -718,7 +722,7 @@ it('supports skip migrations in real life', async () => {
 
 	// this migration should be bypassed
 	migrations.push(
-		migrate(v1Schema, v2Schema, async () => {
+		createMigration(v1Schema, v2Schema, async () => {
 			throw new Error('should not be called');
 		}),
 	);
@@ -766,7 +770,7 @@ it('supports skip migrations in real life', async () => {
 	});
 
 	migrations.push(
-		migrate(v2Schema, v3Schema, async () => {
+		createMigration(v2Schema, v3Schema, async () => {
 			throw new Error('should not be called');
 		}),
 	);
@@ -797,7 +801,7 @@ it('supports skip migrations in real life', async () => {
 	});
 
 	migrations.push(
-		migrate(v3Schema, v4Schema, async () => {
+		createMigration(v3Schema, v4Schema, async () => {
 			throw new Error('should not be called');
 		}),
 	);

@@ -10,7 +10,6 @@ It comes with a bunch of things out of the box. Some stuff you may not want to k
 
 Here's what you need to do before your app is ready to use:
 
-- [ ] Fill in the missing values in `./apps/api.env`
 - [ ] Edit `./packages/verdant/src/schema.ts` and add your first Verdant schema
 - [ ] Run `pnpm generate` to generate the Verdant client
 - [ ] Run `pnpm prisma migrate dev` to set up the database
