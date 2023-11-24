@@ -464,6 +464,8 @@ Those won't sort like we want! Oh dear!
 
 Here's the thing about primary keys... you can't really change them easily. We _could_ rewrite all the entries, basically moving them from one place to another (you can actually do this in a migration if you want). But this can disrupt conflict resolution, because the new documents get new identities.
 
+> Side note: I chose a rather poor (but still unique and predictable) primary key to represent a date for this tutorial. When you're building your apps, try to take more care designing your primary key to avoid this kind of situation entirely! In most cases, though, a random ID is sufficient, so this kind of problem is less likely to affect you.
+
 The truth is, when you're working in local-first systems, you're likely to make mistakes like this at some point. Verdant tries to give you some tools to recover from them. In this case, while we can't rewrite our `date` fields, we _can_ change the index we're querying on to fix the data and make it well-ordered.
 
 Let's change our `date` index from
