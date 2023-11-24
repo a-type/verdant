@@ -1,5 +1,18 @@
 # @lo-fi/web
 
+## 2.8.0
+
+### Minor Changes
+
+- 594a03c: Support limited options for string fields in schema and CLI. Adds validation for field values when writing to entities.
+
+### Patch Changes
+
+- e96b252: Collections deleted during migrations now properly delete all related data
+- Updated dependencies [594a03c]
+- Updated dependencies [e96b252]
+  - @verdant-web/common@1.16.0
+
 ## 2.7.10
 
 ### Patch Changes
