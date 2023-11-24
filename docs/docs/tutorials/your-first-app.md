@@ -609,6 +609,18 @@ Now our schema is ready for deployment, and our `pnpm build` command succeeds.
 
 The resulting output in `apps/web/dist` is ready to be uploaded to any static website host, or you may want to set up your repo with automatic deployment via a provider like Vercel or Netlify.
 
+## I want to point out...
+
+We made a fully functional app, which provides some value to the user, persistently stores data on-device, and reactively updates the UI for every change. And we did it without:
+
+- A React state library like Redux or Zustand
+- A React query and cache library like React Query or RTK Query
+- Worrying about cache invalidation, async mutations, or optimistic updates
+
+The cool thing is no matter how complex your app gets or how big it grows, Verdant continues to work without these things really well. You might find yourself reaching for other tools sometimes, but it will be for more localized problems (like temporary session state) and not holistic ones. Verdant can power ambitious apps, like my [cooking app Gnocchi](https://gnocchi.club), out of the box.
+
+I hope this tutorial made you more excited for local-first development and how simple it can be, and perhaps also for Verdant in particular.
+
 ## More things to explore
 
 Your app comes pre-configured with a PWA-ready service worker and web manifest, but you'll want to customize these details with your own app information, of course.
