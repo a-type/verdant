@@ -1,5 +1,16 @@
 # @verdant-web/cli
 
+## 4.1.0
+
+### Minor Changes
+
+- 594a03c: Support limited options for string fields in schema and CLI. Adds validation for field values when writing to entities.
+
+### Patch Changes
+
+- 78d2fdf: Allow more non-interactive CLI selections
+- fef825e: Fix CLI not bumping WIP schema to prod schema
+
 ## 4.0.5
 
 ### Patch Changes

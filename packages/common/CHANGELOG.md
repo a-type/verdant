@@ -1,5 +1,15 @@
 # @verdant-web/common
 
+## 1.16.0
+
+### Minor Changes
+
+- 594a03c: Support limited options for string fields in schema and CLI. Adds validation for field values when writing to entities.
+
+### Patch Changes
+
+- e96b252: Collections deleted during migrations now properly delete all related data
+
 ## 1.15.5
 
 ### Patch Changes
