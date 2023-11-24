@@ -1,0 +1,8 @@
+{
+	"label": "Tutorials",
+	"position": 10,
+	"link": {
+		"type": "generated-index",
+		"description": "Longer-form tutorials for how to use Verdant"
+	}
+}
