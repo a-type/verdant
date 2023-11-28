@@ -47,6 +47,9 @@
 		{
 			"name": "Scale Test",
 			"path": "../scaleTest"
+		},
+		{
+			"path": "../packages/file-storage-s3"
 		}
 	],
 	"settings": {

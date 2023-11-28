@@ -1,0 +1,39 @@
+{
+	"name": "@verdant-web/s3-file-storage",
+	"version": "1.0.0",
+	"access": "public",
+	"type": "module",
+	"main": "src/index.ts",
+	"module": "src/index.ts",
+	"publishConfig": {
+		"types": "./dist/esm/index.d.ts",
+		"main": "./dist/cjs/index.js",
+		"module": "./dist/esm/index.js",
+		"exports": {
+			".": {
+				"import": "./dist/esm/index.js",
+				"require": "./dist/cjs/index.js"
+			}
+		},
+		"access": "public"
+	},
+	"files": [
+		"dist/",
+		"src/"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"prepublish": "pnpm run build",
+		"link": "pnpm link --global",
+		"test": "vitest"
+	},
+	"dependencies": {
+		"@verdant-web/server": "workspace:*",
+		"@aws-sdk/client-s3": "^3.456.0",
+		"@aws-sdk/lib-storage": "^3.456.0"
+	},
+	"devDependencies": {
+		"typescript": "^4.7.4",
+		"vitest": "^0.22.1"
+	}
+}

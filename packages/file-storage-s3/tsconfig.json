@@ -1,0 +1,16 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"composite": true,
+		"outDir": "./dist/esm",
+		"rootDir": "./src",
+		"lib": ["esnext"]
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.cts",
+		"src/**/*.tsx",
+		"src/**/*.mts",
+		"./typings"
+	]
+}
