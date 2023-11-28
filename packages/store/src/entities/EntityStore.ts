@@ -247,10 +247,25 @@ export class EntityStore {
 				);
 			}
 		} else {
-			const tx = this.db.transaction(collection, 'readwrite');
-			const store = tx.objectStore(collection);
-			await storeRequestPromise(store.delete(id));
-			this.log('info', '❌', 'deleted', collection, id, 'from storage');
+			try {
+				const tx = this.db.transaction(collection, 'readwrite');
+				const store = tx.objectStore(collection);
+				await storeRequestPromise(store.delete(id));
+				this.log('info', '❌', 'deleted', collection, id, 'from storage');
+			} catch (err) {
+				if (err instanceof Error) {
+					// it's ok if the collection doesn't exist or the document
+					// doesn't exist.
+					if (
+						err instanceof DOMException &&
+						err.message?.includes('not found')
+					) {
+						this.log('debug', 'document not found in storage', oid);
+					} else {
+						throw err;
+					}
+				}
+			}
 		}
 	};
 
