@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.8.1
+
+### Patch Changes
+
+- 5526ef6: Hotfix for deleting queryable storage docs in collections that no longer exist
+
 ## 2.8.0
 
 ### Minor Changes
