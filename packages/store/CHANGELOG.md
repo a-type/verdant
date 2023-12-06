@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.8.2
+
+### Patch Changes
+
+- f11bb2e: Fix for multiple tabs causing message cascade
+
 ## 2.8.1
 
 ### Patch Changes
