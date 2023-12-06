@@ -332,8 +332,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 		readonlyKeys?: string[];
 		fieldKey?: string;
 	}): Entity => {
-		let entityRef = this.entities.get(oid);
-		let entity = entityRef?.deref();
+		let entity = this.getCachedEntity(oid);
 		if (!entity) {
 			entity = new Entity({
 				oid,
@@ -352,6 +351,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 		}
 
 		return entity as any;
+	};
+
+	getCachedEntity = (oid: ObjectIdentifier) => {
+		let entityRef = this.entities.get(oid);
+		let entity = entityRef?.deref();
+		return entity;
 	};
 
 	hasOid = (oid: ObjectIdentifier) => {

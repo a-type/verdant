@@ -286,11 +286,7 @@ export class EntityStore {
 	getCached = (oid: ObjectIdentifier) => {
 		const cache = this.documentFamilyCaches.get(oid);
 		if (cache) {
-			const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-			if (!schema) {
-				return null;
-			}
-			return cache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
+			return cache.getCachedEntity(oid) ?? null;
 		}
 		return null;
 	};
