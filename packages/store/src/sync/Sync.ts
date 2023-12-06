@@ -312,11 +312,16 @@ export class ServerSync<Presence = any, Profile = any>
 
 	private handleBroadcastChannelMessage = (event: MessageEvent) => {
 		if (event.data.type === 'sync') {
-			this.handleMessage(event.data.message);
+			this.handleMessage(event.data.message, { source: 'broadcastChannel' });
 		}
 	};
 
-	private handleMessage = async (message: ServerMessage) => {
+	private handleMessage = async (
+		message: ServerMessage,
+		{ source }: { source: 'network' | 'broadcastChannel' } = {
+			source: 'network',
+		},
+	) => {
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
 			for (const op of message.operations) {
@@ -364,10 +369,13 @@ export class ServerSync<Presence = any, Profile = any>
 				await this.meta.updateLastSynced(message.timestamp);
 		}
 
-		this.broadcastChannel?.postMessage({
-			type: 'sync',
-			message,
-		});
+		// avoid rebroadcasting messages
+		if (source === 'network') {
+			this.broadcastChannel?.postMessage({
+				type: 'sync',
+				message,
+			});
+		}
 
 		// update presence if necessary
 		this.presence[HANDLE_MESSAGE](await this.meta.localReplica.get(), message);
