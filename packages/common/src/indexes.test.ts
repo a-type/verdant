@@ -6,6 +6,7 @@ import {
 	createCompoundIndexValue,
 	createLowerBoundIndexValue,
 	createUpperBoundIndexValue,
+	getIndexValues,
 } from './indexes.js';
 
 describe('compound indexes', () => {
@@ -154,5 +155,39 @@ describe('compound indexes', () => {
 			`aaaaaa${COMPOUND_INDEX_SEPARATOR}bbbbbb${COMPOUND_INDEX_SEPARATOR}d`,
 			`aaaaaa${COMPOUND_INDEX_SEPARATOR}bbbbbb${COMPOUND_INDEX_SEPARATOR}e`,
 		]);
+	});
+});
+
+describe('all indexes', () => {
+	it('computes compound indexes from other indexes', () => {
+		expect(
+			getIndexValues(
+				{
+					name: 'test',
+					primaryKey: 'foo',
+					fields: {
+						foo: {
+							type: 'string',
+						},
+					},
+					indexes: {
+						bar: {
+							compute: (doc: any) => doc.foo + 'bar',
+						},
+					},
+					compounds: {
+						foobar: {
+							of: ['foo', 'bar'],
+						},
+					},
+				},
+				{ foo: 'foo' },
+			),
+		).toEqual({
+			foobar: 'foo' + COMPOUND_INDEX_SEPARATOR + 'foobar',
+			'@@@snapshot': { foo: 'foo' },
+			foo: 'foo',
+			bar: 'foobar',
+		});
 	});
 });

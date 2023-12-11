@@ -152,17 +152,17 @@ export function getIndexValues(
 	schema: StorageCollectionSchema<any, any, any>,
 	doc: any,
 ) {
-	const withFirstIndexes: any = {
+	const basicIndexes: any = {
 		[schema.primaryKey]: doc[schema.primaryKey],
 		...computeIndexedFields(schema, doc),
 		...computeSynthetics(schema, doc),
 	};
 	Object.assign(
-		withFirstIndexes,
-		computeCompoundIndices(schema, withFirstIndexes),
+		basicIndexes,
+		computeCompoundIndices(schema, { ...doc, ...basicIndexes }),
 	);
-	withFirstIndexes['@@@snapshot'] = doc;
-	return withFirstIndexes;
+	basicIndexes['@@@snapshot'] = doc;
+	return basicIndexes;
 }
 
 export function assignIndexValues(
