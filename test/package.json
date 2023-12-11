@@ -28,7 +28,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"tsx": "^3.14.0"
+		"tsx": "^4.6.2"
 	},
 	"volta": {
 		"node": "18.13.0"
