@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react",
-	"version": "24.0.0",
+	"version": "24.0.1",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -30,7 +30,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"peerDependencies": {
-		"@verdant-web/store": "^2.8.2",
+		"@verdant-web/store": "^2.8.3",
 		"react": "^18.2.0"
 	},
 	"dependencies": {
