@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.16.1
+
+### Patch Changes
+
+- 56cee57: Fix computing compound indexes from other indexes
+
 ## 1.16.0
 
 ### Minor Changes
