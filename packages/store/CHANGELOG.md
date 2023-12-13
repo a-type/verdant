@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 2.8.4
+
+### Patch Changes
+
+- 6654119: Add missing event typing to sync
+
 ## 2.8.3
 
 ### Patch Changes
