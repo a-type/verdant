@@ -20,6 +20,7 @@ import { WebSocketSync } from './WebSocketSync.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
+	syncingChange: (syncing: boolean) => void;
 };
 
 export type SyncTransportEvents = SyncEvents & {
@@ -158,9 +159,7 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 }
 
 export class ServerSync<Presence = any, Profile = any>
-	extends EventSubscriber<
-		SyncEvents & { syncingChange: (syncing: boolean) => void }
-	>
+	extends EventSubscriber<SyncEvents>
 	implements Sync<Presence, Profile>
 {
 	private webSocketSync: WebSocketSync;
