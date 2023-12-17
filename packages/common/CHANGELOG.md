@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 1.16.2
+
+### Patch Changes
+
+- 5a5a312: Fix multiple bugs handling nested files in entities
+
 ## 1.16.1
 
 ### Patch Changes

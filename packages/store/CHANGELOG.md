@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 2.8.5
+
+### Patch Changes
+
+- 5a5a312: Fix multiple bugs handling nested files in entities
+- Updated dependencies [5a5a312]
+  - @verdant-web/common@1.16.2
+
 ## 2.8.4
 
 ### Patch Changes
