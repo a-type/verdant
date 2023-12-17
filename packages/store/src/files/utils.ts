@@ -12,6 +12,10 @@ export function createFileData(file: File): FileData {
 	};
 }
 
+function isFile(value: any): value is File {
+	return value instanceof File;
+}
+
 /**
  * Replaces File values with refs and returns the normalized value.
  * The list of files passed to the second argument will be populated with the files found in the value.
@@ -20,7 +24,7 @@ export function processValueFiles(
 	value: any,
 	onFileIdentified: (fileData: FileData) => void,
 ): any {
-	if (typeof window !== 'undefined' && value instanceof File) {
+	if (typeof window !== 'undefined' && isFile(value)) {
 		const data = createFileData(value);
 		onFileIdentified(data);
 		return createFileRef(data.id);

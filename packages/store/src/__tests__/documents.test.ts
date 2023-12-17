@@ -2,6 +2,7 @@ import { assert } from '@verdant-web/common';
 import cuid from 'cuid';
 import { describe, it, expect, vi, MockedFunction, vitest } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
+import { EntityFile } from '../index.js';
 
 async function waitForStoragePropagation(mock: MockedFunction<any>) {
 	await new Promise<void>((resolve, reject) => {
@@ -498,5 +499,26 @@ describe('storage documents', () => {
 		expect(() => {
 			item1.set('id', 'foo');
 		}).toThrowErrorMatchingInlineSnapshot('"Cannot set readonly key id"');
+	});
+
+	it('should properly handle pushing to a list of files', async () => {
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+
+		const fileList = weird.get('fileList');
+		fileList.subscribe('change', vi.fn());
+
+		function createTestFile() {
+			return new window.File(['d(⌐□_□)b'], 'test.txt', {
+				type: 'text/plain',
+			});
+		}
+
+		fileList.push(createTestFile());
+		// fileList.get(0).subscribe('change', vi.fn());
+		fileList.push(createTestFile());
+
+		expect(fileList.get(0)).toBeInstanceOf(EntityFile);
+		expect(fileList.get(1)).toBeInstanceOf(EntityFile);
 	});
 });

@@ -80,6 +80,12 @@ export const weirdCollection = collection({
 				type: 'string',
 			},
 		},
+		fileList: {
+			type: 'array',
+			items: {
+				type: 'file',
+			},
+		},
 		objectMap: {
 			type: 'map',
 			values: {

@@ -19,6 +19,10 @@ export class PatchCreator {
 		private createSubId?: () => string,
 	) {}
 
+	isPrimitive = (value: any) => {
+		return !isObject(value) || isRef(value);
+	};
+
 	createDiff = (
 		from: any,
 		to: any,
@@ -38,7 +42,7 @@ export class PatchCreator {
 	): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
-		if (!isObject(value) || isRef(value)) {
+		if (this.isPrimitive(value)) {
 			return [
 				{
 					oid,
@@ -84,7 +88,7 @@ export class PatchCreator {
 	};
 
 	createListPush = (oid: ObjectIdentifier, value: any): Operation[] => {
-		if (!isObject(value)) {
+		if (this.isPrimitive(value)) {
 			return [
 				{
 					oid,
@@ -112,7 +116,7 @@ export class PatchCreator {
 	};
 
 	createListAdd = (oid: ObjectIdentifier, value: any): Operation[] => {
-		if (isObject(value)) {
+		if (!this.isPrimitive(value)) {
 			return [
 				{
 					oid,
@@ -142,7 +146,7 @@ export class PatchCreator {
 		index: number,
 		value: any,
 	): Operation[] => {
-		if (!isObject(value)) {
+		if (this.isPrimitive(value)) {
 			return [
 				{
 					oid,
