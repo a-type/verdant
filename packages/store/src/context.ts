@@ -1,4 +1,9 @@
-import { EventSubscriber, Migration, StorageSchema } from '@verdant-web/common';
+import {
+	EventSubscriber,
+	Migration,
+	StorageSchema,
+	TimestampProvider,
+} from '@verdant-web/common';
 import { UndoHistory } from './UndoHistory.js';
 
 /**
@@ -28,4 +33,8 @@ export interface Context {
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
+	/**
+	 * Get the current logical timestamp
+	 */
+	getNow(): string;
 }

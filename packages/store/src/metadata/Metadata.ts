@@ -57,14 +57,14 @@ export class Metadata extends EventSubscriber<{
 	 */
 	private _closing = false;
 
-	private context: Omit<Context, 'documentDb'>;
+	private context: Omit<Context, 'documentDb' | 'getNow'>;
 
 	constructor({
 		disableRebasing,
 		context,
 	}: {
 		disableRebasing?: boolean;
-		context: Omit<Context, 'documentDb'>;
+		context: Omit<Context, 'documentDb' | 'getNow'>;
 	}) {
 		super();
 		this.context = context;

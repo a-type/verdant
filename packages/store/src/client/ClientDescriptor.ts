@@ -148,7 +148,7 @@ export class ClientDescriptor<
 			metadataVersion,
 		});
 
-		const context: Omit<Context, 'documentDb'> = {
+		const context: Omit<Context, 'documentDb' | 'getNow'> = {
 			namespace: this._namespace,
 			metaDb,
 			schema: init.schema,
@@ -173,15 +173,19 @@ export class ClientDescriptor<
 		// verify schema integrity
 		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
+		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
+			getNow: () => meta.now,
+		});
+
 		const documentDb = await openDocumentDatabase({
-			context,
+			context: contextWithNow,
 			version: init.schema.version,
 			meta,
 			migrations: init.migrations,
 			indexedDB: init.indexedDb,
 		});
 
-		const fullContext: Context = Object.assign(context, { documentDb });
+		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
 
 		const storage = new Client(
 			{
@@ -210,7 +214,7 @@ export class ClientDescriptor<
 			wipNamespace: wipNamespace,
 		});
 
-		const context: Omit<Context, 'documentDb'> = {
+		const context: Omit<Context, 'documentDb' | 'getNow'> = {
 			namespace: this._namespace,
 			metaDb,
 			schema: init.schema,
@@ -232,11 +236,15 @@ export class ClientDescriptor<
 			disableRebasing: init.disableRebasing,
 		});
 
+		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
+			getNow: () => meta.now,
+		});
+
 		// verify schema integrity
 		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
 		const documentDb = await openWIPDocumentDatabase({
-			context,
+			context: contextWithNow,
 			version: init.schema.version,
 			meta,
 			migrations: init.migrations,
@@ -244,7 +252,7 @@ export class ClientDescriptor<
 			wipNamespace,
 		});
 
-		const fullContext: Context = Object.assign(context, { documentDb });
+		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
 
 		const storage = new Client(
 			{
