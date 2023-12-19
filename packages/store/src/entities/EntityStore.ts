@@ -20,6 +20,7 @@ import {
 	removeOidsFromAllSubObjects,
 	StorageCollectionSchema,
 	StorageObjectFieldSchema,
+	validateEntity,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
@@ -226,7 +227,14 @@ export class EntityStore {
 		}
 
 		const snapshot = entity?.getSnapshot();
-		if (snapshot) {
+		// do not store invalid data - this can happen if a document is
+		// from a replica which is still running an older version of the
+		// app with a different schema. the document cannot be used
+		// until that replica updates itself.
+		const validationProblem = snapshot
+			? validateEntity(this.schema.collections[collection].fields, snapshot)
+			: null;
+		if (snapshot && !validationProblem) {
 			const stored = getIndexValues(
 				this.schema.collections[collection],
 				snapshot,

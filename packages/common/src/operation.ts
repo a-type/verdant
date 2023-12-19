@@ -127,6 +127,10 @@ export interface OperationPatchDelete extends BaseOperationPatch {
 	op: 'delete';
 }
 
+export interface OperationPatchTouch extends BaseOperationPatch {
+	op: 'touch';
+}
+
 export type OperationPatch =
 	| OperationPatchInitialize
 	| OperationPatchSet
@@ -138,7 +142,8 @@ export type OperationPatch =
 	| OperationPatchListMoveByIndex
 	| OperationPatchListRemove
 	| OperationPatchDelete
-	| OperationPatchListAdd;
+	| OperationPatchListAdd
+	| OperationPatchTouch;
 
 export type Operation = {
 	oid: ObjectIdentifier;
@@ -654,6 +659,9 @@ export function applyPatch<T extends NormalizedObject>(
 			return undefined;
 		case 'initialize':
 			return cloneDeep(patch.value);
+		case 'touch':
+			// no-op
+			return base;
 		default:
 			throw new Error(`Unsupported patch operation: ${(patch as any).op}`);
 	}

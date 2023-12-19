@@ -273,6 +273,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// 	? []
 		// 	: this.baselines.getAllAfter(info.libraryId, changesSince);
 		const baselines = this.baselines.getAllAfter(info.libraryId, changesSince);
+		// const baselines = this.baselines.getFromServerOrder(
+		// 	info.libraryId,
+		// 	clientReplicaInfo.ackedServerOrder
+		// );
 
 		// We detect that a library is new by checking if it has any history.
 		// If there are no existing operations or baselines (and the requested

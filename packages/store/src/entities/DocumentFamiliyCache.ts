@@ -3,11 +3,14 @@ import {
 	assignOid,
 	cloneDeep,
 	compareTimestampSchemaVersions,
+	decomposeOid,
 	DocumentBaseline,
 	EventSubscriber,
+	getTimestampSchemaVersion,
 	ObjectIdentifier,
 	Operation,
 	StorageFieldSchema,
+	validateEntity,
 } from '@verdant-web/common';
 import { Entity, refreshEntity, StoreTools } from './Entity.js';
 import type { EntityStore } from './EntityStore.js';
@@ -247,14 +250,26 @@ export class DocumentFamilyCache extends EventSubscriber<
 		return { view, deleted, empty: !view && !operations.length };
 	};
 
-	computeView = (oid: ObjectIdentifier) => {
+	computeView = (
+		oid: ObjectIdentifier,
+	): {
+		view: any;
+		deleted: boolean;
+		lastTimestamp: number | null;
+		unmigrated: boolean;
+	} => {
 		if (
 			this.baselinesMap.size === 0 &&
 			this.operationsMap.size === 0 &&
 			this.localOperationsMap.size === 0
 		) {
 			this.context.log('debug', `Entity ${oid} accessed with no data at all`);
-			return { view: null, deleted: true, lastTimestamp: null };
+			return {
+				view: null,
+				deleted: true,
+				lastTimestamp: null,
+				unmigrated: false,
+			};
 		}
 		const confirmed = this.computeConfirmedView(oid);
 		const unconfirmedOperations = this.localOperationsMap.get(oid) || [];
@@ -263,7 +278,12 @@ export class DocumentFamilyCache extends EventSubscriber<
 				'debug',
 				`Entity ${oid} accessed with no local data at all`,
 			);
-			return { view: null, deleted: true, lastTimestamp: null };
+			return {
+				view: null,
+				deleted: true,
+				lastTimestamp: null,
+				unmigrated: false,
+			};
 		}
 		let { view, deleted } = this.applyOperations(
 			confirmed.view,
@@ -273,7 +293,18 @@ export class DocumentFamilyCache extends EventSubscriber<
 		if (view) {
 			assignOid(view, oid);
 		}
-		return { view, deleted, lastTimestamp: this.getLastTimestamp(oid) };
+		const lastTimestamp = this.getLastTimestamp(oid);
+		const lastTimestampClockTime =
+			lastTimestamp !== null
+				? this.storeTools.time.getWallClockTime(lastTimestamp)
+				: null;
+		const lastTimestampSchemaVersion =
+			lastTimestamp && getTimestampSchemaVersion(lastTimestamp);
+		const currentSchemaVersion = this.context.schema.version;
+		const unmigrated =
+			!!lastTimestampSchemaVersion &&
+			lastTimestampSchemaVersion !== currentSchemaVersion;
+		return { view, deleted, lastTimestamp: lastTimestampClockTime, unmigrated };
 	};
 
 	computeConfirmedView = (
@@ -316,7 +347,7 @@ export class DocumentFamilyCache extends EventSubscriber<
 			logicalTimestamp = this.baselinesMap.get(oid)?.timestamp ?? null;
 		}
 		if (!logicalTimestamp) return null;
-		return this.storeTools.time.getWallClockTime(logicalTimestamp);
+		return logicalTimestamp;
 	};
 
 	getEntity = ({

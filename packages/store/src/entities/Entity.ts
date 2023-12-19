@@ -7,6 +7,7 @@ import {
 	EventSubscriber,
 	FileData,
 	FileRef,
+	getTimestampSchemaVersion,
 	isFileRef,
 	isObjectRef,
 	maybeGetOid,
@@ -33,6 +34,8 @@ export interface CacheTools {
 		view: any;
 		deleted: boolean;
 		lastTimestamp: number | null;
+		// only applies for root docs
+		unmigrated: boolean;
 	};
 	getEntity(params: {
 		oid: ObjectIdentifier;
@@ -135,28 +138,6 @@ export class Entity<
 
 	protected events;
 
-	protected hasSubscribersToDeepChanges() {
-		return this.events.subscriberCount('changeDeep') > 0;
-	}
-
-	get hasSubscribers() {
-		if (this.events.totalSubscriberCount() > 0) {
-			return true;
-		}
-
-		// even if nobody subscribes directly to this entity, if a parent
-		// has a deep subscription that counts.
-		let parent = this.parent?.deref();
-		while (parent) {
-			if (parent.hasSubscribersToDeepChanges()) {
-				return true;
-			}
-			parent = parent.parent?.deref();
-		}
-
-		return false;
-	}
-
 	get deleted() {
 		return this._deleted;
 	}
@@ -210,7 +191,6 @@ export class Entity<
 		fieldSchema,
 		cache,
 		parent,
-		onAllUnsubscribed,
 		readonlyKeys = [],
 		fieldPath = [],
 	}: {
@@ -219,7 +199,6 @@ export class Entity<
 		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
 		cache: CacheTools;
 		parent?: Entity<any, any>;
-		onAllUnsubscribed?: () => void;
 		readonlyKeys?: (keyof Init)[];
 		fieldPath?: string[];
 	}) {
@@ -232,21 +211,27 @@ export class Entity<
 		this.readonlyKeys = readonlyKeys;
 		this.cache = cache;
 		this.parent = parent && this.cache.weakRef(parent);
-		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
+		const { view, deleted, lastTimestamp, unmigrated } =
+			this.cache.computeView(oid);
 		this._current = view;
 		this._deleted = deleted;
 		this._updatedAt = lastTimestamp ? lastTimestamp : null;
 		this.cachedDeepUpdatedAt = null;
-		this.events = new EventSubscriber<EntityEvents>(() => {
-			if (!this.hasSubscribers) {
-				onAllUnsubscribed?.();
-			}
-		});
+		this.events = new EventSubscriber<EntityEvents>();
 
 		if (this.oid.includes('.') && !this.parent) {
 			throw new Error('Parent must be provided for sub entities');
 		}
 		assert(!!fieldSchema, 'Field schema must be provided');
+
+		if (!this.parent && unmigrated) {
+			// this is a root doc but it hasn't been migrated to
+			// the latest version. in an ideal world we
+			// would migrate it now, but that's not easy with
+			// the present structure of entities. for now, to
+			// avoid invalid data, we mark it as deleted.
+			this._deleted = true;
+		}
 	}
 
 	private [REFRESH] = (info: EntityChangeInfo) => {
@@ -791,7 +776,6 @@ export interface BaseEntity<
 	getAll(): Value;
 	getSnapshot(): Snapshot;
 	readonly deleted: boolean;
-	readonly hasSubscribers: boolean;
 }
 
 type DeepPartial<T> = {

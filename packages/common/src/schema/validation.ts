@@ -1,17 +1,17 @@
 import { LEGACY_OID_KEY, OID_KEY } from '../oids.js';
 import { isObject } from '../utils.js';
-import { StorageCollectionSchema, StorageFieldSchema } from './types.js';
+import { StorageCollectionSchema, StorageFieldSchema, StorageFieldsSchema } from './types.js';
 
 export function validateEntity(
-	schema: StorageCollectionSchema,
+	schema: StorageFieldsSchema,
 	entity: any,
 ): string | void {
 	for (const [key, value] of Object.entries(entity)) {
-		if (!schema.fields[key]) {
+		if (!schema[key]) {
 			return `Invalid field "${key}"`;
 		}
 		if (value) {
-			const err = validateEntityField(schema.fields[key], value);
+			const err = validateEntityField(schema[key], value);
 			if (err) return err;
 		}
 	}

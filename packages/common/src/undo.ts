@@ -199,6 +199,8 @@ function getUndoOperation(
 					},
 				},
 			];
+		case 'touch':
+			return [];
 		default:
 			throw new Error(`Cannot undo operation type: ${(data as any).op}`);
 	}

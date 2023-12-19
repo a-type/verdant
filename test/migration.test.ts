@@ -4,13 +4,14 @@ import {
 	collection,
 	StorageDescriptor,
 	Migration,
-	migrate,
 	ClientWithCollections,
 	createMigration,
 } from '@verdant-web/store';
 import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
+import { startTestServer } from './lib/testServer.js';
+import { waitForQueryResult } from './lib/waits.js';
 
 async function createTestClient({
 	schema,
@@ -159,7 +160,7 @@ it(
 
 		// specifically testing empty migration here - will the new defaults
 		// be added?
-		migrations.push(migrate(v1Schema, v2Schema, async () => {}));
+		migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
 
 		client = await createTestClient({
 			schema: v2Schema,
@@ -626,10 +627,186 @@ it(
 	15 * 1000,
 );
 
-it.todo(
-	'migrates in an online world where old operations still come in',
-	async () => {},
-);
+it('migrates in an online world where old operations still come in', async () => {
+	const server = await startTestServer({});
+	const indexedDbA = new IDBFactory();
+	const indexedDBB = new IDBFactory();
+	const v1Item = collection({
+		name: 'item',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string' },
+			contents: { type: 'string', nullable: true },
+			tags: { type: 'array', items: { type: 'string' } },
+		},
+	});
+	const v1Schema = schema({
+		version: 1,
+		collections: {
+			items: v1Item,
+		},
+	});
+
+	let migrations: Migration<any>[] = [createMigration(v1Schema)];
+
+	const clientInit = {
+		migrations,
+		library: 'test',
+		user: 'a',
+		server,
+	};
+
+	// @ts-ignore
+	let clientA = await createTestClient({
+		schema: v1Schema,
+		...clientInit,
+		indexedDb: indexedDbA,
+		logId: 'client1',
+	});
+	clientA.sync.start();
+
+	log('📈 Version 1 client A created');
+
+	await clientA.items.put({
+		id: '1',
+		contents: 'hello',
+	});
+	await clientA.items.put({
+		id: '2',
+		contents: 'world',
+		tags: ['a', 'b', 'c'],
+	});
+	await clientA.items.put({
+		id: '3',
+		tags: ['a', 'b'],
+	});
+
+	await clientA.close();
+	await new Promise<void>((resolve) => resolve());
+
+	let clientB = await createTestClient({
+		schema: v1Schema,
+		...clientInit,
+		indexedDb: indexedDBB,
+		logId: 'client2',
+	});
+	clientB.sync.start();
+
+	log('📈 Version 1 client B created');
+
+	let b4 = await clientB.items.put({
+		id: '4',
+		contents: 'hello',
+	});
+	b4.set('contents', 'goodbye');
+	let b5 = await clientB.items.put({
+		id: '5',
+		contents: 'world',
+		tags: ['a', 'b', 'c'],
+	});
+	b5.set('contents', 'so long');
+	b5.get('tags').push('d');
+
+	await waitForQueryResult(clientB.items.get('1'));
+	const b1 = await clientB.items.get('1').resolved;
+	b1.set('contents', 'hi from b');
+
+	await clientB.entities.flushAllBatches();
+
+	await clientB.close();
+	await new Promise<void>((resolve) => resolve());
+
+	const v2Item = collection({
+		name: 'item',
+		primaryKey: 'id',
+		fields: {
+			id: { type: 'string', default: () => 'default' },
+			contents: { type: 'string', default: 'empty' },
+			tags: { type: 'array', items: { type: 'string' } },
+			listId: { type: 'string', nullable: true, indexed: true },
+			newField: { type: 'string', default: 'should be here!' },
+		},
+		synthetics: {
+			hasTags: {
+				type: 'string',
+				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
+			},
+		},
+		compounds: {
+			contents_tag: {
+				of: ['contents', 'tags'],
+			},
+		},
+	});
+
+	const v2Schema = schema({
+		version: 2,
+		collections: {
+			items: v2Item,
+		},
+	});
+
+	migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
+
+	clientA = await createTestClient({
+		schema: v2Schema,
+		...clientInit,
+		indexedDb: indexedDbA,
+		logId: 'client1',
+	});
+	clientA.sync.start();
+
+	log('📈 Version 2 client A created');
+
+	// wait for sync to all come in
+	await waitForQueryResult(
+		clientA.items.get('1'),
+		(item) => item.get('contents') === 'hi from b',
+	);
+
+	// check our test items
+	let item1 = await clientA.items.get('1').resolved;
+	expect(item1.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "contents": "hi from b",
+			  "id": "1",
+			  "listId": null,
+			  "newField": "should be here!",
+			  "tags": [],
+			}
+		`);
+	let item2 = await clientA.items.get('2').resolved;
+	expect(item2.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "contents": "world",
+			  "id": "2",
+			  "listId": null,
+			  "newField": "should be here!",
+			  "tags": [
+			    "a",
+			    "b",
+			    "c",
+			  ],
+			}
+		`);
+	let item3 = await clientA.items.get('3').resolved;
+	expect(item3.getSnapshot()).toMatchInlineSnapshot(`
+			{
+			  "contents": "empty",
+			  "id": "3",
+			  "listId": null,
+			  "newField": "should be here!",
+			  "tags": [
+			    "a",
+			    "b",
+			  ],
+			}
+		`);
+	let item4 = await clientA.items.get('4').resolved;
+	expect(item4).toBe(null);
+	let item5 = await clientA.items.get('5').resolved;
+	expect(item5).toBe(null);
+});
 
 it('supports skip migrations in real life', async () => {
 	const v1Item = collection({

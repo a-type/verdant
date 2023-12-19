@@ -163,6 +163,7 @@ export class ClientDescriptor<
 					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
 				}
 			},
+			migrations: init.migrations,
 		};
 		const meta = new Metadata({
 			context,
@@ -224,6 +225,7 @@ export class ClientDescriptor<
 					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
 				}
 			},
+			migrations: init.migrations,
 		};
 		const meta = new Metadata({
 			context,

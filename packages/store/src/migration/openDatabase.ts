@@ -14,6 +14,7 @@ import {
 	decomposeOid,
 	diffToPatches,
 	getIndexValues,
+	getOid,
 	getOidRoot,
 	hasOid,
 	initialToPatches,
@@ -356,6 +357,24 @@ async function runMigrations({
 					}),
 				);
 
+				// add 'touch' operations to all root OIDs of all documents.
+				// this marks documents which have undergone a migration
+				// so that other clients know when they're working
+				// with unmigrated data - by seeing that there are no
+				// existing operations or baselines with a timestamp
+				// that matches the current version.
+				await Promise.all(
+					oids.map((oid) =>
+						meta.insertLocalOperation([
+							{
+								oid,
+								timestamp: meta.time.zero(migration.version),
+								data: { op: 'touch' },
+							},
+						]),
+					),
+				);
+
 				const snapshots = await Promise.all(
 					oids.map(async (oid) => {
 						try {
@@ -574,8 +593,9 @@ function getMigrationEngine({
 
 			await Promise.all(
 				docs.filter(Boolean).map(async (doc: any) => {
+					const rootOid = getOid(doc);
 					assert(
-						hasOid(doc),
+						!!rootOid,
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
 					const original = cloneDeep(doc);

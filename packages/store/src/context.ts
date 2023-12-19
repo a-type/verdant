@@ -1,4 +1,4 @@
-import { EventSubscriber, StorageSchema } from '@verdant-web/common';
+import { EventSubscriber, Migration, StorageSchema } from '@verdant-web/common';
 import { UndoHistory } from './UndoHistory.js';
 
 /**
@@ -27,4 +27,5 @@ export interface Context {
 		futureSeen: (timestamp: string) => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
+	migrations: Migration<any>[];
 }

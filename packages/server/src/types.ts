@@ -14,6 +14,7 @@ export interface DocumentBaselineSpec
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {
 	snapshot: string;
 	libraryId: string;
+	serverOrder: number;
 }
 
 export interface ReplicaInfoSpec extends ReplicaInfo {

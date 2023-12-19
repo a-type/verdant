@@ -63,9 +63,13 @@ it(
 		// load the file from the URL and see if it matches.
 		// this isn't the same as the original file, but it's good enough to know
 		// something was delivered...
-		const response = await fetch(file.url!);
+		let fileResponse: Response | null = null;
+		await waitForCondition(async () => {
+			fileResponse = await fetch(file.url!);
+			return fileResponse.status !== 404;
+		});
 		context.log('⭐️ image fetched');
-		const blob = await response.blob();
+		const blob = await fileResponse!.blob();
 		const text = await blob.text();
 		context.log(`⭐️ image blob: ${text}`);
 		if (blob.size !== 13) {
