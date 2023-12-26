@@ -1,7 +1,7 @@
 import { FileRef, isFileRef } from './files.js';
 import { isObjectRef, ObjectRef } from './operation.js';
 
-export function isRef(obj: any) {
+export function isRef(obj: any): obj is ObjectRef | FileRef {
 	return isObjectRef(obj) || isFileRef(obj);
 }
 

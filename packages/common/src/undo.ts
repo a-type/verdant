@@ -8,7 +8,7 @@ export function getUndoOperations(
 	operations: Operation[],
 	getNow: () => string,
 ): Operation[] {
-	if (initial === undefined) {
+	if (initial === undefined || initial === null) {
 		// if the initial state is nothing, then the undo is to delete everything.
 		// there's nothing else to worry about!
 		return [

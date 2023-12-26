@@ -58,6 +58,13 @@ export class Batcher<T, UserData = any> {
 	flushAll = () => {
 		return [...this.batches.values()].map((batch) => batch.flush());
 	};
+
+	getSize = (key: string) => {
+		const batch = this.batches.get(key);
+		if (!batch) return 0;
+
+		return batch.items.length;
+	};
 }
 
 export class Batch<T, UserData = any> {

@@ -156,6 +156,7 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			internalEvents: new EventSubscriber(),
 			weakRef: (value) => {
 				if (init.EXPERIMENTAL_weakRefs) {
 					return new WeakRef(value);
@@ -222,6 +223,7 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			internalEvents: new EventSubscriber(),
 			weakRef: (value) => {
 				if (init.EXPERIMENTAL_weakRefs) {
 					return new WeakRef(value);

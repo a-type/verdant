@@ -1,5 +1,5 @@
 import { CollectionIndexFilter, hashObject } from '@verdant-web/common';
-import { Entity } from '../entities/Entity.js';
+import { Entity } from '../entities/2/Entity.js';
 
 function existsFilter<T>(x: T | null): x is T {
 	return x !== null;

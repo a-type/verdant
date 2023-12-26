@@ -108,11 +108,11 @@ export class FileManager {
 	 * Immediately returns an EntityFile to use, then either loads
 	 * the file from cache, local database, or the server.
 	 */
-	get = (id: string) => {
+	get = (id: string, options?: { downloadRemote?: boolean }) => {
 		if (this.files.has(id)) {
 			return this.files.get(id)!;
 		}
-		const file = new EntityFile(id);
+		const file = new EntityFile(id, options);
 		this.files.set(id, file);
 		this.load(file);
 		return file;
@@ -183,7 +183,7 @@ export class FileManager {
 	};
 
 	private handleFileRefsDeleted = async (fileRefs: FileRef[]) => {
-		const tx = this.storage.createTransaction(['files'], 'readwrite');
+		const tx = this.storage.createTransaction(['files'], { mode: 'readwrite' });
 		await Promise.all(
 			fileRefs.map(async (fileRef) => {
 				try {

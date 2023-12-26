@@ -1,6 +1,6 @@
 import { EventSubscriber } from '@verdant-web/common';
 
-type Undoable = () => Undoable | Promise<Undoable>;
+type Undoable = () => Undoable | Promise<Undoable | null> | null;
 
 export class UndoHistory extends EventSubscriber<{ change: () => void }> {
 	private _undoable: Undoable[] = [];
@@ -16,7 +16,8 @@ export class UndoHistory extends EventSubscriber<{ change: () => void }> {
 	undo = async () => {
 		const next = this._undoable.pop();
 		if (next) {
-			this._undone.push(await next());
+			const redo = await next();
+			if (redo) this._undone.push(redo);
 			this.emit('change');
 			return true;
 		}
@@ -26,7 +27,8 @@ export class UndoHistory extends EventSubscriber<{ change: () => void }> {
 	redo = async () => {
 		const next = this._undone.pop();
 		if (next) {
-			this._undoable.push(await next());
+			const undo = await next();
+			if (undo) this._undoable.push(undo);
 			this.emit('change');
 			return true;
 		}

@@ -392,6 +392,9 @@ importers:
       jwt-decode:
         specifier: ^3.1.2
         version: 3.1.2
+      weak-event:
+        specifier: ^2.0.5
+        version: 2.0.5
     devDependencies:
       '@types/node':
         specifier: 16.11.7
@@ -17707,6 +17710,11 @@ packages:
     dependencies:
       defaults: 1.0.4
     dev: true
+
+  /weak-event@2.0.5:
+    resolution: {integrity: sha512-EpmiDbg6NxSYgxd7UAZUUZaStlNpiAaCCsUqhXGdYQ6RyBtq9t5f0HOJmD9rn2mkDvfZOqlUtaJYoPYYtAIPLA==}
+    engines: {node: '>=14.6'}
+    dev: false
 
   /web-namespaces@1.1.4:
     resolution: {integrity: sha512-wYxSGajtmoP4WxfejAPIr4l0fVh+jeMXZb08wNc0tMg6xsfZXj3cECqIK0G7ZAqUq0PP8WlMDtaOGVBTAWztNw==}

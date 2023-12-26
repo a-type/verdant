@@ -20,6 +20,9 @@ export type StoredClientOperation = ClientOperation & {
 };
 
 export class OperationsStore extends IDBService {
+	constructor(db: IDBDatabase, opts: { log?: (...args: any[]) => void }) {
+		super(db, opts);
+	}
 	/**
 	 * Iterates over every patch for the root and every sub-object
 	 * of a given document. Optionally limit by timestamp.
@@ -162,8 +165,7 @@ export class OperationsStore extends IDBService {
 				);
 			},
 			iterator,
-			mode,
-			transaction,
+			{ mode, transaction },
 		);
 	};
 
@@ -254,8 +256,7 @@ export class OperationsStore extends IDBService {
 				return index.openCursor(range, 'next');
 			},
 			iterator,
-			mode,
-			transaction,
+			{ mode, transaction },
 		);
 	};
 
@@ -299,8 +300,7 @@ export class OperationsStore extends IDBService {
 					affected.add(getOidRoot(op.oid));
 					return store.put(op);
 				}),
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 		return Array.from(affected);
 	};

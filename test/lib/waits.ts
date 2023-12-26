@@ -167,6 +167,33 @@ export async function waitForEntityCondition<
 	});
 }
 
+export async function waitForEntitySnapshot(
+	entity: any,
+	snapshot: any,
+	timeout = 10000,
+	onFail?: (entity: any) => void,
+) {
+	return new Promise<void>((resolve, reject) => {
+		if (timeout) {
+			setTimeout(() => {
+				onFail?.(entity);
+				expect(entity.getSnapshot()).toEqual(snapshot);
+				reject(new Error('Timed out waiting for snapshot'));
+			}, timeout);
+		}
+
+		if (JSON.stringify(entity.getSnapshot()) === JSON.stringify(snapshot)) {
+			resolve();
+		} else {
+			entity.subscribe('change', () => {
+				if (JSON.stringify(entity.getSnapshot()) === JSON.stringify(snapshot)) {
+					resolve();
+				}
+			});
+		}
+	});
+}
+
 export async function waitForPeerPresence(
 	client: Client | ClientWithCollections,
 	peerId: string,

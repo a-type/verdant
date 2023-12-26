@@ -311,7 +311,9 @@ describe('query reactivity', () => {
 	});
 
 	it('updates list queries when a document is added to the collection', async () => {
-		const client = await createTestStorage();
+		const client = await createTestStorage({
+			// log: console.log,
+		});
 		await addTestingItems(client);
 		const queries = [
 			client.todos.findAll(),
@@ -346,7 +348,9 @@ describe('query reactivity', () => {
 	});
 
 	it('updates list queries when a document is removed from the collection', async () => {
-		const client = await createTestStorage();
+		const client = await createTestStorage({
+			// log: console.log,
+		});
 		await addTestingItems(client);
 		const queries = [
 			client.todos.findAll(),

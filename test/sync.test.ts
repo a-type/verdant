@@ -10,7 +10,9 @@ import {
 } from './lib/waits.js';
 import { assert } from '@verdant-web/common';
 
-const context = createTestContext();
+const context = createTestContext({
+	testLog: true,
+});
 
 it('can sync multiple clients even if they go offline', async () => {
 	const { server, createTestClient, log } = context;
@@ -18,19 +20,19 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
-		// logId: 'A',
+		logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User C',
-		// logId: 'C',
+		logId: 'C',
 	});
 
 	// seed data offline with A
@@ -158,7 +160,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		.run(() => {
 			b_produce.delete('metadata');
 		})
-		.flush();
+		.commit();
 	await waitForEntityCondition(
 		a_produceCategory,
 		(cat) => !cat.get('metadata'),
@@ -210,29 +212,16 @@ it('can sync multiple clients even if they go offline', async () => {
 	clientA.sync.start();
 	clientB.sync.start();
 
-	async function expectCommentsToExist(
-		client: Client,
-		itemId: string,
-		commentCount: number,
-	) {
-		const item = await client.items.get(itemId).resolved;
-		assert(item);
-		expect(item.get('comments').length).toBe(commentCount);
-	}
-
 	await waitForQueryResult(
 		clientA.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientA, a_unknownItem.get('id'), 2);
 	await waitForQueryResult(
 		clientB.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientB, a_unknownItem.get('id'), 2);
 	await waitForQueryResult(
 		clientC.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientC, a_unknownItem.get('id'), 2);
 }, 30000);

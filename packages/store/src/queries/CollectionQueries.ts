@@ -1,6 +1,6 @@
 import { CollectionFilter, hashObject } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { EntityStore } from '../entities/EntityStore.js';
+import { EntityStore } from '../entities/2/EntityStore.js';
 import { GetQuery } from './GetQuery.js';
 import { QueryCache } from './QueryCache.js';
 import { FindOneQuery } from './FindOneQuery.js';
@@ -22,7 +22,7 @@ export class CollectionQueries<
 	private context;
 	private documentManager;
 
-	put: (init: Init, options?: { undoable?: boolean }) => Promise<T>;
+	put: (init: Init) => Promise<T>;
 	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
 	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
 
@@ -41,7 +41,7 @@ export class CollectionQueries<
 	}) {
 		this.cache = cache;
 		this.collection = collection;
-		this.hydrate = entities.get as any;
+		this.hydrate = entities.hydrate as any;
 		this.context = context;
 		this.documentManager = documentManager;
 

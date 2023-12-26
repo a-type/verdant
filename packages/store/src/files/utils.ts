@@ -17,6 +17,7 @@ function isFile(value: any): value is File {
 }
 
 /**
+ * MUTATES the value.
  * Replaces File values with refs and returns the normalized value.
  * The list of files passed to the second argument will be populated with the files found in the value.
  */

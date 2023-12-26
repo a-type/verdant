@@ -1,4 +1,5 @@
-import { ObjectIdentifier, Operation } from '@verdant-web/common';
+import { ObjectIdentifier } from '@verdant-web/common';
+import type { Entity } from './Entity.js';
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
 	? number
@@ -23,6 +24,13 @@ type IfNullableThen<T, Out> = undefined extends T
 	? Out
 	: null extends T
 	? Out
+	: never;
+
+export type EntityShape<E extends Entity<any, any>> = E extends Entity<
+	infer Value,
+	any
+>
+	? Value
 	: never;
 
 export type BaseEntityValue = { [Key: string]: any } | any[];
@@ -60,6 +68,8 @@ export interface BaseEntity<
 	getAll(): Value;
 	getSnapshot(): Snapshot;
 	readonly deleted: boolean;
+	readonly updatedAt: number;
+	readonly uid: string;
 }
 
 export type DeepPartial<T> = {
@@ -142,13 +152,3 @@ export type EntityDestructured<T extends AnyEntity<any, any, any> | null> =
 			? KeyValue
 			: never)
 	| (T extends null ? null : never);
-
-export type EntityDataTree = {
-	oid: ObjectIdentifier;
-	baseline: any;
-	confirmedOperations: Operation[];
-	unconfirmedOperations: Operation[];
-	snapshot: {
-		[key: string | number]: EntityDataTree | string | number | boolean | null;
-	};
-};

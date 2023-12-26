@@ -57,7 +57,7 @@ async function createTestClient({
 }
 
 function log(...args: any[]) {
-	// console.log(...args);
+	console.log(...args);
 }
 
 // Using the ungenerated client to be more dynamic with the schema
@@ -661,7 +661,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
-		logId: 'client1',
+		// logId: 'client1',
 	});
 	clientA.sync.start();
 
@@ -688,7 +688,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDBB,
-		logId: 'client2',
+		// logId: 'client2',
 	});
 	clientB.sync.start();
 
@@ -696,9 +696,7 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	let b4 = await clientB.items.put({
 		id: '4',
-		contents: 'hello',
 	});
-	b4.set('contents', 'goodbye');
 	let b5 = await clientB.items.put({
 		id: '5',
 		contents: 'world',
@@ -746,13 +744,15 @@ it('migrates in an online world where old operations still come in', async () =>
 		},
 	});
 
-	migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
+	migrations.push(
+		createMigration(v1Schema, v2Schema, async ({ migrate }) => {}),
+	);
 
 	clientA = await createTestClient({
 		schema: v2Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
-		logId: 'client1',
+		// logId: 'client1',
 	});
 	clientA.sync.start();
 
@@ -803,9 +803,31 @@ it('migrates in an online world where old operations still come in', async () =>
 			}
 		`);
 	let item4 = await clientA.items.get('4').resolved;
-	expect(item4).toBe(null);
+	// will be pruned but usable
+	expect(item4.getSnapshot()).toMatchInlineSnapshot(`
+		{
+		  "contents": "empty",
+		  "id": "4",
+		  "listId": null,
+		  "newField": 'should be here!',
+		  "tags": [],
+		}
+	`);
 	let item5 = await clientA.items.get('5').resolved;
-	expect(item5).toBe(null);
+	expect(item5.getSnapshot()).toMatchInlineSnapshot(`
+		{
+		  "contents": "so long",
+		  "id": "5",
+		  "listId": null,
+		  "newField": 'should be here!',
+		  "tags": [
+		    "a",
+		    "b",
+		    "c",
+		    "d",
+		  ],
+		}
+	`);
 });
 
 it('supports skip migrations in real life', async () => {

@@ -1,4 +1,9 @@
-import { Migration, StorageSchema, migrate } from '@verdant-web/common';
+import {
+	Migration,
+	StorageSchema,
+	createMigration,
+	migrate,
+} from '@verdant-web/common';
 import defaultMigrations from './migrations/index.js';
 import defaultSchema from './schema.js';
 import { ClientWithCollections } from '@verdant-web/store';
@@ -34,11 +39,7 @@ it('maintains consistency in real world scenarios', async () => {
 			indexedDb: clientAIDB,
 			schema,
 			migrations,
-			// log: (...messages) => {
-			// 	if (messages.some((m) => `${m}`.includes('a2'))) {
-			// 		console.log(`[A${schema.version}]`, ...messages);
-			// 	}
-			// },
+			// log: context.filterLog('A', 'a6'),
 			// logId: 'A',
 			// try to keep it realistic
 			autoTransport: true,
@@ -54,7 +55,8 @@ it('maintains consistency in real world scenarios', async () => {
 			indexedDb: clientBIDB,
 			schema,
 			migrations,
-			// logId: '[B]',
+			// logId: 'B',
+			// log: context.filterLog('B', 'a6'),
 			// try to keep it realistic
 			autoTransport: true,
 		}) as any;
@@ -65,23 +67,18 @@ it('maintains consistency in real world scenarios', async () => {
 		expectedItems: number,
 	) {
 		const aQuery = clientA.items.findAll({ key: '[a]findAll:items' });
-		await waitForQueryResult(aQuery, (v) => v.length === expectedItems, 10000);
 		const bQuery = clientB.items.findAll({ key: '[b]findAll:items' });
-		await waitForQueryResult(bQuery, (v) => v.length === expectedItems, 10000);
-
-		const aItems = await aQuery.resolved;
-		const bItems = await bQuery.resolved;
-
-		expect(aItems.length).toBe(expectedItems);
-		expect(bItems.length).toBe(expectedItems);
 
 		try {
 			await waitForCondition(
 				() => {
 					for (let i = 0; i < expectedItems; i++) {
+						if (!aQuery.current[i] || !bQuery.current[i]) {
+							return false;
+						}
 						if (
-							JSON.stringify(aItems[i].getSnapshot()) !==
-							JSON.stringify(bItems[i].getSnapshot())
+							JSON.stringify(aQuery.current[i].getSnapshot()) !==
+							JSON.stringify(bQuery.current[i].getSnapshot())
 						) {
 							return false;
 						}
@@ -93,8 +90,8 @@ it('maintains consistency in real world scenarios', async () => {
 			);
 		} catch (err) {
 			// gives a nicer diff...
-			expect(aItems.map((i) => i.getSnapshot())).toEqual(
-				bItems.map((i) => i.getSnapshot()),
+			expect(aQuery.current.map((i) => i.getSnapshot())).toEqual(
+				bQuery.current.map((i) => i.getSnapshot()),
 			);
 			throw err;
 		}
@@ -106,7 +103,7 @@ it('maintains consistency in real world scenarios', async () => {
 	async function makeItem(client: ClientWithCollections, id: string) {
 		const item = await client.items.put({
 			id,
-			content: 'Apples',
+			content: `item ${id}`,
 		});
 		return item;
 	}
@@ -206,7 +203,7 @@ it('maintains consistency in real world scenarios', async () => {
 	};
 	const migrationsV2 = [
 		...defaultMigrations,
-		migrate(defaultSchema, schemaV2, async () => {}),
+		createMigration(defaultSchema, schemaV2, async () => {}),
 	];
 
 	const clientB2 = await createClientB(schemaV2, migrationsV2);
@@ -217,9 +214,10 @@ it('maintains consistency in real world scenarios', async () => {
 	await makeItem(clientB2, 'b4'); // Items: 7
 	await updateItem(clientB2, 'a2');
 	await updateItem(clientB2, 'a3');
+	log('Client B modifications done');
 	await makeItem(clientA1, 'a6'); // Items: 8
 	await updateItem(clientA1, 'a2');
-	log('Client B modifications done');
+	await clientA1.entities.flushAllBatches();
 
 	await clientA1.close();
 	log('Client A closed');

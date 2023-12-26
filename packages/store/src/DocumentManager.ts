@@ -7,7 +7,7 @@ import {
 	StorageDocument,
 	StorageSchema,
 } from '@verdant-web/common';
-import { EntityStore } from './entities/EntityStore.js';
+import { EntityStore } from './entities/2/EntityStore.js';
 import { Metadata } from './metadata/Metadata.js';
 
 /**
@@ -45,15 +45,11 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return addFieldDefaults(collection, init);
 	};
 
-	create = async (
-		collection: string,
-		init: any,
-		options: { undoable?: boolean } = {},
-	) => {
+	create = (collection: string, init: any) => {
 		const defaulted = this.addDefaults(collection, init);
 		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
-		return this.entities.create(defaulted, oid, options) as any;
+		return this.entities.create(defaulted, oid) as any;
 	};
 
 	delete = async (

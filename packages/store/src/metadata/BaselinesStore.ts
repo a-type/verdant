@@ -7,10 +7,11 @@ import {
 	getLegacyDotOidSubIdRange,
 } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
+import { Context } from '../context.js';
 
 export class BaselinesStore extends IDBService {
-	constructor(db: IDBDatabase) {
-		super(db);
+	constructor(db: IDBDatabase, opts: { log?: Context['log'] }) {
+		super(db, opts);
 	}
 
 	getAllForDocument = async (
@@ -61,8 +62,7 @@ export class BaselinesStore extends IDBService {
 				// }
 			},
 			iterator,
-			mode,
-			transaction,
+			{ mode, transaction },
 		);
 	};
 
@@ -84,8 +84,7 @@ export class BaselinesStore extends IDBService {
 				];
 			},
 			iterator,
-			mode,
-			transaction,
+			{ mode, transaction },
 		);
 	};
 
@@ -115,7 +114,7 @@ export class BaselinesStore extends IDBService {
 					// }
 				});
 			},
-			mode,
+			{ mode },
 		);
 		return result.flat();
 	};
@@ -133,7 +132,7 @@ export class BaselinesStore extends IDBService {
 				const index = store.index('timestamp');
 				return index.getAll(range);
 			},
-			mode,
+			{ mode },
 		);
 	};
 
@@ -144,24 +143,20 @@ export class BaselinesStore extends IDBService {
 			mode = 'readonly',
 		}: { transaction?: IDBTransaction; mode?: 'readwrite' | 'readonly' } = {},
 	) => {
-		return this.run<DocumentBaseline>(
-			'baselines',
-			(store) => store.get(oid),
+		return this.run<DocumentBaseline>('baselines', (store) => store.get(oid), {
 			mode,
 			transaction,
-		);
+		});
 	};
 
 	set = async <T>(
 		baseline: DocumentBaseline<T>,
 		{ transaction }: { transaction?: IDBTransaction } = {},
 	) => {
-		await this.run(
-			'baselines',
-			(store) => store.put(baseline),
-			'readwrite',
+		await this.run('baselines', (store) => store.put(baseline), {
+			mode: 'readwrite',
 			transaction,
-		);
+		});
 	};
 
 	setAll = async <T>(
@@ -173,8 +168,7 @@ export class BaselinesStore extends IDBService {
 			(store) => {
 				return baselines.map((baseline) => store.put(baseline));
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	};
 
@@ -186,11 +180,9 @@ export class BaselinesStore extends IDBService {
 		oid: ObjectIdentifier,
 		{ transaction }: { transaction?: IDBTransaction },
 	) => {
-		await this.run(
-			'baselines',
-			(store) => store.delete(oid),
-			'readwrite',
+		await this.run('baselines', (store) => store.delete(oid), {
+			mode: 'readwrite',
 			transaction,
-		);
+		});
 	};
 }

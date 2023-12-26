@@ -152,9 +152,16 @@ export class PushPullSync
 		this._status = 'paused';
 	}
 
-	dispose = () => {};
+	destroy = () => {
+		this.dispose();
+		this.stop();
+	};
 	reconnect(): void {
 		this.heartbeat.start(true);
+	}
+
+	ignoreIncoming(): void {
+		this.stop();
 	}
 
 	// on a heartbeat, do a sync

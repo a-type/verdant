@@ -13,10 +13,36 @@ export function hasDefault(field: StorageFieldSchema | undefined) {
 	if (field.type === 'map') return true;
 	if (field.type === 'array') return true;
 	if (field.type === 'file') return false;
-	if (field.type === 'object') return true;
+	if (field.type === 'object') return false;
 	return field.default !== undefined;
 }
 
+export function getDefault(field: StorageFieldSchema | undefined) {
+	if (!field || !hasDefault(field)) return undefined;
+	if (field.type === 'file') {
+		if (isNullable(field)) return null;
+		return undefined;
+	}
+	if (field.type === 'map') return {};
+	if (field.type === 'array') {
+		if (isNullable(field)) return null;
+		return [];
+	}
+	if (field.type === 'object') {
+		if (isNullable(field)) return null;
+		return undefined;
+	}
+	if (typeof field.default === 'function') {
+		return field.default();
+	}
+	return field.default;
+}
+
+export function isPrunePoint(field: StorageFieldSchema) {
+	return isNullable(field) || hasDefault(field);
+}
+
+/** @deprecated */
 export function isIndexed(field: StorageFieldSchema) {
 	if (field.type === 'map') return false;
 	if (field.type === 'object') return false;

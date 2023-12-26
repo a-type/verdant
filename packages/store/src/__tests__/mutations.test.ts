@@ -3,7 +3,9 @@ import { createTestStorage } from './fixtures/testStorage.js';
 
 describe('mutations', () => {
 	it('should only delete entities related to specified id', async () => {
-		const client = await createTestStorage();
+		const client = await createTestStorage({
+			// log: console.debug,
+		});
 
 		const itemA = await client.todos.put({
 			id: '1',

@@ -42,7 +42,9 @@ describe('storage documents', () => {
 	});
 
 	it('should have a stable identity across different queries when subscribed', async () => {
-		const storage = await createTestStorage();
+		const storage = await createTestStorage({
+			// log: console.log,
+		});
 
 		const item1 = await storage.todos.put({
 			content: 'item 1',
@@ -142,7 +144,9 @@ describe('storage documents', () => {
 			attachments: [],
 		});
 
-		const callback = vi.fn();
+		const callback = vi.fn(() => {
+			var x;
+		});
 		item1.get('tags').subscribe('change', callback);
 
 		item1.get('tags').push('tag 1');
@@ -325,7 +329,8 @@ describe('storage documents', () => {
 			},
 		);
 
-		expect(item1.get('weird').getSnapshot()).toMatchInlineSnapshot(`
+		const weird = item1.get('weird');
+		expect(weird.getSnapshot()).toMatchInlineSnapshot(`
 			{
 			  "bar": 1,
 			}
@@ -412,7 +417,9 @@ describe('storage documents', () => {
 	});
 
 	it('should expose updatedAt', async () => {
-		const storage = await createTestStorage();
+		const storage = await createTestStorage({
+			// log: console.log,
+		});
 
 		let time = new Date();
 		vitest.setSystemTime(time);
@@ -520,5 +527,36 @@ describe('storage documents', () => {
 
 		expect(fileList.get(0)).toBeInstanceOf(EntityFile);
 		expect(fileList.get(1)).toBeInstanceOf(EntityFile);
+	});
+
+	it('should move files by reference in a list', async () => {
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+
+		const fileList = weird.get('fileList');
+		fileList.subscribe('change', vi.fn());
+
+		function createTestFile() {
+			return new window.File(['d(⌐□_□)b'], 'test.txt', {
+				type: 'text/plain',
+			});
+		}
+
+		const file1 = createTestFile();
+		const file2 = createTestFile();
+		const file3 = createTestFile();
+		fileList.push(file1);
+		fileList.push(file2);
+		fileList.push(file3);
+
+		const file1Ref = fileList.get(0);
+		const file2Ref = fileList.get(1);
+		const file3Ref = fileList.get(2);
+
+		fileList.moveItem(file1Ref, 2);
+
+		expect(fileList.get(0)).toBe(file2Ref);
+		expect(fileList.get(1)).toBe(file3Ref);
+		expect(fileList.get(2)).toBe(file1Ref);
 	});
 });

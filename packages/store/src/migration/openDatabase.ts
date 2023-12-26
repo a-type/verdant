@@ -363,17 +363,18 @@ async function runMigrations({
 				// with unmigrated data - by seeing that there are no
 				// existing operations or baselines with a timestamp
 				// that matches the current version.
-				await Promise.all(
-					oids.map((oid) =>
-						meta.insertLocalOperation([
-							{
-								oid,
-								timestamp: meta.time.zero(migration.version),
-								data: { op: 'touch' },
-							},
-						]),
-					),
-				);
+				// UPDATE: no longer necessary now that pruning is a thing.
+				// await Promise.all(
+				// 	oids.map((oid) =>
+				// 		meta.insertLocalOperations([
+				// 			{
+				// 				oid,
+				// 				timestamp: meta.time.zero(migration.version),
+				// 				data: { op: 'touch' },
+				// 			},
+				// 		]),
+				// 	),
+				// );
 
 				const snapshots = await Promise.all(
 					oids.map(async (oid) => {
@@ -472,7 +473,7 @@ function getMigrationMutations({
 					doc[migration.newSchema.collections[collectionName].primaryKey];
 				const oid = createOid(collectionName, primaryKey);
 				newOids.push(oid);
-				await meta.insertLocalOperation(
+				await meta.insertLocalOperations(
 					initialToPatches(doc, oid, getMigrationNow),
 				);
 				return doc;
@@ -480,7 +481,7 @@ function getMigrationMutations({
 			delete: async (id: string) => {
 				const rootOid = createOid(collectionName, id);
 				const allOids = await meta.getAllDocumentRelatedOids(rootOid);
-				return meta.insertLocalOperation(
+				return meta.insertLocalOperations(
 					allOids.map((oid) => ({
 						oid,
 						timestamp: getMigrationNow(),
@@ -575,7 +576,7 @@ function getMigrationEngine({
 	});
 	const deleteCollection = async (collection: string) => {
 		const allOids = await meta.getAllCollectionRelatedOids(collection);
-		return meta.insertLocalOperation(
+		return meta.insertLocalOperations(
 			allOids.map((oid) => ({
 				oid,
 				timestamp: getMigrationNow(),
@@ -619,7 +620,7 @@ function getMigrationEngine({
 							},
 						);
 						if (patches.length > 0) {
-							await meta.insertLocalOperation(patches);
+							await meta.insertLocalOperations(patches);
 						}
 					}
 				}),

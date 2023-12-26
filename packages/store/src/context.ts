@@ -1,6 +1,7 @@
 import {
 	EventSubscriber,
 	Migration,
+	ObjectIdentifier,
 	StorageSchema,
 	TimestampProvider,
 } from '@verdant-web/common';
@@ -19,6 +20,10 @@ export interface Context {
 	log: (...args: any[]) => void;
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;
+		documentChanged: (oid: ObjectIdentifier) => void;
+	}>;
+	internalEvents: EventSubscriber<{
+		documentDbChanged: (db: IDBDatabase) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**

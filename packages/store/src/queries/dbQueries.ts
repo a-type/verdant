@@ -18,7 +18,7 @@ export async function findOneOid({
 	context: Context;
 }) {
 	const store = getStore(context.documentDb, collection);
-	const source = index ? store.index(index.where) : store;
+	const source = index?.where ? store.index(index.where) : store;
 	const range = getRange(context.schema, collection, index);
 	const direction = index?.order === 'desc' ? 'prev' : 'next';
 	const request = source.openCursor(range, direction);
@@ -57,7 +57,7 @@ export async function findAllOids({
 	context: Context;
 }) {
 	const store = getStore(context.documentDb, collection);
-	const source = index ? store.index(index.where) : store;
+	const source = index?.where ? store.index(index.where) : store;
 	const range = getRange(context.schema, collection, index);
 	const direction = index?.order === 'desc' ? 'prev' : 'next';
 	const request = source.openCursor(range, direction);
@@ -102,7 +102,7 @@ export async function findPageOfOids({
 	offset?: number;
 }) {
 	const store = getStore(context.documentDb, collection);
-	const source = index ? store.index(index.where) : store;
+	const source = index?.where ? store.index(index.where) : store;
 	const range = getRange(context.schema, collection, index);
 	const direction = index?.order === 'desc' ? 'prev' : 'next';
 	const request = source.openCursor(range, direction);

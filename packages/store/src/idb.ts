@@ -6,7 +6,12 @@ export function storeRequestPromise<T>(request: IDBRequest<T>) {
 			resolve(request.result);
 		};
 		request.onerror = () => {
-			reject(request.error);
+			if (request.error && request.error.name === 'AbortError') {
+				// TODO: is this the right thing to do?
+				resolve(request.result);
+			} else {
+				reject(request.error);
+			}
 		};
 	});
 }
@@ -114,4 +119,28 @@ export async function getAllDatabaseNamesAndVersions(
 	indexedDB: IDBFactory = window.indexedDB,
 ) {
 	return indexedDB.databases();
+}
+
+export function createAbortableTransaction(
+	db: IDBDatabase,
+	storeNames: string[],
+	mode: 'readonly' | 'readwrite',
+	abortSignal?: AbortSignal,
+	log?: (...args: any[]) => void,
+) {
+	const tx = db.transaction(storeNames, mode);
+	if (abortSignal) {
+		const abort = () => {
+			log?.('debug', 'aborting transaction');
+			tx.abort();
+		};
+		abortSignal.addEventListener('abort', abort);
+		tx.addEventListener('error', () => {
+			abortSignal.removeEventListener('abort', abort);
+		});
+		tx.addEventListener('complete', () => {
+			abortSignal.removeEventListener('abort', abort);
+		});
+	}
+	return tx;
 }
