@@ -29,7 +29,7 @@ import {
 } from '@verdant-web/common';
 import { Context } from '../../context.js';
 import { FileManager } from '../../files/FileManager.js';
-import { processValueFiles } from '../../files/utils.js';
+import { isFile, processValueFiles } from '../../files/utils.js';
 import { EntityFile } from '../../index.js';
 import { EntityCache } from './EntityCache.js';
 import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
@@ -434,10 +434,12 @@ export class Entity<
 		if (ev.oid === this.oid) {
 			// reset cached view
 			this._viewData = undefined;
-			// emit the change, it's for us
-			this.emit('change', { isLocal: ev.isLocal });
+			this.cachedView = undefined;
 			// chain deepChanges to parents
 			this.deepChange(this, ev);
+			// emit the change, it's for us
+			this.ctx.log('Emitting change event', this.oid);
+			this.emit('change', { isLocal: ev.isLocal });
 			// for root entities, we need to go ahead and decide if we're
 			// deleted or not - so queries can exclude us if we are.
 			if (!this.parent) {
@@ -583,7 +585,7 @@ export class Entity<
 		// referenced in multiple entities, which could mean introduction
 		// of foreign OIDs, or one object being assigned different OIDs
 		// with unexpected results.
-		if (!(value instanceof File)) {
+		if (!isFile(value)) {
 			value = cloneDeep(value, false);
 		}
 		const fieldSchema = getChildFieldSchema(this.schema, key);

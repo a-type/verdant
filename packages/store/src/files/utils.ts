@@ -12,8 +12,11 @@ export function createFileData(file: File): FileData {
 	};
 }
 
-function isFile(value: any): value is File {
-	return value instanceof File;
+export function isFile(value: any): value is File {
+	return (
+		value instanceof File ||
+		(typeof Blob !== 'undefined' && value instanceof Blob)
+	);
 }
 
 /**
