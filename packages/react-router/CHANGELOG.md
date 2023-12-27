@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.5.5-next.0
+
+### Patch Changes
+
+- Major rewrite of internals for document storage to improve memory efficiency and data consistency. Introduces "pruning."
+
 ## 0.5.4
 
 ### Patch Changes

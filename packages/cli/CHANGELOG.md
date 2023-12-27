@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.2.0-next.0
+
+### Minor Changes
+
+- Major rewrite of internals for document storage to improve memory efficiency and data consistency. Introduces "pruning."
+
 ## 4.1.0
 
 ### Minor Changes
