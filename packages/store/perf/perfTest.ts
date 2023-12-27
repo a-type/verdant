@@ -88,9 +88,10 @@ async function run() {
 	// continuously monitor memory usage and keep track of
 	// peak values
 	let peakMemory = 0;
-	setInterval(() => {
+	const monitor = () => {
 		peakMemory = (performance as any).memory.usedJSHeapSize;
-	}, 100);
+	};
+	setInterval(monitor, 100);
 
 	// start a timer
 	const start = performance.now();

@@ -197,34 +197,38 @@ export class Entity<
 			return null as any;
 		}
 
-		const view: any = this.isList ? [] : {};
-		assignOid(view, this.oid);
+		this.cachedView = this.isList ? [] : {};
+		assignOid(this.cachedView, this.oid);
 
 		if (Array.isArray(rawView)) {
-			for (let i = 0; i < rawView.length; i++) {
-				const schema = getChildFieldSchema(this.schema, i);
-				if (!schema) {
-					this.ctx.log(
-						'error',
-						'No child field schema for list entity.',
-						this.oid,
-					);
-					return [];
-				}
-				const child = this.get(i);
-				// TODO: optimize this
-				if (this.childIsNull(child) && !isNullable(schema)) {
-					this.ctx.log(
-						'error',
-						'Child missing in non-nullable field',
-						this.oid,
-						'index:',
-						i,
-					);
+			const schema = getChildFieldSchema(this.schema, 0);
+			if (!schema) {
+				/**
+				 * PRUNE - this is a prune point. we can't continue
+				 * to render this data, so we'll just return [].
+				 * This skips the loop.
+				 */
+				this.ctx.log(
+					'error',
+					'No child field schema for list entity.',
+					this.oid,
+				);
+			} else {
+				for (let i = 0; i < rawView.length; i++) {
+					const child = this.get(i);
+					if (this.childIsNull(child) && !isNullable(schema)) {
+						this.ctx.log(
+							'error',
+							'Child missing in non-nullable field',
+							this.oid,
+							'index:',
+							i,
+						);
 
-					// this item will be pruned.
-				} else {
-					view.push(child);
+						// this item will be pruned.
+					} else {
+						this.cachedView.push(child);
+					}
 				}
 			}
 		} else if (isObject(rawView)) {
@@ -237,13 +241,28 @@ export class Entity<
 			for (const key of keys) {
 				const schema = getChildFieldSchema(this.schema, key);
 				if (!schema) {
-					this.ctx.log('error', 'No child field schema for object entity.');
-					// it's valid to prune here if it's a map
-					if (this.schema.type === 'map') return {};
-					return null;
+					/**
+					 * PRUNE - this is a prune point. we can't continue
+					 * to render this data. If this is a map, it will be
+					 * pruned empty. Otherwise, prune moves upward.
+					 *
+					 * This exits the loop.
+					 */
+					this.ctx.log(
+						'error',
+						'No child field schema for object entity at key',
+						key,
+					);
+					if (this.schema.type === 'map') {
+						// it's valid to prune here if it's a map
+						this.cachedView = {};
+					} else {
+						// otherwise prune moves upward
+						this.cachedView = null;
+					}
+					break;
 				}
 				const child = this.get(key as any);
-				// TODO: optimize this
 				if (this.childIsNull(child) && !isNullable(schema)) {
 					this.ctx.log(
 						'error',
@@ -252,18 +271,23 @@ export class Entity<
 						'key:',
 						key,
 					);
-					// for maps, we don't add this child. but for objects,
-					// we must prune upward.
+					/**
+					 * PRUNE - this is a prune point. we can't continue
+					 * to render this data. If this is a map, we can ignore
+					 * this value. Otherwise we must prune upward.
+					 * This exits the loop.
+					 */
 					if (this.schema.type !== 'map') {
-						return null;
+						this.cachedView = null;
+						break;
 					}
 				} else {
-					view[key] = child;
+					this.cachedView[key] = child;
 				}
 			}
 		}
 
-		return view;
+		return this.cachedView;
 	}
 
 	private childIsNull = (child: any) => {

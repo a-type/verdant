@@ -2,7 +2,6 @@ import {
 	ObjectIdentifier,
 	decomposeOid,
 	getIndexValues,
-	validateEntity,
 } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
 import { Context } from '../context.js';
@@ -96,17 +95,7 @@ export class QueryableStorage extends IDBService {
 			this.ctx.log('debug', `Deleted document indexes for querying ${oid}`);
 		} else {
 			const schema = this.ctx.schema.collections[collection];
-			const validationProblem = validateEntity(schema.fields, doc);
-			if (validationProblem) {
-				this.ctx.log(
-					'error',
-					`Cannot save Entity ${oid}: ${validationProblem}`,
-					doc,
-				);
-				throw new Error(
-					`Cannot save Entity ${oid}: its shape does not conform to schema: ${validationProblem}`,
-				);
-			}
+			// no need to validate before storing; the entity's snapshot is already validated.
 			const indexes = getIndexValues(schema, doc);
 			await this.run(collection, (store) => store.put(indexes), {
 				mode: 'readwrite',
