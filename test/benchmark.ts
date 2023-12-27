@@ -155,7 +155,7 @@ async function do1kChangesToOneObjectUnbatched() {
 
 	for (let i = 0; i < 1001; i++) {
 		itemB?.set('content', `${i}`);
-		clientB.entities.flushPatches();
+		clientB.entities.flushAllBatches();
 	}
 
 	await changeWaitPromise;
