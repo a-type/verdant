@@ -121,10 +121,18 @@ export class WebSocketSync
 				this.hasStartedSync = true;
 				this.synced = true;
 				if (this.syncQueue.length) {
-					for (const msg of this.syncQueue) {
-						this.send(msg);
+					if (message.overwriteLocalData) {
+						this.log(
+							'warn',
+							'Overwriting local data - dropping outgoing message queue',
+						);
+						this.syncQueue = [];
+					} else {
+						for (const msg of this.syncQueue) {
+							this.send(msg);
+						}
+						this.syncQueue = [];
 					}
-					this.syncQueue = [];
 				}
 				this.emit('message', message);
 				if (this.incomingQueue.length) {

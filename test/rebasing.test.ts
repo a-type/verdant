@@ -100,12 +100,12 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 		content: 'Oranges',
 	});
 
-	console.info('🔺 --- Waiting for all realtime changes to rebase ---');
+	// console.info('🔺 --- Waiting for all realtime changes to rebase ---');
 	await waitForBaselineCount(clientA, 4);
 	await waitForBaselineCount(clientB, 4);
 	await waitForBaselineCount(clientC, 4);
 
-	console.info('🔺 --- Disconnecting passive replica ---');
+	// console.info('🔺 --- Disconnecting passive replica ---');
 	clientC.sync.stop();
 
 	const oranges = await clientA.items.put({
@@ -116,7 +116,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 		content: 'Bananas',
 	});
 
-	console.info('🔺 --- Waiting for all new changes to rebase ---');
+	// console.info('🔺 --- Waiting for all new changes to rebase ---');
 	await waitForBaselineCount(clientA, 10);
 	await waitForBaselineCount(clientB, 10);
 
@@ -131,7 +131,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	).toBeGreaterThanOrEqual(10);
 
 	// can client C come back online and sync up to the latest state?
-	console.info('🔺 --- Reconnecting passive replica ---');
+	// console.info('🔺 --- Reconnecting passive replica ---');
 	clientC.sync.start();
 	await waitForQueryResult(clientC.items.get(oranges.get('id')));
 	expect(

@@ -55,7 +55,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	const baseClientOptions = {
 		schema: defaultSchema,
 		library: 'wip-1',
-		migrations: [createDefaultMigration(defaultSchema)],
+		migrations: [createMigration(defaultSchema)],
 		user: 'a',
 		indexedDb: new IDBFactory(),
 	};
@@ -64,7 +64,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	await client.items.put({
 		id: '1',
 		content: 'test item',
-		tags: ['test tag'],
+		tags: ['a'],
 		comments: [
 			{
 				id: 'comment-1',
@@ -152,7 +152,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		  "image": null,
 		  "purchased": false,
 		  "tags": [
-		    "test tag",
+		    "a",
 		  ],
 		}
 	`);
@@ -184,7 +184,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		schema: v2Schema,
 		migrations: [
 			...baseClientOptions.migrations,
-			migrate(defaultSchema, v2Schema, async () => {}),
+			createMigration(defaultSchema, v2Schema, async () => {}),
 		],
 	});
 
@@ -204,7 +204,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		  "image": null,
 		  "purchased": false,
 		  "tags": [
-		    "test tag",
+		    "a",
 		  ],
 		}
 	`);

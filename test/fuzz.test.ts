@@ -2,6 +2,7 @@ import { ReplicaType } from '@verdant-web/server';
 import {
 	ClientWithCollections,
 	collection,
+	createMigration,
 	Entity,
 	migrate,
 	schema,
@@ -12,6 +13,7 @@ import { startTestServer } from './lib/testServer.js';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { waitForCondition } from './lib/waits.js';
+import { stableStringify } from '@verdant-web/common';
 
 const fuzzCollectionSchema = collection({
 	name: 'fuzz',
@@ -48,7 +50,7 @@ async function createTestClient({
 		// disableRebasing: true,
 		schema: fuzzSchema,
 		migrations: [
-			migrate(fuzzSchema, async ({ mutations }) => {
+			createMigration(fuzzSchema, async ({ mutations }) => {
 				// create the default fuzz object
 				// @ts-ignore - nested type instantiation issue again
 				await mutations.fuzz.put({ id: 'default', data: {} });
@@ -61,6 +63,7 @@ async function createTestClient({
 					initialPresence: {},
 					defaultProfile: {},
 					initialTransport: 'realtime',
+					automaticTransportSelection: false,
 			  }
 			: undefined,
 		log: logId
@@ -192,22 +195,26 @@ async function waitForConsistency(
 	client2: ClientWithCollections,
 ) {
 	let attempts = 0;
-	await waitForCondition(async () => {
-		attempts++;
-		const fuzz1 = await getFuzz(client1);
-		const fuzz2 = await getFuzz(client2);
-		return (
-			!!fuzz1 &&
-			!!fuzz2 &&
-			JSON.stringify(fuzz1?.getSnapshot()) ===
-				JSON.stringify(fuzz2?.getSnapshot())
-		);
-	});
+	await waitForCondition(
+		async () => {
+			attempts++;
+			const fuzz1 = await getFuzz(client1);
+			const fuzz2 = await getFuzz(client2);
+			return (
+				!!fuzz1 &&
+				!!fuzz2 &&
+				stableStringify(fuzz1?.getSnapshot()) ===
+					stableStringify(fuzz2?.getSnapshot())
+			);
+		},
+		1500,
+		() => {
+			return 'consistency';
+		},
+	);
 	const finalFuzz1 = await getFuzz(client1);
 	const finalFuzz2 = await getFuzz(client2);
-	expect(JSON.stringify(finalFuzz1?.getSnapshot())).toEqual(
-		JSON.stringify(finalFuzz2?.getSnapshot()),
-	);
+	expect(finalFuzz1?.getSnapshot()).toEqual(finalFuzz2?.getSnapshot());
 }
 
 async function getFuzz(client: ClientWithCollections) {
@@ -240,10 +247,6 @@ it(
 			server,
 			indexedDb: client1IndexedDB,
 			// logId: 'a',
-			logFilter: (log) =>
-				`${log}`.startsWith('Inserting') ||
-				`${log}`.startsWith('Enqueueing') ||
-				`${log}`.startsWith('Starting'),
 		});
 		const client2IndexedDB = new IDBFactory();
 		const client2 = await createTestClient({
@@ -251,10 +254,6 @@ it(
 			server,
 			indexedDb: client2IndexedDB,
 			// logId: 'b',
-			logFilter: (log) =>
-				`${log}`.startsWith('Inserting') ||
-				`${log}`.startsWith('Enqueueing') ||
-				`${log}`.startsWith('Starting'),
 		});
 
 		// make a bunch of random changes to the data

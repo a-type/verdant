@@ -120,6 +120,7 @@ export class FileManager {
 
 	private load = async (file: EntityFile, retries = 0) => {
 		if (retries > 5) {
+			this.context.log('error', 'Failed to load file after 5 retries');
 			file[MARK_FAILED]();
 			return;
 		}
@@ -137,6 +138,7 @@ export class FileManager {
 						downloadRemote: file.downloadRemote,
 					});
 				} else {
+					this.context.log('error', 'Failed to load file', result);
 					file[MARK_FAILED]();
 					if (result.retry) {
 						// schedule a retry

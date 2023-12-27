@@ -1,16 +1,13 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { expect, it } from 'vitest';
+import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
-import { log } from './lib/log.js';
-import { createTestContext } from './lib/createTestContext.js';
 
 const ctx = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 async function connectAndSeedData(library = 'reset-1') {
@@ -21,7 +18,7 @@ async function connectAndSeedData(library = 'reset-1') {
 	const clientB = await ctx.createTestClient({
 		library,
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 
 	// seed data into library
@@ -67,7 +64,7 @@ async function connectNewReplicaAndCheckIntegrity(
 	library = 'reset-1',
 	{ a_unknownItem, a_produceCategory }: any,
 ) {
-	log('Connecting new replica to test integrity');
+	ctx.log('Connecting new replica to test integrity');
 	const clientC = await ctx.createTestClient({
 		library,
 		user: 'User C',

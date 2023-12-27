@@ -175,7 +175,7 @@ export class Entity<
 			return this.cachedView;
 		}
 
-		if (this.deleted) {
+		if (this.viewData.deleted) {
 			return null;
 		}
 		// can't use invalid data - but this should be bubbled up to
@@ -279,7 +279,7 @@ export class Entity<
 	}
 
 	get deleted() {
-		return this.viewData.deleted;
+		return this.viewData.deleted || this.view === null;
 	}
 
 	get invalid() {
@@ -422,7 +422,7 @@ export class Entity<
 	private resetAllData = () => {
 		this.ctx.log('debug', 'Entity: resetting all data', this.oid);
 		this.cachedDeepUpdatedAt = null;
-		this.cachedView = null;
+		this.cachedView = undefined;
 		this._viewData = undefined;
 		const changes = this.metadataFamily.replaceAllData({});
 		for (const change of changes) {
@@ -555,6 +555,9 @@ export class Entity<
 			) {
 				if (hasDefault(schema)) {
 					return getDefault(schema);
+				}
+				if (isNullable(schema)) {
+					return null as any;
 				}
 				return undefined as any;
 			}

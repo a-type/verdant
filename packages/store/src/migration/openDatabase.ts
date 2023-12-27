@@ -259,7 +259,11 @@ async function runMigrations({
 						`Migration failed (${migration.oldSchema.version} -> ${migration.newSchema.version})`,
 						err,
 					);
-					throw err;
+					if (err instanceof Error) {
+						throw err;
+					} else {
+						throw new Error('Unknown error during migration');
+					}
 				}
 
 				// now we have to open the database again with the next version and
@@ -416,10 +420,7 @@ async function runMigrations({
 				await Promise.all(
 					views.map(([oid, view]) => {
 						if (view) {
-							return putView(writeStore, view).catch((err) => {
-								view;
-								throw err;
-							});
+							return putView(writeStore, view);
 						} else {
 							const { id } = decomposeOid(oid);
 							return deleteView(writeStore, id);

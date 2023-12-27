@@ -66,7 +66,11 @@ export class QueryableStorage extends IDBService {
 						`Error saving document ${e.oid} (${JSON.stringify(snapshot)})`,
 						err,
 					);
-					throw err;
+					if (err instanceof Error) {
+						throw err;
+					} else {
+						throw new Error('Unknown error saving document');
+					}
 				}
 			}),
 		);

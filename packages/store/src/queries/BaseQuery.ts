@@ -204,8 +204,10 @@ export abstract class BaseQuery<T> extends Disposable {
 						// possibly accessing db while it's closed. not much we can do.
 						return this._value;
 					}
+					throw err;
+				} else {
+					throw new Error('Unknown error executing query');
 				}
-				throw err;
 			});
 		return this._executionPromise;
 	};

@@ -57,7 +57,7 @@ async function createTestClient({
 }
 
 function log(...args: any[]) {
-	console.log(...args);
+	console.log('🐱', ...args);
 }
 
 // Using the ungenerated client to be more dynamic with the schema
@@ -628,7 +628,9 @@ it(
 );
 
 it('migrates in an online world where old operations still come in', async () => {
-	const server = await startTestServer({});
+	const server = await startTestServer({
+		log: true,
+	});
 	const indexedDbA = new IDBFactory();
 	const indexedDBB = new IDBFactory();
 	const v1Item = collection({
@@ -661,7 +663,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
-		// logId: 'client1',
+		logId: 'A',
 	});
 	clientA.sync.start();
 
@@ -688,31 +690,38 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDBB,
-		// logId: 'client2',
+		logId: 'B',
 	});
 	clientB.sync.start();
+
+	// wait for B to get the library
+	await waitForQueryResult(clientB.items.get('3'));
 
 	log('📈 Version 1 client B created');
 
 	let b4 = await clientB.items.put({
 		id: '4',
 	});
+	log('1');
 	let b5 = await clientB.items.put({
 		id: '5',
 		contents: 'world',
 		tags: ['a', 'b', 'c'],
 	});
+	log('2');
 	b5.set('contents', 'so long');
-	b5.get('tags').push('d');
+	log('3');
+	b5.get('tags').push('a');
+	log('4');
 
 	await waitForQueryResult(clientB.items.get('1'));
+	log('5');
 	const b1 = await clientB.items.get('1').resolved;
+	log('6');
 	b1.set('contents', 'hi from b');
-
-	await clientB.entities.flushAllBatches();
+	log('7');
 
 	await clientB.close();
-	await new Promise<void>((resolve) => resolve());
 
 	const v2Item = collection({
 		name: 'item',
@@ -752,7 +761,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v2Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
-		// logId: 'client1',
+		// logId: 'A2',
 	});
 	clientA.sync.start();
 
@@ -809,7 +818,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		  "contents": "empty",
 		  "id": "4",
 		  "listId": null,
-		  "newField": 'should be here!',
+		  "newField": "should be here!",
 		  "tags": [],
 		}
 	`);
@@ -819,12 +828,12 @@ it('migrates in an online world where old operations still come in', async () =>
 		  "contents": "so long",
 		  "id": "5",
 		  "listId": null,
-		  "newField": 'should be here!',
+		  "newField": "should be here!",
 		  "tags": [
 		    "a",
 		    "b",
 		    "c",
-		    "d",
+		    "a",
 		  ],
 		}
 	`);

@@ -132,8 +132,12 @@ export class ClientDescriptor<
 			this._resolvedValue = storage;
 			return storage;
 		} catch (err) {
-			this.rejectReady(err as Error);
-			throw err;
+			if (err instanceof Error) {
+				this.rejectReady(err as Error);
+				throw err;
+			} else {
+				throw new Error('Unknown error initializing storage');
+			}
 		} finally {
 			this._initializing = false;
 		}

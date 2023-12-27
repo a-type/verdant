@@ -1,6 +1,7 @@
 import { expect, Mock } from 'vitest';
 import { AnyEntity, Client, Query } from '../client/index.js';
 import { ClientWithCollections } from '@verdant-web/store';
+import { stableStringify } from '@verdant-web/common';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
 	return new Promise<void>((resolve) => {
@@ -112,12 +113,17 @@ export async function waitForBaselineCount(client: Client, count = 1) {
 export async function waitForCondition(
 	condition: () => boolean | Promise<boolean>,
 	timeout?: number,
-	debugName?: string,
+	debugName?: string | (() => string),
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (timeout) {
 			setTimeout(() => {
-				reject(new Error('Timed out waiting for condition ' + debugName));
+				reject(
+					new Error(
+						'Timed out waiting for condition ' +
+							(typeof debugName === 'function' ? debugName() : debugName),
+					),
+				);
 			}, timeout);
 		}
 
@@ -173,20 +179,25 @@ export async function waitForEntitySnapshot(
 	timeout = 10000,
 	onFail?: (entity: any) => void,
 ) {
+	expect(entity, 'Entity snapshot watcher needs a defined entity').not.toBe(
+		null,
+	);
 	return new Promise<void>((resolve, reject) => {
-		if (timeout) {
-			setTimeout(() => {
-				onFail?.(entity);
-				expect(entity.getSnapshot()).toEqual(snapshot);
-				reject(new Error('Timed out waiting for snapshot'));
-			}, timeout);
-		}
+		let timer = setTimeout(() => {
+			onFail?.(entity);
+			expect(entity.getSnapshot()).toEqual(snapshot);
+			reject(new Error('Timed out waiting for snapshot'));
+		}, timeout);
 
-		if (JSON.stringify(entity.getSnapshot()) === JSON.stringify(snapshot)) {
+		if (stableStringify(entity.getSnapshot()) === stableStringify(snapshot)) {
+			clearTimeout(timer);
 			resolve();
 		} else {
 			entity.subscribe('change', () => {
-				if (JSON.stringify(entity.getSnapshot()) === JSON.stringify(snapshot)) {
+				if (
+					stableStringify(entity.getSnapshot()) === stableStringify(snapshot)
+				) {
+					clearTimeout(timer);
 					resolve();
 				}
 			});
