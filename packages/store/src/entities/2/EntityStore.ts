@@ -315,7 +315,11 @@ export class EntityStore extends Disposable {
 	/**
 	 * Creates a new Entity with the given initial data.
 	 */
-	create = async (initial: any, oid: ObjectIdentifier) => {
+	create = async (
+		initial: any,
+		oid: ObjectIdentifier,
+		{ undoable }: { undoable?: boolean } = {},
+	) => {
 		this.ctx.log('debug', 'Creating new entity', oid);
 		const { collection } = decomposeOid(oid);
 		// remove any OID associations from the initial data
@@ -335,7 +339,7 @@ export class EntityStore extends Disposable {
 
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
 		await this.batcher.commitOperations(operations, {
-			undoable: true,
+			undoable: !!undoable,
 			source: entity,
 		});
 

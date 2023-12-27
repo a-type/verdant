@@ -45,11 +45,15 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return addFieldDefaults(collection, init);
 	};
 
-	create = (collection: string, init: any) => {
+	create = (
+		collection: string,
+		init: any,
+		options: { undoable?: boolean } = {},
+	) => {
 		const defaulted = this.addDefaults(collection, init);
 		const oid = this.getOid(collection, defaulted);
 		// documents are always objects at the root
-		return this.entities.create(defaulted, oid) as any;
+		return this.entities.create(defaulted, oid, options) as any;
 	};
 
 	delete = async (

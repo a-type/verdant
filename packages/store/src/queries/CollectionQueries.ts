@@ -22,7 +22,7 @@ export class CollectionQueries<
 	private context;
 	private documentManager;
 
-	put: (init: Init) => Promise<T>;
+	put: (init: Init, options?: { undoable?: boolean }) => Promise<T>;
 	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
 	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
 
