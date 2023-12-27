@@ -78,7 +78,7 @@ export class Entity<
 	private metadataFamily;
 
 	private schema;
-	private parent;
+	private parent: Entity | undefined;
 	private ctx;
 	private files;
 	private patchCreator;
@@ -127,20 +127,26 @@ export class Entity<
 		this.parent = parent;
 
 		// TODO: should any but the root entity be listening to these?
-		events.add.attach((_store, data) => {
-			if (data.oid === this.oid) {
-				this.addConfirmedData(data);
-			}
-		});
-		events.replace.attach((_store, data) => {
-			if (data.oid === this.oid) {
-				this.replaceAllData(data);
-			}
-		});
-		events.resetAll.attach(() => {
-			this.resetAllData();
-		});
+		if (!this.parent) {
+			events.add.attach(this.onAdd);
+			events.replace.attach(this.onReplace);
+			events.resetAll.attach(this.onResetAll);
+		}
 	}
+
+	private onAdd = (_store: any, data: EntityStoreEventData) => {
+		if (data.oid === this.oid) {
+			this.addConfirmedData(data);
+		}
+	};
+	private onReplace = (_store: any, data: EntityStoreEventData) => {
+		if (data.oid === this.oid) {
+			this.replaceAllData(data);
+		}
+	};
+	private onResetAll = () => {
+		this.resetAllData();
+	};
 
 	private get metadata() {
 		return this.metadataFamily.get(this.oid);
@@ -501,6 +507,7 @@ export class Entity<
 			this.oid,
 			'reset cached view',
 		);
+		this.ctx.log('debug', 'Emitting deep change event', this.oid);
 		this.emit('changeDeep', target, ev);
 		this.parent?.deepChange(target, ev);
 	};
@@ -729,14 +736,17 @@ export class Entity<
 
 	// object entity methods
 	keys = (): string[] => {
+		if (!this.view) return [];
 		return Object.keys(this.view);
 	};
 
 	entries = (): [string, Exclude<KeyValue[keyof KeyValue], undefined>][] => {
+		if (!this.view) return [];
 		return Object.entries(this.view);
 	};
 
 	values = (): Exclude<KeyValue[keyof KeyValue], undefined>[] => {
+		if (!this.view) return [];
 		return Object.values(this.view);
 	};
 

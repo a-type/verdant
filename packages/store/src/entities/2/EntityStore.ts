@@ -69,6 +69,11 @@ export class EntityStore extends Disposable {
 	// halts the current data queue processing
 	private abortDataQueueController = new AbortController();
 	private ongoingResetPromise: Promise<void> | null = null;
+	private entityFinalizationRegistry = new FinalizationRegistry(
+		(oid: ObjectIdentifier) => {
+			this.ctx.log('debug', 'Entity GC', oid);
+		},
+	);
 
 	constructor({
 		ctx,
@@ -192,6 +197,9 @@ export class EntityStore extends Disposable {
 					});
 				});
 			} else {
+				if (this.cache.has(oid)) {
+					this.ctx.log('debug', 'Cache has', oid, ', an event should follow.');
+				}
 				event.invoke(this, {
 					oid,
 					baselines,
@@ -475,6 +483,7 @@ export class EntityStore extends Disposable {
 		// only set the cache after loading.
 		// TODO: is this cache/promise stuff redundant?
 		this.cache.set(entity.oid, this.ctx.weakRef(entity));
+		this.entityFinalizationRegistry.register(entity, entity.oid);
 
 		return entity;
 	};
