@@ -1,5 +1,9 @@
 import { Context } from './context.js';
-import { createAbortableTransaction, storeRequestPromise } from './idb.js';
+import {
+	createAbortableTransaction,
+	isAbortError,
+	storeRequestPromise,
+} from './idb.js';
 import { Disposable } from './utils/Disposable.js';
 
 export class IDBService extends Disposable {
@@ -100,7 +104,13 @@ export class IDBService extends Disposable {
 								resolve();
 							}
 						};
-						req.onerror = reject;
+						req.onerror = () => {
+							if (req.error && isAbortError(req.error)) {
+								resolve();
+							} else {
+								reject(req.error);
+							}
+						};
 					});
 				}),
 			).then(() => undefined);
@@ -115,7 +125,13 @@ export class IDBService extends Disposable {
 					resolve();
 				}
 			};
-			request.onerror = reject;
+			request.onerror = () => {
+				if (request.error && isAbortError(request.error)) {
+					resolve();
+				} else {
+					reject(request.error);
+				}
+			};
 		});
 	};
 

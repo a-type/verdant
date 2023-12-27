@@ -57,7 +57,7 @@ async function createTestClient({
 }
 
 function log(...args: any[]) {
-	console.log('🐱', ...args);
+	// console.log('🐱', ...args);
 }
 
 // Using the ungenerated client to be more dynamic with the schema
@@ -96,7 +96,7 @@ it(
 		let client = await createTestClient({
 			schema: v1Schema,
 			...clientInit,
-			logId: 'client1',
+			// logId: 'client1',
 		});
 
 		log('📈 Version 1 client created');
@@ -663,7 +663,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
-		logId: 'A',
+		// logId: 'A',
 	});
 	clientA.sync.start();
 
@@ -690,7 +690,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDBB,
-		logId: 'B',
+		// logId: 'B',
 	});
 	clientB.sync.start();
 

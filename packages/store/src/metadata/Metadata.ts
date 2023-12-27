@@ -129,10 +129,7 @@ export class Metadata extends EventSubscriber<{
 		assert(documentOid === oid, 'Must be root document OID');
 		oids.add(documentOid);
 		// readwrite mode to block on other write transactions
-		const transaction = this.db.transaction(
-			['baselines', 'operations'],
-			'readwrite',
-		);
+		const transaction = this.createTransaction(['baselines', 'operations']);
 		await Promise.all([
 			this.baselines.iterateOverAllForDocument(
 				documentOid,

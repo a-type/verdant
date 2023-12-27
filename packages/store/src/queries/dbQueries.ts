@@ -1,6 +1,7 @@
 import { CollectionFilter, createOid } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { getRange } from './ranges.js';
+import { isAbortError } from '../idb.js';
 
 function getStore(db: IDBDatabase, collection: string, write?: boolean) {
 	return db
@@ -38,6 +39,8 @@ export async function findOneOid({
 					`findOne query failed with InvalidStateError`,
 					request.error,
 				);
+				resolve(null);
+			} else if (isAbortError(request.error)) {
 				resolve(null);
 			} else {
 				reject(request.error);
@@ -79,6 +82,8 @@ export async function findAllOids({
 					`findAll query failed with InvalidStateError`,
 					request.error,
 				);
+				resolve([]);
+			} else if (isAbortError(request.error)) {
 				resolve([]);
 			} else {
 				reject(request.error);
@@ -140,6 +145,8 @@ export async function findPageOfOids({
 					`find query failed with InvalidStateError`,
 					request.error,
 				);
+				resolve([]);
+			} else if (isAbortError(request.error)) {
 				resolve([]);
 			} else {
 				reject(request.error);

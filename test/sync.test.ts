@@ -11,7 +11,7 @@ import {
 import { assert } from '@verdant-web/common';
 
 const context = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 it('can sync multiple clients even if they go offline', async () => {
@@ -20,19 +20,19 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User A',
-		logId: 'A',
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
 		library: 'sync-1',
 		user: 'User C',
-		logId: 'C',
+		// logId: 'C',
 	});
 
 	// seed data offline with A

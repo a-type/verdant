@@ -8,6 +8,7 @@ import {
 	assert,
 } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
+import { isAbortError } from '../idb.js';
 
 export type ClientOperation = Operation & {
 	isLocal: boolean;
@@ -44,7 +45,11 @@ export class OperationsStore extends IDBService {
 			transaction?: IDBTransaction;
 		} = {},
 	): Promise<void> => {
-		const transaction = providedTx || this.db.transaction('operations', mode);
+		const transaction =
+			providedTx ||
+			this.createTransaction(['operations'], {
+				mode,
+			});
 		const store = transaction.objectStore('operations');
 		const index = store.index('d_t');
 
@@ -80,7 +85,12 @@ export class OperationsStore extends IDBService {
 				}
 			};
 			request.onerror = (event) => {
-				reject(event);
+				if (isAbortError(request.error)) {
+					resolve();
+					return;
+				} else {
+					reject(request.error);
+				}
 			};
 		});
 	};
@@ -100,7 +110,8 @@ export class OperationsStore extends IDBService {
 			transaction?: IDBTransaction;
 		},
 	): Promise<void> => {
-		const transaction = providedTx || this.db.transaction('operations', mode);
+		const transaction =
+			providedTx || this.createTransaction(['operations'], { mode });
 		const store = transaction.objectStore('operations');
 
 		const start = after
@@ -134,7 +145,11 @@ export class OperationsStore extends IDBService {
 				}
 			};
 			request.onerror = (event) => {
-				reject(event);
+				if (isAbortError(request.error)) {
+					resolve();
+				} else {
+					reject(request.error);
+				}
 			};
 		});
 	};
@@ -154,7 +169,8 @@ export class OperationsStore extends IDBService {
 			transaction?: IDBTransaction;
 		},
 	): Promise<void> => {
-		const transaction = providedTx || this.db.transaction('operations', mode);
+		const transaction =
+			providedTx || this.createTransaction(['operations'], { mode });
 
 		return this.iterate(
 			'operations',
@@ -183,7 +199,8 @@ export class OperationsStore extends IDBService {
 			transaction?: IDBTransaction;
 		},
 	): Promise<void> => {
-		const transaction = providedTx || this.db.transaction('operations', mode);
+		const transaction =
+			providedTx || this.createTransaction(['operations'], { mode });
 		const store = transaction.objectStore('operations');
 		const index = store.index('l_t');
 
@@ -217,7 +234,11 @@ export class OperationsStore extends IDBService {
 				}
 			};
 			request.onerror = (event) => {
-				reject(event);
+				if (isAbortError(request.error)) {
+					resolve();
+				} else {
+					reject(request.error);
+				}
 			};
 		});
 	};
@@ -246,11 +267,11 @@ export class OperationsStore extends IDBService {
 
 				const range =
 					start && end
-						? IDBKeyRange.bound(start, end, false, true)
+						? window.IDBKeyRange.bound(start, end, false, true)
 						: start
-						? IDBKeyRange.lowerBound(start, false)
+						? window.IDBKeyRange.lowerBound(start, false)
 						: end
-						? IDBKeyRange.upperBound(end, true)
+						? window.IDBKeyRange.upperBound(end, true)
 						: undefined;
 				const index = store.index('timestamp');
 				return index.openCursor(range, 'next');

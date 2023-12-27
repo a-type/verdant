@@ -351,7 +351,7 @@ describe('storage documents', () => {
 		expect(() => {
 			item1.update({ content: 'bar' }, { merge: false });
 		}).toThrowErrorMatchingInlineSnapshot(
-			'"Cannot use .update without merge if the field has a strict schema type. merge: false is only available on \\"any\\" or \\"map\\" types."',
+			`[Error: Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.]`,
 		);
 	});
 
@@ -505,7 +505,7 @@ describe('storage documents', () => {
 
 		expect(() => {
 			item1.set('id', 'foo');
-		}).toThrowErrorMatchingInlineSnapshot('"Cannot set readonly key id"');
+		}).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot set readonly key id]`);
 	});
 
 	it('should properly handle pushing to a list of files', async () => {

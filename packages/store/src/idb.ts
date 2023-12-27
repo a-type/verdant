@@ -1,12 +1,16 @@
 import { roughSizeOfObject } from '@verdant-web/common';
 
+export function isAbortError(err: unknown) {
+	return err instanceof Error && err.name === 'AbortError';
+}
+
 export function storeRequestPromise<T>(request: IDBRequest<T>) {
 	return new Promise<T>((resolve, reject) => {
 		request.onsuccess = () => {
 			resolve(request.result);
 		};
 		request.onerror = () => {
-			if (request.error && request.error.name === 'AbortError') {
+			if (request.error && isAbortError(request.error)) {
 				// TODO: is this the right thing to do?
 				resolve(request.result);
 			} else {
@@ -34,7 +38,11 @@ export function cursorIterator<T>(
 			}
 		};
 		request.onerror = () => {
-			reject(request.error);
+			if (request.error && isAbortError(request.error)) {
+				resolve();
+			} else {
+				reject(request.error);
+			}
 		};
 	});
 }
@@ -58,7 +66,14 @@ export function getSizeOfObjectStore(
 			}
 		};
 		cursorReq.onerror = function (e) {
-			reject(e);
+			if (cursorReq.error && isAbortError(cursorReq.error)) {
+				resolve({
+					count: count,
+					size: size,
+				});
+			} else {
+				reject(cursorReq.error);
+			}
 		};
 		tx.oncomplete = function (e) {
 			resolve({
@@ -132,7 +147,11 @@ export function createAbortableTransaction(
 	if (abortSignal) {
 		const abort = () => {
 			log?.('debug', 'aborting transaction');
-			tx.abort();
+			try {
+				tx.abort();
+			} catch (e) {
+				log?.('debug', 'aborting transaction failed', e);
+			}
 		};
 		abortSignal.addEventListener('abort', abort);
 		tx.addEventListener('error', () => {

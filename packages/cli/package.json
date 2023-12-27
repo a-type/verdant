@@ -37,11 +37,11 @@
 		"@verdant-web/common": "workspace:*",
 		"@verdant-web/react": "workspace:*",
 		"@verdant-web/store": "workspace:*",
-		"fake-indexeddb": "^4.0.0",
+		"fake-indexeddb": "^5.0.1",
 		"jsdom": "^20.0.0",
 		"rimraf": "^5.0.5",
 		"tsx": "^4.6.2",
 		"typescript": "^4.7.4",
-		"vitest": "^0.24.3"
+		"vitest": "^1.1.0"
 	}
 }

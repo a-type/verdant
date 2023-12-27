@@ -67,7 +67,7 @@ it('can export data and import it even after a schema migration', async () => {
 		},
 	});
 
-	let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
+	let migrations: Migration<any>[] = [createMigration(v1Schema)];
 
 	const clientInit = {
 		migrations,
@@ -148,7 +148,7 @@ it('can export data and import it even after a schema migration', async () => {
 	client = await createTestClient({
 		schema: v2Schema,
 		...clientInit,
-		logId: 'client2',
+		// logId: 'client2',
 	});
 
 	// add more data which will be lost
@@ -179,7 +179,7 @@ it('can export data and import it even after a schema migration', async () => {
 	await client.import(exported);
 
 	await waitForQueryResult(itemsQuery, (items) => {
-		console.log(items?.length);
+		// console.log(items?.length);
 		return items?.length === 3;
 	});
 
