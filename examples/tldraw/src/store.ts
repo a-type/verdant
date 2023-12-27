@@ -38,6 +38,7 @@ export const clientDescriptor = new ClientDescriptor<Presence>({
 		canCleanupDeletedFile: (file) => true,
 	},
 	log: console.debug,
+	EXPERIMENTAL_weakRefs: true,
 });
 clientDescriptor.open().then((client) => {
 	(window as any).client = client;
