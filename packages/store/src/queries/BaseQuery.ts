@@ -1,6 +1,6 @@
 import { EventSubscriber } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { Entity } from '../entities/2/Entity.js';
+import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../utils/Disposable.js';
 import { filterResultSet } from './utils.js';
 

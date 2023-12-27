@@ -27,10 +27,10 @@ import {
 	traverseCollectionFieldsAndApplyDefaults,
 	validateEntityField,
 } from '@verdant-web/common';
-import { Context } from '../../context.js';
-import { FileManager } from '../../files/FileManager.js';
-import { isFile, processValueFiles } from '../../files/utils.js';
-import { EntityFile } from '../../index.js';
+import { Context } from '../context.js';
+import { FileManager } from '../files/FileManager.js';
+import { isFile, processValueFiles } from '../files/utils.js';
+import { EntityFile } from '../index.js';
 import { EntityCache } from './EntityCache.js';
 import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
 import {

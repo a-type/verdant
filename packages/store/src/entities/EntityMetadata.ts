@@ -10,7 +10,7 @@ import {
 	compareTimestampSchemaVersions,
 	getWallClockTime,
 } from '@verdant-web/common';
-import { Context } from '../../context.js';
+import { Context } from '../context.js';
 import { EntityChange } from './types.js';
 
 export type EntityMetadataView = {

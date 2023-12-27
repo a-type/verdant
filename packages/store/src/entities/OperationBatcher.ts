@@ -6,8 +6,8 @@ import {
 	getUndoOperations,
 	groupPatchesByOid,
 } from '@verdant-web/common';
-import { Metadata } from '../../metadata/Metadata.js';
-import { Context } from '../../context.js';
+import { Metadata } from '../metadata/Metadata.js';
+import { Context } from '../context.js';
 import type { EntityStore } from './EntityStore.js';
 import { Entity } from './Entity.js';
 

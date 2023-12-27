@@ -11,7 +11,7 @@ export { ClientDescriptor as StorageDescriptor };
 export { Client as Storage };
 export type { ClientDescriptorOptions };
 export type { ClientDescriptorOptions as StorageInitOptions };
-export { Entity } from './entities/2/Entity.js';
+export { Entity } from './entities/Entity.js';
 export type {
 	ObjectEntity,
 	ListEntity,
@@ -19,7 +19,7 @@ export type {
 	AccessibleEntityProperty,
 	AnyEntity,
 	EntityDestructured,
-} from './entities/2/types.js';
+} from './entities/types.js';
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { EntityFile } from './files/EntityFile.js';

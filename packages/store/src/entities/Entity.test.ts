@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Entity } from './Entity.js';
 import { EntityFamilyMetadata } from './EntityMetadata.js';
-import { Context } from '../../context.js';
+import { Context } from '../context.js';
 import { EntityStoreEvents } from './EntityStore.js';
 import { WeakEvent } from 'weak-event';
-import { FileManager } from '../../files/FileManager.js';
+import { FileManager } from '../files/FileManager.js';
 import {
 	NaiveTimestampProvider,
 	PatchCreator,

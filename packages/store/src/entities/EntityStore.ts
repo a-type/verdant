@@ -14,16 +14,16 @@ import {
 	isRootOid,
 	removeOidsFromAllSubObjects,
 } from '@verdant-web/common';
-import { Context } from '../../context.js';
-import { Metadata } from '../../metadata/Metadata.js';
+import { Context } from '../context.js';
+import { Metadata } from '../metadata/Metadata.js';
 import { Entity } from './Entity.js';
-import { Disposable } from '../../utils/Disposable.js';
+import { Disposable } from '../utils/Disposable.js';
 import { EntityFamilyMetadata } from './EntityMetadata.js';
-import { FileManager } from '../../files/FileManager.js';
+import { FileManager } from '../files/FileManager.js';
 import { OperationBatcher } from './OperationBatcher.js';
-import { QueryableStorage } from '../../queries/QueryableStorage.js';
+import { QueryableStorage } from '../queries/QueryableStorage.js';
 import { WeakEvent } from 'weak-event';
-import { processValueFiles } from '../../files/utils.js';
+import { processValueFiles } from '../files/utils.js';
 import { abort } from 'process';
 
 enum AbortReason {

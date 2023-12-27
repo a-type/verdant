@@ -1,6 +1,6 @@
 import { CollectionFilter, hashObject } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { EntityStore } from '../entities/2/EntityStore.js';
+import { EntityStore } from '../entities/EntityStore.js';
 import { GetQuery } from './GetQuery.js';
 import { QueryCache } from './QueryCache.js';
 import { FindOneQuery } from './FindOneQuery.js';

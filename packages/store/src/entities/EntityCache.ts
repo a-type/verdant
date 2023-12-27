@@ -1,5 +1,5 @@
 import { Entity, EntityInit } from './Entity.js';
-import { EntityFile } from '../../files/EntityFile.js';
+import { EntityFile } from '../files/EntityFile.js';
 import { ObjectIdentifier } from '@verdant-web/common';
 
 export class EntityCache {

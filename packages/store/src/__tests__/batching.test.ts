@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, MockedFunction } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
-import { Entity } from '../entities/2/Entity.js';
+import { Entity } from '../entities/Entity.js';
 
 describe('batching operations', () => {
 	it('should allow multiple runs with manual flush', async () => {
