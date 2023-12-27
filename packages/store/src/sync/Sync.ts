@@ -288,7 +288,7 @@ export class ServerSync<Presence = any, Profile = any>
 					}, 1000);
 				}
 			};
-			let switchoverTimeout: NodeJS.Timer;
+			let switchoverTimeout: NodeJS.Timeout;
 			this.presence.subscribe('peersChanged', decideIfUpgrade);
 			if (automaticTransportSelection !== 'peers-only') {
 				this.presence.subscribe('selfChanged', decideIfUpgrade);
