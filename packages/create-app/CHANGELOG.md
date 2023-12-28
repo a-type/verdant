@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.4.0
+
+### Minor Changes
+
+- 1ab69ee: Add a "Grant's version" template to create-app bootstrapper
+
 ## 0.3.1
 
 ### Patch Changes

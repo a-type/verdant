@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.2.1
+
+### Patch Changes
+
+- f16fe63: Fix some typing issues in the CLI
+
 ## 4.2.0
 
 ### Minor Changes
