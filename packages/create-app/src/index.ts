@@ -8,6 +8,7 @@ import {
 	confirm,
 	note,
 	select,
+	isCancel,
 } from '@clack/prompts';
 import { cpTpl } from 'cp-tpl';
 import * as url from 'url';
@@ -32,8 +33,40 @@ const templateName = await select({
 			label:
 				'The "small business" | A kitchen sink app with a sync server, Google login, and Stripe subscriptions',
 		},
+		{
+			value: 'grant',
+			label:
+				"Grant's version | My personal template for apps I make. You might find it interesting but I don't recommend using it yourself.",
+		},
 	],
 });
+
+if (isCancel(templateName)) {
+	outro('Cancelled');
+	process.exit(1);
+}
+
+if (templateName === 'grant') {
+	const confirmed = await select({
+		message:
+			'Just checking - make sure you look over the code and update things like the TOS before deploying.',
+		options: [
+			{
+				value: 'ok',
+				label: 'I understand',
+			},
+			{
+				value: 'cancel',
+				label: 'Cancel',
+			},
+		],
+	});
+
+	if (confirmed === 'cancel' || isCancel(confirmed)) {
+		outro('Cancelled');
+		process.exit(1);
+	}
+}
 
 const directory = await text({
 	message: 'Where do you want to create your app?',
