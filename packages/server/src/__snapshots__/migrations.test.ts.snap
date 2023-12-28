@@ -1,9 +1,9 @@
-// Vitest Snapshot v1
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`the v5->v6 migration > rewrites legacy oids in all ops and baselines 1`] = `
 [
   {
-    "data": "{\\"op\\":\\"set\\",\\"value\\":{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:ghi\\"}}",
+    "data": "{"op":"set","value":{"@@type":"ref","id":"weirds/b:ghi"}}",
     "libraryId": "test-1",
     "oid": "weirds/b",
     "replicaId": "foo",
@@ -11,7 +11,7 @@ exports[`the v5->v6 migration > rewrites legacy oids in all ops and baselines 1`
     "timestamp": 1,
   },
   {
-    "data": "{\\"op\\":\\"list-push\\",\\"value\\":{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:abc\\"}}",
+    "data": "{"op":"list-push","value":{"@@type":"ref","id":"weirds/b:abc"}}",
     "libraryId": "test-1",
     "oid": "weirds/b:ghi",
     "replicaId": "foo",
@@ -19,7 +19,7 @@ exports[`the v5->v6 migration > rewrites legacy oids in all ops and baselines 1`
     "timestamp": 1,
   },
   {
-    "data": "{\\"op\\":\\"list-remove\\",\\"value\\":{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:abc\\"}}",
+    "data": "{"op":"list-remove","value":{"@@type":"ref","id":"weirds/b:abc"}}",
     "libraryId": "test-1",
     "oid": "weirds/b:ghi",
     "replicaId": "foo",
@@ -27,7 +27,7 @@ exports[`the v5->v6 migration > rewrites legacy oids in all ops and baselines 1`
     "timestamp": 2,
   },
   {
-    "data": "{\\"op\\":\\"set\\",\\"value\\":{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:ghi\\"}}",
+    "data": "{"op":"set","value":{"@@type":"ref","id":"weirds/b:ghi"}}",
     "libraryId": "test-2",
     "oid": "weirds/b",
     "replicaId": "bar",
@@ -42,13 +42,13 @@ exports[`the v5->v6 migration > rewrites legacy oids in all ops and baselines 2`
   {
     "libraryId": "test-1",
     "oid": "weirds/b:ghi",
-    "snapshot": "{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:abc\\"}",
+    "snapshot": "{"@@type":"ref","id":"weirds/b:abc"}",
     "timestamp": "1",
   },
   {
     "libraryId": "test-2",
     "oid": "weirds/b:ghi",
-    "snapshot": "{\\"@@type\\":\\"ref\\",\\"id\\":\\"weirds/b:abc\\"}",
+    "snapshot": "{"@@type":"ref","id":"weirds/b:abc"}",
     "timestamp": "1a",
   },
 ]
