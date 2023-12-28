@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.0.1
+
+### Patch Changes
+
+- f16fe63: Fix some typing issues in the CLI
+
 ## 3.0.0
 
 ### Major Changes
