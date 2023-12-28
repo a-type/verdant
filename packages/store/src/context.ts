@@ -1,4 +1,10 @@
-import { EventSubscriber, StorageSchema } from '@verdant-web/common';
+import {
+	EventSubscriber,
+	Migration,
+	ObjectIdentifier,
+	StorageSchema,
+	TimestampProvider,
+} from '@verdant-web/common';
 import { UndoHistory } from './UndoHistory.js';
 
 /**
@@ -14,6 +20,10 @@ export interface Context {
 	log: (...args: any[]) => void;
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;
+		documentChanged: (oid: ObjectIdentifier) => void;
+	}>;
+	internalEvents: EventSubscriber<{
+		documentDbChanged: (db: IDBDatabase) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**
@@ -27,4 +37,9 @@ export interface Context {
 		futureSeen: (timestamp: string) => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
+	migrations: Migration<any>[];
+	/**
+	 * Get the current logical timestamp
+	 */
+	getNow(): string;
 }

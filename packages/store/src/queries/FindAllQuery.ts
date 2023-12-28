@@ -29,6 +29,10 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 			index: this.index,
 			context: this.context,
 		});
+		this.context.log(
+			'debug',
+			`FindAllQuery: ${oids.length} oids found: ${oids}`,
+		);
 		this.setValue(await Promise.all(oids.map(this.hydrate)));
 	};
 

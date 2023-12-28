@@ -132,8 +132,12 @@ export class ClientDescriptor<
 			this._resolvedValue = storage;
 			return storage;
 		} catch (err) {
-			this.rejectReady(err as Error);
-			throw err;
+			if (err instanceof Error) {
+				this.rejectReady(err as Error);
+				throw err;
+			} else {
+				throw new Error('Unknown error initializing storage');
+			}
 		} finally {
 			this._initializing = false;
 		}
@@ -148,7 +152,7 @@ export class ClientDescriptor<
 			metadataVersion,
 		});
 
-		const context: Omit<Context, 'documentDb'> = {
+		const context: Omit<Context, 'documentDb' | 'getNow'> = {
 			namespace: this._namespace,
 			metaDb,
 			schema: init.schema,
@@ -156,6 +160,7 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			internalEvents: new EventSubscriber(),
 			weakRef: (value) => {
 				if (init.EXPERIMENTAL_weakRefs) {
 					return new WeakRef(value);
@@ -163,6 +168,7 @@ export class ClientDescriptor<
 					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
 				}
 			},
+			migrations: init.migrations,
 		};
 		const meta = new Metadata({
 			context,
@@ -172,15 +178,19 @@ export class ClientDescriptor<
 		// verify schema integrity
 		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
+		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
+			getNow: () => meta.now,
+		});
+
 		const documentDb = await openDocumentDatabase({
-			context,
+			context: contextWithNow,
 			version: init.schema.version,
 			meta,
 			migrations: init.migrations,
 			indexedDB: init.indexedDb,
 		});
 
-		const fullContext: Context = Object.assign(context, { documentDb });
+		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
 
 		const storage = new Client(
 			{
@@ -209,7 +219,7 @@ export class ClientDescriptor<
 			wipNamespace: wipNamespace,
 		});
 
-		const context: Omit<Context, 'documentDb'> = {
+		const context: Omit<Context, 'documentDb' | 'getNow'> = {
 			namespace: this._namespace,
 			metaDb,
 			schema: init.schema,
@@ -217,6 +227,7 @@ export class ClientDescriptor<
 			undoHistory: init.undoHistory || new UndoHistory(),
 			entityEvents: new EventSubscriber(),
 			globalEvents: new EventSubscriber(),
+			internalEvents: new EventSubscriber(),
 			weakRef: (value) => {
 				if (init.EXPERIMENTAL_weakRefs) {
 					return new WeakRef(value);
@@ -224,17 +235,22 @@ export class ClientDescriptor<
 					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
 				}
 			},
+			migrations: init.migrations,
 		};
 		const meta = new Metadata({
 			context,
 			disableRebasing: init.disableRebasing,
 		});
 
+		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
+			getNow: () => meta.now,
+		});
+
 		// verify schema integrity
 		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
 		const documentDb = await openWIPDocumentDatabase({
-			context,
+			context: contextWithNow,
 			version: init.schema.version,
 			meta,
 			migrations: init.migrations,
@@ -242,7 +258,7 @@ export class ClientDescriptor<
 			wipNamespace,
 		});
 
-		const fullContext: Context = Object.assign(context, { documentDb });
+		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
 
 		const storage = new Client(
 			{

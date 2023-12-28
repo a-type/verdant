@@ -10,7 +10,9 @@ import {
 } from './lib/waits.js';
 import { assert } from '@verdant-web/common';
 
-const context = createTestContext();
+const context = createTestContext({
+	testLog: true,
+});
 
 it('can sync multiple clients even if they go offline', async () => {
 	const { server, createTestClient, log } = context;
@@ -24,7 +26,7 @@ it('can sync multiple clients even if they go offline', async () => {
 		server,
 		library: 'sync-1',
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
@@ -130,9 +132,14 @@ it('can sync multiple clients even if they go offline', async () => {
 	assert(c_steakItem);
 	c_steakItem.set('purchased', true);
 
-	await waitForCondition(() => {
-		return b_steakItem.get('purchased') === true;
-	});
+	await waitForEntityCondition(
+		b_steakItem,
+		(e) => {
+			return e.get('purchased') === true;
+		},
+		10000,
+		'steak item is purchased',
+	);
 	expect(b_steakItem.get('purchased')).toBe(true);
 
 	const b_unknownItem = await clientB.items.get(a_unknownItem.get('id'))
@@ -158,29 +165,33 @@ it('can sync multiple clients even if they go offline', async () => {
 		.run(() => {
 			b_produce.delete('metadata');
 		})
-		.flush();
+		.commit();
 	await waitForEntityCondition(
 		a_produceCategory,
 		(cat) => !cat.get('metadata'),
+		10000,
+		'category has no metadata',
 	);
 	clientB.undoHistory.undo();
 
-	async function waitForTags(item: Item) {
-		await waitForCondition(() => {
-			return (
-				item.get('tags').has('a') &&
-				item.get('tags').has('b') &&
-				item.get('tags').has('c')
-			);
-		});
+	async function waitForTags(item: Item, debugName: string) {
+		await waitForEntityCondition(
+			item.get('tags'),
+			(tags) => {
+				return tags.has('a') && tags.has('b') && tags.has('c');
+			},
+			10000,
+			debugName,
+		);
 		expect(item.get('tags').has('a')).toBe(true);
 		expect(item.get('tags').has('b')).toBe(true);
 		expect(item.get('tags').has('c')).toBe(true);
 	}
-	await waitForTags(a_unknownItem);
-	await waitForTags(b_unknownItem);
+	await waitForTags(a_unknownItem, 'a item has tags');
+	await waitForTags(b_unknownItem, 'b item has tags');
 	await waitForTags(
 		(await clientC.items.get(a_unknownItem.get('id')).resolved)!,
+		'c item has tags',
 	);
 	await waitForEntityCondition(
 		a_produceCategory,
@@ -210,29 +221,16 @@ it('can sync multiple clients even if they go offline', async () => {
 	clientA.sync.start();
 	clientB.sync.start();
 
-	async function expectCommentsToExist(
-		client: Client,
-		itemId: string,
-		commentCount: number,
-	) {
-		const item = await client.items.get(itemId).resolved;
-		assert(item);
-		expect(item.get('comments').length).toBe(commentCount);
-	}
-
 	await waitForQueryResult(
 		clientA.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientA, a_unknownItem.get('id'), 2);
 	await waitForQueryResult(
 		clientB.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientB, a_unknownItem.get('id'), 2);
 	await waitForQueryResult(
 		clientC.items.get(a_unknownItem.get('id')),
 		(item) => item?.get('comments').length === 2,
 	);
-	await expectCommentsToExist(clientC, a_unknownItem.get('id'), 2);
 }, 30000);

@@ -1,34 +1,24 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { expect, it } from 'vitest';
+import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
-import { log } from './lib/log.js';
 
-let server: ReturnType<typeof startTestServer> extends Promise<infer T>
-	? T
-	: never;
-beforeAll(async () => {
-	server = await startTestServer({ log: false });
+const ctx = createTestContext({
+	// testLog: true,
 });
 
-afterAll(async () => {
-	await server.cleanup();
-}, 30 * 1000);
-
 async function connectAndSeedData(library = 'reset-1') {
-	const clientA = await createTestClient({
-		server,
+	const clientA = await ctx.createTestClient({
 		library,
 		user: 'User A',
 	});
-	const clientB = await createTestClient({
-		server,
+	const clientB = await ctx.createTestClient({
 		library,
 		user: 'User B',
+		// logId: 'B',
 	});
 
 	// seed data into library
@@ -61,6 +51,7 @@ async function connectAndSeedData(library = 'reset-1') {
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientB.categories.get(a_produceCategory.get('id')));
 
+	ctx.log('Seeded data into library');
 	return {
 		clientA,
 		clientB,
@@ -73,9 +64,8 @@ async function connectNewReplicaAndCheckIntegrity(
 	library = 'reset-1',
 	{ a_unknownItem, a_produceCategory }: any,
 ) {
-	log('Connecting new replica to test integrity');
-	const clientC = await createTestClient({
-		server,
+	ctx.log('Connecting new replica to test integrity');
+	const clientC = await ctx.createTestClient({
 		library,
 		user: 'User C',
 		// logId: 'C',
@@ -105,7 +95,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	clientB.sync.stop();
 
 	// reset server
-	server.server.evictLibrary('reset-1');
+	ctx.server.server.evictLibrary('reset-1');
 
 	// add more data offline with A and B
 	const a_banana = await clientA.items.put({
@@ -119,16 +109,18 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 		categoryId: a_produceCategory.get('id'),
 		content: 'Pears',
 	});
+	const pearId = b_pear.get('id');
 
 	clientA.sync.start();
 	await waitForOnline(clientA);
+	ctx.log('Client A online');
 	// client A should now "win" and re-initialize server data
 
 	await waitForQueryResult(clientA.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientA.items.get(a_banana.get('id')));
 
 	clientB.sync.start();
-	log('Waiting for client B to re-initialize');
+	ctx.log('Waiting for client B to re-initialize');
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(
@@ -138,8 +130,10 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 		},
 		1000,
 	);
-	const b_pearQuery = clientB.items.get(b_pear.get('id'));
-	await waitForQueryResult(b_pearQuery, (val) => !val);
+	const b_pearQuery = clientB.items.get(pearId);
+	await waitForQueryResult(b_pearQuery, (val) => {
+		return !val;
+	});
 	expect(b_pearQuery.current).toBe(null);
 
 	const clientC = await connectNewReplicaAndCheckIntegrity('reset-1', {
@@ -189,7 +183,7 @@ it('can re-initialize in realtime when replicas are still connected', async () =
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(library);
 
-	server.server.evictLibrary(library);
+	ctx.server.server.evictLibrary(library);
 	await waitForOnline(clientA, false);
 	await waitForOnline(clientA, true);
 
@@ -244,7 +238,7 @@ it('resets from replica over http sync', async () => {
 	clientA.sync.stop();
 	clientB.sync.stop();
 
-	server.server.evictLibrary(library);
+	ctx.server.server.evictLibrary(library);
 
 	clientA.sync.setMode('pull');
 	clientA.sync.start();

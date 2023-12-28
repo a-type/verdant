@@ -2,6 +2,7 @@
  * High-level patch creation for use with complex nested objects.
  */
 
+import { FileRef } from './files.js';
 import { createRef, createSubOid, ObjectIdentifier } from './oids.js';
 import {
 	diffToPatches,
@@ -213,7 +214,7 @@ export class PatchCreator {
 
 	createListMoveByRef = (
 		oid: ObjectIdentifier,
-		value: ObjectRef,
+		value: ObjectRef | FileRef,
 		index: number,
 	): Operation[] => {
 		return [

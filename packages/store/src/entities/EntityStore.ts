@@ -1,731 +1,494 @@
 import {
-	assert,
-	assignIndexValues,
-	assignOid,
-	assignOidPropertiesToAllSubObjects,
-	Batcher,
-	cloneDeep,
-	decomposeOid,
 	DocumentBaseline,
-	EventSubscriber,
-	generateId,
-	getIndexValues,
-	getOidRoot,
-	getUndoOperations,
-	groupBaselinesByRootOid,
-	groupPatchesByIdentifier,
-	groupPatchesByRootOid,
 	ObjectIdentifier,
 	Operation,
-	removeOidsFromAllSubObjects,
-	StorageCollectionSchema,
+	StorageFieldsSchema,
 	StorageObjectFieldSchema,
+	assert,
+	assignOid,
+	decomposeOid,
+	getOidRoot,
+	groupBaselinesByRootOid,
+	groupPatchesByOid,
+	groupPatchesByRootOid,
+	isRootOid,
+	removeOidsFromAllSubObjects,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { FileManager } from '../files/FileManager.js';
-import { processValueFiles } from '../files/utils.js';
-import { storeRequestPromise } from '../idb.js';
 import { Metadata } from '../metadata/Metadata.js';
-import { DocumentFamilyCache } from './DocumentFamiliyCache.js';
-import { TaggedOperation } from '../types.js';
+import { Entity } from './Entity.js';
+import { Disposable } from '../utils/Disposable.js';
+import { EntityFamilyMetadata } from './EntityMetadata.js';
+import { FileManager } from '../files/FileManager.js';
+import { OperationBatcher } from './OperationBatcher.js';
+import { QueryableStorage } from '../queries/QueryableStorage.js';
+import { WeakEvent } from 'weak-event';
+import { processValueFiles } from '../files/utils.js';
+import { abort } from 'process';
 
-const DEFAULT_BATCH_KEY = '@@default';
-
-export interface OperationBatch {
-	run: (fn: () => void) => this;
-	flush: () => Promise<void>;
-	discard: () => void;
+enum AbortReason {
+	Reset,
 }
 
-export class EntityStore {
-	private documentFamilyCaches = new Map<string, DocumentFamilyCache>();
+export type EntityStoreEventData = {
+	oid: ObjectIdentifier;
+	operations?: Record<string, Operation[]>;
+	baselines?: DocumentBaseline[];
+	isLocal: boolean;
+};
 
-	public meta;
-	private operationBatcher;
-	public files;
+export type EntityStoreEvents = {
+	add: WeakEvent<EntityStore, EntityStoreEventData>;
+	replace: WeakEvent<EntityStore, EntityStoreEventData>;
+	resetAll: WeakEvent<EntityStore, void>;
+};
 
-	private context: Context;
+type IncomingData = {
+	operations?: Operation[];
+	baselines?: DocumentBaseline[];
+	reset?: boolean;
+	isLocal?: boolean;
+};
 
-	private unsubscribes: (() => void)[] = [];
-
-	private _disposed = false;
-
-	private get log() {
-		return this.context.log;
-	}
-	private get db() {
-		return this.context.documentDb;
-	}
-	private get undoHistory() {
-		return this.context.undoHistory;
-	}
-	private get schema() {
-		return this.context.schema;
-	}
-
-	private currentBatchKey = DEFAULT_BATCH_KEY;
-	private defaultBatchTimeout: number;
+export class EntityStore extends Disposable {
+	private ctx;
+	private meta;
+	private files;
+	private batcher;
+	private queryableStorage;
+	private events: EntityStoreEvents = {
+		add: new WeakEvent(),
+		replace: new WeakEvent(),
+		resetAll: new WeakEvent(),
+	};
+	private cache = new Map<ObjectIdentifier, WeakRef<Entity>>();
+	private pendingEntityPromises = new Map<
+		ObjectIdentifier,
+		Promise<Entity | null>
+	>();
+	// halts the current data queue processing
+	private abortDataQueueController = new AbortController();
+	private ongoingResetPromise: Promise<void> | null = null;
+	private entityFinalizationRegistry = new FinalizationRegistry(
+		(oid: ObjectIdentifier) => {
+			this.ctx.log('debug', 'Entity GC', oid);
+		},
+	);
 
 	constructor({
-		context,
+		ctx,
 		meta,
-		batchTimeout = 200,
 		files,
 	}: {
-		context: Context;
+		ctx: Context;
 		meta: Metadata;
 		files: FileManager;
-		batchTimeout?: number;
 	}) {
-		this.context = context;
+		super();
 
-		this.defaultBatchTimeout = batchTimeout;
+		this.ctx = ctx;
 		this.meta = meta;
 		this.files = files;
-		this.operationBatcher = new Batcher<Operation, { undoable?: boolean }>(
-			this.flushOperations,
-		);
-		// initialize default batch
-		this.operationBatcher.add({
-			key: DEFAULT_BATCH_KEY,
-			items: [],
-			max: 100,
-			timeout: batchTimeout,
-			userData: { undoable: true },
+		this.queryableStorage = new QueryableStorage({ ctx });
+		this.batcher = new OperationBatcher({
+			ctx,
+			meta,
+			entities: this,
 		});
-		this.unsubscribes.push(this.meta.subscribe('rebase', this.handleRebase));
 	}
 
-	setContext = (context: Context) => {
-		this.context = context;
-	};
+	// expose batch APIs
+	get batch() {
+		return this.batcher.batch;
+	}
+	get flushAllBatches() {
+		return this.batcher.flushAll;
+	}
 
-	private getDocumentSchema = (
-		oid: ObjectIdentifier,
-	): { schema: StorageObjectFieldSchema | null; readonlyKeys: string[] } => {
-		const { collection } = decomposeOid(oid);
-		if (!this.schema.collections[collection]) {
-			this.log('warn', `Missing schema for collection: ${collection}`);
-			return { schema: null, readonlyKeys: [] };
-		}
-		const schema = this.schema.collections[collection];
-		return {
-			readonlyKeys: [schema.primaryKey],
-			schema: {
-				type: 'object',
-				properties: schema.fields as any,
-			} as const,
-		};
-	};
-
-	private refreshFamilyCache = async (
-		familyCache: DocumentFamilyCache,
-		dropUnconfirmed = false,
-		dropAll = false,
-	) => {
-		// avoid writing to disposed db
-		if (this._disposed) {
-			this.context.log(
-				'debug',
-				`EntityStore is disposed, not refreshing ${familyCache.oid} cache`,
-			);
+	// internal-ish API to load remote / stored data
+	addData = async (data: IncomingData) => {
+		if (this.disposed) {
+			this.ctx.log('warn', 'EntityStore is disposed, not adding incoming data');
 			return;
 		}
-
-		// metadata must be loaded from database to initialize family cache
-		const transaction = this.meta.createTransaction([
-			'baselines',
-			'operations',
-		]);
-
-		const baselines: DocumentBaseline[] = [];
-		const operations: TaggedOperation[] = [];
-
-		await Promise.all([
-			this.meta.baselines.iterateOverAllForDocument(
-				familyCache.oid,
-				(baseline) => {
-					baselines.push(baseline);
-				},
-				{
-					transaction,
-					mode: 'readwrite',
-				},
-			),
-			this.meta.operations.iterateOverAllOperationsForDocument(
-				familyCache.oid,
-				(op) => {
-					(op as TaggedOperation).confirmed = true;
-					operations.push(op as TaggedOperation);
-				},
-				{ transaction, mode: 'readwrite' },
-			),
-		]);
-		familyCache.reset({
-			operations,
-			baselines,
-			dropExistingUnconfirmed: dropUnconfirmed,
-			dropAll,
-		});
-	};
-
-	private openFamilyCache = async (oid: ObjectIdentifier) => {
-		const documentOid = getOidRoot(oid);
-		let familyCache = this.documentFamilyCaches.get(documentOid);
-		if (!familyCache) {
-			this.context.log('debug', 'opening family cache for', documentOid);
-			// metadata must be loaded from database to initialize family cache
-			familyCache = new DocumentFamilyCache({
-				oid: documentOid,
-				store: this,
-				context: this.context,
+		// for resets - abort any other changes, reset everything,
+		// then proceed
+		if (data.reset) {
+			this.ctx.log(
+				'info',
+				'Resetting local store to replicate remote synced data - dropping any current transactions',
+			);
+			// cancel any other ongoing data - it will all
+			// be replaced by the reset
+			this.abortDataQueueController.abort(AbortReason.Reset);
+			this.abortDataQueueController = new AbortController();
+			this.ongoingResetPromise = this.resetData().finally(() => {
+				this.ongoingResetPromise = null;
 			});
-
-			// PROBLEM: because the next line is async, it yields to
-			// queued promises which may need data from this cache,
-			// but the cache is empty. But if we move the set to
-			// after the async, we can clobber an existing cache
-			// with race conditions...
-			// So as an attempt to fix that, I've added a promise
-			// on DocumentFamilyCache which I manually resolve
-			// with setInitialized, then await initializedPromise
-			// further down even if there was a cache hit.
-			// Surely there is a better pattern for this.
-			// FIXME:
-			this.documentFamilyCaches.set(documentOid, familyCache);
-			await this.refreshFamilyCache(familyCache);
-			familyCache.setInitialized();
-
-			// this.unsubscribes.push(
-			// 	familyCache.subscribe('change:*', this.onEntityChange),
-			// );
-
-			// TODO: cleanup cache when all documents are disposed
 		}
-		await familyCache.initializedPromise;
 
-		return familyCache;
+		// await either the reset we just started, or any that was
+		// in progress when this data came in.
+		if (this.ongoingResetPromise) {
+			this.ctx.log('debug', 'Waiting for ongoing reset to complete');
+			await this.ongoingResetPromise;
+			this.ctx.log('debug', 'Ongoing reset complete');
+		}
+
+		await this.processData(data);
 	};
 
-	private onEntityChange = async (oid: ObjectIdentifier) => {
-		// queueMicrotask(() => this.writeDocumentToStorage(oid));
+	private resetData = async () => {
+		if (this.disposed) {
+			this.ctx.log('warn', 'EntityStore is disposed, not resetting local data');
+			return;
+		}
+		await this.meta.reset();
+		await this.queryableStorage.reset();
+		this.events.resetAll.invoke(this);
 	};
 
-	private writeDocumentToStorage = async (oid: ObjectIdentifier) => {
-		if (this._disposed) {
-			this.log('warn', 'EntityStore is disposed, not writing to storage');
-			return;
-		}
-		const rootOid = getOidRoot(oid);
-		const { id, collection } = decomposeOid(rootOid);
-		const entity = await this.get(rootOid);
-
-		if (this._disposed) {
-			this.log('warn', 'EntityStore is disposed, not writing to storage');
-			return;
-		}
-
-		const snapshot = entity?.getSnapshot();
-		if (snapshot) {
-			const stored = getIndexValues(
-				this.schema.collections[collection],
-				snapshot,
+	private processData = async (data: IncomingData) => {
+		if (this.disposed) {
+			this.ctx.log(
+				'warn',
+				'EntityStore is disposed, not processing incoming data',
 			);
-			try {
-				const tx = this.db.transaction(collection, 'readwrite');
-				const store = tx.objectStore(collection);
-				await storeRequestPromise(store.put(stored));
-				this.log('info', '📝', 'wrote', collection, id, 'to storage', stored);
-			} catch (err) {
-				// if the document can't be written, something's very wrong :(
-				// log the error and move on...
-				this.log(
-					"⚠️ CRITICAL: possibly corrupt data couldn't be written to queryable storage. This is probably a bug in verdant! Please report at https://github.com/a-type/verdant/issues",
-					'\n',
-					'Invalid data:',
-					JSON.stringify(stored),
+			return;
+		}
+
+		const baselines = data?.baselines ?? [];
+		const operations = data?.operations ?? [];
+
+		this.ctx.log('debug', 'Processing incoming data', {
+			operations: operations.length,
+			baselines: baselines.length,
+			reset: !!data.reset,
+		});
+
+		const allDocumentOids: ObjectIdentifier[] = Array.from(
+			new Set(
+				baselines
+					.map((b) => getOidRoot(b.oid))
+					.concat(operations.map((o) => getOidRoot(o.oid))),
+			),
+		);
+		const baselinesGroupedByOid = groupBaselinesByRootOid(baselines);
+		const operationsGroupedByOid = groupPatchesByRootOid(operations);
+
+		this.ctx.log('debug', 'Applying data to live entities');
+		// synchronously add/replace data in any open entities via eventing
+		for (const oid of allDocumentOids) {
+			const baselines = baselinesGroupedByOid[oid];
+			const operations = operationsGroupedByOid[oid] ?? [];
+			const groupedOperations = groupPatchesByOid(operations);
+			// what happens if an entity is being hydrated
+			// while this is happening? - we wait for the hydration promise
+			// to complete, then invoke the event
+			const event = data.reset ? this.events.replace : this.events.add;
+			const hydrationPromise = this.pendingEntityPromises.get(oid);
+			if (hydrationPromise) {
+				hydrationPromise.then(() => {
+					event.invoke(this, {
+						oid,
+						baselines,
+						operations: groupedOperations,
+						isLocal: false,
+					});
+				});
+			} else {
+				if (this.cache.has(oid)) {
+					this.ctx.log('debug', 'Cache has', oid, ', an event should follow.');
+				}
+				event.invoke(this, {
+					oid,
+					baselines,
+					operations: groupedOperations,
+					isLocal: false,
+				});
+			}
+		}
+
+		const abortOptions = {
+			abort: this.abortDataQueueController.signal,
+		};
+
+		// then, asynchronously add to the database
+		await this.meta.insertData(data, abortOptions);
+
+		// FIXME: entities hydrated here are not seeing
+		// the operations just inserted above!!
+		// IDEA: can we coordinate here with hydrate promises
+		// based on affected OIDs?
+
+		// recompute all affected documents for querying
+		const entities = await Promise.all(
+			allDocumentOids.map(async (oid) => {
+				const entity = await this.hydrate(oid, abortOptions);
+				// if the entity is not found, we return a stub that
+				// indicates it's deleted and should be cleared
+				return (
+					entity ?? {
+						oid,
+						getSnapshot(): any {
+							return null;
+						},
+					}
+				);
+			}),
+		);
+		try {
+			await this.queryableStorage.saveEntities(entities, abortOptions);
+		} catch (err) {
+			if (this.disposed) {
+				this.ctx.log(
+					'warn',
+					'Error saving entities to queryable storage - EntityStore is disposed',
+					err,
+				);
+			} else {
+				this.ctx.log(
+					'error',
+					'Error saving entities to queryable storage',
+					err,
 				);
 			}
-		} else {
-			try {
-				const tx = this.db.transaction(collection, 'readwrite');
-				const store = tx.objectStore(collection);
-				await storeRequestPromise(store.delete(id));
-				this.log('info', '❌', 'deleted', collection, id, 'from storage');
-			} catch (err) {
-				if (err instanceof Error) {
-					// it's ok if the collection doesn't exist or the document
-					// doesn't exist.
-					if (
-						err instanceof DOMException &&
-						err.message?.includes('not found')
-					) {
-						this.log('debug', 'document not found in storage', oid);
-					} else {
-						throw err;
+		}
+	};
+
+	// internal-ish API for creating Entities from OIDs
+	// when query results come in
+	hydrate = async (
+		oid: string,
+		opts?: { abort: AbortSignal },
+	): Promise<Entity | null> => {
+		if (!isRootOid(oid)) {
+			throw new Error('Cannot hydrate non-root entity');
+		}
+
+		if (this.cache.has(oid)) {
+			this.ctx.log('debug', 'Hydrating entity from cache', oid);
+			const cached = this.cache.get(oid);
+			if (cached) {
+				const entity = cached.deref();
+				if (entity) {
+					if (entity.deleted) {
+						return null;
 					}
+					return entity;
+				} else {
+					this.ctx.log('debug', "Removing GC'd entity from cache", oid);
+					this.cache.delete(oid);
 				}
 			}
 		}
-	};
 
-	get = async (oid: ObjectIdentifier) => {
-		const familyCache = await this.openFamilyCache(oid);
-		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-		if (!schema) {
-			return null;
-		}
-		return familyCache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
-	};
-
-	/**
-	 * Advanced usage!
-	 * Immediately returns an entity if it exists in the memory cache. An
-	 * entity would be cached if it has been retrieved by a live query.
-	 */
-	getCached = (oid: ObjectIdentifier) => {
-		const cache = this.documentFamilyCaches.get(oid);
-		if (cache) {
-			const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-			if (!schema) {
+		// we don't want to hydrate two entities in parallel, so
+		// we use a promise to ensure that only one is ever
+		// constructed at a time
+		const pendingPromise = this.pendingEntityPromises.get(oid);
+		if (!pendingPromise) {
+			this.ctx.log('debug', 'Hydrating entity from storage', oid);
+			const entity = this.constructEntity(oid);
+			if (!entity) {
 				return null;
 			}
-			return cache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
+			const pendingPromise = this.loadEntity(entity, opts);
+			pendingPromise.finally(() => {
+				this.pendingEntityPromises.delete(oid);
+			});
+			this.pendingEntityPromises.set(oid, pendingPromise);
+			return pendingPromise;
+		} else {
+			this.ctx.log('debug', 'Waiting for entity hydration', oid);
+			return pendingPromise;
 		}
-		return null;
 	};
 
+	destroy = async () => {
+		this.dispose();
+		await this.batcher.flushAll();
+	};
+
+	// public APIs for manipulating entities
+
 	/**
-	 * Creates a new document and returns an Entity for it. The created
-	 * document is submitted to storage and sync.
+	 * Creates a new Entity with the given initial data.
 	 */
 	create = async (
 		initial: any,
 		oid: ObjectIdentifier,
-		options: { undoable?: boolean },
+		{ undoable = true }: { undoable?: boolean } = {},
 	) => {
-		// remove all OID associations from initial data
+		this.ctx.log('debug', 'Creating new entity', oid);
+		const { collection } = decomposeOid(oid);
+		// remove any OID associations from the initial data
 		removeOidsFromAllSubObjects(initial);
-		// first grab any file and replace them with refs
+		// grab files and replace them with refs
 		const processed = processValueFiles(initial, this.files.add);
 
 		assignOid(processed, oid);
-		const operations = this.meta.patchCreator.createInitialize(processed, oid);
-		const familyCache = await this.openFamilyCache(oid);
-		familyCache.insertLocalOperations(operations);
-		// don't enqueue these, submit as distinct operation.
-		// we do this so it can be immediately queryable from storage...
-		// only holding it in memory would introduce lag before it shows up
-		// in other queries.
-		await this.submitOperations(operations, options);
-		const { schema, readonlyKeys } = this.getDocumentSchema(oid);
-		if (!schema) {
+
+		// creating a new Entity with no data, then preloading the operations
+		const entity = this.constructEntity(oid);
+		if (!entity) {
 			throw new Error(
-				`Cannot create a document in the ${
-					decomposeOid(oid).collection
-				} collection; it is not defined in the current schema version.`,
+				`Could not put new document: no schema exists for collection ${collection}`,
 			);
 		}
-		return familyCache.getEntity({ oid, fieldSchema: schema, readonlyKeys });
-	};
 
-	private addOperationsToOpenCaches = async (
-		operations: Operation[],
-		info: { isLocal: boolean; confirmed?: boolean },
-	) => {
-		const operationsByOid = groupPatchesByRootOid(operations);
-		const oids = Object.keys(operationsByOid);
-		oids.forEach((oid) => {
-			const familyCache = this.documentFamilyCaches.get(oid);
-			if (familyCache) {
-				this.log(
-					'adding',
-					info.confirmed ? 'confirmed' : 'unconfirmed',
-					'operations to cache',
-					oid,
-					operationsByOid[oid].length,
-				);
-				if (info.isLocal) {
-					familyCache.insertLocalOperations(operationsByOid[oid]);
-				} else {
-					familyCache.insertOperations(operationsByOid[oid], info);
-				}
-			}
+		const operations = this.meta.patchCreator.createInitialize(processed, oid);
+		await this.batcher.commitOperations(operations, {
+			undoable: !!undoable,
+			source: entity,
 		});
-	};
 
-	private addBaselinesToOpenCaches = async (
-		baselines: DocumentBaseline[],
-		info: { isLocal: boolean },
-	) => {
-		const baselinesByOid = groupBaselinesByRootOid(baselines);
-		const oids = Object.keys(baselinesByOid);
-		oids.forEach((oid) => {
-			const cache = this.documentFamilyCaches.get(oid);
-			if (cache) {
-				this.log(
-					'adding',
-					'baselines to cache',
-					oid,
-					baselinesByOid[oid].length,
-				);
-				cache.insertBaselines(baselinesByOid[oid], info);
-			}
-		});
-	};
+		// TODO: what happens if you create an entity with an OID that already
+		// exists?
 
-	private addDataToOpenCaches = ({
-		baselines,
-		operations,
-		reset,
-		isLocal,
-	}: {
-		baselines: DocumentBaseline[];
-		operations: TaggedOperation[];
-		reset?: boolean;
-		isLocal?: boolean;
-	}) => {
-		const baselinesByDocumentOid = groupBaselinesByRootOid(baselines);
-		const operationsByDocumentOid = groupPatchesByRootOid(operations);
-		const allDocumentOids = Array.from(
-			new Set(
-				Object.keys(baselinesByDocumentOid).concat(
-					Object.keys(operationsByDocumentOid),
-				),
-			),
-		);
-		for (const oid of allDocumentOids) {
-			const familyCache = this.documentFamilyCaches.get(oid);
-			if (familyCache) {
-				familyCache.addData({
-					operations: operationsByDocumentOid[oid] || [],
-					baselines: baselinesByDocumentOid[oid] || [],
-					reset,
-					isLocal,
-				});
-				this.log(
-					'debug',
-					'Added data to cache for',
-					oid,
-					operationsByDocumentOid[oid]?.length ?? 0,
-					'operations',
-					baselinesByDocumentOid[oid]?.length ?? 0,
-					'baselines',
-				);
-			} else {
-				this.log(
-					'debug',
-					'Could not add data to cache for',
-					oid,
-					'because it is not open',
-				);
-			}
-		}
-
-		return allDocumentOids;
-	};
-
-	addData = async ({
-		operations,
-		baselines,
-		reset,
-	}: {
-		operations: Operation[];
-		baselines: DocumentBaseline[];
-		reset?: boolean;
-	}) => {
-		if (this._disposed) {
-			this.log('warn', 'EntityStore is disposed, not adding data');
-			return;
-		}
-		// convert operations to tagged operations with confirmed = false
-		// while we process and store them. this is in-place so as to
-		// not allocate a bunch of objects...
-		const taggedOperations = operations as TaggedOperation[];
-		for (const op of taggedOperations) {
-			op.confirmed = false;
-		}
-
-		let allDocumentOids: string[] = [];
-		// in a reset scenario, it only makes things confusing if we
-		// optimistically apply incoming operations, since the local
-		// history is out of sync
-		if (reset) {
-			this.log(
-				'Resetting local store to replicate remote synced data',
-				baselines.length,
-				'baselines, and',
-				operations.length,
-				'operations',
-			);
-			await this.meta.reset();
-			await this.resetStoredDocuments();
-			allDocumentOids = Array.from(
-				new Set(
-					baselines
-						.map((b) => getOidRoot(b.oid))
-						.concat(operations.map((o) => getOidRoot(o.oid))),
-				),
-			);
-		} else {
-			// first, synchronously add data to any open caches for immediate change propagation
-			allDocumentOids = this.addDataToOpenCaches({
-				operations: taggedOperations,
-				baselines,
-				reset,
-			});
-		}
-
-		// then, asynchronously add data to storage
-		await this.meta.insertRemoteBaselines(baselines);
-		await this.meta.insertRemoteOperations(operations);
-
-		if (reset) {
-			await this.refreshAllCaches(true, true);
-		}
-
-		// recompute all affected documents for querying
-		for (const oid of allDocumentOids) {
-			await this.writeDocumentToStorage(oid);
-		}
-
-		// notify active queries
-		const affectedCollections = Array.from(
-			new Set<string>(
-				allDocumentOids.map((oid) => decomposeOid(oid).collection),
-			),
-		);
-		this.context.log('changes to collections', affectedCollections);
-		this.context.entityEvents.emit('collectionsChanged', affectedCollections);
-	};
-
-	addLocalOperations = async (operations: Operation[]) => {
-		this.log('Adding local operations', operations.length);
-		this.addOperationsToOpenCaches(operations, {
+		// we still need to synchronously add the initial operations to the Entity
+		// even though they are flowing through the system
+		// TODO: this could be better aligned to avoid grouping here
+		const operationsGroupedByOid = groupPatchesByOid(operations);
+		this.events.add.invoke(this, {
+			operations: operationsGroupedByOid,
 			isLocal: true,
-			confirmed: false,
+			oid,
 		});
-		this.operationBatcher.add({
-			key: this.currentBatchKey,
-			items: operations,
-		});
-	};
+		this.cache.set(oid, this.ctx.weakRef(entity));
 
-	batch = ({
-		undoable = true,
-		batchName = generateId(),
-		max = null,
-		timeout = this.defaultBatchTimeout,
-	}: {
-		undoable?: boolean;
-		batchName?: string;
-		max?: number | null;
-		timeout?: number | null;
-	} = {}): OperationBatch => {
-		const internalBatch = this.operationBatcher.add({
-			key: batchName,
-			max,
-			timeout,
-			items: [],
-			userData: { undoable },
-		});
-		const externalApi: OperationBatch = {
-			run: (fn: () => void) => {
-				// while the provided function runs, operations are forwarded
-				// to the new batch instead of default. this relies on the function
-				// being synchronous.
-				this.currentBatchKey = batchName;
-				fn();
-				this.currentBatchKey = DEFAULT_BATCH_KEY;
-				return externalApi;
-			},
-			flush: async () => {
-				// before running a batch, the default operations must be flushed
-				// this better preserves undo history behavior...
-				// if we left the default batch open while flushing a named batch,
-				// then the default batch would be flushed after the named batch,
-				// and the default batch could contain operations both prior and
-				// after the named batch. this would result in a confusing undo
-				// history where the first undo might reverse changes before and
-				// after a set of other changes.
-				await this.operationBatcher.flush(DEFAULT_BATCH_KEY);
-				return internalBatch.flush();
-			},
-			discard: () => {
-				this.operationBatcher.discard(batchName);
-			},
-		};
-		return externalApi;
-	};
-
-	/**
-	 * @deprecated use `batch` instead
-	 */
-	flushPatches = async () => {
-		await this.operationBatcher.flush(this.currentBatchKey);
-	};
-
-	flushAllBatches = async () => {
-		await Promise.all(this.operationBatcher.flushAll());
-	};
-
-	private flushOperations = async (
-		operations: Operation[],
-		batchKey: string,
-		meta: { undoable?: boolean },
-	) => {
-		if (!operations.length) return;
-
-		this.log('Flushing operations', operations.length, 'to storage / sync');
-		// rewrite timestamps of all operations to now - this preserves
-		// the linear history of operations which are sent to the server.
-		// even if multiple batches are spun up in parallel and flushed
-		// after delay, the final operations in each one should reflect
-		// when the batch flushed, not when the changes were made.
-		// This also corresponds to user-observed behavior, since unconfirmed
-		// operations are applied universally after confirmed operations locally,
-		// so even operations which were made before a remote operation but
-		// have not been confirmed yet will appear to come after the remote one
-		// despite the provisional timestamp being earlier (see DocumentFamilyCache#computeView)
-		for (const op of operations) {
-			op.timestamp = this.meta.now;
-		}
-		await this.submitOperations(operations, meta);
-	};
-
-	private submitOperations = async (
-		operations: Operation[],
-		{ undoable = true }: { undoable?: boolean } = {},
-	) => {
-		if (undoable) {
-			// FIXME: this is too slow and needs to be optimized.
-			this.undoHistory.addUndo(await this.createUndo(operations));
-		}
-		await this.meta.insertLocalOperation(operations);
-
-		// confirm the operations
-		this.addDataToOpenCaches({ operations, baselines: [] });
-
-		// recompute all affected documents for querying
-		const allDocumentOids = Array.from(
-			new Set(operations.map((op) => getOidRoot(op.oid))),
-		);
-		for (const oid of allDocumentOids) {
-			await this.writeDocumentToStorage(oid);
-		}
-
-		// TODO: find a more efficient and straightforward way to update affected
-		// queries. Move to Metadata?
-		const affectedCollections = new Set(
-			operations.map(({ oid }) => decomposeOid(oid).collection),
-		);
-		this.context.log('changes to collections', affectedCollections);
-		this.context.entityEvents.emit(
-			'collectionsChanged',
-			Array.from(affectedCollections),
-		);
-	};
-
-	private getInverseOperations = async (ops: Operation[]) => {
-		const grouped = groupPatchesByIdentifier(ops);
-		const inverseOps: Operation[] = [];
-		const getNow = () => this.meta.now;
-		for (const [oid, patches] of Object.entries(grouped)) {
-			const familyCache = await this.openFamilyCache(oid);
-			let { view, deleted } = familyCache.computeConfirmedView(oid);
-			const inverse = getUndoOperations(oid, view, patches, getNow);
-			inverseOps.unshift(...inverse);
-		}
-		return inverseOps;
-	};
-
-	private createUndo = async (ops: Operation[]) => {
-		const inverseOps = await this.getInverseOperations(ops);
-		return async () => {
-			const redo = await this.createUndo(inverseOps);
-			await this.submitOperations(
-				inverseOps.map((op) => {
-					op.timestamp = this.meta.now;
-					return op;
-				}),
-				// undos should not generate their own undo operations
-				// since they already calculate redo as the inverse.
-				{ undoable: false },
-			);
-			return redo;
-		};
-	};
-
-	delete = async (oid: ObjectIdentifier, options?: { undoable?: boolean }) => {
-		assert(
-			oid === getOidRoot(oid),
-			'Only root documents may be deleted via client methods',
-		);
-		// we need to get all sub-object oids to delete alongside the root
-		const allOids = await this.meta.getAllDocumentRelatedOids(oid);
-		const patches = this.meta.patchCreator.createDeleteAll(allOids);
-		// don't enqueue these, submit as distinct operation
-		await this.submitOperations(patches, options);
+		return entity;
 	};
 
 	deleteAll = async (
 		oids: ObjectIdentifier[],
 		options?: { undoable?: boolean },
 	) => {
+		this.ctx.log('info', 'Deleting documents', oids);
+		assert(
+			oids.every((oid) => oid === getOidRoot(oid)),
+			'Only root documents may be deleted via client methods',
+		);
+
 		const allOids = await Promise.all(
-			oids.map((oid) => this.meta.getAllDocumentRelatedOids(oid)),
+			oids.flatMap(async (oid) => {
+				const entity = await this.hydrate(oid);
+				return entity?.__getFamilyOids__() ?? [];
+			}),
 		);
-		const patches = this.meta.patchCreator.createDeleteAll(allOids.flat());
-		// don't enqueue these, submit as distinct operation
-		await this.submitOperations(patches, options);
+
+		// remove the entities from cache
+		oids.forEach((oid) => {
+			this.cache.delete(oid);
+			this.ctx.log('debug', 'Deleted document from cache', oid);
+		});
+
+		// create the delete patches and wait for them to be applied
+		const operations = this.meta.patchCreator.createDeleteAll(allOids.flat());
+		await this.batcher.commitOperations(operations, {
+			undoable: options?.undoable === undefined ? true : options.undoable,
+		});
 	};
 
-	reset = async () => {
-		this.context.log('warn', 'Resetting local database');
-		await this.resetStoredDocuments();
-		await this.refreshAllCaches(true);
-		// this.context.entityEvents.emit(
-		// 	'collectionsChanged',
-		// 	Object.keys(this.schema.collections),
-		// );
+	delete = async (oid: ObjectIdentifier, options?: { undoable?: boolean }) => {
+		return this.deleteAll([oid], options);
 	};
 
-	destroy = async () => {
-		this._disposed = true;
-		for (const unsubscribe of this.unsubscribes) {
-			unsubscribe();
+	private getCollectionSchema = (
+		collectionName: string,
+	): {
+		schema: StorageObjectFieldSchema | null;
+		readonlyKeys: string[];
+	} => {
+		const schema = this.ctx.schema.collections[collectionName];
+		if (!schema) {
+			this.ctx.log('warn', `Missing schema for collection: ${collectionName}`);
+			return {
+				schema: null,
+				readonlyKeys: [],
+			};
 		}
-		for (const cache of this.documentFamilyCaches.values()) {
-			cache.dispose();
+		return {
+			// convert to object schema for compatibility
+			schema: {
+				type: 'object',
+				nullable: false,
+				properties: schema.fields as any,
+			},
+			readonlyKeys: [schema.primaryKey],
+		};
+	};
+
+	/**
+	 * Constructs an entity from an OID, but does not load it.
+	 */
+	private constructEntity = (oid: string): Entity | null => {
+		const { collection } = decomposeOid(oid);
+		const { schema, readonlyKeys } = this.getCollectionSchema(collection);
+
+		if (!schema) {
+			return null;
 		}
-		this.documentFamilyCaches.clear();
-		await this.flushAllBatches();
+
+		if (this.disposed) {
+			throw new Error('Cannot hydrate entity after store has been disposed');
+		}
+
+		const metadataFamily = new EntityFamilyMetadata({
+			ctx: this.ctx,
+			onPendingOperations: this.onPendingOperations,
+			rootOid: oid,
+		});
+
+		// this is created synchronously so it's immediately available
+		// to begin capturing incoming data.
+		return new Entity({
+			ctx: this.ctx,
+			oid,
+			schema,
+			readonlyKeys,
+			files: this.files,
+			metadataFamily: metadataFamily,
+			patchCreator: this.meta.patchCreator,
+			events: this.events,
+		});
 	};
 
-	private handleRebase = (baselines: DocumentBaseline[]) => {
-		this.log('debug', 'Reacting to rebases', baselines.length);
-		// update any open caches with new baseline. this will automatically
-		// drop operations before the baseline.
-		this.addBaselinesToOpenCaches(baselines, { isLocal: true });
+	private onPendingOperations = (operations: Operation[]) => {
+		this.batcher.addOperations(operations);
 	};
 
-	private resetStoredDocuments = async () => {
-		const tx = this.db.transaction(
-			Object.keys(this.schema.collections),
-			'readwrite',
+	/**
+	 * Loads initial Entity data from storage
+	 */
+	private loadEntity = async (
+		entity: Entity,
+		opts?: { abort: AbortSignal },
+	): Promise<Entity | null> => {
+		const { operations, baselines } = await this.meta.getDocumentData(
+			entity.oid,
+			opts,
 		);
-		for (const collection of Object.keys(this.schema.collections)) {
-			const store = tx.objectStore(collection);
-			await storeRequestPromise(store.clear());
-		}
-	};
 
-	private refreshAllCaches = async (
-		dropUnconfirmed = false,
-		dropAll = false,
-	) => {
-		for (const [_, cache] of this.documentFamilyCaches) {
-			await this.refreshFamilyCache(cache, dropUnconfirmed, dropAll);
+		if (!baselines.length && !Object.keys(operations).length) {
+			this.ctx.log('debug', 'No data found for entity', entity.oid);
+			return null;
 		}
+
+		this.ctx.log('debug', 'Loaded entity from storage', entity.oid);
+
+		this.events.replace.invoke(this, {
+			oid: entity.oid,
+			baselines,
+			operations,
+			isLocal: false,
+		});
+
+		// only set the cache after loading.
+		// TODO: is this cache/promise stuff redundant?
+		this.cache.set(entity.oid, this.ctx.weakRef(entity));
+		this.entityFinalizationRegistry.register(entity, entity.oid);
+
+		return entity;
 	};
 }

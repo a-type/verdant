@@ -41,7 +41,7 @@ export class CollectionQueries<
 	}) {
 		this.cache = cache;
 		this.collection = collection;
-		this.hydrate = entities.get as any;
+		this.hydrate = entities.hydrate as any;
 		this.context = context;
 		this.documentManager = documentManager;
 

@@ -17,7 +17,6 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _fileData: FileData | null = null;
 	private _loading = true;
 	private _failed = false;
-	private _disposed = false;
 	private _downloadRemote = false;
 
 	constructor(
@@ -39,7 +38,6 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	[UPDATE] = (fileData: FileData) => {
 		this._loading = false;
 		this._failed = false;
-		this._disposed = false;
 		this._fileData = fileData;
 		if (fileData.file) {
 			if (this._objectUrl) {
@@ -78,10 +76,17 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		return this._failed;
 	}
 
-	dispose = () => {
+	destroy = () => {
 		if (this._objectUrl) {
 			URL.revokeObjectURL(this._objectUrl);
 		}
-		this._disposed = true;
+		this.dispose();
 	};
+
+	getSnapshot() {
+		return {
+			id: this.id,
+			url: this.loading || this.failed ? undefined : this.url,
+		};
+	}
 }

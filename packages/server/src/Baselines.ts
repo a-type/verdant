@@ -129,6 +129,22 @@ export class Baselines {
 			.map(this.hydrateSnapshot);
 	};
 
+	getFromServerOrder = (
+		libraryId: string,
+		serverOrder: number,
+	): DocumentBaseline<any>[] => {
+		return this.db
+			.prepare(
+				`
+			SELECT * FROM DocumentBaseline
+			WHERE libraryId = ? AND serverOrder >= ?
+			ORDER BY serverOrder ASC
+		`,
+			)
+			.all(libraryId, serverOrder)
+			.map(this.hydrateSnapshot);
+	};
+
 	applyOperations = (
 		libraryId: string,
 		oid: string,

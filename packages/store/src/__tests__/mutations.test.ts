@@ -3,16 +3,20 @@ import { createTestStorage } from './fixtures/testStorage.js';
 
 describe('mutations', () => {
 	it('should only delete entities related to specified id', async () => {
-		const client = await createTestStorage();
+		const client = await createTestStorage({
+			log: console.debug,
+		});
 
 		const itemA = await client.todos.put({
 			id: '1',
 			content: 'itemA',
+			category: 'test',
 		});
 
 		const itemB = await client.todos.put({
 			id: '11',
 			content: 'itemB',
+			category: 'test',
 		});
 
 		await client.todos.delete('1');
@@ -21,7 +25,7 @@ describe('mutations', () => {
 		const itemBExists = await client.todos.get('11').resolved;
 
 		expect(itemAExists).toBeNull();
-		expect(itemBExists).toEqual(itemB);
+		expect(itemBExists === itemB).toBe(true);
 	});
 
 	// double check - this time with rebasing disabled, meaning
@@ -33,11 +37,13 @@ describe('mutations', () => {
 		const itemA = await client.todos.put({
 			id: '1',
 			content: 'itemA',
+			category: 'test',
 		});
 
 		const itemB = await client.todos.put({
 			id: '11',
 			content: 'itemB',
+			category: 'test',
 		});
 
 		await client.todos.delete('1');
@@ -46,6 +52,6 @@ describe('mutations', () => {
 		const itemBExists = await client.todos.get('11').resolved;
 
 		expect(itemAExists).toBeNull();
-		expect(itemBExists).toEqual(itemB);
+		expect(itemBExists === itemB).toBe(true);
 	});
 });

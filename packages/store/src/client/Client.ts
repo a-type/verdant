@@ -99,7 +99,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			meta: this.meta,
 		});
 		this._entities = new EntityStore({
-			context: this.context,
+			ctx: this.context,
 			meta: this.meta,
 			files: this._fileManager,
 		});
@@ -242,8 +242,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	};
 
 	close = async () => {
+		this.sync.ignoreIncoming();
+		await this._entities.flushAllBatches();
 		this.sync.stop();
-		this.sync.dispose();
+		this.sync.destroy();
 		// this step does have the potential to flush
 		// changes to storage, so don't close metadata db yet
 		await this._entities.destroy();
@@ -280,7 +282,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 		const metaExport = JSON.parse(buffer.toString()) as ExportData;
 		await this.meta.resetFrom(metaExport);
-		// now reset the document DB to the specified version
+		// now delete the document DB, open it to the specified version
 		// and run migrations to get it to the latest version
 		const version = metaExport.schema.version;
 		const deleteReq = indexedDB.deleteDatabase(
@@ -301,6 +303,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			context: this.context,
 			version,
 		});
+		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
 		// re-initialize data
 		this.context.log('Re-initializing data from imported data...');
 		await this._entities.addData({
@@ -320,5 +323,6 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			context: this.context,
 			version: currentSchema.version,
 		});
+		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
 	};
 }

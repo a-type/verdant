@@ -28,6 +28,9 @@ const pages = collection({
 			values: {
 				type: 'object',
 				properties: {
+					id: {
+						type: 'string',
+					},
 					type: {
 						type: 'string',
 					},
@@ -36,6 +39,14 @@ const pages = collection({
 						items: {
 							type: 'number',
 						},
+					},
+					name: {
+						type: 'string',
+						nullable: true,
+					},
+					src: {
+						type: 'string',
+						nullable: true,
 					},
 				},
 			},

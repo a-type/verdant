@@ -108,11 +108,11 @@ export class FileManager {
 	 * Immediately returns an EntityFile to use, then either loads
 	 * the file from cache, local database, or the server.
 	 */
-	get = (id: string) => {
+	get = (id: string, options?: { downloadRemote?: boolean }) => {
 		if (this.files.has(id)) {
 			return this.files.get(id)!;
 		}
-		const file = new EntityFile(id);
+		const file = new EntityFile(id, options);
 		this.files.set(id, file);
 		this.load(file);
 		return file;
@@ -120,6 +120,7 @@ export class FileManager {
 
 	private load = async (file: EntityFile, retries = 0) => {
 		if (retries > 5) {
+			this.context.log('error', 'Failed to load file after 5 retries');
 			file[MARK_FAILED]();
 			return;
 		}
@@ -137,6 +138,7 @@ export class FileManager {
 						downloadRemote: file.downloadRemote,
 					});
 				} else {
+					this.context.log('error', 'Failed to load file', result);
 					file[MARK_FAILED]();
 					if (result.retry) {
 						// schedule a retry
@@ -183,7 +185,7 @@ export class FileManager {
 	};
 
 	private handleFileRefsDeleted = async (fileRefs: FileRef[]) => {
-		const tx = this.storage.createTransaction(['files'], 'readwrite');
+		const tx = this.storage.createTransaction(['files'], { mode: 'readwrite' });
 		await Promise.all(
 			fileRefs.map(async (fileRef) => {
 				try {

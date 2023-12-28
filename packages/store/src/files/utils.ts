@@ -12,11 +12,15 @@ export function createFileData(file: File): FileData {
 	};
 }
 
-function isFile(value: any): value is File {
-	return value instanceof File;
+export function isFile(value: any): value is File {
+	return (
+		value instanceof File ||
+		(typeof Blob !== 'undefined' && value instanceof Blob)
+	);
 }
 
 /**
+ * MUTATES the value.
  * Replaces File values with refs and returns the normalized value.
  * The list of files passed to the second argument will be populated with the files found in the value.
  */

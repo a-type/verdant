@@ -54,7 +54,8 @@ export type PropertyValue =
 	| boolean
 	| null
 	| undefined
-	| ObjectRef;
+	| ObjectRef
+	| FileRef;
 
 // all patches refer to a specific sub-object.
 interface BaseOperationPatch {}
@@ -94,7 +95,7 @@ export interface OperationPatchListDelete extends BaseOperationPatch {
  */
 export interface OperationPatchListMoveByRef extends BaseOperationPatch {
 	op: 'list-move-by-ref';
-	value: ObjectRef;
+	value: ObjectRef | FileRef;
 	index: number;
 }
 /**
@@ -127,6 +128,10 @@ export interface OperationPatchDelete extends BaseOperationPatch {
 	op: 'delete';
 }
 
+export interface OperationPatchTouch extends BaseOperationPatch {
+	op: 'touch';
+}
+
 export type OperationPatch =
 	| OperationPatchInitialize
 	| OperationPatchSet
@@ -138,7 +143,8 @@ export type OperationPatch =
 	| OperationPatchListMoveByIndex
 	| OperationPatchListRemove
 	| OperationPatchDelete
-	| OperationPatchListAdd;
+	| OperationPatchListAdd
+	| OperationPatchTouch;
 
 export type Operation = {
 	oid: ObjectIdentifier;
@@ -459,7 +465,7 @@ export function shallowInitialToPatches(
 	return patches;
 }
 
-export function groupPatchesByIdentifier(patches: Operation[]) {
+export function groupPatchesByOid(patches: Operation[]) {
 	const grouped: Record<ObjectIdentifier, Operation[]> = {};
 	for (const patch of patches) {
 		if (patch.oid in grouped) {
@@ -623,7 +629,7 @@ export function applyPatch<T extends NormalizedObject>(
 			break;
 		case 'list-move-by-ref':
 			if (listCheck(base)) {
-				index = base.indexOf(patch.value);
+				index = base.findIndex((v) => compareRefs(v, patch.value));
 				spliceResult = base.splice(index, 1);
 				base.splice(patch.index, 0, spliceResult[0]);
 			}
@@ -654,6 +660,9 @@ export function applyPatch<T extends NormalizedObject>(
 			return undefined;
 		case 'initialize':
 			return cloneDeep(patch.value);
+		case 'touch':
+			// no-op
+			return base;
 		default:
 			throw new Error(`Unsupported patch operation: ${(patch as any).op}`);
 	}

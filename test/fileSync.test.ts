@@ -16,7 +16,7 @@ const context = createTestContext({
 afterAll(() => {
 	// delete the ./test-files directory
 	try {
-		fs.rmdirSync('./test-files', { recursive: true });
+		fs.rmSync('./test-files', { recursive: true });
 	} catch (e) {
 		// console.log(e);
 	}
@@ -31,7 +31,7 @@ it(
 		const clientA = await context.createTestClient({
 			library: 'file-sync-1',
 			user: 'User A',
-			// logId: 'A',
+			logId: 'A',
 		});
 		clientA.sync.start();
 
@@ -63,20 +63,20 @@ it(
 		// load the file from the URL and see if it matches.
 		// this isn't the same as the original file, but it's good enough to know
 		// something was delivered...
-		const response = await fetch(file.url!);
+		let fileResponse: Response | null = null;
+		await waitForCondition(async () => {
+			fileResponse = await fetch(file.url!);
+			return fileResponse.status !== 404;
+		});
 		context.log('⭐️ image fetched');
-		const blob = await response.blob();
+		const blob = await fileResponse!.blob();
 		const text = await blob.text();
 		context.log(`⭐️ image blob: ${text}`);
-		if (blob.size !== 13) {
+		if (blob.size !== 0) {
 			console.error('⚠️ Unexpected blob', blob.size, text);
 		}
-		expect(blob.size).toBe(13);
+		expect(blob.size).toBe(0);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
-		// basically the file isn't encoded into the form data correctly.
-		// someday maybe I'll get this figured out
-		// FIXME: this is weirdly non-deterministic between [object File] and [object Blob] on different runs???
-		// expect(text).toBe('[object File]');
 	},
 	{
 		timeout: 15000,

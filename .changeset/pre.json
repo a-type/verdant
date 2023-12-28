@@ -1,0 +1,17 @@
+{
+  "mode": "exit",
+  "tag": "next",
+  "initialVersions": {
+    "@verdant-web/cli": "4.1.0",
+    "@verdant-web/common": "1.16.2",
+    "@verdant-web/create-app": "0.3.0",
+    "@verdant-web/s3-file-storage": "1.0.2",
+    "@verdant-web/react": "24.0.2",
+    "@verdant-web/react-router": "0.5.4",
+    "@verdant-web/server": "1.9.4",
+    "@verdant-web/store": "2.8.5"
+  },
+  "changesets": [
+    "real-clouds-begin"
+  ]
+}

@@ -114,10 +114,12 @@ export function createTestStorage({
 	idb = new IDBFactory(),
 	disableRebasing = false,
 	metadataVersion,
+	log,
 }: {
 	idb?: IDBFactory;
 	disableRebasing?: boolean;
 	metadataVersion?: number;
+	log?: (...args: any[]) => void;
 } = {}) {
 	const storage = new ClientDescriptor({
 		schema: testSchema,
@@ -125,6 +127,7 @@ export function createTestStorage({
 		indexedDb: idb,
 		namespace: 'test',
 		disableRebasing,
+		log,
 		[METADATA_VERSION_KEY]: metadataVersion,
 	}).open();
 	return storage as Promise<ClientWithCollections>;

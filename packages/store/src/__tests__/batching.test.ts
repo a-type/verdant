@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, MockedFunction } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
+import { Entity } from '../entities/Entity.js';
 
 describe('batching operations', () => {
 	it('should allow multiple runs with manual flush', async () => {
 		const storage = await createTestStorage();
 
-		const item = await storage.todos.put({
+		const item: Entity = await storage.todos.put({
 			content: 'hello world',
 			category: 'general',
 			attachments: [
@@ -20,6 +21,8 @@ describe('batching operations', () => {
 
 		batch.run(() => {
 			item.set('content', 'hello world 2');
+			// changes are applied synchronously
+			expect(item.get('content')).toBe('hello world 2');
 			item.set('category', 'never');
 		});
 
@@ -32,7 +35,7 @@ describe('batching operations', () => {
 			item.get('attachments').push({ name: 'other thing' });
 		});
 
-		await batch.flush();
+		await batch.commit();
 
 		expect(item.get('content')).toBe('hello world 3');
 		expect(item.get('category')).toBe('general');

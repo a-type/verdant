@@ -4,8 +4,7 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 } from '../client/index.js';
-// @ts-ignore
-import { IDBFactory } from 'fake-indexeddb';
+// import { IDBFactory } from 'fake-indexeddb';
 
 export async function createTestClient({
 	server,

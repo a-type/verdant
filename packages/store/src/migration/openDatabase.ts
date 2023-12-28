@@ -14,6 +14,7 @@ import {
 	decomposeOid,
 	diffToPatches,
 	getIndexValues,
+	getOid,
 	getOidRoot,
 	hasOid,
 	initialToPatches,
@@ -258,7 +259,11 @@ async function runMigrations({
 						`Migration failed (${migration.oldSchema.version} -> ${migration.newSchema.version})`,
 						err,
 					);
-					throw err;
+					if (err instanceof Error) {
+						throw err;
+					} else {
+						throw new Error('Unknown error during migration');
+					}
 				}
 
 				// now we have to open the database again with the next version and
@@ -356,6 +361,25 @@ async function runMigrations({
 					}),
 				);
 
+				// add 'touch' operations to all root OIDs of all documents.
+				// this marks documents which have undergone a migration
+				// so that other clients know when they're working
+				// with unmigrated data - by seeing that there are no
+				// existing operations or baselines with a timestamp
+				// that matches the current version.
+				// UPDATE: no longer necessary now that pruning is a thing.
+				// await Promise.all(
+				// 	oids.map((oid) =>
+				// 		meta.insertLocalOperations([
+				// 			{
+				// 				oid,
+				// 				timestamp: meta.time.zero(migration.version),
+				// 				data: { op: 'touch' },
+				// 			},
+				// 		]),
+				// 	),
+				// );
+
 				const snapshots = await Promise.all(
 					oids.map(async (oid) => {
 						try {
@@ -396,10 +420,7 @@ async function runMigrations({
 				await Promise.all(
 					views.map(([oid, view]) => {
 						if (view) {
-							return putView(writeStore, view).catch((err) => {
-								view;
-								throw err;
-							});
+							return putView(writeStore, view);
 						} else {
 							const { id } = decomposeOid(oid);
 							return deleteView(writeStore, id);
@@ -453,7 +474,7 @@ function getMigrationMutations({
 					doc[migration.newSchema.collections[collectionName].primaryKey];
 				const oid = createOid(collectionName, primaryKey);
 				newOids.push(oid);
-				await meta.insertLocalOperation(
+				await meta.insertLocalOperations(
 					initialToPatches(doc, oid, getMigrationNow),
 				);
 				return doc;
@@ -461,7 +482,7 @@ function getMigrationMutations({
 			delete: async (id: string) => {
 				const rootOid = createOid(collectionName, id);
 				const allOids = await meta.getAllDocumentRelatedOids(rootOid);
-				return meta.insertLocalOperation(
+				return meta.insertLocalOperations(
 					allOids.map((oid) => ({
 						oid,
 						timestamp: getMigrationNow(),
@@ -556,7 +577,7 @@ function getMigrationEngine({
 	});
 	const deleteCollection = async (collection: string) => {
 		const allOids = await meta.getAllCollectionRelatedOids(collection);
-		return meta.insertLocalOperation(
+		return meta.insertLocalOperations(
 			allOids.map((oid) => ({
 				oid,
 				timestamp: getMigrationNow(),
@@ -574,8 +595,9 @@ function getMigrationEngine({
 
 			await Promise.all(
 				docs.filter(Boolean).map(async (doc: any) => {
+					const rootOid = getOid(doc);
 					assert(
-						hasOid(doc),
+						!!rootOid,
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
 					const original = cloneDeep(doc);
@@ -599,7 +621,7 @@ function getMigrationEngine({
 							},
 						);
 						if (patches.length > 0) {
-							await meta.insertLocalOperation(patches);
+							await meta.insertLocalOperations(patches);
 						}
 					}
 				}),

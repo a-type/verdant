@@ -20,7 +20,7 @@ beforeAll(async () => {
 afterAll(() => {
 	// delete the ./test-files directory
 	try {
-		fs.rmdirSync('./test-files', { recursive: true });
+		fs.rmSync('./test-files', { recursive: true });
 	} catch (e) {
 		// ignore
 	}

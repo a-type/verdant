@@ -17,7 +17,7 @@ import type {
   PageFilter,
   Asset,
   AssetFilter,
-} from "./index.js";
+} from "./index";
 
 type HookConfig<F> = {
   index?: F;

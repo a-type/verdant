@@ -84,9 +84,7 @@ export class HybridLogicalClockTimestampProvider implements TimestampProvider {
 			})
 		);
 	};
-	getWallClockTime = (timestamp: string): number => {
-		return deserializeHlcTimestamp(timestamp.slice(VERSION_BLOCK_LENGTH)).time;
-	};
+	getWallClockTime = getWallClockTime;
 }
 
 class ClockDriftError extends Error {
@@ -289,4 +287,8 @@ export function getTimestampSchemaVersion(timestamp: string): number {
 
 export function compareTimestampSchemaVersions(a: string, b: string) {
 	return getTimestampSchemaVersion(a) - getTimestampSchemaVersion(b);
+}
+
+export function getWallClockTime(timestamp: string): number {
+	return deserializeHlcTimestamp(timestamp.slice(VERSION_BLOCK_LENGTH)).time;
 }

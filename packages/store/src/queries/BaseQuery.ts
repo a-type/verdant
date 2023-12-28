@@ -70,11 +70,15 @@ export abstract class BaseQuery<T> extends Disposable {
 				(collections) => {
 					if (shouldUpdateFn(collections)) {
 						this.context.log('info', 'Updating query', this.key);
+						// immediately refilter the result set - deleted
+						// entities will already be nulled out
+						// this.refreshValue();
 						this.execute();
 					}
 				},
 			),
 		);
+		// TODO: subscribe to document changes and update if necessary.
 	}
 
 	get current() {
@@ -135,6 +139,13 @@ export abstract class BaseQuery<T> extends Disposable {
 		this._rawValue = value;
 		this.subscribeToDeleteAndRestore(this._rawValue);
 		this._value = filterResultSet(value);
+		// validate the value
+		if (
+			Array.isArray(this._value) &&
+			this._value.some((v) => v.getSnapshot() === null)
+		) {
+			debugger;
+		}
 		this._status = 'ready';
 		this._events.emit('change', this._value);
 	};
@@ -193,8 +204,10 @@ export abstract class BaseQuery<T> extends Disposable {
 						// possibly accessing db while it's closed. not much we can do.
 						return this._value;
 					}
+					throw err;
+				} else {
+					throw new Error('Unknown error executing query');
 				}
-				throw err;
 			});
 		return this._executionPromise;
 	};

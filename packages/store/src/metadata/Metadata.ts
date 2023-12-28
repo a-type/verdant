@@ -19,6 +19,7 @@ import {
 import { AckInfoStore } from './AckInfoStore.js';
 import { BaselinesStore } from './BaselinesStore.js';
 import {
+	createAbortableTransaction,
 	getAllFromObjectStores,
 	getSizeOfObjectStore,
 	storeRequestPromise,
@@ -57,20 +58,20 @@ export class Metadata extends EventSubscriber<{
 	 */
 	private _closing = false;
 
-	private context: Omit<Context, 'documentDb'>;
+	private context: Omit<Context, 'documentDb' | 'getNow'>;
 
 	constructor({
 		disableRebasing,
 		context,
 	}: {
 		disableRebasing?: boolean;
-		context: Omit<Context, 'documentDb'>;
+		context: Omit<Context, 'documentDb' | 'getNow'>;
 	}) {
 		super();
 		this.context = context;
 		this.schema = new SchemaStore(context.metaDb, context.schema.version);
-		this.operations = new OperationsStore(this.db);
-		this.baselines = new BaselinesStore(this.db);
+		this.operations = new OperationsStore(this.db, { log: context.log });
+		this.baselines = new BaselinesStore(this.db, { log: context.log });
 		this.localReplica = new LocalReplicaStore(this.db);
 		this.ackInfo = new AckInfoStore(this.db);
 		this.messageCreator = new MessageCreator(this);
@@ -102,8 +103,19 @@ export class Metadata extends EventSubscriber<{
 	 * Methods for accessing data
 	 */
 
-	createTransaction = (stores: ('operations' | 'baselines')[]) => {
-		return this.db.transaction(stores, 'readwrite');
+	createTransaction = (
+		stores: ('operations' | 'baselines')[],
+		opts: {
+			abort?: AbortSignal;
+		} = {},
+	) => {
+		return createAbortableTransaction(
+			this.db,
+			stores,
+			'readwrite',
+			opts.abort,
+			this.context.log,
+		);
 	};
 
 	/**
@@ -117,10 +129,7 @@ export class Metadata extends EventSubscriber<{
 		assert(documentOid === oid, 'Must be root document OID');
 		oids.add(documentOid);
 		// readwrite mode to block on other write transactions
-		const transaction = this.db.transaction(
-			['baselines', 'operations'],
-			'readwrite',
-		);
+		const transaction = this.createTransaction(['baselines', 'operations']);
 		await Promise.all([
 			this.baselines.iterateOverAllForDocument(
 				documentOid,
@@ -210,6 +219,43 @@ export class Metadata extends EventSubscriber<{
 		return root;
 	};
 
+	getDocumentData = async (
+		oid: ObjectIdentifier,
+		opts?: {
+			abort?: AbortSignal;
+		},
+	) => {
+		const transaction = this.createTransaction(
+			['baselines', 'operations'],
+			opts,
+		);
+		const baselines: DocumentBaseline[] = [];
+		const operations: Record<ObjectIdentifier, Operation[]> = {};
+		await Promise.all([
+			this.baselines.iterateOverAllForDocument(
+				oid,
+				(baseline) => {
+					baselines.push(baseline);
+				},
+				{
+					transaction,
+				},
+			),
+			this.operations.iterateOverAllOperationsForDocument(
+				oid,
+				(op) => {
+					operations[op.oid] ??= [];
+					operations[op.oid].push(op);
+				},
+				{ transaction },
+			),
+		]);
+		return {
+			baselines,
+			operations,
+		};
+	};
+
 	/**
 	 * Methods for writing data
 	 */
@@ -242,16 +288,23 @@ export class Metadata extends EventSubscriber<{
 	 * Applies a patch to the document and stores it in the database.
 	 * @returns the oldest local history timestamp
 	 */
-	insertLocalOperation = async (operations: Operation[]) => {
+	insertLocalOperations = async (
+		operations: Operation[],
+		opts?: { transaction?: IDBTransaction },
+	) => {
 		if (operations.length === 0) return;
 		// await this.rebaseLock;
-		this.log(`Inserting ${operations.length} local operations`);
+		this.log(
+			'debug',
+			`Inserting ${operations.length} local operations`,
+			operations,
+		);
 
 		// add local flag, in place.
 		for (const operation of operations) {
 			(operation as ClientOperation).isLocal = true;
 		}
-		await this.operations.addOperations(operations as ClientOperation[]);
+		await this.operations.addOperations(operations as ClientOperation[], opts);
 
 		const message = await this.messageCreator.createOperation({ operations });
 		this.emit('message', message);
@@ -264,16 +317,24 @@ export class Metadata extends EventSubscriber<{
 	 * Inserts remote operations. This does not affect local history.
 	 * @returns a list of affected document OIDs
 	 */
-	insertRemoteOperations = async (operations: Operation[]) => {
+	insertRemoteOperations = async (
+		operations: Operation[],
+		opts?: { transaction?: IDBTransaction },
+	) => {
 		if (operations.length === 0) return [];
 		// await this.rebaseLock;
-		this.log(`Inserting ${operations.length} remote operations`);
+		this.log(
+			'debug',
+			`Inserting ${operations.length} remote operations`,
+			operations,
+		);
 
 		const affectedDocumentOids = await this.operations.addOperations(
 			operations.map((patch) => ({
 				...patch,
 				isLocal: false,
 			})),
+			opts,
 		);
 
 		this.ack(operations[operations.length - 1].timestamp);
@@ -281,11 +342,14 @@ export class Metadata extends EventSubscriber<{
 		return affectedDocumentOids;
 	};
 
-	insertRemoteBaselines = async (baselines: DocumentBaseline[]) => {
+	insertRemoteBaselines = async (
+		baselines: DocumentBaseline[],
+		opts?: { transaction?: IDBTransaction },
+	) => {
 		if (baselines.length === 0) return [];
 		this.log(`Inserting ${baselines.length} remote baselines`);
 
-		await this.baselines.setAll(baselines);
+		await this.baselines.setAll(baselines, opts);
 
 		// this.ack(baselines[baselines.length - 1].timestamp);
 
@@ -295,6 +359,31 @@ export class Metadata extends EventSubscriber<{
 		});
 
 		return Array.from(affectedOidSet);
+	};
+
+	insertData = async (
+		data: {
+			baselines?: DocumentBaseline[];
+			operations?: Operation[];
+			isLocal?: boolean;
+		},
+		opts?: { abort: AbortSignal },
+	) => {
+		const transaction = this.createTransaction(
+			['baselines', 'operations'],
+			opts,
+		);
+		if (data.baselines) {
+			await this.insertRemoteBaselines(data.baselines, { transaction });
+		}
+		if (opts?.abort?.aborted) return;
+		if (data.operations) {
+			if (data.isLocal) {
+				await this.insertLocalOperations(data.operations, { transaction });
+			} else {
+				await this.insertRemoteOperations(data.operations, { transaction });
+			}
+		}
 	};
 
 	updateLastSynced = async (timestamp: string) => {
@@ -331,10 +420,7 @@ export class Metadata extends EventSubscriber<{
 		// find all operations before the global ack
 		let lastTimestamp;
 		const toRebase = new Set<ObjectIdentifier>();
-		const transaction = this.db.transaction(
-			['baselines', 'operations'],
-			'readwrite',
-		);
+		const transaction = this.createTransaction(['baselines', 'operations']);
 		let operationCount = 0;
 		await this.operations.iterateOverAllOperations(
 			(patch) => {
@@ -349,7 +435,6 @@ export class Metadata extends EventSubscriber<{
 		);
 
 		if (!toRebase.size) {
-			this.log('Cannot rebase, no operations prior to', globalAckTimestamp);
 			return;
 		}
 
@@ -381,8 +466,7 @@ export class Metadata extends EventSubscriber<{
 
 		this.log('[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
 		const transaction =
-			providedTx ||
-			this.db.transaction(['operations', 'baselines'], 'readwrite');
+			providedTx || this.createTransaction(['operations', 'baselines']);
 		const baseline = await this.baselines.get(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;
@@ -419,6 +503,7 @@ export class Metadata extends EventSubscriber<{
 		}
 
 		this.log(
+			'debug',
 			'successfully rebased',
 			oid,
 			'up to',

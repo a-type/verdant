@@ -1,6 +1,6 @@
 /** @generated - do not modify this file. */
 
-// src/client/schemaVersions/v1.js
+// src/schema.ts
 import { schema, collection } from "@verdant-web/store";
 var pages = collection({
   name: "page",
@@ -30,6 +30,9 @@ var pages = collection({
       values: {
         type: "object",
         properties: {
+          id: {
+            type: "string"
+          },
           type: {
             type: "string"
           },
@@ -38,6 +41,14 @@ var pages = collection({
             items: {
               type: "number"
             }
+          },
+          name: {
+            type: "string",
+            nullable: true
+          },
+          src: {
+            type: "string",
+            nullable: true
           }
         }
       }
@@ -56,19 +67,13 @@ var assets = collection({
     }
   }
 });
-var v1_default = schema({
+var schema_default = schema({
   version: 1,
   collections: {
     pages,
     assets
   }
 });
-var finalSchema = { wip: void 0, ...v1_default };
-var schema_default = finalSchema;
-
-// src/client/schema.js
-var finalSchema2 = { wip: void 0, ...schema_default };
-var schema_default2 = finalSchema2;
 export {
-  schema_default2 as default
+  schema_default as default
 };

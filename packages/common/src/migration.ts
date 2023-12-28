@@ -12,6 +12,7 @@ import {
 	assignOid,
 	getOid,
 	hasDefault,
+	validateEntity,
 } from './index.js';
 
 /**@deprecated */
@@ -566,6 +567,13 @@ export function createMigration(
 					// involves cloning
 					assignOid(baseValue, getOid(val));
 					const result = auto(baseValue);
+					const validationError = validateEntity(
+						newSchema.collections[collection].fields,
+						result,
+					);
+					if (validationError) {
+						// TODO: what? throw?
+					}
 					return result;
 				};
 				// @ts-ignore

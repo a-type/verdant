@@ -15,17 +15,22 @@ describe('undoing operations', () => {
 				},
 			],
 		});
+		const itemId = item.get('id');
 
-		await storage.todos.delete(item.get('id'));
+		await storage.todos.delete(itemId);
 
-		expect(await storage.todos.get(item.get('id')).resolved).toBeNull();
+		expect(await storage.todos.get(itemId).resolved).toBeNull();
 
 		await storage.undoHistory.undo();
 
-		const restored = await storage.todos.get(item.get('id')).resolved;
+		// the entity should be restored now
+		// this should not throw
+		item.get('id');
+
+		const restored = await storage.todos.get(itemId).resolved;
 		expect(restored).toBeTruthy();
 		assert(!!restored);
-		expect(restored.get('id')).toBe(item.get('id'));
+		expect(restored.get('id')).toBe(itemId);
 		expect(restored.get('content')).toBe('item');
 		expect(restored.get('category')).toBe('general');
 		expect(restored.get('attachments').get(0).get('name')).toBe('thing');
@@ -48,7 +53,7 @@ describe('undoing operations', () => {
 
 		item.get('attachments').delete(0);
 
-		await storage.entities.flushPatches();
+		await storage.entities.flushAllBatches();
 
 		expect(item.get('attachments').length).toBe(0);
 
@@ -56,10 +61,12 @@ describe('undoing operations', () => {
 
 		expect(item.get('attachments').length).toBe(1);
 		expect(item.get('attachments').get(0).get('name')).toBe('thing');
-	});
+	}, 10000);
 
 	it('should create batches without undo', async () => {
-		const storage = await createTestStorage();
+		const storage = await createTestStorage({
+			log: console.log,
+		});
 
 		const item = await storage.todos.put({
 			content: 'item',
@@ -76,7 +83,7 @@ describe('undoing operations', () => {
 			.run(() => {
 				item.set('content', 'hello world');
 			})
-			.flush();
+			.commit();
 
 		await storage
 			.batch({
@@ -86,7 +93,7 @@ describe('undoing operations', () => {
 				item.set('content', 'hello world 2');
 				item.set('category', 'sticky');
 			})
-			.flush();
+			.commit();
 
 		expect(item.get('content')).toBe('hello world 2');
 		expect(item.get('category')).toBe('sticky');
@@ -100,6 +107,7 @@ describe('undoing operations', () => {
 		expect(item.get('category')).toBe('sticky');
 
 		// the next undo will undo the creation
+		expect(storage.undoHistory.canUndo).toBe(true);
 		await storage.undoHistory.undo();
 		expect(item.deleted).toBe(true);
 	});

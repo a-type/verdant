@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.0.0-next.0
+
+### Major Changes
+
+- Major rewrite of internals for document storage to improve memory efficiency and data consistency. Introduces "pruning."
+
 ## 1.16.2
 
 ### Patch Changes

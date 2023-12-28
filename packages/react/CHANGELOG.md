@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 25.0.0-next.0
+
+### Minor Changes
+
+- Major rewrite of internals for document storage to improve memory efficiency and data consistency. Introduces "pruning."
+
+### Patch Changes
+
+- Updated dependencies
+  - @verdant-web/common@2.0.0-next.0
+  - @verdant-web/store@3.0.0-next.0
+
 ## 24.0.2
 
 ### Patch Changes

@@ -521,3 +521,7 @@ export function replaceLegacyOidsInJsonString(string: string) {
 export function replaceLegacyOidsInObject(obj: any) {
 	return JSON.parse(replaceLegacyOidsInJsonString(JSON.stringify(obj)));
 }
+
+export function isRootOid(oid: ObjectIdentifier) {
+	return !oid.includes(RANDOM_SEPARATOR);
+}

@@ -2,6 +2,7 @@ import { ReplicaType } from '@verdant-web/server';
 import {
 	collection,
 	createDefaultMigration,
+	createMigration,
 	Migration,
 	schema,
 	StorageDescriptor,
@@ -66,7 +67,7 @@ it('can export data and import it even after a schema migration', async () => {
 		},
 	});
 
-	let migrations: Migration<any>[] = [createDefaultMigration(v1Schema)];
+	let migrations: Migration<any>[] = [createMigration(v1Schema)];
 
 	const clientInit = {
 		migrations,
@@ -142,7 +143,7 @@ it('can export data and import it even after a schema migration', async () => {
 		},
 	});
 
-	migrations.push(createDefaultMigration(v1Schema, v2Schema));
+	migrations.push(createMigration(v1Schema, v2Schema));
 
 	client = await createTestClient({
 		schema: v2Schema,
@@ -171,11 +172,16 @@ it('can export data and import it even after a schema migration', async () => {
 	const itemsSubscriber = vitest.fn();
 	itemsQuery.subscribe(itemsSubscriber);
 
-	await waitForQueryResult(itemsQuery, (items) => items?.length === 2);
+	await waitForQueryResult(itemsQuery, (items) => {
+		return items?.length === 2;
+	});
 
 	await client.import(exported);
 
-	await waitForQueryResult(itemsQuery, (items) => items?.length === 3);
+	await waitForQueryResult(itemsQuery, (items) => {
+		// console.log(items?.length);
+		return items?.length === 3;
+	});
 
 	// lists should exist now (not throw)
 	await client.lists.findAll().resolved;

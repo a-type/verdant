@@ -5,7 +5,9 @@ import { createTestContext } from './lib/createTestContext.js';
 import { createTestFile } from './lib/createTestFile.js';
 import { waitForEverythingToRebase } from './lib/waits.js';
 
-const context = createTestContext();
+const context = createTestContext({
+	// serverLog: true,
+});
 
 it('can store and cleanup local files', async () => {
 	const { server, createTestClient } = context;
@@ -32,6 +34,10 @@ it('can store and cleanup local files', async () => {
 	expect(file.loading).toBe(false);
 	expect(file.url).toBeTruthy();
 
+	// wait for file to be stored... this is
+	// not ideal
+	await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
 	// file is persisted and can be recovered
 	// after a restart
 	await clientA.close();
@@ -41,6 +47,7 @@ it('can store and cleanup local files', async () => {
 		library: 'files-1',
 		user: 'User A',
 		indexedDb,
+		// logId: 'A2',
 	});
 
 	const a_item2 = await clientA2.items.get(a_item.get('id')).resolved;

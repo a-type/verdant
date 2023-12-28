@@ -9,6 +9,7 @@ export class EventSubscriber<
 	> = {} as any;
 	protected counts: Record<string, number> = {} as any;
 	private _disabled = false;
+	protected disposed = false;
 
 	constructor(private _onAllUnsubscribed?: (event: keyof Events) => void) {}
 
@@ -62,6 +63,8 @@ export class EventSubscriber<
 	};
 
 	dispose = () => {
+		this._disabled = true;
+		this.disposed = true;
 		const events = Object.keys(this.subscribers);
 		this.subscribers = {} as any;
 		this.counts = {} as any;

@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react-router",
-	"version": "0.5.4",
+	"version": "0.5.5-next.0",
 	"access": "public",
 	"type": "module",
 	"main": "src/index.ts",
@@ -44,6 +44,6 @@
 		"react-dom": "^18.2.0",
 		"typescript": "^4.7.4",
 		"vite": "^4.2.1",
-		"vitest": "^0.22.1"
+		"vitest": "^1.1.0"
 	}
 }

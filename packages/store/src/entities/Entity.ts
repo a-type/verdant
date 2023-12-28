@@ -1,185 +1,340 @@
 import {
-	assert,
-	assignOid,
-	cloneDeep,
-	createRef,
-	decomposeOid,
+	DocumentBaseline,
+	EntityValidationProblem,
 	EventSubscriber,
-	FileData,
-	FileRef,
-	isFileRef,
-	isObjectRef,
-	maybeGetOid,
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
 	StorageFieldSchema,
 	StorageFieldsSchema,
-	TimestampProvider,
+	assert,
+	assignOid,
+	cloneDeep,
+	compareRefs,
+	createFileRef,
+	createRef,
+	getChildFieldSchema,
+	getDefault,
+	hasDefault,
+	isFileRef,
+	isNullable,
+	isObject,
+	isObjectRef,
+	isPrunePoint,
+	isRef,
+	maybeGetOid,
+	memoByKeys,
 	traverseCollectionFieldsAndApplyDefaults,
 	validateEntityField,
 } from '@verdant-web/common';
-import { EntityFile } from '../files/EntityFile.js';
-import { processValueFiles } from '../files/utils.js';
+import { Context } from '../context.js';
+import { FileManager } from '../files/FileManager.js';
+import { isFile, processValueFiles } from '../files/utils.js';
+import { EntityFile } from '../index.js';
+import { EntityCache } from './EntityCache.js';
+import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
+import {
+	BaseEntityValue,
+	DataFromInit,
+	DeepPartial,
+	EntityChange,
+	EntityEvents,
+	ListEntity,
+	ListItemInit,
+	ListItemValue,
+	ObjectEntity,
+} from './types.js';
+import { EntityStoreEventData, EntityStoreEvents } from './EntityStore.js';
 
-export const ADD_OPERATIONS = '@@addOperations';
-export const DELETE = '@@delete';
-export const REBASE = '@@rebase';
-const REFRESH = '@@refresh';
-export const DEEP_CHANGE = '@@deepChange';
-
-export interface CacheTools {
-	computeView(oid: ObjectIdentifier): {
-		view: any;
-		deleted: boolean;
-		lastTimestamp: number | null;
-	};
-	getEntity(params: {
-		oid: ObjectIdentifier;
-		fieldSchema: StorageFieldSchema;
-		parent?: Entity;
-		fieldKey?: string | number;
-	}): Entity;
-	hasOid(oid: ObjectIdentifier): boolean;
-	weakRef<T extends object>(value: T): WeakRef<T>;
-}
-
-export interface StoreTools {
-	addLocalOperations(operations: Operation[]): void;
+export interface EntityInit {
+	oid: ObjectIdentifier;
+	schema: StorageFieldSchema;
+	entityFamily?: EntityCache;
+	metadataFamily: EntityFamilyMetadata;
+	parent?: Entity;
+	ctx: Context;
+	files: FileManager;
+	readonlyKeys?: string[];
+	fieldPath?: (string | number)[];
 	patchCreator: PatchCreator;
-	addFile: (file: FileData) => void;
-	getFile: (id: string) => EntityFile;
-	time: TimestampProvider;
-	now: string;
+	events: EntityStoreEvents;
 }
-
-export type AccessibleEntityProperty<T> = T extends Array<any>
-	? number
-	: T extends object
-	? keyof T
-	: never;
-
-type DataFromInit<Init> = Init extends { [key: string]: any }
-	? {
-			[Key in keyof Init]: Init[Key];
-	  }
-	: Init extends Array<any>
-	? Init
-	: any;
-
-export type EntityShape<E extends Entity<any, any>> = E extends Entity<
-	infer Value,
-	any
->
-	? Value
-	: never;
-
-// reduces keys of an object to only ones with an optional
-// value
-type DeletableKeys<T> = keyof {
-	[Key in keyof T as IfNullableThen<T[Key], Key>]: Key;
-};
-type IfNullableThen<T, Out> = undefined extends T
-	? Out
-	: null extends T
-	? Out
-	: never;
-
-export function refreshEntity(
-	entity: Entity<any, any>,
-	info: EntityChangeInfo,
-) {
-	return entity[REFRESH](info);
-}
-
-export interface EntityChangeInfo {
-	isLocal?: boolean;
-}
-
-type EntityEvents = {
-	change: (info: EntityChangeInfo) => void;
-	changeDeep: (target: Entity<any, any>, info: EntityChangeInfo) => void;
-	delete: (info: EntityChangeInfo) => void;
-	restore: (info: EntityChangeInfo) => void;
-};
-
-type BaseEntityValue = { [Key: string]: any } | any[];
 
 export class Entity<
 		Init = any,
 		KeyValue extends BaseEntityValue = any,
 		Snapshot extends any = DataFromInit<Init>,
 	>
+	extends EventSubscriber<EntityEvents>
 	implements
 		ObjectEntity<Init, KeyValue, Snapshot>,
 		ListEntity<Init, KeyValue, Snapshot>
 {
-	// if current is null, the entity was deleted.
-	protected _current: any | null = null;
-
 	readonly oid: ObjectIdentifier;
-	readonly fieldPath: string[];
-	readonly collection: string;
-	protected readonly store: StoreTools;
-	protected readonly fieldSchema;
-	protected readonly cache: CacheTools;
-	protected _deleted = false;
-	protected parent: WeakRef<Entity<any, any>> | undefined;
-	protected readonly readonlyKeys: (keyof Init)[];
+	private readonlyKeys: string[];
+	private fieldPath: (string | number)[] = [];
+	// these are shared between all entities in this family
+	private entityFamily: EntityCache;
+	private metadataFamily;
 
-	private cachedSnapshot: any = null;
-	private cachedDestructure: KeyValue | null = null;
+	private schema;
+	private parent: Entity | undefined;
+	private ctx;
+	private files;
+	private patchCreator;
+	private events;
+
+	// an internal representation of this Entity.
+	// if present, this is the cached, known value. If null,
+	// the entity is deleted. If undefined, we need to recompute
+	// the view.
+	private _viewData: EntityMetadataView | undefined = undefined;
+	private validationError: EntityValidationProblem | undefined = undefined;
 	private cachedDeepUpdatedAt: number | null = null;
+	// only used for root entities to track delete/restore state.
+	private wasDeletedLastChange = false;
+	private cachedView: any | undefined = undefined;
 
-	private _updatedAt: number | null = null;
+	constructor({
+		oid,
+		schema,
+		entityFamily: childCache,
+		parent,
+		ctx,
+		metadataFamily,
+		readonlyKeys,
+		files,
+		patchCreator,
+		events,
+	}: EntityInit) {
+		super();
 
-	protected events;
+		assert(!!oid, 'oid is required');
 
-	protected hasSubscribersToDeepChanges() {
-		return this.events.subscriberCount('changeDeep') > 0;
+		this.oid = oid;
+		this.readonlyKeys = readonlyKeys || [];
+		this.ctx = ctx;
+		this.files = files;
+		this.schema = schema;
+		this.entityFamily =
+			childCache ||
+			new EntityCache({
+				initial: [this],
+			});
+		this.patchCreator = patchCreator;
+		this.metadataFamily = metadataFamily;
+		this.events = events;
+		this.parent = parent;
+
+		// TODO: should any but the root entity be listening to these?
+		if (!this.parent) {
+			events.add.attach(this.onAdd);
+			events.replace.attach(this.onReplace);
+			events.resetAll.attach(this.onResetAll);
+		}
 	}
 
-	get hasSubscribers() {
-		if (this.events.totalSubscriberCount() > 0) {
-			return true;
+	private onAdd = (_store: any, data: EntityStoreEventData) => {
+		if (data.oid === this.oid) {
+			this.addConfirmedData(data);
+		}
+	};
+	private onReplace = (_store: any, data: EntityStoreEventData) => {
+		if (data.oid === this.oid) {
+			this.replaceAllData(data);
+		}
+	};
+	private onResetAll = () => {
+		this.resetAllData();
+	};
+
+	private get metadata() {
+		return this.metadataFamily.get(this.oid);
+	}
+
+	/**
+	 * The view of this Entity, not including nested
+	 * entities (that's the snapshot - see #getSnapshot())
+	 *
+	 * Nested entities are represented by refs.
+	 */
+	private get viewData() {
+		if (this._viewData === undefined) {
+			this._viewData = this.metadata.computeView();
+			this.validate();
+		}
+		return this._viewData;
+	}
+
+	/** convenience getter for viewData.view */
+	private get rawView() {
+		return this.viewData.view;
+	}
+
+	/**
+	 * An Entity's View includes the rendering of its underlying data,
+	 * connecting of children where refs were, and validation
+	 * and pruning according to schema.
+	 */
+	private get view() {
+		if (this.cachedView !== undefined) {
+			return this.cachedView;
 		}
 
-		// even if nobody subscribes directly to this entity, if a parent
-		// has a deep subscription that counts.
-		let parent = this.parent?.deref();
-		while (parent) {
-			if (parent.hasSubscribersToDeepChanges()) {
-				return true;
+		if (this.viewData.deleted) {
+			return null;
+		}
+		// can't use invalid data - but this should be bubbled up to
+		// a prune point
+		const rawView = this.rawView;
+
+		const viewIsWrongType =
+			(!rawView && !isNullable(this.schema)) ||
+			(this.schema.type === 'array' && !Array.isArray(rawView)) ||
+			((this.schema.type === 'object' || this.schema.type === 'map') &&
+				!isObject(rawView));
+
+		if (viewIsWrongType) {
+			// this will cover lists and maps, too.
+			if (hasDefault(this.schema)) {
+				return getDefault(this.schema);
 			}
-			parent = parent.parent?.deref();
+			// force null - invalid - will require parent prune
+			return null as any;
 		}
 
-		return false;
+		this.cachedView = this.isList ? [] : {};
+		assignOid(this.cachedView, this.oid);
+
+		if (Array.isArray(rawView)) {
+			const schema = getChildFieldSchema(this.schema, 0);
+			if (!schema) {
+				/**
+				 * PRUNE - this is a prune point. we can't continue
+				 * to render this data, so we'll just return [].
+				 * This skips the loop.
+				 */
+				this.ctx.log(
+					'error',
+					'No child field schema for list entity.',
+					this.oid,
+				);
+			} else {
+				for (let i = 0; i < rawView.length; i++) {
+					const child = this.get(i);
+					if (this.childIsNull(child) && !isNullable(schema)) {
+						this.ctx.log(
+							'error',
+							'Child missing in non-nullable field',
+							this.oid,
+							'index:',
+							i,
+						);
+
+						// this item will be pruned.
+					} else {
+						this.cachedView.push(child);
+					}
+				}
+			}
+		} else if (isObject(rawView)) {
+			// iterate over known properties in object-type entities;
+			// for maps, we just iterate over the keys.
+			const keys =
+				this.schema.type === 'object'
+					? Object.keys(this.schema.properties)
+					: Object.keys(rawView);
+			for (const key of keys) {
+				const schema = getChildFieldSchema(this.schema, key);
+				if (!schema) {
+					/**
+					 * PRUNE - this is a prune point. we can't continue
+					 * to render this data. If this is a map, it will be
+					 * pruned empty. Otherwise, prune moves upward.
+					 *
+					 * This exits the loop.
+					 */
+					this.ctx.log(
+						'error',
+						'No child field schema for object entity at key',
+						key,
+					);
+					if (this.schema.type === 'map') {
+						// it's valid to prune here if it's a map
+						this.cachedView = {};
+					} else {
+						// otherwise prune moves upward
+						this.cachedView = null;
+					}
+					break;
+				}
+				const child = this.get(key as any);
+				if (this.childIsNull(child) && !isNullable(schema)) {
+					this.ctx.log(
+						'error',
+						'Child entity is missing for non-nullable field',
+						this.oid,
+						'key:',
+						key,
+					);
+					/**
+					 * PRUNE - this is a prune point. we can't continue
+					 * to render this data. If this is a map, we can ignore
+					 * this value. Otherwise we must prune upward.
+					 * This exits the loop.
+					 */
+					if (this.schema.type !== 'map') {
+						this.cachedView = null;
+						break;
+					}
+				} else {
+					this.cachedView[key] = child;
+				}
+			}
+		}
+
+		return this.cachedView;
+	}
+
+	private childIsNull = (child: any) => {
+		if (child instanceof Entity) {
+			const childView = child.view;
+			return childView === null || childView === undefined;
+		}
+		return child === null || child === undefined;
+	};
+
+	get uid() {
+		return this.oid;
 	}
 
 	get deleted() {
-		return this._deleted;
+		return this.viewData.deleted || this.view === null;
 	}
 
-	protected get value() {
-		return this._current;
+	get invalid() {
+		return !!this.validate();
 	}
 
 	get isList() {
-		return Array.isArray(this._current) as any;
+		// have to turn TS off here as our two interfaces both implement
+		// const values for this boolean.
+		return (
+			this.schema.type === 'array' || (Array.isArray(this.viewData.view) as any)
+		);
 	}
 
 	get updatedAt() {
-		return this._updatedAt;
+		return this.viewData.updatedAt;
 	}
 
 	get deepUpdatedAt() {
 		if (this.cachedDeepUpdatedAt) return this.cachedDeepUpdatedAt;
 		// iterate over all children and take the latest timestamp
-		let latest: number | null = this._updatedAt;
+		let latest: number | null = this.updatedAt;
 		if (this.isList) {
-			this.forEach((child) => {
-				if ((child as any) instanceof Entity) {
+			this.forEach((child: any) => {
+				if (child instanceof Entity) {
 					const childTimestamp = child.deepUpdatedAt;
 					if (childTimestamp && (!latest || childTimestamp > latest)) {
 						latest = childTimestamp;
@@ -188,7 +343,7 @@ export class Entity<
 			});
 		} else {
 			this.values().forEach((child) => {
-				if ((child as any) instanceof Entity) {
+				if (child instanceof Entity) {
 					const childTimestamp = child.deepUpdatedAt;
 					if (childTimestamp && (!latest || childTimestamp > latest)) {
 						latest = childTimestamp;
@@ -200,170 +355,253 @@ export class Entity<
 		return latest;
 	}
 
-	get uid() {
-		return this.oid;
+	/**
+	 * @internal - this is relevant to Verdant's system, not users.
+	 *
+	 * Indicates whether this document is from an outdated version
+	 * of the schema - which means it cannot be used until it is upgraded.
+	 */
+	get isOutdatedVersion(): boolean {
+		if (this.parent) return this.parent.isOutdatedVersion;
+		return this.viewData.fromOlderVersion;
 	}
 
-	constructor({
-		oid,
-		store,
-		fieldSchema,
-		cache,
-		parent,
-		onAllUnsubscribed,
-		readonlyKeys = [],
-		fieldPath = [],
-	}: {
-		oid: ObjectIdentifier;
-		store: StoreTools;
-		fieldSchema: StorageFieldSchema | StorageFieldsSchema;
-		cache: CacheTools;
-		parent?: Entity<any, any>;
-		onAllUnsubscribed?: () => void;
-		readonlyKeys?: (keyof Init)[];
-		fieldPath?: string[];
-	}) {
-		this.oid = oid;
-		const { collection } = decomposeOid(oid);
-		this.collection = collection;
-		this.store = store;
-		this.fieldSchema = fieldSchema;
-		this.fieldPath = fieldPath;
-		this.readonlyKeys = readonlyKeys;
-		this.cache = cache;
-		this.parent = parent && this.cache.weakRef(parent);
-		const { view, deleted, lastTimestamp } = this.cache.computeView(oid);
-		this._current = view;
-		this._deleted = deleted;
-		this._updatedAt = lastTimestamp ? lastTimestamp : null;
-		this.cachedDeepUpdatedAt = null;
-		this.events = new EventSubscriber<EntityEvents>(() => {
-			if (!this.hasSubscribers) {
-				onAllUnsubscribed?.();
-			}
-		});
+	/**
+	 * Pruning - when entities have invalid children, we 'prune' that
+	 * data up to the nearest prunable point - a nullable field,
+	 * or a list.
+	 */
+	protected validate = memoByKeys(
+		() => {
+			this.validationError =
+				validateEntityField({
+					field: this.schema,
+					value: this.rawView,
+					fieldPath: this.fieldPath,
+					depth: 1,
+				}) ?? undefined;
+			return this.validationError;
+		},
+		() => [this.viewData],
+	);
 
-		if (this.oid.includes('.') && !this.parent) {
-			throw new Error('Parent must be provided for sub entities');
+	private viewWithMappedChildren = (
+		mapper: (child: Entity | EntityFile) => any,
+	) => {
+		const view = this.view;
+		if (!view) {
+			return null;
 		}
-		assert(!!fieldSchema, 'Field schema must be provided');
-	}
-
-	private [REFRESH] = (info: EntityChangeInfo) => {
-		const { view, deleted, lastTimestamp } = this.cache.computeView(this.oid);
-		this._current = view;
-		const restored = this._deleted && !deleted;
-		this._deleted = deleted;
-		this.cachedDestructure = null;
-		this._updatedAt = lastTimestamp ? lastTimestamp : null;
-		this.cachedDeepUpdatedAt = null;
-
-		if (this._deleted) {
-			this.events.emit('delete', info);
+		if (Array.isArray(view)) {
+			const mapped = view.map((value) => {
+				if (value instanceof Entity || value instanceof EntityFile) {
+					return mapper(value);
+				} else {
+					return value;
+				}
+			});
+			assignOid(mapped, this.oid);
+			return mapped;
 		} else {
-			this.events.emit('change', info);
-			this[DEEP_CHANGE](this as unknown as Entity<any, any>, info);
-		}
-		if (restored) {
-			this.cachedSnapshot = null;
-			this.events.emit('restore', info);
+			const mapped = Object.entries(view).reduce((acc, [key, value]) => {
+				if (value instanceof Entity || value instanceof EntityFile) {
+					acc[key as any] = mapper(value);
+				} else {
+					acc[key as any] = value;
+				}
+				return acc;
+			}, {} as any);
+			assignOid(mapped, this.oid);
+			return mapped;
 		}
 	};
 
-	private [DEEP_CHANGE] = (
-		source: Entity<any, any>,
-		info: EntityChangeInfo,
-	) => {
-		this.cachedSnapshot = null;
+	/**
+	 * A current snapshot of this Entity's data, including nested
+	 * Entities.
+	 */
+	getSnapshot = (): any => {
+		return this.viewWithMappedChildren((child) => child.getSnapshot());
+	};
+
+	// change management methods (internal use only)
+	private addPendingOperations = (operations: Operation[]) => {
+		this.ctx.log('debug', 'Entity: adding pending operations', this.oid);
+		const changes = this.metadataFamily.addPendingData(operations);
+		for (const change of changes) {
+			this.change(change);
+		}
+	};
+
+	private addConfirmedData = (data: EntityStoreEventData) => {
+		this.ctx.log('debug', 'Entity: adding confirmed data', this.oid);
+		const changes = this.metadataFamily.addConfirmedData(data);
+		for (const change of changes) {
+			this.change(change);
+		}
+	};
+
+	private replaceAllData = (data: EntityStoreEventData) => {
+		this.ctx.log('debug', 'Entity: replacing all data', this.oid);
+		const changes = this.metadataFamily.replaceAllData(data);
+		for (const change of changes) {
+			this.change(change);
+		}
+	};
+
+	private resetAllData = () => {
+		this.ctx.log('debug', 'Entity: resetting all data', this.oid);
 		this.cachedDeepUpdatedAt = null;
-		this.events.emit('changeDeep', source, info);
-		const parent = this.parent?.deref();
-		if (parent) {
-			parent[DEEP_CHANGE](source, info);
+		this.cachedView = undefined;
+		this._viewData = undefined;
+		const changes = this.metadataFamily.replaceAllData({});
+		for (const change of changes) {
+			this.change(change);
 		}
 	};
 
-	protected getChildFieldSchema = (key: any) => {
-		if (this.fieldSchema.type === 'object') {
-			return this.fieldSchema.properties[key];
-		} else if (this.fieldSchema.type === 'array') {
-			return this.fieldSchema.items;
-		} else if (this.fieldSchema.type === 'map') {
-			return this.fieldSchema.values;
-		} else if (this.fieldSchema.type === 'any') {
-			return this.fieldSchema;
+	private change = (ev: EntityChange) => {
+		if (ev.oid === this.oid) {
+			// reset cached view
+			this._viewData = undefined;
+			this.cachedView = undefined;
+			// chain deepChanges to parents
+			this.deepChange(this, ev);
+			// emit the change, it's for us
+			this.ctx.log('Emitting change event', this.oid);
+			this.emit('change', { isLocal: ev.isLocal });
+			// for root entities, we need to go ahead and decide if we're
+			// deleted or not - so queries can exclude us if we are.
+			if (!this.parent) {
+				// newly deleted - emit event
+				if (this.deleted && !this.wasDeletedLastChange) {
+					this.ctx.log('debug', 'Entity deleted', this.oid);
+					this.emit('delete', { isLocal: ev.isLocal });
+					this.wasDeletedLastChange = true;
+				} else if (!this.deleted && this.wasDeletedLastChange) {
+					this.ctx.log('debug', 'Entity restored', this.oid);
+					// newly restored - emit event
+					this.emit('restore', { isLocal: ev.isLocal });
+					this.wasDeletedLastChange = false;
+				}
+			}
+		} else {
+			// forward it to the correct family member. if none exists
+			// in cache, no one will hear it anyways.
+			const other = this.entityFamily.getCached(ev.oid);
+			if (other && other instanceof Entity) {
+				other.change(ev);
+			}
 		}
-		throw new Error('Invalid field schema');
+	};
+	protected deepChange = (target: Entity, ev: EntityChange) => {
+		// reset cached deep updated at timestamp; either this
+		// entity or children have changed
+		this.cachedDeepUpdatedAt = null;
+		// reset this flag to recompute snapshot data - children
+		// or self has changed. new pruning needs to happen.
+		this.cachedView = undefined;
+		this.ctx.log(
+			'debug',
+			'Deep change detected at',
+			this.oid,
+			'reset cached view',
+		);
+		this.ctx.log('debug', 'Emitting deep change event', this.oid);
+		this.emit('changeDeep', target, ev);
+		this.parent?.deepChange(target, ev);
 	};
 
-	dispose = () => {
-		this.events.dispose();
-	};
-
-	subscribe = <EventName extends keyof EntityEvents>(
-		event: EventName,
-		callback: EntityEvents[EventName],
-	) => {
-		const unsubscribe = this.events.subscribe(event, callback);
-
-		return unsubscribe;
-	};
-
-	protected addPatches = (patches: Operation[]) => {
-		this.store.addLocalOperations(patches);
-	};
-
-	protected cloneCurrent = () => {
-		if (this._current === undefined) {
-			return undefined;
+	private getChild = (key: any, oid: ObjectIdentifier) => {
+		const schema = getChildFieldSchema(this.schema, key);
+		if (!schema) {
+			throw new Error(
+				`No schema for key ${String(key)} in ${JSON.stringify(this.schema)}`,
+			);
 		}
-		return cloneDeep(this._current);
-	};
-
-	protected getSubObject = (
-		oid: ObjectIdentifier,
-		key: any,
-	): Entity<any, any> => {
-		const fieldSchema = this.getChildFieldSchema(key);
-		// this is a failure case, but trying to be graceful about it...
-		// @ts-ignore
-		// if (!fieldSchema) return null;
-		return this.cache.getEntity({
+		return this.entityFamily.get({
 			oid,
-			fieldSchema,
+			schema,
+			entityFamily: this.entityFamily,
+			metadataFamily: this.metadataFamily,
 			parent: this,
-			fieldKey: key,
+			ctx: this.ctx,
+			files: this.files,
+			fieldPath: [...this.fieldPath, key],
+			patchCreator: this.patchCreator,
+			events: this.events,
 		});
 	};
 
-	protected wrapValue = <Key extends keyof KeyValue>(
-		value: any,
-		key: Key,
-	): KeyValue[Key] => {
-		if (isObjectRef(value)) {
-			const oid = value.id;
-			const subObject = this.getSubObject(oid, key);
-			if (subObject) {
-				return subObject as any;
-			}
+	// generic entity methods
+	/**
+	 * Gets a value from this Entity. If the value
+	 * is an object, it will be wrapped in another
+	 * Entity.
+	 */
+	get = <Key extends keyof KeyValue>(key: Key): KeyValue[Key] => {
+		assertNotSymbol(key);
+
+		const view = this.rawView;
+		if (!view) {
 			throw new Error(
-				`CACHE MISS: Subobject ${oid} does not exist on ${this.oid}`,
+				`Cannot access data at key ${key} on deleted entity ${this.oid}`,
 			);
-		} else if (isFileRef(value)) {
-			const file = this.store.getFile(value.id);
-			if (file) {
-				file.subscribe('change', () => {
-					this[DEEP_CHANGE](this, {
-						isLocal: false,
-					});
-				});
-				return file as any;
-			}
 		}
-		return value;
+		const child = view[key as any];
+		const schema = getChildFieldSchema(this.schema, key);
+		if (!schema) {
+			throw new Error(
+				`No schema for key ${String(key)} in ${JSON.stringify(this.schema)}`,
+			);
+		}
+		if (isRef(child)) {
+			if (isFileRef(child)) {
+				if (schema.type !== 'file') {
+					throw new Error(
+						`Expected file schema for key ${String(key)}, got ${schema.type}`,
+					);
+				}
+				const file = this.files.get(child.id, {
+					downloadRemote: !!schema.downloadRemote,
+				});
+
+				// FIXME: this seems bad and inconsistent
+				file.subscribe('change', () => {
+					this.deepChange(this, { isLocal: false, oid: this.oid });
+				});
+
+				return file as KeyValue[Key];
+			} else {
+				return this.getChild(key, child.id) as KeyValue[Key];
+			}
+		} else {
+			// prune invalid primitive fields
+			if (
+				validateEntityField({
+					field: schema,
+					value: child,
+					fieldPath: [...this.fieldPath, key],
+					depth: 1,
+					requireDefaults: true,
+				})
+			) {
+				if (hasDefault(schema)) {
+					return getDefault(schema);
+				}
+				if (isNullable(schema)) {
+					return null as any;
+				}
+				return undefined as any;
+			}
+			return child as KeyValue[Key];
+		}
 	};
 
-	protected processInputValue = (value: any, key: any) => {
+	private processInputValue = (value: any, key: any) => {
+		if (this.readonlyKeys.includes(key as string)) {
+			throw new Error(`Cannot set readonly key ${key.toString()}`);
+		}
 		// disassociate incoming OIDs on values and generally break object
 		// references. cloning doesn't work on files so those are
 		// filtered out.
@@ -378,234 +616,50 @@ export class Entity<
 		// referenced in multiple entities, which could mean introduction
 		// of foreign OIDs, or one object being assigned different OIDs
 		// with unexpected results.
-		if (!(value instanceof File)) {
+		if (!isFile(value)) {
 			value = cloneDeep(value, false);
 		}
-		const fieldSchema = this.getChildFieldSchema(key);
+		const fieldSchema = getChildFieldSchema(this.schema, key);
 		if (fieldSchema) {
 			traverseCollectionFieldsAndApplyDefaults(value, fieldSchema);
-		}
-		const validationError = validateEntityField(fieldSchema, value, [
-			...this.fieldPath,
-			key,
-		]);
-		if (validationError) {
-			// TODO: is it a good idea to throw an error here? a runtime error won't be that helpful,
-			// but also we don't really want invalid data supplied.
-			throw new Error(validationError);
-		}
-		return processValueFiles(value, this.store.addFile);
-	};
-
-	get = <Key extends keyof KeyValue>(key: Key): KeyValue[Key] => {
-		if (this.value === undefined || this.value === null) {
-			throw new Error('Cannot access deleted entity');
-		}
-
-		const value = this.value[key];
-		return this.wrapValue(value, key);
-	};
-
-	getAll = (): KeyValue => {
-		if (this.value === undefined || this.value === null) {
-			throw new Error('Cannot access deleted entity');
-		}
-
-		if (this.cachedDestructure) return this.cachedDestructure;
-
-		let result: any;
-		if (Array.isArray(this.value)) {
-			result = this.value.map((value, index) =>
-				this.wrapValue(value, index as any),
-			) as any;
-		} else {
-			result = {} as any;
-			for (const key in this.value) {
-				result[key as any] = this.get(key as any);
+			const validationError = validateEntityField({
+				field: fieldSchema,
+				value,
+				fieldPath: [...this.fieldPath, key],
+			});
+			if (validationError) {
+				// TODO: is it a good idea to throw an error here? a runtime error won't be that helpful,
+				// but also we don't really want invalid data supplied.
+				throw new Error(validationError.message);
 			}
 		}
-		this.cachedDestructure = result;
-		return result;
+		return processValueFiles(value, this.files.add);
 	};
 
-	private getFileSnapshot(item: FileRef) {
-		const file = this.store.getFile(item.id);
-		if (file.url) {
-			return { id: item.id, url: file.url };
-		} else if (file.loading || file.failed) {
-			return { id: item.id, url: undefined };
-		} else {
-			return { id: item.id, url: null };
-		}
-	}
-
-	/**
-	 * Returns a copy of the entity and all sub-objects as
-	 * a plain object or array.
-	 */
-	getSnapshot = (): any => {
-		if (!this.value) {
-			return null;
-		}
-		if (this.deleted) {
-			return null;
-		}
-		if (this.cachedSnapshot) {
-			return this.cachedSnapshot;
-		}
-		let snapshot;
-		if (Array.isArray(this.value)) {
-			snapshot = this.value.map((item, idx) => {
-				if (isObjectRef(item)) {
-					return this.getSubObject(item.id, idx)?.getSnapshot();
-				} else if (isFileRef(item)) {
-					return this.getFileSnapshot(item);
-				}
-				return item;
-			}) as Snapshot;
-		} else {
-			snapshot = { ...this.value };
-			for (const [key, value] of Object.entries(snapshot)) {
-				if (isObjectRef(value)) {
-					snapshot[key] = this.getSubObject(value.id, key)?.getSnapshot();
-				} else if (isFileRef(value)) {
-					snapshot[key] = this.getFileSnapshot(value);
-				}
-			}
-		}
-
-		assignOid(snapshot, this.oid);
-		this.cachedSnapshot = snapshot;
-		return snapshot;
-	};
-
-	/**
-	 * Object methods
-	 */
-	keys = () => {
-		return Object.keys(this.value || {});
-	};
-	entries = () => {
-		return Object.entries(this.getAll());
-	};
-	values = () => {
-		return Object.values(this.getAll());
-	};
-	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
-		if (this.readonlyKeys.includes(key)) {
-			throw new Error(`Cannot set readonly key ${key.toString()}`);
-		}
-		this.addPatches(
-			this.store.patchCreator.createSet(
-				this.oid,
-				key as string | number,
-				this.processInputValue(value, key),
-			),
-		);
-	};
-	delete = (key: any) => {
-		if (Array.isArray(this.value)) {
-			this.addPatches(
-				this.store.patchCreator.createListDelete(this.oid, key as number, 1),
-			);
-		} else {
-			// the key must be deletable - i.e. optional in the schema
-			const deleteMode = this.getDeleteMode(key);
-			if (!deleteMode) {
-				throw new Error(
-					`Cannot delete key ${key} - the property is not marked as optional in the schema`,
-				);
-			}
-			if (deleteMode === 'delete') {
-				this.addPatches(this.store.patchCreator.createRemove(this.oid, key));
-			} else {
-				this.addPatches(this.store.patchCreator.createSet(this.oid, key, null));
-			}
-		}
-	};
 	private getDeleteMode = (key: any) => {
 		if (this.readonlyKeys.includes(key)) {
 			return false;
 		}
-		// 'any' is always deletable, and map values can be removed completely
-		if (this.fieldSchema.type === 'any' || this.fieldSchema.type === 'map') {
+		// any is always deletable, and map values
+		if (this.schema.type === 'any' || this.schema.type === 'map') {
 			return 'delete';
 		}
 
-		if (this.fieldSchema.type === 'object') {
-			const property = this.fieldSchema.properties[key];
+		if (this.schema.type === 'object') {
+			const property = this.schema.properties[key];
 			if (!property) {
-				// huh, trying to delete a field that isn't specified
-				// in the schema. we should use 'delete' mode.
+				// huh, the property doesn't exist. it's ok to
+				// remove I suppose.
 				return 'delete';
 			}
 			if (property.type === 'any') return 'delete';
-			// map can't be nullable
-			// TODO: should it be?
+			// map can't be nullable. should it be?
 			if (property.type === 'map') return false;
-			// nullable properties can only be set null
 			if (property.nullable) return 'null';
 		}
-		// no other parent objects support deleting
+		// no other types are deletable
 		return false;
 	};
-	/** @deprecated - renamed to delete */
-	remove = this.delete.bind(this);
-
-	update = (
-		value: DeepPartial<Init>,
-		{
-			replaceSubObjects = false,
-			merge = true,
-		}: {
-			/**
-			 * If true, merged sub-objects will be replaced entirely if there's
-			 * ambiguity about their identity.
-			 */
-			replaceSubObjects?: boolean;
-			/**
-			 * If false, omitted keys will erase their respective fields.
-			 */
-			merge?: boolean;
-		} = {
-			replaceSubObjects: false,
-			merge: true,
-		},
-	) => {
-		if (
-			!merge &&
-			this.fieldSchema.type !== 'any' &&
-			this.fieldSchema.type !== 'map'
-		) {
-			throw new Error(
-				'Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.',
-			);
-		}
-		for (const [key, field] of Object.entries(value)) {
-			if (this.readonlyKeys.includes(key as any)) {
-				throw new Error(`Cannot set readonly key ${key.toString()}`);
-			}
-			const fieldSchema = this.getChildFieldSchema(key);
-			if (fieldSchema) {
-				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
-			}
-		}
-		const withoutFiles = processValueFiles(value, this.store.addFile);
-		this.addPatches(
-			this.store.patchCreator.createDiff(
-				this.getSnapshot(),
-				assignOid(withoutFiles, this.oid),
-				{
-					mergeUnknownObjects: !replaceSubObjects,
-					defaultUndefined: merge,
-				},
-			),
-		);
-	};
-
-	/**
-	 * List methods
-	 */
 
 	/**
 	 * Returns the referent value of an item in the list, used for
@@ -613,115 +667,213 @@ export class Entity<
 	 * it will attempt to create an OID reference to it. If it
 	 * is a primitive, it will return the primitive.
 	 */
-	private getItemRefValue = (item: ListItemValue<KeyValue>) => {
+	private getItemRefValue = (item: any) => {
+		if (item instanceof Entity) {
+			return createRef(item.oid);
+		}
+		if (item instanceof EntityFile) {
+			return createFileRef(item.id);
+		}
 		if (typeof item === 'object') {
 			const itemOid = maybeGetOid(item);
-			if (!itemOid || !this.cache.hasOid(itemOid)) {
+			if (!itemOid || !this.entityFamily.has(itemOid)) {
 				throw new Error(
 					`Cannot move object ${JSON.stringify(
 						item,
 					)} which does not exist in this list`,
 				);
 			}
-			return itemOid;
+			return createRef(itemOid);
 		} else {
 			return item;
 		}
 	};
 
-	get length() {
-		return this.value.length;
-	}
-
-	push = (value: ListItemInit<Init>) => {
-		this.addPatches(
-			this.store.patchCreator.createListPush(
+	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
+		assertNotSymbol(key);
+		this.addPendingOperations(
+			this.patchCreator.createSet(
 				this.oid,
-				this.processInputValue(value, this.value.length),
+				key,
+				this.processInputValue(value, key),
 			),
 		);
 	};
-	insert = (index: number, value: ListItemInit<Init>) => {
-		this.addPatches(
-			this.store.patchCreator.createListInsert(
+
+	/**
+	 * Returns a destructured version of this Entity, where child
+	 * Entities are accessible at their respective keys.
+	 */
+	getAll = (): KeyValue => {
+		return this.view;
+	};
+
+	delete = (key: any) => {
+		if (this.isList) {
+			assertNumber(key);
+			this.addPendingOperations(
+				this.patchCreator.createListDelete(this.oid, key),
+			);
+		} else {
+			// the key must be deletable - i.e. optional in the schema.
+			const deleteMode = this.getDeleteMode(key);
+			if (!deleteMode) {
+				throw new Error(
+					`Cannot delete key ${key.toString()} - the property is not marked as optional in the schema.`,
+				);
+			}
+			if (deleteMode === 'delete') {
+				this.addPendingOperations(
+					this.patchCreator.createRemove(this.oid, key),
+				);
+			} else {
+				this.addPendingOperations(
+					this.patchCreator.createSet(this.oid, key, null),
+				);
+			}
+		}
+	};
+
+	// object entity methods
+	keys = (): string[] => {
+		if (!this.view) return [];
+		return Object.keys(this.view);
+	};
+
+	entries = (): [string, Exclude<KeyValue[keyof KeyValue], undefined>][] => {
+		if (!this.view) return [];
+		return Object.entries(this.view);
+	};
+
+	values = (): Exclude<KeyValue[keyof KeyValue], undefined>[] => {
+		if (!this.view) return [];
+		return Object.values(this.view);
+	};
+
+	update = (
+		data: DeepPartial<Init>,
+		{
+			merge = true,
+			replaceSubObjects = false,
+		}: { replaceSubObjects?: boolean; merge?: boolean } = {},
+	): void => {
+		if (!merge && this.schema.type !== 'any' && this.schema.type !== 'map') {
+			throw new Error(
+				'Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.',
+			);
+		}
+		const changes: any = {};
+		assignOid(changes, this.oid);
+		for (const [key, field] of Object.entries(data)) {
+			if (this.readonlyKeys.includes(key as any)) {
+				throw new Error(`Cannot set readonly key ${key.toString()}`);
+			}
+			const fieldSchema = getChildFieldSchema(this.schema, key);
+			if (fieldSchema) {
+				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
+			}
+			changes[key] = this.processInputValue(field, key);
+		}
+		this.addPendingOperations(
+			this.patchCreator.createDiff(this.getSnapshot(), changes, {
+				mergeUnknownObjects: !replaceSubObjects,
+				defaultUndefined: merge,
+			}),
+		);
+	};
+
+	// array entity methods
+	get length(): number {
+		return this.view.length;
+	}
+
+	push = (value: ListItemInit<Init>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListPush(
+				this.oid,
+				this.processInputValue(value, this.view.length),
+			),
+		);
+	};
+
+	insert = (index: number, value: ListItemInit<Init>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListInsert(
 				this.oid,
 				index,
 				this.processInputValue(value, index),
 			),
 		);
 	};
-	move = (from: number, to: number) => {
-		this.addPatches(
-			this.store.patchCreator.createListMoveByIndex(this.oid, from, to),
+
+	move = (from: number, to: number): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListMoveByIndex(this.oid, from, to),
 		);
 	};
-	moveItem = (item: ListItemValue<KeyValue>, to: number) => {
+
+	moveItem = (item: ListItemValue<KeyValue>, to: number): void => {
 		const itemRef = this.getItemRefValue(item);
-		if (isObjectRef(itemRef)) {
-			this.addPatches(
-				this.store.patchCreator.createListMoveByRef(this.oid, itemRef, to),
+		if (isRef(itemRef)) {
+			this.addPendingOperations(
+				this.patchCreator.createListMoveByRef(this.oid, itemRef, to),
 			);
 		} else {
-			const index = this.value.indexOf(itemRef);
-			this.addPatches(
-				this.store.patchCreator.createListMoveByIndex(this.oid, index, to),
-			);
+			const index = this.view.indexOf(item);
+			if (index === -1) {
+				throw new Error(
+					`Cannot move item ${JSON.stringify(
+						item,
+					)} which does not exist in this list`,
+				);
+			}
+			this.move(index, to);
 		}
 	};
-	removeAll = (item: ListItemValue<KeyValue>) => {
-		this.addPatches(
-			this.store.patchCreator.createListRemove(
+
+	add = (value: ListItemValue<KeyValue>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListAdd(
 				this.oid,
-				this.getItemRefValue(item),
+				this.processInputValue(value, this.view.length),
 			),
 		);
 	};
-	removeFirst = (item: ListItemValue<KeyValue>) => {
-		this.addPatches(
-			this.store.patchCreator.createListRemove(
+
+	removeAll = (item: ListItemValue<KeyValue>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListRemove(this.oid, this.getItemRefValue(item)),
+		);
+	};
+
+	removeFirst = (item: ListItemValue<KeyValue>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListRemove(
 				this.oid,
 				this.getItemRefValue(item),
 				'first',
 			),
 		);
 	};
-	removeLast = (item: ListItemValue<KeyValue>) => {
-		this.addPatches(
-			this.store.patchCreator.createListRemove(
+
+	removeLast = (item: ListItemValue<KeyValue>): void => {
+		this.addPendingOperations(
+			this.patchCreator.createListRemove(
 				this.oid,
 				this.getItemRefValue(item),
 				'last',
 			),
 		);
 	};
-	add = (item: ListItemValue<KeyValue>) => {
-		this.addPatches(
-			this.store.patchCreator.createListAdd(
-				this.oid,
-				this.processInputValue(item, this.value.length),
-			),
-		);
-	};
-	has = (item: ListItemValue<KeyValue>) => {
-		if (typeof item === 'object') {
-			return this.value.some((val: unknown) => {
-				if (isObjectRef(val)) return val.id === maybeGetOid(item);
-				// Sets of files don't work right now, there's no way to compare them
-				// effectively.
-				if (isFileRef(val)) return false;
-				return false;
-			});
-		}
-		return this.value.includes(item);
-	};
 
 	// list implements an iterator which maps items to wrapped
 	// versions
 	[Symbol.iterator]() {
 		let index = 0;
+		let length = this.view?.length;
 		return {
 			next: () => {
-				if (index < this.value.length) {
+				if (index < length) {
 					return {
 						value: this.get(index++) as ListItemValue<KeyValue>,
 						done: false,
@@ -735,140 +887,68 @@ export class Entity<
 		};
 	}
 
-	// additional access methods
-
-	private getAsWrapped = (): ListItemValue<KeyValue>[] => {
-		if (!this.isList) throw new Error('Cannot map items of a non-list');
-		return this.value.map(this.wrapValue);
-	};
-
-	map = <U>(callback: (value: ListItemValue<KeyValue>, index: number) => U) => {
-		return this.getAsWrapped().map(callback);
+	map = <U>(
+		callback: (value: ListItemValue<KeyValue>, index: number) => U,
+	): U[] => {
+		return this.view.map(callback);
 	};
 
 	filter = (
 		callback: (value: ListItemValue<KeyValue>, index: number) => boolean,
-	) => {
-		return this.getAsWrapped().filter((val, index) => {
-			return callback(val, index);
-		});
+	): ListItemValue<KeyValue>[] => {
+		return this.view.filter(callback);
+	};
+
+	has = (value: ListItemValue<KeyValue>): boolean => {
+		if (!this.isList) {
+			throw new Error('has() is only available on list entities');
+		}
+		const itemRef = this.getItemRefValue(value);
+		if (isRef(itemRef)) {
+			return this.view.some((item: any) => {
+				if (isRef(item)) {
+					return compareRefs(item, itemRef);
+				}
+			});
+		} else {
+			return this.view.includes(value);
+		}
 	};
 
 	forEach = (
 		callback: (value: ListItemValue<KeyValue>, index: number) => void,
-	) => {
-		this.getAsWrapped().forEach(callback);
+	): void => {
+		this.view.forEach(callback);
 	};
 
-	some = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
-		return this.getAsWrapped().some(predicate);
+	some = (predicate: (value: ListItemValue<KeyValue>) => boolean): boolean => {
+		return this.view.some(predicate);
 	};
 
-	every = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
-		return this.getAsWrapped().every(predicate);
+	every = (predicate: (value: ListItemValue<KeyValue>) => boolean): boolean => {
+		return this.view.every(predicate);
 	};
 
-	find = (predicate: (value: ListItemValue<KeyValue>) => boolean) => {
-		return this.getAsWrapped().find(predicate);
+	find = (
+		predicate: (value: ListItemValue<KeyValue>) => boolean,
+	): ListItemValue<KeyValue> | undefined => {
+		return this.view.find(predicate);
 	};
 
-	includes = (item: ListItemValue<KeyValue>) => {
-		return this.has(item);
+	includes = this.has;
+
+	// TODO: make these escape hatches unnecessary
+	__getViewData__ = (oid: ObjectIdentifier, type: 'confirmed' | 'pending') => {
+		return this.metadataFamily.get(oid).computeView(type === 'confirmed');
 	};
+	__getFamilyOids__ = () => this.metadataFamily.getAllOids();
 }
 
-export interface BaseEntity<
-	Init,
-	Value extends BaseEntityValue,
-	Snapshot = DataFromInit<Init>,
-> {
-	dispose: () => void;
-	subscribe<EventName extends keyof EntityEvents>(
-		event: EventName,
-		callback: EntityEvents[EventName],
-	): () => void;
-	get<Key extends keyof Value>(key: Key): Value[Key];
-	getAll(): Value;
-	getSnapshot(): Snapshot;
-	readonly deleted: boolean;
-	readonly hasSubscribers: boolean;
+function assertNotSymbol<T>(key: T): asserts key is Exclude<T, symbol> {
+	if (typeof key === 'symbol') throw new Error("Symbol keys aren't supported");
 }
 
-type DeepPartial<T> = {
-	[P in keyof T]?: T[P] extends Array<infer U>
-		? Array<DeepPartial<U>>
-		: T[P] extends ReadonlyArray<infer U>
-		? ReadonlyArray<DeepPartial<U>>
-		: DeepPartial<T[P]>;
-};
-
-export interface ObjectEntity<
-	Init,
-	Value extends BaseEntityValue,
-	Snapshot = DataFromInit<Init>,
-> extends BaseEntity<Init, Value, Snapshot> {
-	keys(): string[];
-	entries(): [string, Exclude<Value[keyof Value], undefined>][];
-	values(): Exclude<Value[keyof Value], undefined>[];
-	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
-	delete(key: DeletableKeys<Value>): void;
-	update(
-		value: DeepPartial<Init>,
-		options?: { replaceSubObjects?: boolean; merge?: boolean },
-	): void;
-	readonly isList: false;
+function assertNumber(key: unknown): asserts key is number {
+	if (typeof key !== 'number')
+		throw new Error('Only number keys are supported in list entities');
 }
-
-export interface ListEntity<
-	Init,
-	Value extends BaseEntityValue,
-	Snapshot = DataFromInit<Init>,
-> extends Iterable<ListItemValue<Value>>,
-		BaseEntity<Init, Value, Snapshot> {
-	readonly isList: true;
-	readonly length: number;
-	push(value: ListItemInit<Init>): void;
-	insert(index: number, value: ListItemInit<Init>): void;
-	move(from: number, to: number): void;
-	moveItem(item: ListItemValue<Value>, to: number): void;
-	/**
-	 * A Set operation which adds a value if an equivalent value is not already present.
-	 * Object values are never the same.
-	 */
-	add(value: ListItemValue<Value>): void;
-	removeAll(item: ListItemValue<Value>): void;
-	removeFirst(item: ListItemValue<Value>): void;
-	removeLast(item: ListItemValue<Value>): void;
-	map<U>(callback: (value: ListItemValue<Value>, index: number) => U): U[];
-	filter(
-		callback: (value: ListItemValue<Value>, index: number) => boolean,
-	): ListItemValue<Value>[];
-	delete(index: number): void;
-	has(value: ListItemValue<Value>): boolean;
-	forEach(callback: (value: ListItemValue<Value>, index: number) => void): void;
-	some(predicate: (value: ListItemValue<Value>) => boolean): boolean;
-	every(predicate: (value: ListItemValue<Value>) => boolean): boolean;
-	find(
-		predicate: (value: ListItemValue<Value>) => boolean,
-	): ListItemValue<Value> | undefined;
-	includes(value: ListItemValue<Value>): boolean;
-}
-
-export type AnyEntity<
-	Init,
-	KeyValue extends BaseEntityValue,
-	Snapshot extends any,
-> =
-	| ListEntity<Init, KeyValue, Snapshot>
-	| ObjectEntity<Init, KeyValue, Snapshot>;
-
-type ListItemValue<KeyValue> = KeyValue extends Array<infer T> ? T : never;
-type ListItemInit<Init> = Init extends Array<infer T> ? T : never;
-
-export type EntityDestructured<T extends AnyEntity<any, any, any> | null> =
-	| (T extends ListEntity<any, infer KeyValue, any>
-			? KeyValue
-			: T extends ObjectEntity<any, infer KeyValue, any>
-			? KeyValue
-			: never)
-	| (T extends null ? null : never);

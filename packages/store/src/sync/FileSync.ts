@@ -14,6 +14,7 @@ export type FilePullResult =
 	| {
 			success: false;
 			retry: boolean;
+			error?: any;
 	  };
 
 export class FileSync {
@@ -117,6 +118,7 @@ export class FileSync {
 			this.log('error', 'File information fetch failed', e);
 			return {
 				success: false,
+				error: e,
 				retry: true,
 			};
 		}

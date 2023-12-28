@@ -21,10 +21,13 @@ export class WebSocketSync
 	private connectQueue: ClientMessage[] = [];
 	// messages awaiting sync response to send
 	private syncQueue: ClientMessage[] = [];
+	// messages waiting for sync to finish
+	private incomingQueue: ServerMessage[] = [];
 	private endpointProvider;
 	private _status: 'active' | 'paused' = 'paused';
 	private synced = false;
 	private hasStartedSync = false;
+	private _ignoreIncoming = false;
 
 	readonly mode = 'realtime';
 	private log = (...args: any[]) => {};
@@ -75,6 +78,9 @@ export class WebSocketSync
 
 	private onOnlineChange = async (online: boolean) => {
 		this.log('Socket online change', online);
+		if (this.disposed) {
+			return;
+		}
 		if (!online) {
 			this.hasStartedSync = false;
 			this.synced = false;
@@ -95,6 +101,14 @@ export class WebSocketSync
 	};
 
 	private onMessage = async (event: MessageEvent) => {
+		if (this._ignoreIncoming) {
+			this.log(
+				'Ignoring incoming message (ignore incoming flag set)',
+				event.data,
+			);
+			return;
+		}
+
 		const message = JSON.parse(event.data) as ServerMessage;
 		switch (message.type) {
 			case 'sync-resp':
@@ -107,22 +121,39 @@ export class WebSocketSync
 				this.hasStartedSync = true;
 				this.synced = true;
 				if (this.syncQueue.length) {
-					for (const msg of this.syncQueue) {
-						this.send(msg);
+					if (message.overwriteLocalData) {
+						this.log(
+							'warn',
+							'Overwriting local data - dropping outgoing message queue',
+						);
+						this.syncQueue = [];
+					} else {
+						for (const msg of this.syncQueue) {
+							this.send(msg);
+						}
+						this.syncQueue = [];
 					}
-					this.syncQueue = [];
 				}
+				this.emit('message', message);
+				if (this.incomingQueue.length) {
+					for (const msg of this.incomingQueue) {
+						this.emit('message', msg);
+					}
+					this.incomingQueue = [];
+				}
+				break;
 			case 'need-since':
 			case 'presence-changed':
 			case 'presence-offline':
 				this.emit('message', message);
 				break;
 			case 'op-re':
-				if (!this.hasStartedSync) {
+				if (!this.synced) {
 					this.log(
-						`Skipping op-re message because sync hasn't started yet`,
+						`Enqueueing op-re message because sync hasn't finished yet`,
 						message,
 					);
+					this.incomingQueue.push(message);
 					break;
 				}
 				this.emit('message', message);
@@ -215,10 +246,9 @@ export class WebSocketSync
 		}
 	};
 
-	dispose = () => {
-		this.socket?.removeEventListener('message', this.onMessage);
-		this.socket?.removeEventListener('close', this.onClose);
-		this.socket?.close();
+	destroy = () => {
+		this.dispose();
+		this.stop();
 	};
 
 	start = () => {
@@ -230,10 +260,17 @@ export class WebSocketSync
 	};
 
 	stop = () => {
-		this.dispose();
+		this.socket?.removeEventListener('message', this.onMessage);
+		this.socket?.removeEventListener('close', this.onClose);
+		this.socket?.close();
 		this.socket = null;
 		this._status = 'paused';
 	};
+
+	ignoreIncoming(): void {
+		this.incomingQueue = [];
+		this._ignoreIncoming = true;
+	}
 
 	get isConnected() {
 		return this.socket?.readyState === WebSocket.OPEN;

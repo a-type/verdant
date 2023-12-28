@@ -24,7 +24,7 @@ export class AckInfoStore extends IDBService {
 		await this.run(
 			'info',
 			(store) => store.put({ type: 'ack', globalAckTimestamp: ack }),
-			'readwrite',
+			{ mode: 'readwrite' },
 		);
 	};
 }

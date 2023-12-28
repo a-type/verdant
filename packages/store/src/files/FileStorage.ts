@@ -53,8 +53,7 @@ export class FileStorage extends IDBService {
 					buffer,
 				} as StoredFileData);
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	};
 
@@ -86,8 +85,7 @@ export class FileStorage extends IDBService {
 					remote: 'true',
 				} as StoredFileData);
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	};
 
@@ -100,8 +98,7 @@ export class FileStorage extends IDBService {
 			(store) => {
 				return store.get(id);
 			},
-			'readonly',
-			transaction,
+			{ mode: 'readonly', transaction },
 		);
 		if (!raw) {
 			return undefined;
@@ -129,8 +126,7 @@ export class FileStorage extends IDBService {
 			(store) => {
 				return store.delete(id);
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	}
 
@@ -152,8 +148,7 @@ export class FileStorage extends IDBService {
 					deletedAt: Date.now(),
 				} as StoredFileData);
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	};
 
@@ -163,7 +158,7 @@ export class FileStorage extends IDBService {
 			(store) => {
 				return store.index('remote').getAll('false');
 			},
-			'readonly',
+			{ mode: 'readonly' },
 		);
 		return raw.map(this.hydrateFileData);
 	};
@@ -182,8 +177,7 @@ export class FileStorage extends IDBService {
 			(value, store) => {
 				iterator(this.hydrateFileData(value), store);
 			},
-			'readwrite',
-			transaction,
+			{ mode: 'readwrite', transaction },
 		);
 	};
 }

@@ -1,7 +1,7 @@
-// Vitest Snapshot v1
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`generated client > should produce consistent output code 1`] = `
-"export * from \\"@verdant-web/store\\";
+"export * from "@verdant-web/store";
 "
 `;
 
@@ -14,36 +14,36 @@ import type {
   CollectionQueries,
   StorageSchema,
   Migration,
-} from \\"@verdant-web/store\\";
-export * from \\"@verdant-web/store\\";
+} from "@verdant-web/store";
+export * from "@verdant-web/store";
 
 export class Client<Presence = any, Profile = any> {
   readonly todos: CollectionQueries<Todo, TodoInit, TodoFilter>;
   readonly people: CollectionQueries<Person, PersonInit, PersonFilter>;
   readonly posts: CollectionQueries<Post, PostInit, PostFilter>;
 
-  sync: BaseClient<Presence, Profile>[\\"sync\\"];
-  undoHistory: BaseClient<Presence, Profile>[\\"undoHistory\\"];
-  namespace: BaseClient<Presence, Profile>[\\"namespace\\"];
-  entities: BaseClient<Presence, Profile>[\\"entities\\"];
+  sync: BaseClient<Presence, Profile>["sync"];
+  undoHistory: BaseClient<Presence, Profile>["undoHistory"];
+  namespace: BaseClient<Presence, Profile>["namespace"];
+  entities: BaseClient<Presence, Profile>["entities"];
   // queryStore: BaseClient<Presence, Profile>['queryStore'];
-  batch: BaseClient<Presence, Profile>[\\"batch\\"];
+  batch: BaseClient<Presence, Profile>["batch"];
   // files: BaseClient<Presence, Profile>['files'];
-  close: BaseClient<Presence, Profile>[\\"close\\"];
-  export: BaseClient<Presence, Profile>[\\"export\\"];
-  import: BaseClient<Presence, Profile>[\\"import\\"];
-  subscribe: BaseClient<Presence, Profile>[\\"subscribe\\"];
-  stats: BaseClient<Presence, Profile>[\\"stats\\"];
+  close: BaseClient<Presence, Profile>["close"];
+  export: BaseClient<Presence, Profile>["export"];
+  import: BaseClient<Presence, Profile>["import"];
+  subscribe: BaseClient<Presence, Profile>["subscribe"];
+  stats: BaseClient<Presence, Profile>["stats"];
   __dangerous__resetLocal: BaseClient<
     Presence,
     Profile
-  >[\\"__dangerous__resetLocal\\"];
+  >["__dangerous__resetLocal"];
 }
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any>
   extends Omit<
     BaseClientDescriptorOptions<Presence, Profile>,
-    \\"schema\\" | \\"migrations\\"
+    "schema" | "migrations"
   > {
   /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
   schema?: StorageSchema;
@@ -61,7 +61,7 @@ export class ClientDescriptor<Presence = any, Profile = any> {
   readonly namespace: string;
 }
 
-import { ObjectEntity, ListEntity, EntityFile } from \\"@verdant-web/store\\";
+import { ObjectEntity, ListEntity, EntityFile } from "@verdant-web/store";
 
 /** Generated types for Todo */
 
@@ -74,7 +74,7 @@ export type TodoTags = ListEntity<
   TodoTagsDestructured,
   TodoTagsSnapshot
 >;
-export type TodoTagsItem = \\"work\\" | \\"home\\" | \\"other\\";
+export type TodoTagsItem = "work" | "home" | "other";
 export type TodoCategory = string;
 export type TodoAttachments = ListEntity<
   TodoAttachmentsInit,
@@ -97,7 +97,7 @@ export type TodoInit = {
   attachments?: TodoAttachmentsInit;
 };
 
-export type TodoTagsInit = (\\"work\\" | \\"home\\" | \\"other\\")[];
+export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
 export type TodoDestructured = {
@@ -109,7 +109,7 @@ export type TodoDestructured = {
   attachments: TodoAttachments;
 };
 
-export type TodoTagsDestructured = (\\"work\\" | \\"home\\" | \\"other\\")[];
+export type TodoTagsDestructured = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemDestructured = { name: string; test: number };
 export type TodoAttachmentsDestructured = TodoAttachmentsItem[];
 export type TodoSnapshot = {
@@ -121,63 +121,63 @@ export type TodoSnapshot = {
   attachments: TodoAttachmentsSnapshot;
 };
 
-export type TodoTagsSnapshot = (\\"work\\" | \\"home\\" | \\"other\\")[];
+export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
 
 /** Index filters for Todo **/
 
 export interface TodoExampleMatchFilter {
-  where: \\"example\\";
+  where: "example";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoExampleRangeFilter {
-  where: \\"example\\";
+  where: "example";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoExampleStartsWithFilter {
-  where: \\"example\\";
+  where: "example";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoContentMatchFilter {
-  where: \\"content\\";
+  where: "content";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoContentRangeFilter {
-  where: \\"content\\";
+  where: "content";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoContentStartsWithFilter {
-  where: \\"content\\";
+  where: "content";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoTagsSortedByDoneCompoundFilter {
-  where: \\"tagsSortedByDone\\";
+  where: "tagsSortedByDone";
   match: {
     tags: string;
     done?: boolean;
   };
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface TodoCategorySortedByDoneCompoundFilter {
-  where: \\"categorySortedByDone\\";
+  where: "categorySortedByDone";
   match: {
     category: string | null;
     done?: boolean;
   };
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export type TodoFilter =
   | TodoExampleMatchFilter
@@ -225,40 +225,40 @@ export type PersonPostsSnapshot = string[];
 /** Index filters for Person **/
 
 export interface PersonNameMatchFilter {
-  where: \\"name\\";
+  where: "name";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PersonNameRangeFilter {
-  where: \\"name\\";
+  where: "name";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PersonNameStartsWithFilter {
-  where: \\"name\\";
+  where: "name";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PersonNameMatchFilter {
-  where: \\"name\\";
+  where: "name";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PersonNameRangeFilter {
-  where: \\"name\\";
+  where: "name";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PersonNameStartsWithFilter {
-  where: \\"name\\";
+  where: "name";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export type PersonFilter =
   | PersonNameMatchFilter
@@ -283,40 +283,40 @@ export type PostSnapshot = { id: string; title: string; content: string };
 /** Index filters for Post **/
 
 export interface PostTitleMatchFilter {
-  where: \\"title\\";
+  where: "title";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PostTitleRangeFilter {
-  where: \\"title\\";
+  where: "title";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PostTitleStartsWithFilter {
-  where: \\"title\\";
+  where: "title";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PostTitleMatchFilter {
-  where: \\"title\\";
+  where: "title";
   equals: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PostTitleRangeFilter {
-  where: \\"title\\";
+  where: "title";
   gte?: string;
   gt?: string;
   lte?: string;
   lt?: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export interface PostTitleStartsWithFilter {
-  where: \\"title\\";
+  where: "title";
   startsWith: string;
-  order?: \\"asc\\" | \\"desc\\";
+  order?: "asc" | "desc";
 }
 export type PostFilter =
   | PostTitleMatchFilter
@@ -329,12 +329,12 @@ export type PostFilter =
 `;
 
 exports[`generated client > should produce consistent output code 3`] = `
-"import { ClientDescriptorOptions } from \\"./client.js\\";
-export * from \\"./client.js\\";
-import schema from \\"./schema.js\\";
-import { ClientDescriptor as StorageDescriptor } from \\"./client.js\\";
-import migrations from \\"../migrations/index.js\\";
-export * from \\"@verdant-web/store\\";
+"import { ClientDescriptorOptions } from "./client.js";
+export * from "./client.js";
+import schema from "./schema.js";
+import { ClientDescriptor as StorageDescriptor } from "./client.js";
+import migrations from "../migrations/index.js";
+export * from "@verdant-web/store";
 
 export class ClientDescriptor<
   Presence = unknown,
@@ -357,43 +357,43 @@ exports[`generated client > should produce consistent output code 4`] = `
 "/** @generated - do not modify this file. */
 
 // test/schema.ts
-import { collection, schema } from \\"@verdant-web/store\\";
+import { collection, schema } from "@verdant-web/store";
 var todo = collection({
-  name: \\"todo\\",
-  primaryKey: \\"id\\",
+  name: "todo",
+  primaryKey: "id",
   fields: {
     id: {
-      type: \\"string\\",
+      type: "string",
       default: () => Math.random().toString(36).slice(2, 9)
     },
     content: {
-      type: \\"string\\",
-      default: \\"\\"
+      type: "string",
+      default: ""
     },
     done: {
-      type: \\"boolean\\"
+      type: "boolean"
     },
     tags: {
-      type: \\"array\\",
+      type: "array",
       items: {
-        type: \\"string\\",
-        options: [\\"work\\", \\"home\\", \\"other\\"]
+        type: "string",
+        options: ["work", "home", "other"]
       }
     },
     category: {
-      type: \\"string\\",
+      type: "string",
       nullable: true
     },
     attachments: {
-      type: \\"array\\",
+      type: "array",
       items: {
-        type: \\"object\\",
+        type: "object",
         properties: {
           name: {
-            type: \\"string\\"
+            type: "string"
           },
           test: {
-            type: \\"number\\",
+            type: "number",
             default: 1
           }
         }
@@ -402,56 +402,56 @@ var todo = collection({
   },
   indexes: {
     example: {
-      type: \\"string\\",
+      type: "string",
       compute: (doc) => doc.content
     },
     content: {
-      field: \\"content\\"
+      field: "content"
     }
   },
   compounds: {
     tagsSortedByDone: {
-      of: [\\"tags\\", \\"done\\"]
+      of: ["tags", "done"]
     },
     categorySortedByDone: {
-      of: [\\"category\\", \\"done\\"]
+      of: ["category", "done"]
     }
   }
 });
 var person = collection({
-  name: \\"person\\",
-  primaryKey: \\"id\\",
+  name: "person",
+  primaryKey: "id",
   fields: {
     id: {
-      type: \\"string\\",
+      type: "string",
       default: () => Math.random().toString(36).slice(2, 9)
     },
     name: {
-      type: \\"string\\",
+      type: "string",
       indexed: true
     },
     posts: {
-      type: \\"array\\",
+      type: "array",
       items: {
-        type: \\"string\\"
+        type: "string"
       }
     }
   }
 });
 var post = collection({
-  name: \\"post\\",
-  primaryKey: \\"id\\",
+  name: "post",
+  primaryKey: "id",
   fields: {
     id: {
-      type: \\"string\\",
+      type: "string",
       default: () => Math.random().toString(36).slice(2, 9)
     },
     title: {
-      type: \\"string\\",
+      type: "string",
       indexed: true
     },
     content: {
-      type: \\"string\\"
+      type: "string"
     }
   }
 });
@@ -473,7 +473,7 @@ export {
 `;
 
 exports[`generated client > should produce consistent output code 5`] = `
-"import { StorageSchema } from \\"@verdant-web/common\\";
+"import { StorageSchema } from "@verdant-web/common";
 declare const schema: StorageSchema;
 export default schema;
 
@@ -486,7 +486,7 @@ export type TodoSnapshot = {
   attachments: TodoAttachmentsSnapshot;
 };
 
-export type TodoTagsSnapshot = (\\"work\\" | \\"home\\" | \\"other\\")[];
+export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
 export type TodoInit = {
@@ -498,7 +498,7 @@ export type TodoInit = {
   attachments?: TodoAttachmentsInit;
 };
 
-export type TodoTagsInit = (\\"work\\" | \\"home\\" | \\"other\\")[];
+export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
 
@@ -524,11 +524,11 @@ export type MigrationTypes = {
 "
 `;
 
-exports[`generated client > should produce consistent output code 6`] = `"{\\"verdantCLI\\":1}"`;
+exports[`generated client > should produce consistent output code 6`] = `"{"verdantCLI":1}"`;
 
 exports[`generated react hooks > should produce consistent output code 1`] = `
-"import { createHooks as baseCreateHooks } from \\"@verdant-web/react\\";
-import schema from \\"./schema.js\\";
+"import { createHooks as baseCreateHooks } from "@verdant-web/react";
+import schema from "./schema.js";
 
 export function createHooks() {
   return baseCreateHooks(schema);
@@ -537,7 +537,7 @@ export function createHooks() {
 `;
 
 exports[`generated react hooks > should produce consistent output code 2`] = `
-"import { Context, ComponentType, ReactNode } from \\"react\\";
+"import { Context, ComponentType, ReactNode } from "react";
 import type {
   Client,
   ClientDescriptor,
@@ -558,7 +558,7 @@ import type {
   PersonFilter,
   Post,
   PostFilter,
-} from \\"./index.js\\";
+} from "./index.js";
 
 type HookConfig<F> = {
   index?: F;

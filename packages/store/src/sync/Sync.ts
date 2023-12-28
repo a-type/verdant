@@ -40,9 +40,10 @@ export interface SyncTransport {
 	send(message: ClientMessage): void;
 
 	start(): void;
+	ignoreIncoming(): void;
 	stop(): void;
 
-	dispose(): void;
+	destroy(): void;
 
 	reconnect(): void;
 
@@ -71,7 +72,9 @@ export class NoSync<Presence = any, Profile = any>
 
 	public stop(): void {}
 
-	public dispose = () => {};
+	public ignoreIncoming(): void {}
+
+	public destroy = () => {};
 
 	public reconnect(): void {}
 
@@ -285,7 +288,7 @@ export class ServerSync<Presence = any, Profile = any>
 					}, 1000);
 				}
 			};
-			let switchoverTimeout: NodeJS.Timer;
+			let switchoverTimeout: NodeJS.Timeout;
 			this.presence.subscribe('peersChanged', decideIfUpgrade);
 			if (automaticTransportSelection !== 'peers-only') {
 				this.presence.subscribe('selfChanged', decideIfUpgrade);
@@ -453,9 +456,14 @@ export class ServerSync<Presence = any, Profile = any>
 		return this.activeSync.stop();
 	};
 
-	public dispose = () => {
-		this.webSocketSync.dispose();
-		this.pushPullSync.dispose();
+	public ignoreIncoming(): void {
+		this.activeSync.ignoreIncoming();
+	}
+
+	public destroy = () => {
+		this.dispose();
+		this.webSocketSync.destroy();
+		this.pushPullSync.destroy();
 	};
 
 	public reconnect = () => {

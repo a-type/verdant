@@ -45,7 +45,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return addFieldDefaults(collection, init);
 	};
 
-	create = async (
+	create = (
 		collection: string,
 		init: any,
 		options: { undoable?: boolean } = {},

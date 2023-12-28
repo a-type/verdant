@@ -1,8 +1,8 @@
-import { ClientDescriptorOptions } from "./client.js";
-export * from "./client.js";
-import schema from "./schema.js";
-import { ClientDescriptor as StorageDescriptor } from "./client.js";
-import migrations from "../migrations/index.js";
+import { ClientDescriptorOptions } from "./client";
+export * from "./client";
+import schema from "./schema";
+import { ClientDescriptor as StorageDescriptor } from "./client";
+import migrations from "../migrations/index";
 export * from "@verdant-web/store";
 
 export class ClientDescriptor<
