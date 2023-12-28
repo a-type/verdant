@@ -6,7 +6,6 @@ import type {
   CollectionQueries,
   StorageSchema,
   Migration,
-  EntityFile,
 } from "@verdant-web/store";
 export * from "@verdant-web/store";
 
@@ -18,13 +17,13 @@ export class Client<Presence = any, Profile = any> {
   undoHistory: BaseClient<Presence, Profile>["undoHistory"];
   namespace: BaseClient<Presence, Profile>["namespace"];
   entities: BaseClient<Presence, Profile>["entities"];
-  queryStore: BaseClient<Presence, Profile>["queryStore"];
+  // queryStore: BaseClient<Presence, Profile>['queryStore'];
   batch: BaseClient<Presence, Profile>["batch"];
-  files: BaseClient<Presence, Profile>["files"];
+  // files: BaseClient<Presence, Profile>['files'];
   close: BaseClient<Presence, Profile>["close"];
   export: BaseClient<Presence, Profile>["export"];
   import: BaseClient<Presence, Profile>["import"];
-  subscribe: BaseClient<Presence, Profile>["on"];
+  subscribe: BaseClient<Presence, Profile>["subscribe"];
   stats: BaseClient<Presence, Profile>["stats"];
   __dangerous__resetLocal: BaseClient<
     Presence,
@@ -44,7 +43,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any>
 }
 
 export class ClientDescriptor<Presence = any, Profile = any> {
-  constructor(init: ClientInitOptions<Presence, Profile>);
+  constructor(init: ClientDescriptorOptions<Presence, Profile>);
   open: () => Promise<Client<Presence, Profile>>;
   close: () => Promise<void>;
   readonly current: Client<Presence, Profile> | null;
@@ -82,6 +81,7 @@ export type PageAssetsValue = ObjectEntity<
   PageAssetsValueDestructured,
   PageAssetsValueSnapshot
 >;
+export type PageAssetsValueId = string;
 export type PageAssetsValueType = string;
 export type PageAssetsValueSize = ListEntity<
   PageAssetsValueSizeInit,
@@ -89,6 +89,8 @@ export type PageAssetsValueSize = ListEntity<
   PageAssetsValueSizeSnapshot
 >;
 export type PageAssetsValueSizeItem = number;
+export type PageAssetsValueName = string;
+export type PageAssetsValueSrc = string;
 export type PageInit = {
   id?: string;
   version: number;
@@ -101,8 +103,11 @@ export type PageShapesInit = { [key: string]: PageShapesValueInit };
 export type PageBindingsInit = { [key: string]: PageBindingsValueInit };
 export type PageAssetsValueSizeInit = number[];
 export type PageAssetsValueInit = {
+  id: string;
   type: string;
   size?: PageAssetsValueSizeInit;
+  name?: string | null;
+  src?: string | null;
 };
 export type PageAssetsInit = { [key: string]: PageAssetsValueInit };
 export type PageDestructured = {
@@ -121,8 +126,11 @@ export type PageBindingsDestructured = {
 };
 export type PageAssetsValueSizeDestructured = number[];
 export type PageAssetsValueDestructured = {
+  id: string;
   type: string;
   size: PageAssetsValueSize;
+  name: string | null;
+  src: string | null;
 };
 export type PageAssetsDestructured = {
   [key: string]: PageAssetsValue | undefined;
@@ -139,8 +147,11 @@ export type PageShapesSnapshot = { [key: string]: PageShapesValueSnapshot };
 export type PageBindingsSnapshot = { [key: string]: PageBindingsValueSnapshot };
 export type PageAssetsValueSizeSnapshot = number[];
 export type PageAssetsValueSnapshot = {
+  id: string;
   type: string;
   size: PageAssetsValueSizeSnapshot;
+  name: string | null;
+  src: string | null;
 };
 export type PageAssetsSnapshot = { [key: string]: PageAssetsValueSnapshot };
 
