@@ -318,7 +318,7 @@ export class EntityStore extends Disposable {
 	create = async (
 		initial: any,
 		oid: ObjectIdentifier,
-		{ undoable }: { undoable?: boolean } = {},
+		{ undoable = true }: { undoable?: boolean } = {},
 	) => {
 		this.ctx.log('debug', 'Creating new entity', oid);
 		const { collection } = decomposeOid(oid);
