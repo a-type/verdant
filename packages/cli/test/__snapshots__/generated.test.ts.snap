@@ -59,9 +59,21 @@ export class ClientDescriptor<Presence = any, Profile = any> {
   readonly readyPromise: Promise<Client<Presence, Profile>>;
   readonly schema: StorageSchema;
   readonly namespace: string;
+  /**
+   * Resets all local data for this client, including the schema and migrations.
+   * If the client is not connected to sync, this causes the irretrievable loss of all data.
+   * If the client is connected to sync, this will cause the client to re-sync all data from the server.
+   * Use this very carefully, and only as a last resort.
+   */
+  __dangerous__resetLocal: () => Promise<void>;
 }
 
-import { ObjectEntity, ListEntity, EntityFile } from "@verdant-web/store";
+import {
+  ObjectEntity,
+  ListEntity,
+  EntityFile,
+  EntityFileSnapshot,
+} from "@verdant-web/store";
 
 /** Generated types for Todo */
 
@@ -127,6 +139,10 @@ export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
 
 /** Index filters for Todo **/
 
+export interface TodoExampleSortFilter {
+  where: "example";
+  order: "asc" | "desc";
+}
 export interface TodoExampleMatchFilter {
   where: "example";
   equals: string;
@@ -144,6 +160,10 @@ export interface TodoExampleStartsWithFilter {
   where: "example";
   startsWith: string;
   order?: "asc" | "desc";
+}
+export interface TodoContentSortFilter {
+  where: "content";
+  order: "asc" | "desc";
 }
 export interface TodoContentMatchFilter {
   where: "content";
@@ -180,9 +200,11 @@ export interface TodoCategorySortedByDoneCompoundFilter {
   order?: "asc" | "desc";
 }
 export type TodoFilter =
+  | TodoExampleSortFilter
   | TodoExampleMatchFilter
   | TodoExampleRangeFilter
   | TodoExampleStartsWithFilter
+  | TodoContentSortFilter
   | TodoContentMatchFilter
   | TodoContentRangeFilter
   | TodoContentStartsWithFilter
@@ -224,6 +246,10 @@ export type PersonPostsSnapshot = string[];
 
 /** Index filters for Person **/
 
+export interface PersonNameSortFilter {
+  where: "name";
+  order: "asc" | "desc";
+}
 export interface PersonNameMatchFilter {
   where: "name";
   equals: string;
@@ -241,6 +267,10 @@ export interface PersonNameStartsWithFilter {
   where: "name";
   startsWith: string;
   order?: "asc" | "desc";
+}
+export interface PersonNameSortFilter {
+  where: "name";
+  order: "asc" | "desc";
 }
 export interface PersonNameMatchFilter {
   where: "name";
@@ -261,9 +291,11 @@ export interface PersonNameStartsWithFilter {
   order?: "asc" | "desc";
 }
 export type PersonFilter =
+  | PersonNameSortFilter
   | PersonNameMatchFilter
   | PersonNameRangeFilter
   | PersonNameStartsWithFilter
+  | PersonNameSortFilter
   | PersonNameMatchFilter
   | PersonNameRangeFilter
   | PersonNameStartsWithFilter;
@@ -282,6 +314,10 @@ export type PostSnapshot = { id: string; title: string; content: string };
 
 /** Index filters for Post **/
 
+export interface PostTitleSortFilter {
+  where: "title";
+  order: "asc" | "desc";
+}
 export interface PostTitleMatchFilter {
   where: "title";
   equals: string;
@@ -299,6 +335,10 @@ export interface PostTitleStartsWithFilter {
   where: "title";
   startsWith: string;
   order?: "asc" | "desc";
+}
+export interface PostTitleSortFilter {
+  where: "title";
+  order: "asc" | "desc";
 }
 export interface PostTitleMatchFilter {
   where: "title";
@@ -319,9 +359,11 @@ export interface PostTitleStartsWithFilter {
   order?: "asc" | "desc";
 }
 export type PostFilter =
+  | PostTitleSortFilter
   | PostTitleMatchFilter
   | PostTitleRangeFilter
   | PostTitleStartsWithFilter
+  | PostTitleSortFilter
   | PostTitleMatchFilter
   | PostTitleRangeFilter
   | PostTitleStartsWithFilter;

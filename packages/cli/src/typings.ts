@@ -62,6 +62,13 @@ export class ClientDescriptor<Presence = any, Profile = any> {
   readonly readyPromise: Promise<Client<Presence, Profile>>;
   readonly schema: StorageSchema;
   readonly namespace: string;
+	/**
+	 * Resets all local data for this client, including the schema and migrations.
+	 * If the client is not connected to sync, this causes the irretrievable loss of all data.
+	 * If the client is connected to sync, this will cause the client to re-sync all data from the server.
+	 * Use this very carefully, and only as a last resort.
+	 */
+	__dangerous__resetLocal: () => Promise<void>;
 }
 `;
 	return typings;
@@ -74,7 +81,7 @@ export function getSchemaTypings({ schema }: { schema: StorageSchema }) {
 		})
 		.reduce(
 			(acc, curr) => acc + '\n\n' + curr,
-			`import { ObjectEntity, ListEntity, EntityFile } from '@verdant-web/store';\n`,
+			`import { ObjectEntity, ListEntity, EntityFile, EntityFileSnapshot } from '@verdant-web/store';\n`,
 		);
 	return types;
 }
@@ -172,7 +179,7 @@ function getFieldTypings({
 						? 'File'
 						: mode === 'destructured'
 						? 'EntityFile'
-						: 'string'
+						: 'EntityFileSnapshot'
 				}${field.nullable ? ' | null' : ''}`,
 				optional,
 				declarations: '',
@@ -419,6 +426,19 @@ export function getFilterTypings({
 			}),
 		);
 	});
+	const primaryKeyField = collection.fields[collection.primaryKey];
+	if (primaryKeyField) {
+		const filters = getFieldFilterTypings({
+			field: primaryKeyField,
+			key: collection.primaryKey,
+			name: `${name}${pascalCase(collection.primaryKey)}`,
+			collection,
+		});
+		// I guess it's possible primaryKey is also marked 'indexed'
+		if (!filters.some((f) => f.name === filters[0].name)) {
+			filters.push(...filters);
+		}
+	}
 	if (filters.length === 0) {
 		return `export type ${name}Filter = never;`;
 	}
@@ -472,6 +492,13 @@ function getFieldFilterTypings({
 	}
 
 	let filters = [
+		{
+			name: `${name}SortFilter`,
+			typing: `export interface ${name}SortFilter {
+	where: "${key}";
+	order: "asc" | "desc";
+	};`,
+		},
 		{
 			typing: `export interface ${name}MatchFilter {
   where: "${key}";

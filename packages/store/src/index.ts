@@ -22,7 +22,7 @@ export type {
 } from './entities/types.js';
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
-export { EntityFile } from './files/EntityFile.js';
+export { EntityFile, type EntityFileSnapshot } from './files/EntityFile.js';
 export {
 	collection,
 	schema,

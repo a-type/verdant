@@ -7,6 +7,11 @@ export type EntityFileEvents = {
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
 
+export type EntityFileSnapshot = {
+	id: string;
+	url?: string | null;
+};
+
 /**
  * Provides a consistent interface for files used in an app via
  * Entity access.
@@ -83,7 +88,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.dispose();
 	};
 
-	getSnapshot() {
+	getSnapshot(): EntityFileSnapshot {
 		return {
 			id: this.id,
 			url: this.loading || this.failed ? undefined : this.url,
