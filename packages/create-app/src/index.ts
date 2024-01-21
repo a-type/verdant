@@ -164,6 +164,8 @@ await execAsync('pnpm --recursive update "@verdant-web/*" --latest', {
 	cwd: destinationDir,
 });
 
+installSpinner.stop('Verdant updated');
+
 installSpinner.start('Generating client code...');
 
 // exec pnpm generate in the new directory
@@ -186,7 +188,7 @@ const openInCode = await confirm({
 });
 
 if (openInCode) {
-	await execAsync(`code ${destinationDir} ${destinationDir}/README.md`);
+	exec(`code ${destinationDir} ${destinationDir}/README.md`);
 }
 
 outro('Done!');

@@ -4,6 +4,7 @@ import {
 	migrations,
 	UserInfo,
 } from '@{{todo}}/verdant';
+export type * from '@{{todo}}/verdant';
 
 export interface Presence {
 	/**
