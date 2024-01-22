@@ -13,6 +13,7 @@
 		"@verdant-web/store": "workspace:*",
 		"express": "^4.18.2",
 		"fake-indexeddb": "^5.0.1",
+		"get-port": "^7.0.0",
 		"jsdom": "^20.0.0",
 		"tsx": "^4.0.0",
 		"typescript": "^4.8.4",
