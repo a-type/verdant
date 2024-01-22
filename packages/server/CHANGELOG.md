@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 2.0.2
+
+### Patch Changes
+
+- d1f7e46: Attempt to fix a consistency error in rebasing
+
 ## 2.0.1
 
 ### Patch Changes
