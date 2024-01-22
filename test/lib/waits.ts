@@ -234,3 +234,9 @@ export async function waitForPeerPresence(
 	});
 	expect(predicate(client.sync.presence.peers[peerId]?.presence)).toBe(true);
 }
+
+export async function waitForTime(ms: number) {
+	return new Promise<void>((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}

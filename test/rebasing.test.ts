@@ -8,20 +8,12 @@ import {
 	waitForEverythingToRebase,
 	waitForPeerCount,
 	waitForQueryResult,
+	waitForTime,
 } from './lib/waits.js';
 import migrations from './migrations/index.js';
+import { createTestContext } from './lib/createTestContext.js';
 
-const cleanupClients: Client[] = [];
-
-let server: { port: number; cleanup: () => Promise<void> };
-beforeAll(async () => {
-	server = await startTestServer();
-});
-
-afterAll(async () => {
-	cleanupClients.forEach((c) => c.sync.stop());
-	await server.cleanup();
-}, 30 * 1000);
+const context = createTestContext();
 
 it('an offline client rebases everything', async () => {
 	const indexedDb = new IDBFactory();
@@ -64,20 +56,17 @@ it('an offline client rebases everything', async () => {
 });
 
 it('passive clients do not interfere with rebasing when offline', async () => {
-	const clientA = await createTestClient({
-		server,
+	const clientA = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User A',
 		// logId: 'A',
 	});
-	const clientB = await createTestClient({
-		server,
+	const clientB = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User B',
 		// logId: 'B',
 	});
-	const clientC = await createTestClient({
-		server,
+	const clientC = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User C',
 		type: ReplicaType.PassiveRealtime,
@@ -137,4 +126,64 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	expect(
 		(await clientC.items.get(oranges.get('id')).resolved)!.get('purchased'),
 	).toBe(true);
+});
+
+it("server does not rebase old offline operations that haven't yet synced to online replicas", async () => {
+	const clientA = await context.createTestClient({
+		library: 'old-rebase-sync-1',
+		user: 'A',
+	});
+	const clientB = await context.createTestClient({
+		library: 'old-rebase-sync-1',
+		user: 'B',
+	});
+
+	clientA.sync.start();
+	clientA.items.put({
+		id: '1',
+		content: 'Item 1',
+	});
+
+	clientB.sync.start();
+	await waitForPeerCount(clientA, 1);
+	await waitForPeerCount(clientB, 1);
+	await waitForQueryResult(clientB.items.get('1'));
+
+	clientB.items.put({
+		id: '2',
+		content: 'Item 2',
+	});
+	await waitForQueryResult(clientA.items.get('2'));
+
+	clientA.sync.stop();
+
+	await waitForTime(500);
+
+	clientA.items.put({
+		id: '3',
+		content: 'Item 3',
+	});
+
+	await waitForTime(200);
+
+	clientB.items.put({
+		id: '4',
+		content: 'Item 4',
+	});
+
+	// b goes offline, but only after it's sent a new operation
+	// which is after item 3. if we only went by timestamp, b
+	// has "seen" 3, but it hasn't.
+	clientB.sync.stop();
+	await waitForTime(500);
+
+	clientA.sync.start();
+
+	await waitForTime(500);
+
+	clientB.sync.start();
+
+	await waitForQueryResult(clientB.items.get('3'));
+	await waitForQueryResult(clientB.items.get('4'));
+	await waitForQueryResult(clientA.items.get('4'));
 });

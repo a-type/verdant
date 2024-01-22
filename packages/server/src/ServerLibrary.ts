@@ -481,10 +481,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 
 		// fundamentally a rebase occurs when some conditions are met:
 		// 1. the replica which created an operation has dropped that operation
-		//    from their history stack, i.e. their oldest timestamp is after it.
+		//    from their history stack, i.e. their oldest acked timestamp is after it.
 		// 2. all other replicas have acknowledged an operation since the
 		//    operation which will be flattened to the baseline. i.e. global
-		//    ack > timestamp.
+		//    ack server order > server order.
 		//
 		// to determine which rebases we can do, we use a heuristic.
 		// the maximal set of operations we could potentially rebase is
@@ -499,14 +499,24 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			(p) => p.replicaId,
 		);
 		const globalAck = this.replicas.getGlobalAck(libraryId, activeReplicaIds);
+		const globalServerOrder =
+			this.replicas.getEarliestAckedServerOrder(libraryId);
 
 		if (!globalAck) {
 			this.log('No global ack, skipping rebase');
 			return;
 		}
 
+		if (globalServerOrder === null) {
+			this.log('No global server order, skipping rebase');
+			return;
+		}
+
 		// these are in forward chronological order
-		const ops = this.operations.getBefore(libraryId, globalAck);
+		const ops = this.operations.getBeforeServerOrder(
+			libraryId,
+			globalServerOrder,
+		);
 
 		const opsToApply: Record<string, OperationSpec[]> = {};
 		// if we encounter a sequential operation in history which does

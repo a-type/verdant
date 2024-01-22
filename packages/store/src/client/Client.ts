@@ -51,6 +51,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	private _queryCache: QueryCache;
 	private _documentManager: DocumentManager<any>;
 	private _fileManager: FileManager;
+	private _closed = false;
 
 	readonly collectionNames: string[];
 
@@ -206,10 +207,14 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		const collectionNames = Object.keys(this.schema.collections);
 		let collections = {} as Record<string, { count: number; size: number }>;
 		for (const collectionName of collectionNames) {
-			collections[collectionName] = await getSizeOfObjectStore(
-				this.documentDb,
-				collectionName,
-			);
+			try {
+				collections[collectionName] = await getSizeOfObjectStore(
+					this.documentDb,
+					collectionName,
+				);
+			} catch (err) {
+				this.context.log?.('error', err);
+			}
 		}
 		const meta = await this.meta.stats();
 		const storage =
@@ -242,6 +247,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	};
 
 	close = async () => {
+		this._closed = true;
 		this.sync.ignoreIncoming();
 		await this._entities.flushAllBatches();
 		this.sync.stop();
