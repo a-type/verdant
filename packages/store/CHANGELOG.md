@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.0.3
+
+### Patch Changes
+
+- d1f7e46: Attempt to fix a consistency error in rebasing
+
 ## 3.0.2
 
 ### Patch Changes
