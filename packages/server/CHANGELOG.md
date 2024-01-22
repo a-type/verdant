@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 2.0.1
+
+### Patch Changes
+
+- d2bbec4: Add standalone server CLI command
+- Updated dependencies [d2bbec4]
+  - @verdant-web/common@2.0.1
+
 ## 2.0.0
 
 ### Major Changes

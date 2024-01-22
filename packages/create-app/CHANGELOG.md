@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.4.1
+
+### Patch Changes
+
+- e461f9a: Fix some issues with local-only bootstrapper
+
 ## 0.4.0
 
 ### Minor Changes
