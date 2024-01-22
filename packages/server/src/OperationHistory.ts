@@ -76,19 +76,19 @@ export class OperationHistory {
 	};
 
 	/**
-	 * Returns all operations before the given timestamp
+	 * Returns all operations before the given server order
 	 * in ascending chronological order
 	 */
-	getBefore = (libraryId: string, before: string) => {
+	getBeforeServerOrder = (libraryId: string, beforeServerOrder: number) => {
 		return this.db
 			.prepare(
 				`
 			SELECT * FROM OperationHistory
-			WHERE libraryId = ? AND timestamp < ?
+			WHERE libraryId = ? AND serverOrder < ?
 			ORDER BY timestamp ASC
 		`,
 			)
-			.all(libraryId, before)
+			.all(libraryId, beforeServerOrder)
 			.map(this.hydratePatch);
 	};
 
