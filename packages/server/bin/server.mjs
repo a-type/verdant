@@ -1,4 +1,4 @@
-#! /usr/bin/node
+#!/usr/bin/env node
 import { createServer } from 'http';
 import { createReadStream } from 'fs';
 import { parse, URLSearchParams } from 'url';
