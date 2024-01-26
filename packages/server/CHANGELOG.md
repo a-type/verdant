@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 2.0.3
+
+### Patch Changes
+
+- 7bc2ca3: Fix server cli shebang
+
 ## 2.0.2
 
 ### Patch Changes
