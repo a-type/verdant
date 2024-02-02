@@ -2,6 +2,8 @@ import {
 	ClientMessage,
 	EventSubscriber,
 	ServerMessage,
+	VerdantErrorCode,
+	isVerdantErrorResponse,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
@@ -92,6 +94,15 @@ export class PushPullSync
 				if (this._isConnected) {
 					this._isConnected = false;
 					this.emit('onlineChange', false);
+				}
+
+				const json = await response.json();
+				if (isVerdantErrorResponse(json)) {
+					// token expired... retry again later after clearing it
+					if (json.code === VerdantErrorCode.TokenExpired) {
+						this.endpointProvider.clearCache();
+						this.heartbeat.keepAlive();
+					}
 				}
 
 				// only keep trying if the error was not 4xx

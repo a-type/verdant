@@ -27,3 +27,4 @@ export * from './files.js';
 export type { Ref } from './refs.js';
 export { makeObjectRef, makeFileRef, isRef, compareRefs } from './refs.js';
 export * from './memo.js';
+export * from './error.js';
