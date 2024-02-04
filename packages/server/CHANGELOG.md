@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 2.0.4
+
+### Patch Changes
+
+- 5aa6531: Refresh auth token after expiration
+- Updated dependencies [5aa6531]
+  - @verdant-web/common@2.0.2
+
 ## 2.0.3
 
 ### Patch Changes

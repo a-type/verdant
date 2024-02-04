@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.0.2
+
+### Patch Changes
+
+- 5aa6531: Refresh auth token after expiration
+
 ## 2.0.1
 
 ### Patch Changes
