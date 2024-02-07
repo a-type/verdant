@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as pathTools from 'path/posix';
@@ -37,7 +37,7 @@ export async function readSchema({
 			// convert all functions to "FUNCTION"
 			(key, value) => (typeof value === 'function' ? 'FUNCTION' : value),
 		)
-	)`;
+	); process.exit(0);`;
 	await fs.writeFile(`${tempDir}/readFile.ts`, readFileContent);
 	await esbuild.build({
 		entryPoints: [`${tempDir}/readFile.ts`],
@@ -58,7 +58,14 @@ export async function readSchema({
       `,
 		},
 	});
-	const result = execSync(`node ${tempDir}/readFile.js`).toString();
+	const result = await new Promise<string>((resolve, reject) => {
+		exec(`node ${tempDir}/readFile.js`, (err, stdout) => {
+			if (err) {
+				reject(err);
+			}
+			resolve(stdout);
+		});
+	});
 	await fs.rm(tempDir, { recursive: true });
 	return JSON.parse(result);
 }
