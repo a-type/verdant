@@ -167,7 +167,7 @@ await execAsync('pnpm --recursive update "@verdant-web/*" --latest', {
 installSpinner.start('Generating client code...');
 
 // exec pnpm generate in the new directory
-await execAsync('pnpm generate --select=wip', {
+await execAsync('pnpm generate --select=wip --module=esm', {
 	cwd: destinationDir,
 });
 
