@@ -23,7 +23,7 @@ export class PresenceManager<
 	 */
 	selfChanged: (presence: UserInfo<Profile, Presence>) => void;
 	/** Fired when any number of peer presences have changed */
-	peersChanged: (peers: Record<string, any>) => void;
+	peersChanged: (peers: Record<string, UserInfo<Profile, Presence>>) => void;
 	/** Fired when a peer presence goes offline */
 	peerLeft: (userId: string, lastPresence: UserInfo<Profile, Presence>) => void;
 	/** Fired after local presence changes are flushed to the server. */
