@@ -13,10 +13,20 @@ export class PresenceManager<
 	Profile = any,
 	Presence = any,
 > extends EventSubscriber<{
+	/**
+	 * Fired when a particular peer's presence changes
+	 */
 	peerChanged: (userId: string, presence: UserInfo<Profile, Presence>) => void;
+	/**
+	 * Fired immediately when a change to local presence is made. This change may not
+	 * yet have been sent to the server (see: "update" event)
+	 */
 	selfChanged: (presence: UserInfo<Profile, Presence>) => void;
+	/** Fired when any number of peer presences have changed */
 	peersChanged: (peers: Record<string, any>) => void;
+	/** Fired when a peer presence goes offline */
 	peerLeft: (userId: string, lastPresence: UserInfo<Profile, Presence>) => void;
+	/** Fired after local presence changes are flushed to the server. */
 	update: (presence: Partial<Presence>) => void;
 }> {
 	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
