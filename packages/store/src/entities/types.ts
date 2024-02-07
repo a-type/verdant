@@ -72,13 +72,11 @@ export interface BaseEntity<
 	readonly uid: string;
 }
 
-export type DeepPartial<T> = {
-	[P in keyof T]?: T[P] extends Array<infer U>
-		? Array<DeepPartial<U>>
-		: T[P] extends ReadonlyArray<infer U>
-		? ReadonlyArray<DeepPartial<U>>
-		: DeepPartial<T[P]>;
-};
+export type DeepPartial<T> = T extends object
+	? {
+			[P in keyof T]?: DeepPartial<T[P]>;
+	  }
+	: T;
 
 export interface ObjectEntity<
 	Init,
@@ -92,7 +90,29 @@ export interface ObjectEntity<
 	delete(key: DeletableKeys<Value>): void;
 	update(
 		value: DeepPartial<Init>,
-		options?: { replaceSubObjects?: boolean; merge?: boolean },
+		options?: {
+			/**
+			 * Forces the replacement of sub-objects in the update payload - rather than
+			 * Verdant keeping their identities intact and merging changes, your update
+			 * will replace these objects entirely, overwriting any other changes from other
+			 * sources.
+			 *
+			 * Useful when the update you're making is logically replacing sub-objects, rather
+			 * than simply modifying them.
+			 *
+			 * Default: false
+			 */
+			replaceSubObjects?: boolean;
+			/**
+			 * If set to false, this will drop any keys in the object which were
+			 * not provided in your update payload, while also merging the ones that
+			 * were. This option only works for `map` and `any` type fields; you cannot
+			 * use it with defined `object` type fields.
+			 *
+			 * Default: true
+			 */
+			merge?: boolean;
+		},
 	): void;
 	readonly isList: false;
 }

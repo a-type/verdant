@@ -751,7 +751,7 @@ export class Entity<
 	};
 
 	update = (
-		data: DeepPartial<Init>,
+		data: any,
 		{
 			merge = true,
 			replaceSubObjects = false,
