@@ -3,7 +3,7 @@ import express from 'express';
 import { createServer } from 'http';
 import * as fs from 'fs/promises';
 import { LocalFileStorage } from '@verdant-web/server/src/files/FileStorage.js';
-import * as path from 'path';
+import getPort from 'get-port';
 
 const SECRET = 'notsecret';
 
@@ -16,7 +16,7 @@ export async function startTestServer({
 	disableRebasing?: boolean;
 	keepDb?: boolean;
 } = {}) {
-	const port = Math.floor(Math.random() * 4000) + 4000;
+	const port = await getPort();
 	const app = express();
 	const httpServer = createServer(app);
 

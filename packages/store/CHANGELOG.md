@@ -1,5 +1,39 @@
 # @lo-fi/web
 
+## 3.0.5
+
+### Patch Changes
+
+- Updated dependencies [4b9e3e4]
+  - @verdant-web/common@2.0.3
+
+## 3.0.4
+
+### Patch Changes
+
+- 5aa6531: Refresh auth token after expiration
+- Updated dependencies [5aa6531]
+  - @verdant-web/common@2.0.2
+
+## 3.0.3
+
+### Patch Changes
+
+- d1f7e46: Attempt to fix a consistency error in rebasing
+
+## 3.0.2
+
+### Patch Changes
+
+- Updated dependencies [d2bbec4]
+  - @verdant-web/common@2.0.1
+
+## 3.0.1
+
+### Patch Changes
+
+- f16fe63: Fix some typing issues in the CLI
+
 ## 3.0.0
 
 ### Major Changes

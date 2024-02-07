@@ -7,6 +7,7 @@ import {
 	generateId,
 	Operation,
 	ServerMessage,
+	VerdantError,
 } from '@verdant-web/common';
 import EventEmitter from 'events';
 import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
@@ -180,6 +181,14 @@ export class Server extends EventEmitter implements MessageSender {
 				});
 			} catch (e) {
 				this.emit('error', e);
+				if (e instanceof VerdantError && e.httpStatus === 401) {
+					socket.write(
+						'HTTP/1.1 401 Unauthorized\r\n' +
+							'Connection: close\r\n' +
+							'Content-Length: 0\r\n' +
+							'\r\n',
+					);
+				}
 				socket.destroy();
 			}
 		});
@@ -287,11 +296,28 @@ export class Server extends EventEmitter implements MessageSender {
 				this.emit('request', info);
 			}
 		} catch (e) {
-			this.emit('error', e);
-			res.writeHead(500);
-			res.end();
+			return this.sendErrorResponse(e, res);
 		}
 	};
+
+	private sendErrorResponse(e: unknown, res: ServerResponse) {
+		this.emit('error', e);
+		this.log('Error handling request', e);
+
+		if (e instanceof VerdantError) {
+			// write error data to response
+			res.writeHead(e.httpStatus);
+			res.write(JSON.stringify(e.toResponse()));
+		} else {
+			res.writeHead(500);
+			res.write(
+				JSON.stringify(
+					new VerdantError(VerdantError.Code.Unexpected).toResponse(),
+				),
+			);
+		}
+		res.end();
+	}
 
 	/**
 	 * Handles a multipart upload of a file from a verdant client. The upload
@@ -414,10 +440,7 @@ export class Server extends EventEmitter implements MessageSender {
 				res.end();
 			}
 		} catch (e) {
-			this.log('Error handling file request', e);
-			this.emit('error', e);
-			res.writeHead(500);
-			res.end();
+			return this.sendErrorResponse(e, res);
 		}
 	};
 

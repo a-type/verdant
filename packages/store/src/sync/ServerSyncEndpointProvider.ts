@@ -82,4 +82,8 @@ export class ServerSyncEndpointProvider {
 		};
 		return this.cached;
 	};
+
+	clearCache = () => {
+		this.cached = null;
+	};
 }

@@ -179,6 +179,28 @@ export class ReplicaInfos {
 			.run(serverOrder, replicaId, libraryId);
 	};
 
+	getEarliestAckedServerOrder = (libraryId: string) => {
+		// get the earliest acked server order of all non-truant replicas
+		const allAcks = (
+			this.db
+				.prepare(
+					`
+			SELECT ackedServerOrder FROM ReplicaInfo
+			WHERE libraryId = ?
+			AND lastSeenWallClockTime > ?
+		`,
+				)
+				.all(libraryId, this.truantCutoff) as {
+				ackedServerOrder: number | null;
+			}[]
+		).map((row: { ackedServerOrder: number | null }) => row.ackedServerOrder);
+
+		if (allAcks.some((ack) => ack === null)) {
+			return null;
+		}
+		return Math.min(...(allAcks as number[]));
+	};
+
 	acknowledgeOperation = (
 		libraryId: string,
 		replicaId: string,
@@ -208,15 +230,18 @@ export class ReplicaInfos {
 			(replica) => replica.type < 2 || onlineReplicaIds?.includes(replica.id),
 		);
 		// get the earliest acked time
-		return globalAckEligible.reduce((acc, replica) => {
-			if (!replica.ackedLogicalTime) {
-				return acc;
-			}
-			if (acc === undefined) {
-				return replica.ackedLogicalTime;
-			}
-			return acc < replica.ackedLogicalTime ? acc : replica.ackedLogicalTime;
-		}, undefined as string | undefined);
+		return globalAckEligible.reduce(
+			(acc, replica) => {
+				if (!replica.ackedLogicalTime) {
+					return acc;
+				}
+				if (acc === undefined) {
+					return replica.ackedLogicalTime;
+				}
+				return acc < replica.ackedLogicalTime ? acc : replica.ackedLogicalTime;
+			},
+			undefined as string | undefined,
+		);
 	};
 
 	delete = (libraryId: string, replicaId: string) => {

@@ -1,5 +1,23 @@
 # @verdant-web/common
 
+## 2.0.3
+
+### Patch Changes
+
+- 4b9e3e4: Make validation exception for legacy @@id key
+
+## 2.0.2
+
+### Patch Changes
+
+- 5aa6531: Refresh auth token after expiration
+
+## 2.0.1
+
+### Patch Changes
+
+- d2bbec4: Add standalone server CLI command
+
 ## 2.0.0
 
 ### Major Changes

@@ -1,3 +1,4 @@
+import { OID_KEY } from '../oids.js';
 import { isObject } from '../utils.js';
 import { hasDefault, isNullable } from './fields.js';
 import { StorageFieldSchema, StorageFieldsSchema } from './types.js';
@@ -7,6 +8,8 @@ export function validateEntity(
 	entity: any,
 ): EntityValidationProblem | void {
 	for (const [key, value] of Object.entries(entity)) {
+		// legacy -- old objects sometimes accidentally include this key
+		if (key === OID_KEY) continue;
 		if (!schema[key]) {
 			return {
 				type: 'invalid-key',
@@ -74,6 +77,8 @@ export function validateEntityField({
 			};
 		}
 		for (const [key, subField] of Object.entries(field.properties)) {
+			// legacy -- old objects sometimes accidentally include this key
+			if (key === OID_KEY) continue;
 			if (value[key]) {
 				validateEntityField({
 					field: subField,

@@ -6,7 +6,6 @@ import {
 	Operation,
 	ReplicaType,
 	ServerMessage,
-	replaceLegacyOidsInObject,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
@@ -316,6 +315,10 @@ export class ServerSync<Presence = any, Profile = any>
 		if (event.data.type === 'sync') {
 			this.handleMessage(event.data.message, { source: 'broadcastChannel' });
 		}
+	};
+
+	private onTokenExpired = () => {
+		this.endpointProvider.clearCache();
 	};
 
 	private handleMessage = async (

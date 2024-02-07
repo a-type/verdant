@@ -1,5 +1,40 @@
 # @lo-fi/server
 
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [4b9e3e4]
+  - @verdant-web/common@2.0.3
+
+## 2.0.4
+
+### Patch Changes
+
+- 5aa6531: Refresh auth token after expiration
+- Updated dependencies [5aa6531]
+  - @verdant-web/common@2.0.2
+
+## 2.0.3
+
+### Patch Changes
+
+- 7bc2ca3: Fix server cli shebang
+
+## 2.0.2
+
+### Patch Changes
+
+- d1f7e46: Attempt to fix a consistency error in rebasing
+
+## 2.0.1
+
+### Patch Changes
+
+- d2bbec4: Add standalone server CLI command
+- Updated dependencies [d2bbec4]
+  - @verdant-web/common@2.0.1
+
 ## 2.0.0
 
 ### Major Changes
