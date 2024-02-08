@@ -8,7 +8,7 @@ export async function isCommonJS() {
 	while (pkgPath !== path.parse(pkgPath).root) {
 		try {
 			const pkg = JSON.parse(
-				await fs.readFile(`${pkgPath}\\package.json`, 'utf8'),
+				await fs.readFile(path.join(pkgPath, `package.json`), 'utf8'),
 			);
 			return pkg.type === 'commonjs' || !pkg.type;
 		} catch (err) {
