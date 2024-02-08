@@ -8,6 +8,8 @@ import {
 	StorageSyntheticIndexSchema,
 	StorageSyntheticIndices,
 } from './types.js';
+import { fields } from './fieldHelpers.js';
+import cuid from 'cuid';
 
 export function collection<
 	Fields extends StorageFieldsSchema,
@@ -48,6 +50,11 @@ export function schema<
 >(input: Schema): StorageSchema {
 	return input;
 }
+schema.collection = collection;
+schema.fields = fields;
+schema.generated = {
+	id: cuid,
+};
 
 export * from './types.js';
 

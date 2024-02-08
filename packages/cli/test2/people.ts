@@ -1,6 +1,6 @@
-import { collection } from '@verdant-web/common';
+import { schema } from '@verdant-web/common';
 
-export const people = collection({
+export const people = schema.collection({
 	name: 'person',
 	primaryKey: 'id',
 	fields: {

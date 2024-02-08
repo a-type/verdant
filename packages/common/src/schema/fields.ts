@@ -1,6 +1,10 @@
 import { LEGACY_OID_KEY, OID_KEY } from '../oids.js';
 import { isObject } from '../utils.js';
-import type { StorageFieldSchema, StorageCollectionSchema } from './types.js';
+import type {
+	StorageFieldSchema,
+	StorageCollectionSchema,
+	NestedStorageFieldsSchema,
+} from './types.js';
 
 export function isNullable(field: StorageFieldSchema) {
 	if (field.type === 'any') return true;
@@ -13,7 +17,6 @@ export function hasDefault(field: StorageFieldSchema | undefined) {
 	if (field.type === 'map') return true;
 	if (field.type === 'array') return true;
 	if (field.type === 'file') return false;
-	if (field.type === 'object') return false;
 	return field.default !== undefined;
 }
 
@@ -79,7 +82,9 @@ export function traverseCollectionFieldsAndApplyDefaults(
 ) {
 	if (value === undefined || value === null) return value;
 	if (field.type === 'object') {
-		for (const [key, subField] of Object.entries(field.properties)) {
+		for (const [key, subField] of Object.entries(
+			field.properties as NestedStorageFieldsSchema,
+		)) {
 			if (value[key] === undefined) {
 				const defaultValue = getFieldDefault(subField);
 				if (defaultValue !== undefined) {
@@ -123,6 +128,21 @@ export function getFieldDefault(field: StorageFieldSchema) {
 	}
 	if (field.type !== 'any' && field.nullable) {
 		return null;
+	}
+	if (field.type === 'object' && field.default) {
+		const defaultValue =
+			// @ts-ignore
+			typeof field.default === 'function'
+				? field.default()
+				: JSON.parse(JSON.stringify(field.default));
+		for (const [key, property] of Object.entries(
+			field.properties as NestedStorageFieldsSchema,
+		)) {
+			if (defaultValue[key] === undefined) {
+				defaultValue[key] = getFieldDefault(property);
+			}
+		}
+		return defaultValue;
 	}
 	return undefined;
 }

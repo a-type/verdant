@@ -1,6 +1,6 @@
-import { collection, schema } from '@verdant-web/store';
+import { schema } from '@verdant-web/store';
 
-export const todo = collection({
+export const todo = schema.collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {
@@ -61,7 +61,7 @@ export const todo = collection({
 	},
 });
 
-export const person = collection({
+export const person = schema.collection({
 	name: 'person',
 	primaryKey: 'id',
 	fields: {
@@ -82,7 +82,7 @@ export const person = collection({
 	},
 });
 
-export const post = collection({
+export const post = schema.collection({
 	name: 'post',
 	primaryKey: 'id',
 	fields: {

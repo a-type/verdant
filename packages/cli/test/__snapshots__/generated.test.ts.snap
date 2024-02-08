@@ -399,8 +399,8 @@ exports[`generated client > should produce consistent output code 4`] = `
 "/** @generated - do not modify this file. */
 
 // test/schema.ts
-import { collection, schema } from "@verdant-web/store";
-var todo = collection({
+import { schema } from "@verdant-web/store";
+var todo = schema.collection({
   name: "todo",
   primaryKey: "id",
   fields: {
@@ -460,7 +460,7 @@ var todo = collection({
     }
   }
 });
-var person = collection({
+var person = schema.collection({
   name: "person",
   primaryKey: "id",
   fields: {
@@ -480,7 +480,7 @@ var person = collection({
     }
   }
 });
-var post = collection({
+var post = schema.collection({
   name: "post",
   primaryKey: "id",
   fields: {

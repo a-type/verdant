@@ -1,6 +1,6 @@
-import { collection } from '@verdant-web/common';
+import { schema } from '@verdant-web/common';
 
-export const todos = collection({
+export const todos = schema.collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {

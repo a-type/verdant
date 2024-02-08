@@ -12,8 +12,8 @@ import {
 
 // arrays of primitives are eligible for compound indices
 type PrimitiveArrayFields<Fields extends StorageFieldsSchema> = {
-	[K in keyof Fields as Fields[K] extends StorageArrayFieldSchema
-		? Fields[K]['items'] extends
+	[K in keyof Fields as Fields[K] extends StorageArrayFieldSchema<infer U>
+		? U extends
 				| NestedStorageStringFieldSchema
 				| NestedStorageNumberFieldSchema
 				| NestedStorageBooleanFieldSchema

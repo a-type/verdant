@@ -1,4 +1,4 @@
-import { collection, schema } from '@verdant-web/store';
+import { schema } from '@verdant-web/store';
 import cuid from 'cuid';
 
 /**
@@ -19,26 +19,26 @@ import cuid from 'cuid';
  * For subsequent changes to your schema, use just `pnpm generate`.
  */
 
-const items = collection({
+const items = schema.collection({
 	name: 'item',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
+		id: schema.fields.string({
 			default: cuid,
-		},
-		content: {
-			type: 'string',
+		}),
+		content: schema.fields.string({
 			default: '',
-		},
-		done: {
-			type: 'boolean',
+		}),
+		done: schema.fields.boolean({
 			default: false,
-		},
-		createdAt: {
-			type: 'number',
+		}),
+		createdAt: schema.fields.number({
 			default: () => Date.now(),
-			indexed: true,
+		}),
+	},
+	indexes: {
+		createdAt: {
+			field: 'createdAt',
 		},
 	},
 });

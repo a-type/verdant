@@ -87,12 +87,9 @@ it('applies a WIP schema over an old schema and discards it once the new version
 				...defaultSchema.collections.items,
 				fields: {
 					...defaultSchema.collections.items.fields,
-					comments: {
-						type: 'array',
-						items: {
-							type: 'string',
-						},
-					},
+					comments: schema.fields.array({
+						items: schema.fields.string(),
+					}),
 				},
 			},
 		},
@@ -170,10 +167,9 @@ it('applies a WIP schema over an old schema and discards it once the new version
 				...defaultSchema.collections.categories,
 				fields: {
 					...defaultSchema.collections.categories.fields,
-					icon: {
-						type: 'string',
+					icon: schema.fields.string({
 						default: '',
-					},
+					}),
 				},
 			},
 		},
@@ -222,12 +218,9 @@ it('can start a WIP schema from no pre-existing client', async () => {
 				...defaultSchema.collections.items,
 				fields: {
 					...defaultSchema.collections.items.fields,
-					comments: {
-						type: 'array',
-						items: {
-							type: 'string',
-						},
-					},
+					comments: schema.fields.array({
+						items: schema.fields.string(),
+					}),
 				},
 			},
 		},

@@ -25,10 +25,10 @@ export type BaseShapeFromProperty<T extends StorageFieldSchema> =
 		? number
 		: T['type'] extends 'boolean'
 		? boolean
-		: T extends StorageArrayFieldSchema
-		? ShapeFromProperty<T['items']>[]
-		: T extends StorageObjectFieldSchema
-		? ShapeFromFields<T['properties']>
+		: T extends StorageArrayFieldSchema<infer U>
+		? ShapeFromProperty<U>[]
+		: T extends StorageObjectFieldSchema<infer U>
+		? ShapeFromFields<U>
 		: T extends StorageMapFieldSchema<any>
 		? Record<string, ShapeFromProperty<T['values']>>
 		: T['type'] extends 'any'
@@ -65,7 +65,7 @@ type StoragePropertyIsOptional<T extends StorageFieldSchema> =
 		? true
 		: false;
 
-type ShapeFromFieldsWithDefaults<
+export type ShapeFromFieldsWithDefaults<
 	T extends StorageFieldsSchema | NestedStorageFieldsSchema,
 > = {
 	[K in keyof T as StoragePropertyIsOptional<T[K]> extends true
@@ -80,3 +80,7 @@ type ShapeFromFieldsWithDefaults<
 export type StorageDocumentInit<
 	Collection extends StorageCollectionSchema<any, any, any>,
 > = ShapeFromFieldsWithDefaults<Collection['fields']>;
+
+export type FieldsFromShape<Shape extends Record<string, unknown>> = {
+	[K in keyof Shape]: StorageFieldSchema;
+};

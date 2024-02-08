@@ -1,58 +1,47 @@
-import { schema, collection } from '@verdant-web/store';
+import { schema } from '@verdant-web/store';
 
-const items = collection({
+const items = schema.collection({
 	name: 'item',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
+		id: schema.fields.string({
 			default: () => Math.random().toString(36).slice(2, 9),
-		},
-		content: {
-			type: 'string',
+		}),
+		content: schema.fields.string({
 			default: '',
-		},
-		tags: {
-			type: 'array',
-			items: {
-				type: 'string',
+		}),
+		tags: schema.fields.array({
+			items: schema.fields.string({
 				options: ['a', 'b', 'c'],
-			},
-		},
-		purchased: {
-			type: 'boolean',
+			}),
+		}),
+		purchased: schema.fields.boolean({
 			default: false,
-		},
-		categoryId: {
-			type: 'string',
+		}),
+		categoryId: schema.fields.string({
 			nullable: true,
-			indexed: true,
-		},
-		comments: {
-			type: 'array',
-			items: {
-				type: 'object',
+		}),
+		comments: schema.fields.array({
+			items: schema.fields.object({
 				properties: {
-					id: {
-						type: 'string',
+					id: schema.fields.string({
 						default: () => Math.random().toString(36).slice(2, 9),
-					},
-					content: {
-						type: 'string',
+					}),
+					content: schema.fields.string({
 						default: '',
-					},
-					authorId: {
-						type: 'string',
-					},
+					}),
+					authorId: schema.fields.string(),
 				},
-			},
-		},
-		image: {
-			type: 'file',
+			}),
+		}),
+		image: schema.fields.file({
 			nullable: true,
-		},
+		}),
 	},
 	indexes: {
+		categoryId: {
+			field: 'categoryId',
+		},
 		purchasedYesNo: {
 			type: 'string',
 			compute(item) {
@@ -62,27 +51,25 @@ const items = collection({
 	},
 });
 
-const categories = collection({
+const categories = schema.collection({
 	name: 'category',
 	pluralName: 'categories',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
+		id: schema.fields.string({
 			default: () => Math.random().toString(36).slice(2, 9),
-		},
-		name: {
-			type: 'string',
-			indexed: true,
-		},
-		metadata: {
-			type: 'object',
+		}),
+		name: schema.fields.string(),
+		metadata: schema.fields.object({
 			nullable: true,
 			properties: {
-				color: {
-					type: 'string',
-				},
+				color: schema.fields.string(),
 			},
+		}),
+	},
+	indexes: {
+		name: {
+			field: 'name',
 		},
 	},
 });

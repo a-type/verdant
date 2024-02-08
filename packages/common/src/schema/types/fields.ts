@@ -21,19 +21,21 @@ export type StorageBooleanFieldSchema = {
 	/** @deprecated - add an index to indexes with this field name. */
 	indexed?: boolean;
 };
-export type StorageArrayFieldSchema = {
+export type StorageArrayFieldSchema<TItems extends NestedStorageFieldSchema> = {
 	type: 'array';
-	items: NestedStorageFieldSchema;
+	items: TItems;
 	nullable?: boolean;
 };
-export type StorageObjectFieldSchema = {
-	type: 'object';
-	properties: NestedStorageFieldsSchema;
-	nullable?: boolean;
-};
-export type StorageAnyFieldSchema = {
+export type StorageObjectFieldSchema<Props extends NestedStorageFieldsSchema> =
+	{
+		type: 'object';
+		properties: Props;
+		nullable?: boolean;
+		default?: Record<string, any> | (() => Record<string, any>);
+	};
+export type StorageAnyFieldSchema<TShape = any> = {
 	type: 'any';
-	default?: any;
+	default?: TShape;
 };
 export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
 	type: 'map';
@@ -54,8 +56,8 @@ export type StorageFieldSchema =
 	| StorageStringFieldSchema
 	| StorageNumberFieldSchema
 	| StorageBooleanFieldSchema
-	| StorageArrayFieldSchema
-	| StorageObjectFieldSchema
+	| StorageArrayFieldSchema<any>
+	| StorageObjectFieldSchema<any>
 	| StorageAnyFieldSchema
 	| StorageMapFieldSchema<any>
 	| StorageFileFieldSchema;
@@ -81,8 +83,8 @@ export type NestedStorageFieldSchema =
 	| NestedStorageStringFieldSchema
 	| NestedStorageNumberFieldSchema
 	| NestedStorageBooleanFieldSchema
-	| StorageArrayFieldSchema
-	| StorageObjectFieldSchema
+	| StorageArrayFieldSchema<any>
+	| StorageObjectFieldSchema<any>
 	| StorageAnyFieldSchema
 	| StorageMapFieldSchema<any>
 	| StorageFileFieldSchema;

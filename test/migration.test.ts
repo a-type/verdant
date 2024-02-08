@@ -1,7 +1,6 @@
 import { it, expect, describe } from 'vitest';
 import {
 	schema,
-	collection,
 	StorageDescriptor,
 	Migration,
 	ClientWithCollections,
@@ -67,13 +66,13 @@ it(
 	'offline migrates to add collections, indexes, and defaults; or changing data shape',
 	async () => {
 		const indexedDb = new IDBFactory();
-		const v1Item = collection({
+		const v1Item = schema.collection({
 			name: 'item',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string' },
-				contents: { type: 'string', nullable: true },
-				tags: { type: 'array', items: { type: 'string' } },
+				id: schema.fields.string(),
+				contents: schema.fields.string({ nullable: true }),
+				tags: schema.fields.array({ items: schema.fields.string() }),
 			},
 		});
 		const v1Schema = schema({
@@ -118,16 +117,19 @@ it(
 		await client.close();
 		await new Promise<void>((resolve) => resolve());
 
-		const v2Item = collection({
+		const v2Item = schema.collection({
 			name: 'item',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: () => 'default' },
-				contents: { type: 'string', default: 'empty' },
-				tags: { type: 'array', items: { type: 'string' } },
-				listId: { type: 'string', nullable: true, indexed: true },
+				id: schema.fields.string({ default: () => 'default' }),
+				contents: schema.fields.string({ default: 'empty' }),
+				tags: schema.fields.array({ items: schema.fields.string() }),
+				listId: schema.fields.string({ nullable: true }),
 			},
-			synthetics: {
+			indexes: {
+				listId: {
+					field: 'listId',
+				},
 				hasTags: {
 					type: 'string',
 					compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -139,14 +141,14 @@ it(
 				},
 			},
 		});
-		const v2List = collection({
+		const v2List = schema.collection({
 			name: 'list',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: 'something' },
-				name: { type: 'string' },
-				items: { type: 'array', items: { type: 'string' } },
-				nullable: { type: 'string', nullable: true },
+				id: schema.fields.string({ default: 'something' }),
+				name: schema.fields.string(),
+				items: schema.fields.array({ items: schema.fields.string() }),
+				nullable: schema.fields.string({ nullable: true }),
 			},
 		});
 
@@ -248,29 +250,26 @@ it(
 
 		// the final schema change includes refactoring the tags
 		// array to use objects instead of strings
-		const v3Item = collection({
+		const v3Item = schema.collection({
 			name: 'item',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: () => 'default' },
-				contents: { type: 'string', default: 'empty' },
-				tags: {
-					type: 'array',
-					items: {
-						type: 'object',
+				id: schema.fields.string({ default: () => 'default' }),
+				contents: schema.fields.string({ default: 'empty' }),
+				tags: schema.fields.array({
+					items: schema.fields.object({
 						properties: {
-							name: {
-								type: 'string',
-							},
-							color: {
-								type: 'string',
-							},
+							name: schema.fields.string(),
+							color: schema.fields.string(),
 						},
-					},
-				},
-				listId: { type: 'string', nullable: true, indexed: true },
+					}),
+				}),
+				listId: schema.fields.string({ nullable: true }),
 			},
-			synthetics: {
+			indexes: {
+				listId: {
+					field: 'listId',
+				},
 				hasTags: {
 					type: 'string',
 					compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -280,14 +279,14 @@ it(
 			// TODO: synthetic index that returns an array, using that to map
 			// tags to their values, then using that to create a compound index?
 		});
-		const v3List = collection({
+		const v3List = schema.collection({
 			name: 'list',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: 'something' },
-				name: { type: 'string' },
-				items: { type: 'array', items: { type: 'string' } },
-				nullable: { type: 'string', default: 'not nullable anymore' },
+				id: schema.fields.string({ default: 'something' }),
+				name: schema.fields.string(),
+				items: schema.fields.array({ items: schema.fields.string() }),
+				nullable: schema.fields.string({ default: 'not nullable anymore' }),
 			},
 		});
 
@@ -383,21 +382,19 @@ it(
 
 		await client.close();
 
-		const v4List = collection({
+		const v4List = schema.collection({
 			name: 'list',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: () => 'default' },
-				name: { type: 'string', default: 'empty' },
-				items: {
-					type: 'array',
-					items: {
-						type: 'object',
+				id: schema.fields.string({ default: () => 'default' }),
+				name: schema.fields.string({ default: 'empty' }),
+				items: schema.fields.array({
+					items: schema.fields.object({
 						properties: {
 							...v3Item.fields,
 						},
-					},
-				},
+					}),
+				}),
 			},
 		});
 
@@ -522,23 +519,21 @@ it(
 
 		await client.close();
 
-		const v5List = collection({
+		const v5List = schema.collection({
 			name: 'list',
 			primaryKey: 'id',
 			fields: {
-				id: { type: 'string', default: () => 'default' },
-				name: { type: 'string', default: 'empty' },
-				items: {
-					type: 'array',
-					items: {
-						type: 'object',
+				id: schema.fields.string({ default: () => 'default' }),
+				name: schema.fields.string({ default: 'empty' }),
+				items: schema.fields.array({
+					items: schema.fields.object({
 						properties: {
 							...v3Item.fields,
 						},
-					},
-				},
+					}),
+				}),
 			},
-			synthetics: {
+			indexes: {
 				hasItems: {
 					type: 'boolean',
 					compute: (list) => list.items.length > 0,
@@ -633,13 +628,13 @@ it('migrates in an online world where old operations still come in', async () =>
 	});
 	const indexedDbA = new IDBFactory();
 	const indexedDBB = new IDBFactory();
-	const v1Item = collection({
+	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string' },
-			contents: { type: 'string', nullable: true },
-			tags: { type: 'array', items: { type: 'string' } },
+			id: schema.fields.string(),
+			contents: schema.fields.string({ nullable: true }),
+			tags: schema.fields.array({ items: schema.fields.string() }),
 		},
 	});
 	const v1Schema = schema({
@@ -723,17 +718,20 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	await clientB.close();
 
-	const v2Item = collection({
+	const v2Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: () => 'default' },
-			contents: { type: 'string', default: 'empty' },
-			tags: { type: 'array', items: { type: 'string' } },
-			listId: { type: 'string', nullable: true, indexed: true },
-			newField: { type: 'string', default: 'should be here!' },
+			id: schema.fields.string({ default: () => 'default' }),
+			contents: schema.fields.string({ default: 'empty' }),
+			tags: schema.fields.array({ items: schema.fields.string() }),
+			listId: schema.fields.string({ nullable: true }),
+			newField: schema.fields.string({ default: 'should be here!' }),
 		},
-		synthetics: {
+		indexes: {
+			listId: {
+				field: 'listId',
+			},
 			hasTags: {
 				type: 'string',
 				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -840,13 +838,13 @@ it('migrates in an online world where old operations still come in', async () =>
 });
 
 it('supports skip migrations in real life', async () => {
-	const v1Item = collection({
+	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string' },
-			contents: { type: 'string', nullable: true },
-			tags: { type: 'array', items: { type: 'string' } },
+			id: schema.fields.string(),
+			contents: schema.fields.string({ nullable: true }),
+			tags: schema.fields.array({ items: schema.fields.string() }),
 		},
 	});
 	const v1Schema = schema({
@@ -888,16 +886,19 @@ it('supports skip migrations in real life', async () => {
 
 	await client.close();
 
-	const v2Item = collection({
+	const v2Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: () => 'default' },
-			contents: { type: 'string', default: 'empty' },
-			tags: { type: 'array', items: { type: 'string' } },
-			listId: { type: 'string', nullable: true, indexed: true },
+			id: schema.fields.string({ default: () => 'default' }),
+			contents: schema.fields.string({ default: 'empty' }),
+			tags: schema.fields.array({ items: schema.fields.string() }),
+			listId: schema.fields.string({ nullable: true }),
 		},
-		synthetics: {
+		indexes: {
+			listId: {
+				field: 'listId',
+			},
 			hasTags: {
 				type: 'string',
 				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -909,14 +910,14 @@ it('supports skip migrations in real life', async () => {
 			},
 		},
 	});
-	const v2List = collection({
+	const v2List = schema.collection({
 		name: 'list',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: 'something' },
-			name: { type: 'string' },
-			items: { type: 'array', items: { type: 'string' } },
-			nullable: { type: 'string', nullable: true },
+			id: schema.fields.string({ default: 'something' }),
+			name: schema.fields.string(),
+			items: schema.fields.array({ items: schema.fields.string() }),
+			nullable: schema.fields.string({ nullable: true }),
 		},
 	});
 
@@ -935,29 +936,26 @@ it('supports skip migrations in real life', async () => {
 		}),
 	);
 
-	const v3Item = collection({
+	const v3Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: () => 'default' },
-			contents: { type: 'string', default: 'empty' },
-			tags: {
-				type: 'array',
-				items: {
-					type: 'object',
+			id: schema.fields.string({ default: () => 'default' }),
+			contents: schema.fields.string({ default: 'empty' }),
+			tags: schema.fields.array({
+				items: schema.fields.object({
 					properties: {
-						name: {
-							type: 'string',
-						},
-						color: {
-							type: 'string',
-						},
+						name: schema.fields.string(),
+						color: schema.fields.string(),
 					},
-				},
-			},
-			listId: { type: 'string', nullable: true, indexed: true },
+				}),
+			}),
+			listId: schema.fields.string({ nullable: true }),
 		},
-		synthetics: {
+		indexes: {
+			listId: {
+				field: 'listId',
+			},
 			hasTags: {
 				type: 'string',
 				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -983,21 +981,19 @@ it('supports skip migrations in real life', async () => {
 		}),
 	);
 
-	const v4List = collection({
+	const v4List = schema.collection({
 		name: 'list',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: () => 'default' },
-			name: { type: 'string', default: 'empty' },
-			items: {
-				type: 'array',
-				items: {
-					type: 'object',
+			id: schema.fields.string({ default: () => 'default' }),
+			name: schema.fields.string({ default: 'empty' }),
+			items: schema.fields.array({
+				items: schema.fields.object({
 					properties: {
 						...v3Item.fields,
 					},
-				},
-			},
+				}),
+			}),
 		},
 	});
 
