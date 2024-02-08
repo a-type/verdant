@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.4.2
+
+### Patch Changes
+
+- 19cbf93: Specify module for code generation during bootstrap of create-app
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.0.6
+
+### Patch Changes
+
+- c0105e7: Fix DeepPartial type and update syntax
+
 ## 3.0.5
 
 ### Patch Changes

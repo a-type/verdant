@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.2.2
+
+### Patch Changes
+
+- 398452d: Fix CLI for older node versions hanging on schema read
+
 ## 4.2.1
 
 ### Patch Changes
