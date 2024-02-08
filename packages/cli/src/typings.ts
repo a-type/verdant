@@ -3,6 +3,7 @@ import {
 	IndexValueTag,
 	StorageCollectionSchema,
 	StorageFieldSchema,
+	StorageFieldsSchema,
 	StorageSchema,
 	StorageSyntheticIndexSchema,
 	hasDefault,
@@ -187,7 +188,9 @@ function getFieldTypings({
 		case 'object':
 			let declarations = '';
 			const objBuilder = recordBuilder();
-			for (const [key, subfield] of Object.entries(field.properties)) {
+			for (const [key, subfield] of Object.entries(
+				field.properties as StorageFieldsSchema,
+			)) {
 				const fieldName = `${name}${pascalCase(key)}`;
 				const subfieldTypings = getFieldTypings({
 					name: fieldName,
@@ -352,10 +355,12 @@ function getEntityFieldTypings({
 			return [baseList, itemTypings].join('\n');
 		case 'object':
 			const subtypes = new Array<string>();
-			Object.entries(field.properties).forEach(([key, field]) => {
-				const fieldName = `${name}${pascalCase(key)}`;
-				subtypes.push(getEntityFieldTypings({ name: fieldName, field }));
-			});
+			Object.entries(field.properties as StorageFieldsSchema).forEach(
+				([key, field]) => {
+					const fieldName = `${name}${pascalCase(key)}`;
+					subtypes.push(getEntityFieldTypings({ name: fieldName, field }));
+				},
+			);
 			return [
 				aliasBuilder(
 					name,
