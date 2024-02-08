@@ -25,6 +25,7 @@ const fieldValidator: z.ZodType<any> = z.discriminatedUnion('type', [
 		type: z.literal('object'),
 		properties: z.object({}).catchall(z.lazy(() => fieldValidator)),
 		nullable: z.boolean().optional(),
+		default: z.union([z.any(), functionValidator]),
 	}),
 	z.object({
 		type: z.literal('array'),
