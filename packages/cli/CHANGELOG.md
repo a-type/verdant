@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.2.3
+
+### Patch Changes
+
+- 14ec36f: Fix OS path resolution for commonJS check in CLI
+
 ## 4.2.2
 
 ### Patch Changes
