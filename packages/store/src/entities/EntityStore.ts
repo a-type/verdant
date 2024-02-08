@@ -397,7 +397,7 @@ export class EntityStore extends Disposable {
 	private getCollectionSchema = (
 		collectionName: string,
 	): {
-		schema: StorageObjectFieldSchema | null;
+		schema: StorageObjectFieldSchema<any> | null;
 		readonlyKeys: string[];
 	} => {
 		const schema = this.ctx.schema.collections[collectionName];

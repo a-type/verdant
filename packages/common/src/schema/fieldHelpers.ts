@@ -84,7 +84,7 @@ const mapField = <T extends NestedStorageFieldSchema>(args: {
 	};
 };
 
-const fileField = (args: {
+const fileField = (args?: {
 	nullable?: boolean;
 	downloadRemote?: boolean;
 }): StorageFileFieldSchema => {

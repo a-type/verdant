@@ -1,52 +1,39 @@
-import { collection, createMigration, schema } from '@verdant-web/common';
+import { createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';
 import { METADATA_VERSION_KEY } from '../../client/constants.js';
 
-export const todoCollection = collection({
+export const todoCollection = schema.collection({
 	name: 'todo',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
-			indexed: true,
+		id: schema.fields.string({
 			default: () => Math.random().toString(36).slice(2, 9),
-		},
-		content: {
-			type: 'string',
-			indexed: true,
-		},
-		done: {
-			type: 'boolean',
+		}),
+		content: schema.fields.string(),
+		done: schema.fields.boolean({
 			default: false,
-		},
-		tags: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
-		},
-		category: {
-			type: 'string',
-		},
-		attachments: {
-			type: 'array',
-			items: {
-				type: 'object',
+		}),
+		tags: schema.fields.array({
+			items: schema.fields.string(),
+		}),
+		category: schema.fields.string(),
+		attachments: schema.fields.array({
+			items: schema.fields.object({
 				properties: {
-					name: {
-						type: 'string',
-					},
-					test: {
-						type: 'number',
+					name: schema.fields.string(),
+					test: schema.fields.number({
 						default: 1,
-					},
+					}),
 				},
-			},
-		},
+			}),
+		}),
 	},
-	synthetics: {
+	indexes: {
+		content: {
+			field: 'content',
+		},
 		example: {
 			type: 'string',
 			compute: (doc) => doc.content,
@@ -62,44 +49,28 @@ export const todoCollection = collection({
 	},
 });
 
-export const weirdCollection = collection({
+export const weirdCollection = schema.collection({
 	name: 'weird',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
-			indexed: true,
+		id: schema.fields.string({
 			default: () => Math.random().toString(36).slice(2, 9),
-		},
-		weird: {
-			type: 'any',
-		},
-		map: {
-			type: 'map',
-			values: {
-				type: 'string',
-			},
-		},
-		fileList: {
-			type: 'array',
-			items: {
-				type: 'file',
-			},
-		},
-		objectMap: {
-			type: 'map',
-			values: {
-				type: 'object',
+		}),
+		weird: schema.fields.any(),
+		map: schema.fields.map({
+			values: schema.fields.string(),
+		}),
+		fileList: schema.fields.array({
+			items: schema.fields.file(),
+		}),
+		objectMap: schema.fields.map({
+			values: schema.fields.object({
 				properties: {
-					content: {
-						type: 'string',
-					},
+					content: schema.fields.string(),
 				},
-			},
-		},
+			}),
+		}),
 	},
-	synthetics: {},
-	compounds: {},
 });
 
 const testSchema = schema({
