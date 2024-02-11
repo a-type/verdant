@@ -1,7 +1,6 @@
 import { ReplicaType } from '@verdant-web/server';
 import {
 	collection,
-	createDefaultMigration,
 	createMigration,
 	Migration,
 	schema,
@@ -51,13 +50,13 @@ async function createTestClient({
 }
 
 it('can export data and import it even after a schema migration', async () => {
-	const v1Item = collection({
+	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string' },
-			contents: { type: 'string' },
-			tags: { type: 'array', items: { type: 'string' } },
+			id: schema.fields.string(),
+			contents: schema.fields.string(),
+			tags: schema.fields.array({ items: schema.fields.string() }),
 		},
 	});
 	const v1Schema = schema({
@@ -104,16 +103,19 @@ it('can export data and import it even after a schema migration', async () => {
 
 	await client.close();
 
-	const v2Item = collection({
+	const v2Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: () => 'default' },
-			contents: { type: 'string', default: 'empty' },
-			tags: { type: 'array', items: { type: 'string' } },
-			listId: { type: 'string', nullable: true, indexed: true },
+			id: schema.fields.string({ default: () => 'default' }),
+			contents: schema.fields.string({ default: 'empty' }),
+			tags: schema.fields.array({ items: schema.fields.string() }),
+			listId: schema.fields.string({ nullable: true }),
 		},
-		synthetics: {
+		indexes: {
+			listId: {
+				field: 'listId',
+			},
 			hasTags: {
 				type: 'string',
 				compute: (item) => (item.tags.length > 0 ? 'true' : 'false'),
@@ -129,9 +131,9 @@ it('can export data and import it even after a schema migration', async () => {
 		name: 'list',
 		primaryKey: 'id',
 		fields: {
-			id: { type: 'string', default: 'something' },
-			name: { type: 'string' },
-			items: { type: 'array', items: { type: 'string' } },
+			id: schema.fields.string({ default: 'something' }),
+			name: schema.fields.string(),
+			items: schema.fields.array({ items: schema.fields.string() }),
 		},
 	});
 
