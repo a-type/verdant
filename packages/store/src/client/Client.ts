@@ -84,7 +84,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 						onData: this.addData,
 						log: this.context.log,
 				  })
-				: new NoSync<Presence, Profile>();
+				: new NoSync<Presence, Profile>({ meta: this.meta });
 		if (context.schema.wip && this.config.syncConfig) {
 			context.log(
 				'warn',

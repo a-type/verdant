@@ -84,10 +84,16 @@ export class NoSync<Presence = any, Profile = any>
 	public readonly status = 'paused';
 	public readonly pullInterval = 0;
 
-	public readonly presence = new PresenceManager<Profile, Presence>({
-		initialPresence: {} as any,
-		defaultProfile: {} as any,
-	});
+	public readonly presence;
+
+	constructor({ meta }: { meta: Metadata }) {
+		super();
+		this.presence = new PresenceManager({
+			initialPresence: null as any,
+			defaultProfile: null as any,
+			replicaStore: meta.localReplica,
+		});
+	}
 
 	uploadFile = async () => {
 		return {
@@ -218,6 +224,7 @@ export class ServerSync<Presence = any, Profile = any>
 			initialPresence,
 			defaultProfile,
 			updateBatchTimeout: presenceUpdateBatchTimeout,
+			replicaStore: meta.localReplica,
 		});
 		this.endpointProvider = new ServerSyncEndpointProvider({
 			authEndpoint,

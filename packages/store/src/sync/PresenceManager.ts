@@ -5,7 +5,10 @@ import {
 	Batch,
 } from '@verdant-web/common';
 import type { UserInfo } from '../index.js';
-import { LocalReplicaInfo } from '../metadata/LocalReplicaStore.js';
+import {
+	LocalReplicaInfo,
+	LocalReplicaStore,
+} from '../metadata/LocalReplicaStore.js';
 
 export const HANDLE_MESSAGE = Symbol('handleMessage');
 
@@ -28,6 +31,7 @@ export class PresenceManager<
 	peerLeft: (userId: string, lastPresence: UserInfo<Profile, Presence>) => void;
 	/** Fired after local presence changes are flushed to the server. */
 	update: (presence: Partial<Presence>) => void;
+	load: () => void;
 }> {
 	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
 	private _self = { profile: {} } as UserInfo<Profile, Presence>;
@@ -63,14 +67,23 @@ export class PresenceManager<
 		initialPresence,
 		updateBatchTimeout = 200,
 		defaultProfile,
+		replicaStore,
 	}: {
 		initialPresence: Presence;
 		defaultProfile: Profile;
 		updateBatchTimeout?: number;
+		replicaStore: LocalReplicaStore;
 	}) {
 		super();
 		this.self.presence = initialPresence;
 		this.self.profile = defaultProfile;
+		this.self.id = '';
+		this.self.replicaId = '';
+
+		// set the local replica ID as soon as it's loaded
+		replicaStore.get().then((info) => {
+			this.self.replicaId = info.id;
+		});
 
 		this._updateBatcher = new Batcher(this.flushPresenceUpdates);
 		this._updateBatch = this._updateBatcher.add({
