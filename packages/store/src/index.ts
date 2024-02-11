@@ -24,6 +24,7 @@ export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { EntityFile, type EntityFileSnapshot } from './files/EntityFile.js';
 export {
+	/** @deprecated - use schema.collection */
 	collection,
 	schema,
 	createDefaultMigration,
@@ -34,6 +35,17 @@ export type {
 	StorageDocument,
 	StorageSchema,
 	StorageCollectionSchema,
+	StorageAnyFieldSchema,
+	StorageArrayFieldSchema,
+	StorageObjectFieldSchema,
+	StorageBooleanFieldSchema,
+	StorageFieldSchema,
+	StorageFileFieldSchema,
+	StorageMapFieldSchema,
+	StorageNumberFieldSchema,
+	StorageStringFieldSchema,
+	StorageFieldsSchema,
+	IndexValueTag,
 	Migration,
 } from '@verdant-web/common';
 export type { UserInfo } from '@verdant-web/common';
