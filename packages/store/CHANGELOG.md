@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.1.0
+
+### Minor Changes
+
+- e0b2a02: Late minor bump for previous changes. Also exports a few more typings related to schemas.
+
 ## 3.0.7
 
 ### Patch Changes
