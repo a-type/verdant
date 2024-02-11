@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 3.1.1
+
+### Patch Changes
+
+- e4f0720: Fix bug with presence not having a local replica id
+- Updated dependencies [e4f0720]
+  - @verdant-web/common@2.1.1
+
 ## 3.1.0
 
 ### Minor Changes

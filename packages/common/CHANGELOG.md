@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.1.1
+
+### Patch Changes
+
+- e4f0720: Fix bug with presence not having a local replica id
+
 ## 2.1.0
 
 ### Minor Changes
