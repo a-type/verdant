@@ -21,7 +21,7 @@ import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
 import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
 import busboy from 'busboy';
 import { FileInfo, FileStorage } from './files/FileStorage.js';
-import { Readable } from 'stream';
+import internal, { Readable } from 'stream';
 import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
 import { ServerLibrary } from './ServerLibrary.js';
 import { migrations } from './migrations.js';
@@ -108,7 +108,7 @@ export declare interface Server {
 }
 
 export class Server extends EventEmitter implements MessageSender {
-	readonly httpServer: HttpServer;
+	private httpServer: HttpServer;
 	private wss: WebSocketServer;
 	private fileStorage?: FileStorage;
 	private fileMetadata;
@@ -171,30 +171,63 @@ export class Server extends EventEmitter implements MessageSender {
 		this.wss.on('connection', this.handleConnection);
 
 		this.httpServer =
-			options.httpServer || new HttpServer(this.internalServerHandleRequest);
-
-		this.httpServer.on('upgrade', async (req, socket, head) => {
-			try {
-				const info = this.authorizeRequest(req);
-				this.wss.handleUpgrade(req, socket, head, (ws) => {
-					this.wss.emit('connection', ws, req, info);
-				});
-			} catch (e) {
-				this.emit('error', e);
-				if (e instanceof VerdantError && e.httpStatus === 401) {
-					socket.write(
-						'HTTP/1.1 401 Unauthorized\r\n' +
-							'Connection: close\r\n' +
-							'Content-Length: 0\r\n' +
-							'\r\n',
-					);
-				}
-				socket.destroy();
-			}
-		});
+			options.httpServer || new HttpServer(this.createInternalRequestHandler());
 
 		this.keepalives.subscribe('lost', this.library.remove);
 	}
+
+	/**
+	 * Attaches the Verdant server to an HttpServer instance, which
+	 * allows it to handle requests and websockets required for the
+	 * Verdant protocol.
+	 *
+	 * You can pass httpPath = false if you want to handle HTTP requests
+	 * yourself, and this will only attach the websocket handling.
+	 */
+	attach = (
+		server: HttpServer,
+		options: { httpPath?: string | false } = {},
+	) => {
+		if (this.httpServer) {
+			this.httpServer.off('upgrade', this.handleUpgrade);
+		}
+		this.httpServer = server;
+		this.httpServer.on('upgrade', this.handleUpgrade);
+
+		if (options.httpPath !== false) {
+			this.httpServer.on(
+				'request',
+				this.createInternalRequestHandler(options.httpPath),
+			);
+		}
+	};
+
+	/**
+	 * Handles an HTTP upgrade request to a websocket connection.
+	 */
+	handleUpgrade = async (
+		req: IncomingMessage,
+		socket: internal.Duplex,
+		head: Buffer,
+	) => {
+		try {
+			const info = this.authorizeRequest(req);
+			this.wss.handleUpgrade(req, socket, head, (ws) => {
+				this.wss.emit('connection', ws, req, info);
+			});
+		} catch (e) {
+			this.emit('error', e);
+			if (e instanceof VerdantError && e.httpStatus === 401) {
+				socket.write(
+					'HTTP/1.1 401 Unauthorized\r\n' +
+						'Connection: close\r\n' +
+						'Content-Length: 0\r\n' +
+						'\r\n',
+				);
+			}
+			socket.destroy();
+		}
+	};
 
 	private authorizeRequest = (req: IncomingMessage) => {
 		return this.tokenVerifier.verifyToken(this.getRequestToken(req));
@@ -223,23 +256,26 @@ export class Server extends EventEmitter implements MessageSender {
 		return token;
 	};
 
-	private internalServerHandleRequest = (
-		req: IncomingMessage,
-		res: ServerResponse,
-	) => {
-		const url = new URL(req.url || '', 'http://localhost');
-		if (url.pathname.startsWith('lofi')) {
-			if (url.pathname === 'lofi') {
-				return this.handleRequest(req, res);
-			} else if (url.pathname.startsWith('/lofi/files/')) {
-				return this.handleFileRequest(req, res);
+	private createInternalRequestHandler = (pathPrefix = '/sync') => {
+		const handleRequest = (req: IncomingMessage, res: ServerResponse) => {
+			const url = new URL(req.url || '', 'http://localhost');
+			if (url.pathname.startsWith('sync')) {
+				if (url.pathname === 'sync') {
+					return this.handleRequest(req, res);
+				} else if (url.pathname.startsWith('/sync/files/')) {
+					return this.handleFileRequest(req, res);
+				}
+			} else {
+				res.writeHead(404);
+				res.end();
 			}
-		} else {
-			res.writeHead(404);
-			res.end();
-		}
+		};
+		return handleRequest;
 	};
 
+	/**
+	 * Handles an HTTP request from a verdant client.
+	 */
 	handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
 		try {
 			if (req.method === 'POST') {

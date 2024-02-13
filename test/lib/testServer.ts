@@ -32,7 +32,6 @@ export async function startTestServer({
 				return { id: userId };
 			},
 		},
-		httpServer,
 		log: log
 			? (...args: any[]) =>
 					console.log(
@@ -45,6 +44,7 @@ export async function startTestServer({
 			host: `http://localhost:${port}/files`,
 		}),
 	});
+	server.attach(httpServer, { httpPath: false });
 
 	const tokenProvider = new TokenProvider({
 		secret: SECRET,
