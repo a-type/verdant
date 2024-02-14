@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 2.1.0
+
+### Minor Changes
+
+- 3bd652f: Support fetch-style server integration using new server methods.
+
 ## 2.0.8
 
 ### Patch Changes

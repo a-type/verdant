@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.1.2
+
+### Patch Changes
+
+- 3bd652f: Support fetch-style server integration using new server methods.
+
 ## 3.1.1
 
 ### Patch Changes
