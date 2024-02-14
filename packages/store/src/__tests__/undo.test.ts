@@ -65,7 +65,7 @@ describe('undoing operations', () => {
 
 	it('should create batches without undo', async () => {
 		const storage = await createTestStorage({
-			log: console.log,
+			// log: console.log,
 		});
 
 		const item = await storage.todos.put({

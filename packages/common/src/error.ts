@@ -1,8 +1,13 @@
 export enum VerdantErrorCode {
-	Unexpected = 5000,
+	InvalidRequest = 4000,
+	BodyRequired = 4001,
 	NoToken = 4010,
 	InvalidToken = 4011,
 	TokenExpired = 4012,
+	NotFound = 4040,
+	Unexpected = 5000,
+	ConfigurationError = 5010,
+	NoFileStorage = 5011,
 }
 
 export class VerdantError extends Error {

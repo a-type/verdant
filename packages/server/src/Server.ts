@@ -25,6 +25,12 @@ import internal, { Readable } from 'stream';
 import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
 import { ServerLibrary } from './ServerLibrary.js';
 import { migrations } from './migrations.js';
+import {
+	ReadableStream,
+	ReadableWritablePair,
+	TransformStream,
+	WritableStream,
+} from 'node:stream/web';
 
 export interface ServerOptions {
 	/**
@@ -229,11 +235,21 @@ export class Server extends EventEmitter implements MessageSender {
 		}
 	};
 
-	private authorizeRequest = (req: IncomingMessage) => {
+	private authorizeRequest = (req: IncomingMessage | Request) => {
 		return this.tokenVerifier.verifyToken(this.getRequestToken(req));
 	};
 
-	private getRequestToken = (req: IncomingMessage) => {
+	private getRequestToken = (req: IncomingMessage | Request) => {
+		if (isFetch(req)) {
+			const authHeader = req.headers.get('Authorization');
+			assert(authHeader, 'Token is required');
+			const [type, token] = authHeader.split(' ');
+			if (type === 'Bearer') {
+				return token;
+			}
+			return token;
+		}
+
 		if (req.headers.authorization) {
 			const [type, token] = req.headers.authorization.split(' ');
 			if (type === 'Bearer') {
@@ -310,33 +326,71 @@ export class Server extends EventEmitter implements MessageSender {
 						});
 					}));
 
-				try {
-					for (const message of body.messages) {
-						await this.handleMessage(key, info, message);
-					}
-				} catch (e) {
-					this.emit('error', e);
-					res.writeHead(500);
-					res.end();
-					return;
-				}
-
-				// update our keepalive timers for presence management
-				const firstMessage = body.messages[0];
-				if (firstMessage) {
-					this.keepalives.refresh(info.libraryId, firstMessage.replicaId);
-				}
+				await this.handleRequestBody(key, info, body);
 
 				finish();
 
 				this.emit('request', info);
 			}
 		} catch (e) {
-			return this.sendErrorResponse(e, res);
+			return this.writeErrorResponse(e, res);
 		}
 	};
 
-	private sendErrorResponse(e: unknown, res: ServerResponse) {
+	/**
+	 * Handles a "fetch" style request. Complement to handleRequest, for servers
+	 * that use Request/Response style handlers.
+	 */
+	handleFetch = async (req: Request): Promise<Response> => {
+		try {
+			const info = this.authorizeRequest(req);
+			const key = generateId();
+
+			const finish = this.clientConnections.addFetch(
+				info.libraryId,
+				key,
+				req,
+				info,
+			);
+
+			const body = (await req.json()) as
+				| { messages: ClientMessage[] }
+				| null
+				| undefined;
+
+			if (!body) {
+				throw new VerdantError(VerdantError.Code.BodyRequired);
+			}
+
+			await this.handleRequestBody(key, info, body);
+
+			const res = finish();
+
+			this.emit('request', info);
+
+			return res;
+		} catch (e) {
+			return this.getErrorResponse(e);
+		}
+	};
+
+	private handleRequestBody = async (
+		key: string,
+		info: TokenInfo,
+		body: { messages: ClientMessage[] },
+	) => {
+		for (const message of body.messages) {
+			await this.handleMessage(key, info, message);
+		}
+
+		// update our keepalive timers for presence management
+		const firstMessage = body.messages[0];
+		if (firstMessage) {
+			this.keepalives.refresh(info.libraryId, firstMessage.replicaId);
+		}
+	};
+
+	private writeErrorResponse(e: unknown, res: ServerResponse) {
 		this.emit('error', e);
 		this.log('Error handling request', e);
 
@@ -355,129 +409,236 @@ export class Server extends EventEmitter implements MessageSender {
 		res.end();
 	}
 
+	// for fetch-style
+	private getErrorResponse(e: unknown) {
+		this.emit('error', e);
+		this.log('Error handling request', e);
+
+		if (e instanceof VerdantError) {
+			return new Response(JSON.stringify(e.toResponse()), {
+				status: e.httpStatus,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		} else {
+			return new Response(
+				JSON.stringify(
+					new VerdantError(VerdantError.Code.Unexpected).toResponse(),
+				),
+				{
+					status: 500,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				},
+			);
+		}
+	}
+
 	/**
 	 * Handles a multipart upload of a file from a verdant client. The upload
 	 * will include parameters for the file's ID, name, and type. The request
 	 * must be authenticated with a token to tie it to a library.
 	 */
 	handleFileRequest = async (req: IncomingMessage, res: ServerResponse) => {
-		const fs = this.fileStorage;
-		if (!fs) {
-			this.emit(
-				'error',
-				new Error(
-					'No file storage configured, but a client attempted to upload a file.',
-				),
-			);
-			res.writeHead(500);
-			res.write('File storage is not configured');
-			res.end();
-			return;
-		}
-
-		// FIXME: rather than trying to support Express, I should
-		// just expose regular methods you call from whatever HTTP handler...
-		const url = new URL(
-			(req as any).originalUrl || (req as any).baseUrl || req.url || '',
-			'http://localhost',
-		);
-
-		const id = url.pathname.split('/').pop();
-
-		if (!id || id === 'files') {
-			res.writeHead(400);
-			res.write(
-				'File ID is required to be in the URL path as the last parameter',
-			);
-			res.end();
-			return;
-		}
-
 		try {
+			const info = this.authorizeRequest(req);
+
+			const url = new URL(
+				(req as any).originalUrl || (req as any).baseUrl || req.url || '',
+				'http://localhost',
+			);
+
+			const id = url.pathname.split('/').pop();
+
+			if (!id || id === 'files') {
+				throw new VerdantError(VerdantError.Code.NotFound);
+			}
+
 			if (req.method === 'POST') {
-				const info = this.authorizeRequest(req);
-				await new Promise((resolve, reject) => {
-					const bb = busboy({ headers: req.headers });
-
-					bb.on('file', (fieldName, stream, fileInfo) => {
-						// too many 'info's....
-						const lofiFileInfo: FileInfo = {
-							id,
-							libraryId: info.libraryId,
-							fileName: fileInfo.filename,
-							type: fileInfo.mimeType,
-						};
-						// write metadata to storage
-						try {
-							this.fileMetadata.put(info.libraryId, lofiFileInfo);
-							fs.put(stream, lofiFileInfo);
-						} catch (e) {
-							reject(e);
-						}
-					});
-					bb.on('field', (fieldName, value) => {
-						if (fieldName === 'file') {
-							if (this.__testMode) {
-								// this isn't right in the real world, but in testing it's
-								// the only way we get file data.
-								// we create a stream from the data and pass it as if it
-								// were a file stream
-								const stream = new Readable();
-								stream.push(value);
-								stream.push(null);
-								const fileInfo = {
-									filename: 'test.txt',
-									mimeType: 'text/plain',
-								};
-								bb.emit('file', fieldName, stream, fileInfo);
-							} else {
-								throw new Error('Invalid file upload');
-							}
-						}
-					});
-
-					req.pipe(bb);
-					bb.on('finish', resolve);
-					bb.on('error', reject);
+				await this.streamIncomingFile({
+					req,
+					info,
+					headers: req.headers,
+					id,
 				});
 				this.log('File upload complete');
 				res.writeHead(200);
 				res.write(JSON.stringify({ success: true }));
 				res.end();
 			} else if (req.method === 'GET') {
-				const info = this.authorizeRequest(req);
-
-				const fileInfo = this.fileMetadata.get(info.libraryId, id);
-				if (!fileInfo) {
-					res.writeHead(404);
-					res.end();
-					return;
-				}
-
-				const url = await fs.getUrl({
-					fileName: fileInfo.name,
-					id: fileInfo.fileId,
-					libraryId: info.libraryId,
-					type: fileInfo.type,
-				});
+				const data = await this.getFileData(info, id);
 				res.writeHead(200, {
 					'Content-Type': 'application/json',
 				});
-				// we need to augment that data with the URL from the file backend.
-				// and generally enforce the FileData interface here...
-				const data: FileData = {
-					id: fileInfo.fileId,
-					url,
-					remote: true,
-					name: fileInfo.name,
-					type: fileInfo.type,
-				};
 				res.write(JSON.stringify(data));
 				res.end();
 			}
 		} catch (e) {
-			return this.sendErrorResponse(e, res);
+			return this.writeErrorResponse(e, res);
 		}
+	};
+
+	/**
+	 * Handles a "fetch" style file request. Complement to handleFileRequest,
+	 * for servers that use Request/Response style handlers.
+	 */
+	handleFileFetch = async (req: Request): Promise<Response> => {
+		this.log('info', 'Handling file fetch', req.url, req.method);
+		try {
+			const info = this.authorizeRequest(req);
+
+			const url = new URL(req.url, 'http://localhost');
+
+			const id = url.pathname.split('/').pop();
+
+			if (!id || id === 'files') {
+				throw new VerdantError(VerdantError.Code.NotFound);
+			}
+
+			if (req.method === 'POST') {
+				if (!req.body) {
+					throw new VerdantError(VerdantError.Code.InvalidRequest);
+				}
+
+				const headersAsRecord = Array.from(req.headers.entries()).reduce(
+					(acc, [key, value]) => {
+						acc[key] = value;
+						return acc;
+					},
+					{} as Record<string, string | string[] | undefined>,
+				);
+
+				// this is needed because Node's webstreams don't
+				// like itty's polyfill streams
+				const intermediate = new TransformStream();
+				req.body.pipeTo(intermediate.writable);
+
+				await this.streamIncomingFile({
+					req: Readable.fromWeb(intermediate.readable),
+					info,
+					headers: headersAsRecord,
+					id,
+				});
+				this.log('File upload complete');
+				return new Response(JSON.stringify({ success: true }), {
+					status: 200,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				});
+			} else if (req.method === 'GET') {
+				const data = await this.getFileData(info, id);
+				return new Response(JSON.stringify(data), {
+					status: 200,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				});
+			} else {
+				throw new VerdantError(VerdantError.Code.InvalidRequest);
+			}
+		} catch (e) {
+			return this.getErrorResponse(e);
+		}
+	};
+
+	private getFileStorageOrThrow = () => {
+		if (!this.fileStorage) {
+			throw new VerdantError(VerdantError.Code.NoFileStorage);
+		}
+		return this.fileStorage;
+	};
+
+	private streamIncomingFile = ({
+		id,
+		req,
+		headers,
+		info,
+	}: {
+		req: Readable;
+		headers: Record<string, string | string[] | undefined>;
+		id: string;
+		info: TokenInfo;
+	}) => {
+		const fs = this.getFileStorageOrThrow();
+
+		return new Promise((resolve, reject) => {
+			const bb = busboy({ headers });
+
+			bb.on('file', (fieldName, stream, fileInfo) => {
+				// too many 'info's....
+				const lofiFileInfo: FileInfo = {
+					id,
+					libraryId: info.libraryId,
+					fileName: fileInfo.filename,
+					type: fileInfo.mimeType,
+				};
+				// write metadata to storage
+				try {
+					this.fileMetadata.put(info.libraryId, lofiFileInfo);
+					fs.put(stream, lofiFileInfo);
+				} catch (e) {
+					reject(e);
+				}
+			});
+			bb.on('field', (fieldName, value) => {
+				if (fieldName === 'file') {
+					if (this.__testMode) {
+						// this isn't right in the real world, but in testing it's
+						// the only way we get file data.
+						// we create a stream from the data and pass it as if it
+						// were a file stream
+						const stream = new Readable();
+						stream.push(value);
+						stream.push(null);
+						const fileInfo = {
+							filename: 'test.txt',
+							mimeType: 'text/plain',
+						};
+						bb.emit('file', fieldName, stream, fileInfo);
+					} else {
+						throw new Error('Invalid file upload');
+					}
+				}
+			});
+
+			req.pipe(bb);
+			bb.on('finish', resolve);
+			bb.on('error', reject);
+		});
+	};
+
+	private getFileData = async (
+		info: TokenInfo,
+		id: string,
+	): Promise<FileData> => {
+		const fs = this.getFileStorageOrThrow();
+
+		const fileInfo = this.fileMetadata.get(info.libraryId, id);
+		if (!fileInfo) {
+			throw new VerdantError(
+				VerdantError.Code.NotFound,
+				undefined,
+				`File ${id} not found`,
+			);
+		}
+
+		const url = await fs.getUrl({
+			fileName: fileInfo.name,
+			id: fileInfo.fileId,
+			libraryId: info.libraryId,
+			type: fileInfo.type,
+		});
+
+		return {
+			id: fileInfo.fileId,
+			url,
+			remote: true,
+			name: fileInfo.name,
+			type: fileInfo.type,
+		};
 	};
 
 	broadcast = (
@@ -628,4 +789,8 @@ export class Server extends EventEmitter implements MessageSender {
 			createOid(collection, documentId),
 		);
 	};
+}
+
+function isFetch(request: Request | IncomingMessage): request is Request {
+	return 'json' in request;
 }

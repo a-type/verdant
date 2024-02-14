@@ -526,6 +526,9 @@ importers:
       '@verdant-web/store':
         specifier: workspace:*
         version: link:../packages/store
+      '@whatwg-node/server':
+        specifier: ^0.9.25
+        version: 0.9.25
       express:
         specifier: ^4.18.2
         version: 4.18.2
@@ -535,6 +538,9 @@ importers:
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
+      itty-router:
+        specifier: ^4.0.27
+        version: 4.0.27
       jsdom:
         specifier: ^20.0.0
         version: 20.0.0
@@ -4111,7 +4117,7 @@ packages:
       cssnano-preset-advanced: 5.3.9(postcss@8.4.21)
       postcss: 8.4.21
       postcss-sort-media-queries: 4.3.0(postcss@8.4.21)
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /@docusaurus/logger@2.1.0:
@@ -4119,7 +4125,7 @@ packages:
     engines: {node: '>=16.14'}
     dependencies:
       chalk: 4.1.2
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /@docusaurus/mdx-loader@2.1.0(@docusaurus/types@2.1.0)(react-dom@18.2.0)(react@18.2.0):
@@ -4143,7 +4149,7 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
       remark-emoji: 2.2.0
       stringify-object: 3.3.0
-      tslib: 2.4.0
+      tslib: 2.6.2
       unified: 9.2.2
       unist-util-visit: 2.0.3
       url-loader: 4.1.1(file-loader@6.2.0)(webpack@5.74.0)
@@ -4200,7 +4206,7 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       reading-time: 1.5.0
-      tslib: 2.4.0
+      tslib: 2.6.2
       unist-util-visit: 2.0.3
       utility-types: 3.10.0
       webpack: 5.74.0
@@ -4244,7 +4250,7 @@ packages:
       lodash: 4.17.21
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       utility-types: 3.10.0
       webpack: 5.74.0
     transitivePeerDependencies:
@@ -4280,7 +4286,7 @@ packages:
       fs-extra: 10.1.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       webpack: 5.74.0
     transitivePeerDependencies:
       - '@parcel/css'
@@ -4314,7 +4320,7 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-json-view: 1.21.3(@types/react@18.0.20)(react-dom@18.2.0)(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -4347,7 +4353,7 @@ packages:
       '@docusaurus/utils-validation': 2.1.0(@docusaurus/types@2.1.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -4378,7 +4384,7 @@ packages:
       '@docusaurus/utils-validation': 2.1.0(@docusaurus/types@2.1.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -4414,7 +4420,7 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       sitemap: 7.1.1
-      tslib: 2.4.0
+      tslib: 2.6.2
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -4516,7 +4522,7 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
       react-router-dom: 5.3.4(react@18.2.0)
       rtlcss: 3.5.0
-      tslib: 2.4.0
+      tslib: 2.6.2
       utility-types: 3.10.0
     transitivePeerDependencies:
       - '@parcel/css'
@@ -4557,7 +4563,7 @@ packages:
       prism-react-renderer: 1.3.5(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       utility-types: 3.10.0
     transitivePeerDependencies:
       - '@docusaurus/types'
@@ -4601,7 +4607,7 @@ packages:
       lodash: 4.17.21
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       utility-types: 3.10.0
     transitivePeerDependencies:
       - '@algolia/client-search'
@@ -4629,7 +4635,7 @@ packages:
     engines: {node: '>=16.14'}
     dependencies:
       fs-extra: 10.1.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /@docusaurus/types@2.1.0(react-dom@18.2.0)(react@18.2.0):
@@ -4664,7 +4670,7 @@ packages:
         optional: true
     dependencies:
       '@docusaurus/types': 2.1.0(react-dom@18.2.0)(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /@docusaurus/utils-validation@2.1.0(@docusaurus/types@2.1.0):
@@ -4675,7 +4681,7 @@ packages:
       '@docusaurus/utils': 2.1.0(@docusaurus/types@2.1.0)
       joi: 17.6.4
       js-yaml: 4.1.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     transitivePeerDependencies:
       - '@docusaurus/types'
       - '@swc/core'
@@ -4707,7 +4713,7 @@ packages:
       micromatch: 4.0.5
       resolve-pathname: 3.0.0
       shelljs: 0.8.5
-      tslib: 2.4.0
+      tslib: 2.6.2
       url-loader: 4.1.1(file-loader@6.2.0)(webpack@5.74.0)
       webpack: 5.74.0
     transitivePeerDependencies:
@@ -6082,6 +6088,10 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
+
+  /@kamilkisiela/fast-url-parser@1.1.4:
+    resolution: {integrity: sha512-gbkePEBupNydxCelHCESvFSFM8XPh1Zs/OAVRW/rKpEqPAl5PbOM90Si8mv9bvnR53uPD2s/FiRxdvSejpRJew==}
+    dev: false
 
   /@leichtgewicht/ip-codec@2.0.4:
     resolution: {integrity: sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==}
@@ -8824,6 +8834,38 @@ packages:
     resolution: {integrity: sha512-niT+Prh3Aff8Uf1MVBVUsaNjFj9rJAKDXuoHIKiQbB+6IUP/3J3JIhBNyZ7lDhytvXxw6ppgnwKZdDJ08UMj4Q==}
     dev: false
 
+  /@whatwg-node/events@0.1.1:
+    resolution: {integrity: sha512-AyQEn5hIPV7Ze+xFoXVU3QTHXVbWPrzaOkxtENMPMuNL6VVHrp4hHfDt9nrQpjO7BgvuM95dMtkycX5M/DZR3w==}
+    engines: {node: '>=16.0.0'}
+    dev: false
+
+  /@whatwg-node/fetch@0.9.16:
+    resolution: {integrity: sha512-mqasZiUNquRe3ea9+aCAuo81BR6vq5opUKprPilIHTnrg8a21Z1T1OrI+KiMFX8OmwO5HUJe/vro47lpj2JPWQ==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@whatwg-node/node-fetch': 0.5.6
+      urlpattern-polyfill: 10.0.0
+    dev: false
+
+  /@whatwg-node/node-fetch@0.5.6:
+    resolution: {integrity: sha512-cmAsGMHoI0S3AHi3CmD3ma1Q234ZI2JNmXyDyM9rLtbXejBKxU3ZWdhS+mzRIAyUxZCMGlFW1tHmROv0MDdxpw==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@kamilkisiela/fast-url-parser': 1.1.4
+      '@whatwg-node/events': 0.1.1
+      busboy: 1.6.0
+      fast-querystring: 1.1.2
+      tslib: 2.6.2
+    dev: false
+
+  /@whatwg-node/server@0.9.25:
+    resolution: {integrity: sha512-DlPqPPcfyzh4/9Lz1fl4c5bZsGp/1wCh7B+cK8FE1bWoW7tlZkVguvGn/XnYPKthGzEIwo/fLdHwevH44z+eeg==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@whatwg-node/fetch': 0.9.16
+      tslib: 2.6.2
+    dev: false
+
   /@xtuc/ieee754@1.2.0:
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
 
@@ -9061,7 +9103,7 @@ packages:
     dependencies:
       '@types/react': 18.0.20
       react: 18.2.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /array-back@3.1.0:
@@ -9117,7 +9159,7 @@ packages:
     resolution: {integrity: sha512-x1FCFnFifvYDDzTaLII71vG5uvDwgtmDTEVWAxrgeiR8VjMONcCXJx7E+USjDtHlwFmt9MysbqgF9b9Vjr6w+w==}
     engines: {node: '>=4'}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: true
 
   /async-lock@1.4.0:
@@ -9554,7 +9596,7 @@ packages:
     resolution: {integrity: sha512-gxGWBrTT1JuMx6R+o5PTXMmUnhnVzLQ9SNutD4YqKtI6ap897t3tKECYla6gCWEkplXnlNybEkZg9GEGxKFCgw==}
     dependencies:
       pascal-case: 3.1.2
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /camelcase-css@2.0.1:
@@ -9620,7 +9662,7 @@ packages:
     resolution: {integrity: sha512-ds37W8CytHgwnhGGTi88pcPyR15qoNkOpYwmMMfnWqqWgESapLqvDx6huFjQ5vqWSn2Z06173XNA7LtMOeUh1A==}
     dependencies:
       no-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
       upper-case-first: 2.0.2
     dev: false
 
@@ -9991,7 +10033,7 @@ packages:
     resolution: {integrity: sha512-I2hSBi7Vvs7BEuJDr5dDHfzb/Ruj3FyvFyh7KLilAjNQw3Be+xgqUBA2W6scVEcL0hL1dwPRtIqEPVUCKkSsyQ==}
     dependencies:
       no-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
       upper-case: 2.0.2
     dev: false
 
@@ -10808,7 +10850,7 @@ packages:
     resolution: {integrity: sha512-Kv5nKlh6yRrdrGvxeJ2e5y2eRUpkUosIW4A2AS38zwSz27zu7ufDwQPi5Jhs3XAlGNetl3bmnGhQsMtkKJnj3w==}
     dependencies:
       no-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /dot-prop@5.3.0:
@@ -11552,6 +11594,10 @@ packages:
     resolution: {integrity: sha512-vxybH29Owtc6khV/Usy47B1g+eKwyhFiX8nwpCC4td320jvwrKQDH6vNtcJZgUzVxmfsSIlHzLKQzT76JMCO7A==}
     engines: {node: '>=18'}
 
+  /fast-decode-uri-component@1.0.1:
+    resolution: {integrity: sha512-WKgKWg5eUxvRZGwW8FvfbaH7AXSh2cL+3j5fMGzUMCxWBJ3dV3a7Wz8y2f/uQ0e3B6WmodD3oS54jTQ9HVTIIg==}
+    dev: false
+
   /fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -11574,6 +11620,12 @@ packages:
 
   /fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
+
+  /fast-querystring@1.1.2:
+    resolution: {integrity: sha512-g6KuKWmFXc0fID8WWH0jit4g0AGBoJhCkJMb1RmbsSEUNvQ+ZC8D6CUZ+GtF8nMzSPXnhiePyyqqipzNNEnHjg==}
+    dependencies:
+      fast-decode-uri-component: 1.0.1
+    dev: false
 
   /fast-url-parser@1.1.3:
     resolution: {integrity: sha512-5jOCVXADYNuRkKFzNJ0dCCewsZiYo0dz8QNYljkOpFC6r2U4OBmKtvm/Tsuh4w1YYdDqDb31a8TVhBJ2OJKdqQ==}
@@ -11657,7 +11709,7 @@ packages:
     resolution: {integrity: sha512-s8KNnmIDTBoD0p9uJ9uD0XY38SCeBOtj0UMXyQSLg1Ypfrfj8+dAvwsLjYQkQ2GjhVtp2HrnF5cJzMhBjfD8HA==}
     engines: {node: '>= 10'}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /file-type@18.7.0:
@@ -12281,7 +12333,7 @@ packages:
     resolution: {integrity: sha512-H/vuk5TEEVZwrR0lp2zed9OCo1uAILMlx0JEMgC26rzyJJ3N1v6XkwHHXJQdR2doSjcGPM6OKPYoJgf0plJ11Q==}
     dependencies:
       capital-case: 1.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /history@4.10.1:
@@ -12973,6 +13025,10 @@ packages:
       react: 18.2.0
     dev: false
 
+  /itty-router@4.0.27:
+    resolution: {integrity: sha512-Q3/GOE2EJvyu3hhxGN3WDWh3QNg4v7h1KFx/jSLcIOOkpSI1jUFTgGefEESXon4j5YwqCIf0DEemjiVAFSBiUw==}
+    dev: false
+
   /jackspeak@2.3.6:
     resolution: {integrity: sha512-N3yCS/NegsOBokc8GAdM8UcmfsKiSS8cipheD/nivzr700H+nsMOxJjQnvwOcRYVuFkdH0wGUvW2WbXGmrZGbQ==}
     engines: {node: '>=14'}
@@ -13386,7 +13442,7 @@ packages:
   /lower-case@2.0.2:
     resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /lowercase-keys@1.0.1:
@@ -13790,7 +13846,7 @@ packages:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
     dependencies:
       lower-case: 2.0.2
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /node-abi@3.24.0:
@@ -14168,7 +14224,7 @@ packages:
     resolution: {integrity: sha512-RXlj7zCYokReqWpOPH9oYivUzLYZ5vAPIfEmCTNViosC78F8F0H9y7T7gG2M39ymgutxF5gcFEsyZQSph9Bp3A==}
     dependencies:
       dot-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /parent-module@1.0.1:
@@ -14226,14 +14282,14 @@ packages:
     resolution: {integrity: sha512-uWlGT3YSnK9x3BQJaOdcZwrnV6hPpd8jFH1/ucpiLRPh/2zCVJKS19E4GvYHvaCcACn3foXZ0cLB9Wrx1KGe5g==}
     dependencies:
       no-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /path-case@3.0.4:
     resolution: {integrity: sha512-qO4qCFjXqVTrcbPt/hQfhTQ+VhFsqNKOPtytgNKkKxSoEp3XPUQ8ObFuePylOIok5gjn69ry8XiULxCwot3Wfg==}
     dependencies:
       dot-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /path-exists@3.0.0:
@@ -15622,7 +15678,7 @@ packages:
       '@types/react': 18.0.20
       react: 18.2.0
       react-style-singleton: 2.2.1(@types/react@18.0.20)(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /react-remove-scroll@2.5.4(@types/react@18.0.20)(react@18.2.0):
@@ -15639,7 +15695,7 @@ packages:
       react: 18.2.0
       react-remove-scroll-bar: 2.3.4(@types/react@18.0.20)(react@18.2.0)
       react-style-singleton: 2.2.1(@types/react@18.0.20)(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       use-callback-ref: 1.3.0(@types/react@18.0.20)(react@18.2.0)
       use-sidecar: 1.1.2(@types/react@18.0.20)(react@18.2.0)
     dev: false
@@ -15658,7 +15714,7 @@ packages:
       react: 18.2.0
       react-remove-scroll-bar: 2.3.4(@types/react@18.0.20)(react@18.2.0)
       react-style-singleton: 2.2.1(@types/react@18.0.20)(react@18.2.0)
-      tslib: 2.4.0
+      tslib: 2.6.2
       use-callback-ref: 1.3.0(@types/react@18.0.20)(react@18.2.0)
       use-sidecar: 1.1.2(@types/react@18.0.20)(react@18.2.0)
     dev: false
@@ -15720,7 +15776,7 @@ packages:
       get-nonce: 1.0.1
       invariant: 2.2.4
       react: 18.2.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /react-textarea-autosize@8.3.4(@types/react@18.0.20)(react@18.2.0):
@@ -16170,7 +16226,7 @@ packages:
   /rxjs@7.5.7:
     resolution: {integrity: sha512-z9MzKh/UcOqB3i20H6rtrlaE/CgjLOvheWK/9ILrbhROGTweAi1BaFsTT9FbwZi5Trr1qNRs+MXkhmR06awzQA==}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /safari-14-idb-fix@3.0.0:
@@ -16337,7 +16393,7 @@ packages:
     resolution: {integrity: sha512-8LS0JInaQMCRoQ7YUytAo/xUu5W2XnQxV2HI/6uM6U7CITS1RqPElr30V6uIqyMKM9lJGRVFy5/4CuzcixNYSg==}
     dependencies:
       no-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
       upper-case-first: 2.0.2
     dev: false
 
@@ -16541,7 +16597,7 @@ packages:
     resolution: {integrity: sha512-LAOh4z89bGQvl9pFfNF8V146i7o7/CqFPbqzYgP+yYzDIDeS9HaNFtXABamRW+AQzEVODcvE79ljJ+8a9YSdMg==}
     dependencies:
       dot-case: 3.0.4
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /sockjs@0.3.24:
@@ -17231,10 +17287,10 @@ packages:
 
   /tslib@2.4.0:
     resolution: {integrity: sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==}
+    dev: false
 
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
-    dev: false
 
   /tsx@3.12.1:
     resolution: {integrity: sha512-Rcg1x+rNe7qwlP8j7kx4VjP/pJo/V57k+17hlrn6a7FuQLNwkaw5W4JF75tYornNVCxkXdSUnqlIT8JY/ttvIw==}
@@ -17643,13 +17699,13 @@ packages:
   /upper-case-first@2.0.2:
     resolution: {integrity: sha512-514ppYHBaKwfJRK/pNC6c/OxfGa0obSnAl106u97Ed0I625Nin96KAjttZF6ZL3e1XLtphxnqrOi9iWgm+u+bg==}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /upper-case@2.0.2:
     resolution: {integrity: sha512-KgdgDGJt2TpuwBUIjgG6lzw2GWFRCW9Qkfkiv0DxqHHLYJHmtmdUIKcZd8rHgFSjopVTlw6ggzCm1b8MFQwikg==}
     dependencies:
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /uri-js@4.4.1:
@@ -17687,6 +17743,10 @@ packages:
       querystringify: 2.2.0
       requires-port: 1.0.0
 
+  /urlpattern-polyfill@10.0.0:
+    resolution: {integrity: sha512-H/A06tKD7sS1O1X2SshBVeA5FLycRpjqiBeqGKmBwBDBy28EnRjORxTNe269KSSr5un5qyWi1iL61wLxpd+ZOg==}
+    dev: false
+
   /urlpattern-polyfill@9.0.0:
     resolution: {integrity: sha512-WHN8KDQblxd32odxeIgo83rdVDE2bvdkb86it7bMhYZwWKJz0+O0RK/eZiHYnM+zgt/U7hAHOlCQGfjjvSkw2g==}
     dev: true
@@ -17703,7 +17763,7 @@ packages:
     dependencies:
       '@types/react': 18.0.20
       react: 18.2.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /use-composed-ref@1.3.0(react@18.2.0):
@@ -17754,7 +17814,7 @@ packages:
       '@types/react': 18.0.20
       detect-node-es: 1.1.0
       react: 18.2.0
-      tslib: 2.4.0
+      tslib: 2.6.2
     dev: false
 
   /use-sync-external-store@1.2.0(react@18.2.0):

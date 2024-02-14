@@ -414,7 +414,7 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 
 		if (newSync === this.activeSync) return;
-		this.log('switching to', transport, 'mode');
+		this.log('debug', 'switching to', transport, 'mode');
 
 		// transfer state to new sync
 		if (this.activeSync.status === 'active') {
@@ -439,6 +439,11 @@ export class ServerSync<Presence = any, Profile = any>
 	};
 
 	uploadFile = async (info: FileData) => {
+		this.log('info', 'Uploading file', {
+			name: info.name,
+			type: info.type,
+			id: info.id,
+		});
 		if (this.activeSync.status === 'active') {
 			return this.fileSync.uploadFile(info);
 		} else {

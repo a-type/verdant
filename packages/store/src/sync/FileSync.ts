@@ -57,6 +57,7 @@ export class FileSync {
 			});
 
 			if (response.ok) {
+				this.log('info', 'File upload successful');
 				return {
 					success: true,
 					retry: false,

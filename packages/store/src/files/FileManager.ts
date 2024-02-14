@@ -77,12 +77,7 @@ export class FileManager {
 		await this.storage.addFile(file);
 		// send to sync
 		if (file.file) {
-			const result = await this.sync.uploadFile(file);
-			if (result.success) {
-				await this.storage.markUploaded(file.id);
-			} else {
-				this.context.log('error', 'Failed to upload file');
-			}
+			await this.uploadFile(file, 1);
 		}
 	};
 

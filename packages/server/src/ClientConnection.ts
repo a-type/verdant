@@ -40,10 +40,47 @@ class RequestClientConnection extends ClientConnection {
 	};
 }
 
+class FetchClientConnection extends ClientConnection {
+	readonly type = 'fetch';
+
+	private responses: ServerMessage[] = [];
+	res = new Response('', { status: 200 });
+
+	constructor(
+		key: string,
+		private readonly req: Request,
+		private readonly info: TokenInfo,
+	) {
+		super(key);
+	}
+
+	respond = (message: ServerMessage) => {
+		this.responses.push(message);
+	};
+
+	end = () => {
+		this.res = new Response(
+			JSON.stringify({
+				messages: this.responses,
+			}),
+			{
+				status: 200,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			},
+		);
+	};
+}
+
 class WebSocketClientConnection extends ClientConnection {
 	readonly type = 'websocket';
 
-	constructor(key: string, readonly ws: WebSocket, readonly info: TokenInfo) {
+	constructor(
+		key: string,
+		readonly ws: WebSocket,
+		readonly info: TokenInfo,
+	) {
 		super(key);
 	}
 
@@ -101,6 +138,25 @@ export class ClientConnectionManager {
 		return () => {
 			connection.end();
 			lib.delete(key);
+		};
+	};
+
+	addFetch = (
+		libraryId: string,
+		key: string,
+		req: Request,
+		info: TokenInfo,
+	): (() => Response) => {
+		const lib = this.getLibraryConnections(libraryId);
+
+		const connection = new FetchClientConnection(key, req, info);
+
+		lib.set(key, connection);
+
+		return () => {
+			connection.end();
+			lib.delete(key);
+			return connection.res;
 		};
 	};
 
