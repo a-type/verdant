@@ -40,6 +40,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 	const to = resolve(rawTo);
 	const external = forceExternal ?? isExternal(to);
 	const transitioning = useIsRouteTransitioning();
+	const preserveScroll = rawTo.startsWith('?');
 
 	const wasClickedRef = useRef(false);
 
@@ -82,10 +83,20 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 				replace,
 				skipTransition,
 				state,
+				preserveScroll,
 			});
 			onClick?.(event);
 		},
-		[onClick, replace, state, preserveQuery],
+		[
+			onClick,
+			replace,
+			state,
+			preserveQuery,
+			preserveScroll,
+			to,
+			navigate,
+			skipTransition,
+		],
 	);
 
 	const pathAtRenderTime =
@@ -118,6 +129,9 @@ function isExternal(url: string = '') {
 function resolve(path: string = '') {
 	if (path.startsWith('.')) {
 		return new URL(path, window.location.href).pathname;
+	}
+	if (path.startsWith('?')) {
+		return window.location.pathname + path;
 	}
 	return path;
 }
