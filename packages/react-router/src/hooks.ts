@@ -259,7 +259,11 @@ export function useSearchParams() {
 	const setParams = useCallback(
 		(
 			params: URLSearchParams | ((old: URLSearchParams) => URLSearchParams),
-			options: { state?: any; skipTransition?: boolean; replace?: boolean },
+			options: {
+				state?: any;
+				skipTransition?: boolean;
+				replace?: boolean;
+			} = {},
 		) => {
 			const newParams =
 				typeof params === 'function'
