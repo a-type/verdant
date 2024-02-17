@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.2.1
+
+### Patch Changes
+
+- 064a094: Fix failure to save document query indexes when data was synced which includes collections which are no longer in the current schema
+
 ## 3.2.0
 
 ### Minor Changes
