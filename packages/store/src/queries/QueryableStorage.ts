@@ -45,9 +45,24 @@ export class QueryableStorage extends IDBService {
 			return;
 		}
 
-		const collections = Array.from(
+		let collections = Array.from(
 			new Set(entities.map((e) => decomposeOid(e.oid).collection)),
 		);
+		// we could theoretically receive entities from old schema versions which no
+		// longer have collections. We should ignore these. If we don't, the transaction
+		// will fail, because the object store doesn't exist.
+		const toRemove = collections.filter((c) => !this.ctx.schema.collections[c]);
+		if (toRemove.length > 0) {
+			this.ctx.log(
+				'warn',
+				`Ignoring entities from collections that no longer exist: ${toRemove.join(
+					', ',
+				)}`,
+			);
+			const withRemoved = new Set(collections);
+			toRemove.forEach((c) => withRemoved.delete(c));
+			collections = Array.from(withRemoved);
+		}
 		const options = {
 			transaction: this.createTransaction(collections, {
 				mode: 'readwrite',
