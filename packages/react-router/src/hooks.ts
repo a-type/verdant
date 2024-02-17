@@ -259,7 +259,7 @@ export function useSearchParams() {
 	const setParams = useCallback(
 		(
 			params: URLSearchParams | ((old: URLSearchParams) => URLSearchParams),
-			options: { state?: any; skipTransition?: boolean },
+			options: { state?: any; skipTransition?: boolean; replace?: boolean },
 		) => {
 			const newParams =
 				typeof params === 'function'
@@ -275,7 +275,11 @@ export function useSearchParams() {
 			};
 			const newSearch = newParams.toString();
 			if (newSearch !== location.search) {
-				window.history.pushState(routeState, '', `?${newSearch}`);
+				if (options.replace) {
+					window.history.replaceState(routeState, '', `?${newSearch}`);
+				} else {
+					window.history.pushState(routeState, '', `?${newSearch}`);
+				}
 				window.dispatchEvent(new PopStateEvent('popstate'));
 				internalSetParams(newParams);
 			}
