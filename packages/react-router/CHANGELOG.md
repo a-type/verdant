@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.6.0
+
+### Minor Changes
+
+- 0603aa4: Fix various router problems. Router onNavigate now accepts full location as first parameter (breaking change). Fixed links going to stale locations if to prop changed. Fix scroll resetting on search param change. Fixed scroll jumping to 0 during a suspense route transition.
+
 ## 0.5.5
 
 ### Patch Changes
