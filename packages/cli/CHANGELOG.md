@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.3.0
+
+### Minor Changes
+
+- 4077465: This release officially removes support for "indexed" applied to individual fields in your schema. Please migrate to use the "indexes" section of the collection definition instead! It also fixes some typing issues with the new field creator functions on schema.fields.
+
 ## 4.2.4
 
 ### Patch Changes
