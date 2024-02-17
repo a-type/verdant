@@ -114,7 +114,7 @@ export declare interface Server {
 }
 
 export class Server extends EventEmitter implements MessageSender {
-	private httpServer: HttpServer;
+	private httpServer!: HttpServer;
 	private wss: WebSocketServer;
 	private fileStorage?: FileStorage;
 	private fileMetadata;
@@ -176,8 +176,12 @@ export class Server extends EventEmitter implements MessageSender {
 
 		this.wss.on('connection', this.handleConnection);
 
-		this.httpServer =
-			options.httpServer || new HttpServer(this.createInternalRequestHandler());
+		if (options.httpServer) {
+			// backwards compat with old httpServer option - it didn't attach path handlers
+			this.attach(options.httpServer, { httpPath: false });
+		} else {
+			this.attach(new HttpServer(this.createInternalRequestHandler()));
+		}
 
 		this.keepalives.subscribe('lost', this.library.remove);
 	}
