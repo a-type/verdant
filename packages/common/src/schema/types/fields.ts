@@ -1,7 +1,5 @@
 export type StorageStringFieldSchema = {
 	type: 'string';
-	/** @deprecated - add an index to indexes with this field name. */
-	indexed?: boolean;
 	nullable?: boolean;
 	default?: string | (() => string);
 	/** Limit the values to a certain set of options */
@@ -9,8 +7,6 @@ export type StorageStringFieldSchema = {
 };
 export type StorageNumberFieldSchema = {
 	type: 'number';
-	/** @deprecated - add an index to indexes with this field name. */
-	indexed?: boolean;
 	nullable?: boolean;
 	default?: number | (() => number);
 };
@@ -18,26 +14,23 @@ export type StorageBooleanFieldSchema = {
 	type: 'boolean';
 	nullable?: boolean;
 	default?: boolean | (() => boolean);
-	/** @deprecated - add an index to indexes with this field name. */
-	indexed?: boolean;
 };
-export type StorageArrayFieldSchema<TItems extends NestedStorageFieldSchema> = {
+export type StorageArrayFieldSchema<TItems extends StorageFieldSchema> = {
 	type: 'array';
 	items: TItems;
 	nullable?: boolean;
 };
-export type StorageObjectFieldSchema<Props extends NestedStorageFieldsSchema> =
-	{
-		type: 'object';
-		properties: Props;
-		nullable?: boolean;
-		default?: Record<string, any> | (() => Record<string, any>);
-	};
+export type StorageObjectFieldSchema<Props extends StorageFieldsSchema> = {
+	type: 'object';
+	properties: Props;
+	nullable?: boolean;
+	default?: Record<string, any> | (() => Record<string, any>);
+};
 export type StorageAnyFieldSchema<TShape = any> = {
 	type: 'any';
 	default?: TShape;
 };
-export type StorageMapFieldSchema<V extends NestedStorageFieldSchema> = {
+export type StorageMapFieldSchema<V extends StorageFieldSchema> = {
 	type: 'map';
 	values: V;
 };
@@ -62,41 +55,9 @@ export type StorageFieldSchema =
 	| StorageMapFieldSchema<any>
 	| StorageFileFieldSchema;
 
-// nested versions don't have index info
-export type NestedStorageStringFieldSchema = {
-	type: 'string';
-	nullable?: boolean;
-	default?: string | (() => string);
-};
-export type NestedStorageNumberFieldSchema = {
-	type: 'number';
-	nullable?: boolean;
-	default?: number | (() => number);
-};
-export type NestedStorageBooleanFieldSchema = {
-	type: 'boolean';
-	nullable?: boolean;
-	default: boolean | (() => boolean);
-};
-
-export type NestedStorageFieldSchema =
-	| NestedStorageStringFieldSchema
-	| NestedStorageNumberFieldSchema
-	| NestedStorageBooleanFieldSchema
-	| StorageArrayFieldSchema<any>
-	| StorageObjectFieldSchema<any>
-	| StorageAnyFieldSchema
-	| StorageMapFieldSchema<any>
-	| StorageFileFieldSchema;
-
 export type StorageFieldsSchema = {
 	[key: string]: StorageFieldSchema;
 };
-
-export type NestedStorageFieldsSchema = Record<
-	string,
-	NestedStorageFieldSchema
->;
 
 // filters to only fields which can be indexed
 export type StorageIndexableFields<Fields extends StorageFieldsSchema> = {

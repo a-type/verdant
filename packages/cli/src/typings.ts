@@ -8,7 +8,6 @@ import {
 	StorageSyntheticIndexSchema,
 	hasDefault,
 	isDirectSynthetic,
-	isIndexed,
 	isNullable,
 } from '@verdant-web/common';
 import { pascalCase } from 'change-case';
@@ -401,15 +400,17 @@ export function getFilterTypings({
 }) {
 	let filters = new Array<{ typing: string; name: string }>();
 	Object.entries(collection.fields).forEach(([key, field]) => {
-		if (!isIndexed(field)) return;
-		filters.push(
-			...getFieldFilterTypings({
-				field,
-				key,
-				name: `${name}${pascalCase(key)}`,
-				collection,
-			}),
-		);
+		// transitional... until fully dropping 'indexed'
+		if ('indexed' in field) {
+			filters.push(
+				...getFieldFilterTypings({
+					field,
+					key,
+					name: `${name}${pascalCase(key)}`,
+					collection,
+				}),
+			);
+		}
 	});
 	Object.entries(collection.indexes ?? {}).forEach(([key, field]) => {
 		filters.push(

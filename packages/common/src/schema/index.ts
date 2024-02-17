@@ -1,4 +1,3 @@
-import { isIndexed } from './fields.js';
 import {
 	CollectionCompoundIndices,
 	StorageCollectionSchema,
@@ -28,7 +27,7 @@ export function collection<
 	const finalIndexes = { ...synthetics, ...indexes };
 	// add all indexed fields into the synthetic indices (back compat)
 	for (const [key, field] of Object.entries(input.fields)) {
-		if (isIndexed(field)) {
+		if ('indexed' in field) {
 			finalIndexes[key] = {
 				field: key,
 			} as StorageDirectSyntheticSchema<Fields>;

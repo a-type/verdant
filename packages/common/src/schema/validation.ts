@@ -1,11 +1,7 @@
 import { OID_KEY } from '../oids.js';
 import { isObject } from '../utils.js';
 import { hasDefault, isNullable } from './fields.js';
-import {
-	NestedStorageFieldsSchema,
-	StorageFieldSchema,
-	StorageFieldsSchema,
-} from './types.js';
+import { StorageFieldSchema, StorageFieldsSchema } from './types.js';
 
 export function validateEntity(
 	schema: StorageFieldsSchema,
@@ -81,7 +77,7 @@ export function validateEntityField({
 			};
 		}
 		for (const [key, subField] of Object.entries(
-			field.properties as NestedStorageFieldsSchema,
+			field.properties as StorageFieldsSchema,
 		)) {
 			// legacy -- old objects sometimes accidentally include this key
 			if (key === OID_KEY) continue;
