@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.6.1
+
+### Patch Changes
+
+- 61f77a6: Export a few types for the router
+
 ## 0.6.0
 
 ### Minor Changes
