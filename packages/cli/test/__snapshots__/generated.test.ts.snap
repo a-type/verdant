@@ -806,12 +806,9 @@ export interface GeneratedHooks<Presence, Profile> {
 }
 
 type HookName = \`use\${string}\`;
-type HookWithoutClient<
-  Hook extends <TArgs extends any[], TRet>(
-    client: Client,
-    ...args: Targs
-  ) => TRet,
-> = (...args: TArgs) => TRet;
+type ArgsWithoutClient<T> = T extends (client: Client, ...args: infer U) => any
+  ? U
+  : never;
 export function createHooks<
   Presence = any,
   Profile = any,
@@ -831,7 +828,9 @@ export function createHooks<
   >(
     mutations: Mutations,
   ) => GeneratedHooks<Presence, Profile> & {
-    [MutHook in keyof Mutations]: HookWithoutClient<Mutations[MutHook]>;
+    [MutHook in keyof Mutations]: (
+      ...args: ArgsWithoutClient<Mutations[MutHook]>
+    ) => ReturnType<Mutations[MutHook]>;
   };
 };
 "
