@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 2.1.3
+
+### Patch Changes
+
+- a99d9a4: Add types for libraryInfo. Return null if library is not stored in the database.
+
 ## 2.1.2
 
 ### Patch Changes
