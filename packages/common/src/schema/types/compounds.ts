@@ -1,9 +1,9 @@
 import {
-	NestedStorageBooleanFieldSchema,
-	NestedStorageNumberFieldSchema,
-	NestedStorageStringFieldSchema,
 	StorageArrayFieldSchema,
+	StorageBooleanFieldSchema,
 	StorageFieldsSchema,
+	StorageNumberFieldSchema,
+	StorageStringFieldSchema,
 } from './fields.js';
 import {
 	DirectIndexableFieldName,
@@ -14,9 +14,9 @@ import {
 type PrimitiveArrayFields<Fields extends StorageFieldsSchema> = {
 	[K in keyof Fields as Fields[K] extends StorageArrayFieldSchema<infer U>
 		? U extends
-				| NestedStorageStringFieldSchema
-				| NestedStorageNumberFieldSchema
-				| NestedStorageBooleanFieldSchema
+				| StorageStringFieldSchema
+				| StorageNumberFieldSchema
+				| StorageBooleanFieldSchema
 			? K
 			: never
 		: never]: Fields[K];

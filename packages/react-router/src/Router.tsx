@@ -2,18 +2,18 @@ import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { RouteConfig, RouteMatch } from './types.js';
 import { RouteGlobalProvider, RouteLevelProvider } from './context.js';
 import { Outlet } from './Outlet.js';
-import { useOnLocationChange } from './hooks.js';
-import { getScrollPosition, recordScrollPosition } from './scrollPositions.js';
+import { PreviousLocation, useOnLocationChange } from './hooks.js';
 
 export interface RouterProps {
 	children: ReactNode;
 	routes: RouteConfig[];
 	onNavigate?: (
-		path: string,
+		location: Location,
 		routerState: {
 			state?: any;
 			skipTransition?: boolean;
 		},
+		previous: PreviousLocation,
 	) => boolean | void;
 	/**
 	 * Pass this to re-enable browser-native scroll restoration
@@ -61,8 +61,8 @@ export function Router({
 		};
 	}, [nativeScrollRestoration]);
 
-	useOnLocationChange((location, state) => {
-		const cancelNavigation = onNavigate?.(location.pathname, state) === false;
+	useOnLocationChange((location, state, previous) => {
+		const cancelNavigation = onNavigate?.(location, state, previous) === false;
 		if (cancelNavigation) return;
 
 		if (state?.skipTransition) {

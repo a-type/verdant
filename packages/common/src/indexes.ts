@@ -2,7 +2,6 @@ import {
 	StorageCollectionSchema,
 	StorageSyntheticIndexSchema,
 	CollectionCompoundIndex,
-	isIndexed,
 	StorageDirectSyntheticSchema,
 } from './index.js';
 
@@ -139,7 +138,8 @@ export function computeCompoundIndices(
 function computeIndexedFields(schema: StorageCollectionSchema, doc: any) {
 	return Object.entries(schema.fields).reduce<Record<string, any>>(
 		(acc, [key, field]) => {
-			if (isIndexed(field)) {
+			// TODO: remove once I'm comfortable dropping 'indexed' support
+			if ('indexed' in field) {
 				acc[key] = sanitizeIndexValue(doc[key]);
 			}
 			return acc;

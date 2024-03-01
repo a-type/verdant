@@ -1,5 +1,22 @@
 # @lo-fi/web
 
+## 3.2.1
+
+### Patch Changes
+
+- 064a094: Fix failure to save document query indexes when data was synced which includes collections which are no longer in the current schema
+
+## 3.2.0
+
+### Minor Changes
+
+- 4077465: This release officially removes support for "indexed" applied to individual fields in your schema. Please migrate to use the "indexes" section of the collection definition instead! It also fixes some typing issues with the new field creator functions on schema.fields.
+
+### Patch Changes
+
+- Updated dependencies [4077465]
+  - @verdant-web/common@2.2.0
+
 ## 3.1.2
 
 ### Patch Changes

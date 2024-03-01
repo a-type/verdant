@@ -1,5 +1,18 @@
 # @lo-fi/server
 
+## 2.1.2
+
+### Patch Changes
+
+- Updated dependencies [4077465]
+  - @verdant-web/common@2.2.0
+
+## 2.1.1
+
+### Patch Changes
+
+- cffabae: fix http server attachment mistake in last release. only affected passing httpServer to Verdant Server constructor
+
 ## 2.1.0
 
 ### Minor Changes

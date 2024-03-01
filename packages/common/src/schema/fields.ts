@@ -3,7 +3,7 @@ import { isObject } from '../utils.js';
 import type {
 	StorageFieldSchema,
 	StorageCollectionSchema,
-	NestedStorageFieldsSchema,
+	StorageFieldsSchema,
 } from './types.js';
 
 export function isNullable(field: StorageFieldSchema) {
@@ -45,16 +45,6 @@ export function isPrunePoint(field: StorageFieldSchema) {
 	return isNullable(field) || hasDefault(field);
 }
 
-/** @deprecated */
-export function isIndexed(field: StorageFieldSchema) {
-	if (field.type === 'map') return false;
-	if (field.type === 'object') return false;
-	if (field.type === 'array') return false;
-	if (field.type === 'file') return false;
-	if (field.type === 'any') return false;
-	return field.indexed;
-}
-
 export function addFieldDefaults(
 	collection: StorageCollectionSchema,
 	value: any,
@@ -83,7 +73,7 @@ export function traverseCollectionFieldsAndApplyDefaults(
 	if (value === undefined || value === null) return value;
 	if (field.type === 'object') {
 		for (const [key, subField] of Object.entries(
-			field.properties as NestedStorageFieldsSchema,
+			field.properties as StorageFieldsSchema,
 		)) {
 			if (value[key] === undefined) {
 				const defaultValue = getFieldDefault(subField);
@@ -136,7 +126,7 @@ export function getFieldDefault(field: StorageFieldSchema) {
 				? field.default()
 				: JSON.parse(JSON.stringify(field.default));
 		for (const [key, property] of Object.entries(
-			field.properties as NestedStorageFieldsSchema,
+			field.properties as StorageFieldsSchema,
 		)) {
 			if (defaultValue[key] === undefined) {
 				defaultValue[key] = getFieldDefault(property);

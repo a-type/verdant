@@ -1,10 +1,10 @@
 import {
-	NestedStorageFieldSchema,
-	NestedStorageFieldsSchema,
 	ShapeFromFieldsWithDefaults,
 	StorageAnyFieldSchema,
 	StorageArrayFieldSchema,
 	StorageBooleanFieldSchema,
+	StorageFieldSchema,
+	StorageFieldsSchema,
 	StorageFileFieldSchema,
 	StorageMapFieldSchema,
 	StorageNumberFieldSchema,
@@ -12,7 +12,7 @@ import {
 	StorageStringFieldSchema,
 } from './types.js';
 
-const objectField = <Props extends NestedStorageFieldsSchema>(args: {
+const objectField = <Props extends StorageFieldsSchema>(args: {
 	properties: Props;
 	nullable?: boolean;
 	default?:
@@ -25,7 +25,7 @@ const objectField = <Props extends NestedStorageFieldsSchema>(args: {
 	};
 };
 
-const arrayField = <T extends NestedStorageFieldSchema>(args: {
+const arrayField = <T extends StorageFieldSchema>(args: {
 	items: T;
 	nullable?: boolean;
 }): StorageArrayFieldSchema<T> => {
@@ -75,7 +75,7 @@ const anyField = <TShape>(args?: {
 	};
 };
 
-const mapField = <T extends NestedStorageFieldSchema>(args: {
+const mapField = <T extends StorageFieldSchema>(args: {
 	values: T;
 }): StorageMapFieldSchema<T> => {
 	return {

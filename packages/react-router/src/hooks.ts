@@ -22,6 +22,7 @@ import {
 import { getScrollPosition, recordScrollPosition } from './scrollPositions.js';
 import { RouteConfig, RouteMatch } from './types.js';
 import { generateId } from './util.js';
+import { useIsRouteTransitioning } from './TransitionIndicator.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -29,28 +30,51 @@ function useStableCallback<T extends Function>(cb: T): T {
 	return useCallback((...args: any[]) => ref.current(...args), []) as any as T;
 }
 
+export type RouteState = {
+	state?: any;
+	skipTransition?: boolean;
+	id: string;
+	isSearch?: boolean;
+};
+
+export type PreviousLocation = {
+	pathname: string;
+	search: string;
+	hash: string;
+};
+
 /**
  * Calls the given callback when the location changes.
  */
 export function useOnLocationChange(
 	callback: (
 		location: Location,
-		state: {
-			state?: any;
-			skipTransition?: boolean;
-			id: string;
-		},
+		state: RouteState,
+		prev: PreviousLocation,
 	) => void,
 ) {
 	const cb = useStableCallback(callback);
+	const previousRef = useRef<PreviousLocation>({
+		pathname: location.pathname,
+		search: location.search,
+		hash: location.hash,
+	});
+
 	useLayoutEffect(() => {
-		const handler = (ev: PopStateEvent) =>
+		const handler = (ev: PopStateEvent) => {
 			cb(
 				location,
 				ev.state || {
 					id: 'initial',
 				},
+				previousRef.current,
 			);
+			previousRef.current = {
+				pathname: location.pathname,
+				search: location.search,
+				hash: location.hash,
+			};
+		};
 		window.addEventListener('popstate', handler);
 		return () => window.removeEventListener('popstate', handler);
 	}, [cb]);
@@ -101,10 +125,13 @@ export function useMatchingRoutes(): RouteMatch[] {
 export function useParams<Shape extends Record<string, string>>(): Shape {
 	const matches = useMatchingRoutes();
 	return useMemo(() => {
-		return matches.reduce((params, match) => {
-			Object.assign(params, match.params);
-			return params;
-		}, {} as any as Shape);
+		return matches.reduce(
+			(params, match) => {
+				Object.assign(params, match.params);
+				return params;
+			},
+			{} as any as Shape,
+		);
 	}, [matches]);
 }
 
@@ -162,10 +189,18 @@ export function useNavigate() {
 				replace,
 				skipTransition,
 				state = null,
-			}: { replace?: boolean; skipTransition?: boolean; state?: any } = {},
+				preserveScroll,
+			}: {
+				replace?: boolean;
+				skipTransition?: boolean;
+				state?: any;
+				preserveScroll?: boolean;
+			} = {},
 		) => {
 			events.dispatchEvent(new WillNavigateEvent());
-			const id = generateId();
+			// if paths are equal for this navigation, preserve current
+			// route id
+			const id = preserveScroll ? history.state?.id ?? 'initial' : generateId();
 			const routeState = {
 				state,
 				skipTransition,
@@ -222,14 +257,33 @@ export function useSearchParams() {
 		internalSetParams(new URLSearchParams(location.search)),
 	);
 	const setParams = useCallback(
-		(params: URLSearchParams | ((old: URLSearchParams) => URLSearchParams)) => {
+		(
+			params: URLSearchParams | ((old: URLSearchParams) => URLSearchParams),
+			options: {
+				state?: any;
+				skipTransition?: boolean;
+				replace?: boolean;
+			} = {},
+		) => {
 			const newParams =
 				typeof params === 'function'
 					? params(new URLSearchParams(location.search))
 					: new URLSearchParams(params);
+
+			const routeState = {
+				state: options.state,
+				skipTransition: options.skipTransition,
+				// keep the current route id for search changes
+				id: history.state?.id ?? 'initial',
+				isSearch: true,
+			};
 			const newSearch = newParams.toString();
 			if (newSearch !== location.search) {
-				window.history.pushState(null, '', `?${newSearch}`);
+				if (options.replace) {
+					window.history.replaceState(routeState, '', `?${newSearch}`);
+				} else {
+					window.history.pushState(routeState, '', `?${newSearch}`);
+				}
 				window.dispatchEvent(new PopStateEvent('popstate'));
 				internalSetParams(newParams);
 			}
@@ -282,6 +336,8 @@ export function useScrollRestoration({
 	useOnLocationChange((_, state) => {
 		setRouteId(state?.id ?? 'initial');
 	});
+	// don't restore scroll until after transition is complete
+	const transitioning = useIsRouteTransitioning();
 
 	const restoreKey = `${id ?? 'default'}__${routeId}`;
 
@@ -289,7 +345,11 @@ export function useScrollRestoration({
 	const stableOnGetScrollPosition = useStableCallback(onGetScrollPosition);
 
 	const restoredKeyRef = useRef<string | null>(null);
+	// restore scroll position on mount
 	useEffect(() => {
+		// don't restore scroll until after transition is complete
+		if (transitioning) return;
+
 		// using this ref to prevent double invocation of this
 		// effect in dev mode, since that would record 0,0 for
 		// scroll in some cases and errantly restore it
@@ -307,7 +367,9 @@ export function useScrollRestoration({
 			}
 			restoredKeyRef.current = restoreKey;
 		}
-	}, [restoreKey, stableOnScrollRestored, debug]);
+	}, [restoreKey, stableOnScrollRestored, debug, transitioning]);
+
+	// record scroll position on unmount
 	useEffect(() => {
 		return () => {
 			const scroll = stableOnGetScrollPosition();

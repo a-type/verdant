@@ -14,6 +14,8 @@ export {
 	useNextMatchingRoute,
 	useScrollRestoration,
 	useParams,
+	type PreviousLocation,
+	type RouteState,
 } from './hooks.js';
 export { Route, RouteTree, RouteRenderer } from './Route.js';
 export type {

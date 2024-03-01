@@ -19,6 +19,9 @@ export class TokenProvider {
 		fileEndpoint?: string;
 		role?: string;
 		type?: ReplicaType;
+		/**
+		 * The time when the token will expire. A string in the format of "3d" or a number of seconds.
+		 */
 		expiresIn?: string | number;
 	}) => {
 		return jwt.sign(

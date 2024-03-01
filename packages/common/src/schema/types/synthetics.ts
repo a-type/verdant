@@ -1,6 +1,5 @@
 import {
 	StorageBooleanFieldSchema,
-	StorageFieldSchema,
 	StorageFieldsSchema,
 	StorageNumberFieldSchema,
 	StorageStringFieldSchema,

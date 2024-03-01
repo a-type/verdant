@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { RestoreScroll } from '../src';
+import { Link, RestoreScroll } from '../src';
 
 export function ScrollTester(props: any) {
 	return (
@@ -49,6 +49,7 @@ export function ContainerScrollTester(props: any) {
 					<div style={{ fontSize: '10vh' }}>{i}</div>
 				</div>
 			))}
+			<Link to="?query=true">Search params</Link>
 		</div>
 	);
 }

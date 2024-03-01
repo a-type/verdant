@@ -27,7 +27,7 @@ export function Posts() {
 					<Outlet />
 				</Suspense>
 			</div>
-			{/* <ContainerScrollTester /> */}
+			<ContainerScrollTester />
 		</div>
 	);
 }

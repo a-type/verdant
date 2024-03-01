@@ -1,6 +1,5 @@
 import { StorageCollectionSchema } from './collection.js';
 import {
-	NestedStorageFieldsSchema,
 	StorageArrayFieldSchema,
 	StorageFieldSchema,
 	StorageFieldsSchema,
@@ -42,9 +41,7 @@ export type ShapeFromProperty<T extends StorageFieldSchema> =
 		? BaseShapeFromProperty<T> | null
 		: BaseShapeFromProperty<T>;
 
-export type ShapeFromFields<
-	T extends StorageFieldsSchema | NestedStorageFieldsSchema,
-> = {
+export type ShapeFromFields<T extends StorageFieldsSchema> = {
 	[K in keyof T]: ShapeFromProperty<T[K]>;
 };
 
@@ -65,9 +62,7 @@ type StoragePropertyIsOptional<T extends StorageFieldSchema> =
 		? true
 		: false;
 
-export type ShapeFromFieldsWithDefaults<
-	T extends StorageFieldsSchema | NestedStorageFieldsSchema,
-> = {
+export type ShapeFromFieldsWithDefaults<T extends StorageFieldsSchema> = {
 	[K in keyof T as StoragePropertyIsOptional<T[K]> extends true
 		? K
 		: never]?: ShapeFromProperty<T[K]>;
