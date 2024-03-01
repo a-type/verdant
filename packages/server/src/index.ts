@@ -7,3 +7,4 @@ export { TokenProvider } from './TokenProvider.js';
 export { LocalFileStorage } from './files/FileStorage.js';
 export type { FileStorage, FileInfo } from './files/FileStorage.js';
 export type { TokenInfo } from './TokenVerifier.js';
+export type { LibraryInfo } from './types.js';

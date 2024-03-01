@@ -28,7 +28,7 @@ import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
-import { OperationSpec } from './types.js';
+import { LibraryInfo, OperationSpec } from './types.js';
 
 export type ServerLibraryEvents = {
 	changes: (
@@ -671,7 +671,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		return this.presences.all(libraryId);
 	};
 
-	getInfo = async (libraryId: string) => {
+	getInfo = async (libraryId: string): Promise<LibraryInfo | null> => {
 		const rawReplicas = this.replicas.getAll(libraryId);
 		const profiles = await Promise.all(
 			rawReplicas.map((r) => this.profiles.get(r.clientId)),
@@ -682,18 +682,29 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			ackedServerOrder: r.ackedServerOrder,
 			type: r.type,
 			truant:
-				r.lastSeenWallClockTime &&
+				!!r.lastSeenWallClockTime &&
 				r.lastSeenWallClockTime < this.replicas.truantCutoff,
 			profile: profiles[index],
 		}));
 
-		return {
+		const data = {
+			id: libraryId,
 			replicas,
 			latestServerOrder: this.operations.getLatestServerOrder(libraryId),
 			operationsCount: this.operations.getCount(libraryId),
 			baselinesCount: this.baselines.getCount(libraryId),
-			globalAck: this.replicas.getGlobalAck(libraryId),
+			globalAck: this.replicas.getGlobalAck(libraryId) ?? null,
 		};
+
+		if (
+			data.replicas.length === 0 &&
+			data.operationsCount === 0 &&
+			data.baselinesCount === 0
+		) {
+			return null;
+		}
+
+		return data;
 	};
 
 	evictUser = (libraryId: string, userId: string) => {

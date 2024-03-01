@@ -27,6 +27,22 @@ export interface ReplicaInfoSpec extends ReplicaInfo {
 	ackedServerOrder: number;
 }
 
+export type LibraryInfo<Profile = unknown> = {
+	id: string;
+	replicas: {
+		id: string;
+		ackedLogicalTime: string | null;
+		ackedServerOrder: number;
+		type: ReplicaType;
+		truant: boolean;
+		profile: Profile;
+	}[];
+	latestServerOrder: number;
+	operationsCount: number;
+	baselinesCount: number;
+	globalAck: string | null;
+};
+
 // patch File
 declare global {
 	interface File {
