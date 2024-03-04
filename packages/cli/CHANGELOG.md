@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.3.1
+
+### Patch Changes
+
+- d5ca12f: Fix generated react hook mutations typings
+
 ## 4.3.0
 
 ### Minor Changes
