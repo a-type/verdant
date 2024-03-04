@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.2.2
+
+### Patch Changes
+
+- bee37cd: Support custom fetch implementation in sync
+
 ## 3.2.1
 
 ### Patch Changes
