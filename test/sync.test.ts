@@ -1,17 +1,15 @@
-import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
-import { Client, Item, Query } from './client/index.js';
+import { assert } from '@verdant-web/common';
+import { expect, it, vitest } from 'vitest';
+import { Client, Item } from './client/index.js';
 import { createTestContext } from './lib/createTestContext.js';
 import {
-	waitForCondition,
 	waitForEntityCondition,
-	waitForMockCall,
 	waitForPeerCount,
 	waitForQueryResult,
 } from './lib/waits.js';
-import { assert } from '@verdant-web/common';
 
 const context = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 it('can sync multiple clients even if they go offline', async () => {

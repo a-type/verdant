@@ -3,7 +3,11 @@ import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
 import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
-import { FileStorage, ReturnedFileData } from './FileStorage.js';
+import {
+	FileStorage,
+	ReturnedFileData,
+	StoredFileData,
+} from './FileStorage.js';
 
 /**
  * Default: if file was deleted > 3 days ago
@@ -151,6 +155,36 @@ export class FileManager {
 
 	listUnsynced = async () => {
 		return this.storage.listUnsynced();
+	};
+
+	exportAll = async (downloadRemote = false) => {
+		const storedFiles = await this.storage.getAll();
+		if (downloadRemote) {
+			for (const storedFile of storedFiles) {
+				// if it doesn't have a buffer, we need to read
+				// one from the server
+				if (!storedFile.file && storedFile.url) {
+					try {
+						const blob = await fetch(storedFile.url, {
+							method: 'GET',
+							credentials: 'include',
+						}).then((r) => r.blob());
+						storedFile.file = blob;
+					} catch (err) {
+						this.context.log(
+							'error',
+							"Failed to download file to cache it locally. The file will still be available using its URL. Check the file server's CORS configuration.",
+							err,
+						);
+					}
+				}
+			}
+		}
+		return storedFiles;
+	};
+
+	importAll = async (files: ReturnedFileData[]) => {
+		await Promise.all(files.map((file) => this.add(file)));
 	};
 
 	private onOnlineChange = async (online: boolean) => {

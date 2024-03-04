@@ -21,6 +21,7 @@ import { EntityStore } from '../entities/EntityStore.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
 import { CollectionQueries } from '../queries/CollectionQueries.js';
 import { QueryCache } from '../queries/QueryCache.js';
+import { ReturnedFileData } from '../files/FileStorage.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
@@ -183,13 +184,6 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	}
 
 	/**
-	 * @deprecated - use client.sync.presence instead
-	 */
-	get presence() {
-		return this.sync.presence;
-	}
-
-	/**
 	 * Batch multiple operations together to be executed in a single transaction.
 	 * The changes made will not be included in the same undo history step as
 	 * any other changes made outside of the batch. You can also disable undo
@@ -276,21 +270,88 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		await deleteAllDatabases(this.namespace, indexedDB);
 	};
 
-	export = async () => {
+	export = async (
+		{ downloadRemoteFiles }: { downloadRemoteFiles?: boolean } = {
+			downloadRemoteFiles: true,
+		},
+	) => {
+		this.context.log('info', 'Exporting data...');
 		const metaExport = await this.meta.export();
-		return Buffer.from(JSON.stringify(metaExport));
+		const filesExport = await this._fileManager.exportAll(downloadRemoteFiles);
+		// split files into data and files
+		const fileData: Array<Omit<ReturnedFileData, 'file'>> = [];
+		const files: Array<File> = [];
+
+		for (const fileExport of filesExport) {
+			const file = fileExport.file;
+			delete fileExport.file;
+			fileData.push(fileExport);
+			if (file) {
+				// rename with ID
+				const asFile = new File(
+					[file],
+					this.getFileExportName(fileExport.name, fileExport.id),
+					{
+						type: fileExport.type,
+					},
+				);
+				files.push(asFile);
+			} else {
+				this.context.log(
+					'warn',
+					`File ${fileExport.id} was could not be loaded locally or from the server. It will be missing in the export.`,
+				);
+			}
+		}
+		return {
+			data: metaExport,
+			fileData,
+			files,
+		};
 	};
 
-	import = async (buffer: Buffer) => {
-		this.context.log('Importing data...');
+	private getFileExportName = (originalFileName: string, id: string) => {
+		return `${id}___${originalFileName}`;
+	};
+
+	private parseFileExportname = (name: string) => {
+		const [id, originalFileName] = name.split('___');
+		return { id, originalFileName };
+	};
+
+	import = async ({
+		data,
+		fileData,
+		files,
+	}: {
+		data: ExportData;
+		fileData: Array<Omit<ReturnedFileData, 'file'>>;
+		files: File[];
+	}) => {
+		this.context.log('info', 'Importing data...');
 		// close the document DB
 		await closeDatabase(this.context.documentDb);
 
-		const metaExport = JSON.parse(buffer.toString()) as ExportData;
-		await this.meta.resetFrom(metaExport);
+		await this.meta.resetFrom(data);
+		// re-attach files to their file data and import
+		const fileToIdMap = new Map(
+			files.map((file) => {
+				const { id } = this.parseFileExportname(file.name);
+				return [id, file];
+			}),
+		);
+		const importedFiles: ReturnedFileData[] = fileData.map((fileData) => {
+			const file = fileToIdMap.get(fileData.id);
+
+			return {
+				...fileData,
+				file,
+			};
+		});
+		await this._fileManager.importAll(importedFiles);
 		// now delete the document DB, open it to the specified version
 		// and run migrations to get it to the latest version
-		const version = metaExport.schema.version;
+		const version = data.schema.version;
 		const deleteReq = indexedDB.deleteDatabase(
 			[this.namespace, 'collections'].join('_'),
 		);
@@ -300,7 +361,18 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		});
 		// reset our context to the imported schema for now
 		const currentSchema = this.context.schema;
-		this.context.schema = metaExport.schema;
+		if (currentSchema.version !== version) {
+			// TODO: support importing older schema data - this will
+			// require being able to migrate that data, which requires
+			// a "live" schema for that version. the client does not currently
+			// receive historical schemas, although they should be available
+			// if the CLI was used.
+			// importing from older versions is also tricky because
+			// migration shortcuts mean that versions could get marooned.
+			throw new Error(
+				`Only exports from the current schema version can be imported`,
+			);
+		}
 		// now open the document DB empty at the specified version
 		// and initialize it from the meta DB
 		this.context.documentDb = await openDocumentDatabase({
@@ -313,8 +385,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// re-initialize data
 		this.context.log('Re-initializing data from imported data...');
 		await this._entities.addData({
-			operations: metaExport.operations,
-			baselines: metaExport.baselines,
+			operations: data.operations,
+			baselines: data.baselines,
 			reset: true,
 		});
 		// close the database and reopen to latest version, applying
@@ -330,5 +402,21 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			version: currentSchema.version,
 		});
 		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
+	};
+
+	/**
+	 * Export all data, then re-import it. This might resolve
+	 * some issues with the local database, but it should
+	 * only be done as a second-to-last resort. The last resort
+	 * would be __dangerous__resetLocal on ClientDescriptor, which
+	 * clears all local data.
+	 *
+	 * Unlike __dangerous__resetLocal, this method allows local-only
+	 * clients to recover data, whereas __dangerous__resetLocal only
+	 * lets networked clients recover from the server.
+	 */
+	__dangerous__hardReset = async () => {
+		const exportData = await this.export();
+		await this.import(exportData);
 	};
 }

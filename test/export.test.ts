@@ -8,6 +8,7 @@ import {
 } from '@verdant-web/store';
 import { expect, it, vitest } from 'vitest';
 import { waitForQueryResult } from './lib/waits.js';
+import { createTestFile } from './lib/createTestFile.js';
 
 async function createTestClient({
 	schema,
@@ -57,6 +58,7 @@ it('can export data and import it even after a schema migration', async () => {
 			id: schema.fields.string(),
 			contents: schema.fields.string(),
 			tags: schema.fields.array({ items: schema.fields.string() }),
+			file: schema.fields.file({ nullable: true }),
 		},
 	});
 	const v1Schema = schema({
@@ -92,11 +94,13 @@ it('can export data and import it even after a schema migration', async () => {
 		id: '2',
 		contents: 'world',
 		tags: ['a', 'b', 'c'],
+		file: createTestFile('file 1'),
 	});
 	await client.items.put({
 		id: '3',
 		contents: 'foo',
 		tags: ['a', 'b'],
+		file: createTestFile('file 2 a different file'),
 	});
 
 	const exported = await client.export();
@@ -194,30 +198,30 @@ it('can export data and import it even after a schema migration', async () => {
 
 	// make sure the data is correct
 	const items = await itemsQuery.resolved;
-	expect(items.map((item: any) => item.getSnapshot())).toMatchInlineSnapshot(`
-		[
-		  {
-		    "contents": "hello",
-		    "id": "1",
-		    "tags": [],
-		  },
-		  {
-		    "contents": "world",
-		    "id": "2",
-		    "tags": [
-		      "a",
-		      "b",
-		      "c",
-		    ],
-		  },
-		  {
-		    "contents": "foo",
-		    "id": "3",
-		    "tags": [
-		      "a",
-		      "b",
-		    ],
-		  },
-		]
-	`);
+	expect(items.map((item: any) => item.getSnapshot())).toEqual([
+		{
+			contents: 'hello',
+			file: null,
+			id: '1',
+			tags: [],
+		},
+		{
+			contents: 'world',
+			file: {
+				id: expect.any(String),
+				url: 'blob:text/plain:6',
+			},
+			id: '2',
+			tags: ['a', 'b', 'c'],
+		},
+		{
+			contents: 'foo',
+			file: {
+				id: expect.any(String),
+				url: 'blob:text/plain:23',
+			},
+			id: '3',
+			tags: ['a', 'b'],
+		},
+	]);
 });

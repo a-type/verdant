@@ -9,6 +9,10 @@
 		".": {
 			"import": "./src/index.ts",
 			"require": "./dist/cjs/index.js"
+		},
+		"./backup": {
+			"import": "./src/backup.ts",
+			"require": "./dist/cjs/backup.js"
 		}
 	},
 	"publishConfig": {
@@ -19,6 +23,10 @@
 			".": {
 				"import": "./dist/esm/index.js",
 				"require": "./dist/cjs/index.js"
+			},
+			"./backup": {
+				"import": "./dist/esm/backup.js",
+				"require": "./dist/cjs/backup.js"
 			}
 		},
 		"access": "public"
@@ -42,6 +50,7 @@
 	"dependencies": {
 		"@verdant-web/common": "workspace:*",
 		"cuid": "^2.1.8",
+		"jszip": "^3.10.1",
 		"jwt-decode": "^3.1.2",
 		"weak-event": "^2.0.5"
 	},

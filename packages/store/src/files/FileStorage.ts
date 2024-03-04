@@ -1,13 +1,14 @@
 import { FileData } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
 import { fileToArrayBuffer } from './utils.js';
+import { getAllFromObjectStores } from '../idb.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
  * since it's more compatible, and replace remote boolean with
  * a string since IDB doesn't support boolean indexes.
  */
-interface StoredFileData extends Omit<FileData, 'remote' | 'file'> {
+export interface StoredFileData extends Omit<FileData, 'remote' | 'file'> {
 	remote: 'true' | 'false';
 	buffer?: ArrayBuffer;
 	deletedAt: number | null;
@@ -179,6 +180,11 @@ export class FileStorage extends IDBService {
 			},
 			{ mode: 'readwrite', transaction },
 		);
+	};
+
+	getAll = async () => {
+		const [files] = await getAllFromObjectStores(this.db, ['files']);
+		return files.map(this.hydrateFileData);
 	};
 }
 

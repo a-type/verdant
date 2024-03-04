@@ -42,8 +42,8 @@ export async function createTestClient({
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
+					initialPresence: {} as any,
+					defaultProfile: {} as any,
 					initialTransport: transport,
 					// don't allow clients to downgrade to polling!
 					// polling sucks for testing lol
