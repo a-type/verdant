@@ -8,12 +8,18 @@ export interface ServerSyncEndpointProviderConfig {
 	 */
 	authEndpoint?: string;
 	/**
-	 * A custom fetch function to retrieve authorization
-	 * data.
+	 * A custom function to retrieve authorization
+	 * data. Use whatever fetching mechanism you want.
 	 */
 	fetchAuth?: () => Promise<{
 		accessToken: string;
 	}>;
+	/**
+	 * A spec-compliant fetch implementation. If not provided,
+	 * the global fetch will be used. authEndpoint will
+	 * be used to fetch the token.
+	 */
+	fetch?: typeof fetch;
 }
 
 export class ServerSyncEndpointProvider {
@@ -42,7 +48,8 @@ export class ServerSyncEndpointProvider {
 		if (this.config.fetchAuth) {
 			result = await this.config.fetchAuth();
 		} else {
-			result = await fetch(this.config.authEndpoint!, {
+			const fetchImpl = this.config.fetch || fetch;
+			result = await fetchImpl(this.config.authEndpoint!, {
 				credentials: 'include',
 			}).then((res) => {
 				if (!res.ok) {

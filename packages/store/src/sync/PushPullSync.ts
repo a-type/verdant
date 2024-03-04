@@ -19,6 +19,7 @@ export class PushPullSync
 	readonly presence: PresenceManager;
 	private endpointProvider;
 	private heartbeat;
+	private fetch;
 
 	readonly mode = 'pull';
 	private log;
@@ -33,18 +34,21 @@ export class PushPullSync
 		presence,
 		interval = 15 * 1000,
 		log = () => {},
+		fetch = window.fetch,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
 		presence: PresenceManager;
 		interval?: number;
 		log?: (...args: any[]) => any;
+		fetch?: typeof window.fetch;
 	}) {
 		super();
 		this.log = log;
 		this.meta = meta;
 		this.presence = presence;
 		this.endpointProvider = endpointProvider;
+		this.fetch = fetch;
 
 		this.heartbeat = new Heartbeat({
 			interval,
@@ -65,7 +69,7 @@ export class PushPullSync
 		this.log('Sending sync request', messages);
 		try {
 			const { http: host, token } = await this.endpointProvider.getEndpoints();
-			const response = await fetch(host, {
+			const response = await this.fetch(host, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
