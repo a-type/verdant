@@ -26,12 +26,7 @@ export type SyncTransportEvents = SyncEvents & {
 	message: (message: ServerMessage) => void;
 };
 
-export interface SyncTransport {
-	subscribe(
-		event: 'onlineChange',
-		handler: (online: boolean) => void,
-	): () => void;
-
+export interface SyncTransport extends EventSubscriber<SyncTransportEvents> {
 	readonly presence: PresenceManager;
 
 	readonly mode: SyncTransportMode;
@@ -50,13 +45,22 @@ export interface SyncTransport {
 	readonly status: 'active' | 'paused';
 }
 
-export interface Sync<Presence = any, Profile = any> extends SyncTransport {
+export interface Sync<Presence = any, Profile = any> {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
 	uploadFile(data: FileData): Promise<FileUploadResult>;
 	getFile(fileId: string): Promise<FilePullResult>;
 	readonly presence: PresenceManager<Profile, Presence>;
+	send(message: ClientMessage): void;
+	start(): void;
+	stop(): void;
+	ignoreIncoming(): void;
+	destroy(): void;
+	reconnect(): void;
+	readonly isConnected: boolean;
+	readonly status: 'active' | 'paused';
+	readonly mode: SyncTransportMode;
 }
 
 export class NoSync<Presence = any, Profile = any>
