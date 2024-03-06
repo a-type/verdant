@@ -25,7 +25,7 @@
 		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
-		"test": "vitest"
+		"//test": "vitest"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.456.0",

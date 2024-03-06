@@ -45,7 +45,8 @@ export interface SyncTransport extends EventSubscriber<SyncTransportEvents> {
 	readonly status: 'active' | 'paused';
 }
 
-export interface Sync<Presence = any, Profile = any> {
+export interface Sync<Presence = any, Profile = any>
+	extends EventSubscriber<SyncEvents> {
 	setMode(mode: SyncTransportMode): void;
 	setPullInterval(interval: number): void;
 	readonly pullInterval: number;
