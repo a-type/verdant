@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 28.0.1
+
+### Patch Changes
+
+- 9d7caba: Allow overriding context for react hooks
+
 ## 28.0.0
 
 ### Patch Changes
