@@ -67,10 +67,14 @@ type HookName = `use${string}`;
 
 export function createHooks<Presence = any, Profile = any>(
 	schema: StorageSchema<any>,
+	options: {
+		/** you can provide your own context to use instead of the generated one */
+		Context?: React.Context<StorageDescriptor<Presence, Profile> | null>;
+	} = {},
 ) {
-	const Context = createContext<StorageDescriptor<Presence, Profile> | null>(
-		null,
-	);
+	const Context =
+		options.Context ??
+		createContext<StorageDescriptor<Presence, Profile> | null>(null);
 
 	function useStorage(): ClientWithCollections {
 		const ctx = useContext(Context);
