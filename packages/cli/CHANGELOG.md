@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.3.2
+
+### Patch Changes
+
+- 4daf1b0: CLI support for new react hooks options
+
 ## 4.3.1
 
 ### Patch Changes
