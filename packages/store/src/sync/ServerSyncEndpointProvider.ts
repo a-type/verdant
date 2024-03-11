@@ -48,7 +48,7 @@ export class ServerSyncEndpointProvider {
 		if (this.config.fetchAuth) {
 			result = await this.config.fetchAuth();
 		} else {
-			const fetchImpl = this.config.fetch || fetch;
+			const fetchImpl = this.config.fetch || fetch.bind(window);
 			result = await fetchImpl(this.config.authEndpoint!, {
 				credentials: 'include',
 			}).then((res) => {

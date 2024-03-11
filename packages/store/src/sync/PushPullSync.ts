@@ -34,7 +34,7 @@ export class PushPullSync
 		presence,
 		interval = 15 * 1000,
 		log = () => {},
-		fetch = window.fetch,
+		fetch = window.fetch.bind(window),
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		meta: Metadata;
