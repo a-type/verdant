@@ -106,7 +106,7 @@ export function createHooks<
 		[N: HookName]: (client: Client<Presence, Profile>, ...args: any[]) => any;
 	} = never,
 >(
-	mutations?: Mutations,
+	options?: { Context?: Context<StorageDescriptor<Presence, Profile> | null> }
 ): GeneratedHooks<Presence, Profile> & {
 	withMutations: <
 		Mutations extends {
@@ -136,8 +136,8 @@ export function getReactImplementation({
 import { createHooks as baseCreateHooks } from '@verdant-web/react';
 import schema from '${schemaPath}${commonjs ? '' : '.js'}';
 
-export function createHooks() {
-	return baseCreateHooks(schema);
+export function createHooks(options) {
+	return baseCreateHooks(schema, options);
 }
 `;
 }

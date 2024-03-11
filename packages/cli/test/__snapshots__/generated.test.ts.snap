@@ -572,8 +572,8 @@ exports[`generated react hooks > should produce consistent output code 1`] = `
 "import { createHooks as baseCreateHooks } from "@verdant-web/react";
 import schema from "./schema.js";
 
-export function createHooks() {
-  return baseCreateHooks(schema);
+export function createHooks(options) {
+  return baseCreateHooks(schema, options);
 }
 "
 `;
@@ -815,9 +815,9 @@ export function createHooks<
   Mutations extends {
     [N: HookName]: (client: Client<Presence, Profile>, ...args: any[]) => any;
   } = never,
->(
-  mutations?: Mutations,
-): GeneratedHooks<Presence, Profile> & {
+>(options?: {
+  Context?: Context<StorageDescriptor<Presence, Profile> | null>;
+}): GeneratedHooks<Presence, Profile> & {
   withMutations: <
     Mutations extends {
       [Name: HookName]: (
