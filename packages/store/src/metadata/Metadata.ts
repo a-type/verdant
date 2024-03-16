@@ -107,12 +107,13 @@ export class Metadata extends EventSubscriber<{
 		stores: ('operations' | 'baselines')[],
 		opts: {
 			abort?: AbortSignal;
+			write?: boolean;
 		} = {},
 	) => {
 		return createAbortableTransaction(
 			this.db,
 			stores,
-			'readwrite',
+			opts.write ? 'readwrite' : 'readonly',
 			opts.abort,
 			this.context.log,
 		);
@@ -369,10 +370,10 @@ export class Metadata extends EventSubscriber<{
 		},
 		opts?: { abort: AbortSignal },
 	) => {
-		const transaction = this.createTransaction(
-			['baselines', 'operations'],
-			opts,
-		);
+		const transaction = this.createTransaction(['baselines', 'operations'], {
+			...opts,
+			write: true,
+		});
 		if (data.baselines) {
 			await this.insertRemoteBaselines(data.baselines, { transaction });
 		}
@@ -420,7 +421,9 @@ export class Metadata extends EventSubscriber<{
 		// find all operations before the global ack
 		let lastTimestamp;
 		const toRebase = new Set<ObjectIdentifier>();
-		const transaction = this.createTransaction(['baselines', 'operations']);
+		const transaction = this.createTransaction(['baselines', 'operations'], {
+			write: true,
+		});
 		let operationCount = 0;
 		await this.operations.iterateOverAllOperations(
 			(patch) => {
@@ -466,7 +469,8 @@ export class Metadata extends EventSubscriber<{
 
 		this.log('[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
 		const transaction =
-			providedTx || this.createTransaction(['operations', 'baselines']);
+			providedTx ||
+			this.createTransaction(['operations', 'baselines'], { write: true });
 		const baseline = await this.baselines.get(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;
