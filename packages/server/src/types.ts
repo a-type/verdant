@@ -5,19 +5,22 @@ import {
 	ReplicaType,
 } from '@verdant-web/common';
 
-export interface OperationSpec extends Operation {
+export interface StoredOperation extends Operation {
 	serverOrder: number;
 	replicaId: string;
 }
 
-export interface DocumentBaselineSpec
+export interface StoredDocumentBaseline
 	extends Omit<DocumentBaseline<any>, 'snapshot'> {
 	snapshot: string;
 	libraryId: string;
-	serverOrder: number;
 }
 
-export interface ReplicaInfoSpec extends ReplicaInfo {
+export interface HydratedDocumentBaseline extends DocumentBaseline<any> {
+	libraryId: string;
+}
+
+export interface StoredReplicaInfo extends ReplicaInfo {
 	libraryId: string;
 	// the authenticated client ID authorized
 	// to write to this replica

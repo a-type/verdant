@@ -1,6 +1,6 @@
 import { Database } from 'better-sqlite3';
-import { TokenInfo } from './TokenVerifier.js';
-import { ReplicaInfoSpec } from './types.js';
+import { TokenInfo } from '../TokenVerifier.js';
+import { StoredReplicaInfo } from '../types.js';
 
 export class ReplicaInfos {
 	constructor(
@@ -12,7 +12,7 @@ export class ReplicaInfos {
 		return Date.now() - this.replicaTruancyMinutes * 60 * 1000;
 	}
 
-	get = (libraryId: string, replicaId: string): ReplicaInfoSpec | null => {
+	get = (libraryId: string, replicaId: string): StoredReplicaInfo | null => {
 		const row = this.db
 			.prepare(
 				`
@@ -41,9 +41,9 @@ export class ReplicaInfos {
 		info: TokenInfo,
 	): {
 		status: 'new' | 'existing' | 'truant';
-		replicaInfo: ReplicaInfoSpec;
+		replicaInfo: StoredReplicaInfo;
 	} => {
-		const replicaInfo: ReplicaInfoSpec = this.db
+		const replicaInfo: StoredReplicaInfo = this.db
 			.prepare(
 				`
 			SELECT * FROM ReplicaInfo
@@ -111,7 +111,7 @@ export class ReplicaInfos {
 		};
 	};
 
-	getAllNonTruant = (libraryId: string): ReplicaInfoSpec[] => {
+	getAllNonTruant = (libraryId: string): StoredReplicaInfo[] => {
 		return this.db
 			.prepare(
 				`
@@ -122,7 +122,7 @@ export class ReplicaInfos {
 			.all(libraryId, this.truantCutoff);
 	};
 
-	getAll = (libraryId: string): ReplicaInfoSpec[] => {
+	getAll = (libraryId: string): StoredReplicaInfo[] => {
 		return this.db
 			.prepare(
 				`

@@ -19,16 +19,16 @@ import {
 	EventSubscriber,
 } from '@verdant-web/common';
 import { Database } from 'better-sqlite3';
-import { ReplicaInfos } from './Replicas.js';
+import { ReplicaInfos } from './storage/Replicas.js';
 import { MessageSender } from './MessageSender.js';
-import { OperationHistory } from './OperationHistory.js';
-import { Baselines } from './Baselines.js';
+import { OperationHistory } from './storage/OperationHistory.js';
+import { Baselines } from './storage/Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
 import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
-import { LibraryInfo, OperationSpec } from './types.js';
+import { LibraryInfo, StoredOperation } from './types.js';
 
 export type ServerLibraryEvents = {
 	changes: (
@@ -191,7 +191,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		this.emit(`changes`, info, message.operations, []);
 	};
 
-	private removeExtraOperationData = (operation: OperationSpec): Operation => {
+	private removeExtraOperationData = (
+		operation: StoredOperation,
+	): Operation => {
 		return omit(operation, ['replicaId', 'serverOrder']);
 	};
 
@@ -268,15 +270,13 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// truant replicas should also reset their storage.
 		const replicaShouldReset = !!message.resyncAll || status !== 'existing';
 
-		// TODO: assumption: only new replicas need baselines
-		// const baselines = replicaShouldReset
-		// 	? []
-		// 	: this.baselines.getAllAfter(info.libraryId, changesSince);
-		const baselines = this.baselines.getAllAfter(info.libraryId, changesSince);
-		// const baselines = this.baselines.getFromServerOrder(
-		// 	info.libraryId,
-		// 	clientReplicaInfo.ackedServerOrder
-		// );
+		// only new replicas need baselines. by definition, a rebase only
+		// happens when all active replicas agree on history. every client
+		// replica will generate the same baseline locally, so it
+		// doesn't need to receive it from the server.
+		const baselines = replicaShouldReset
+			? this.baselines.getAll(info.libraryId)
+			: [];
 
 		// We detect that a library is new by checking if it has any history.
 		// If there are no existing operations or baselines (and the requested
@@ -396,7 +396,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		});
 	};
 
-	private createAckNonce = (ops: OperationSpec[]): string | undefined => {
+	private createAckNonce = (ops: StoredOperation[]): string | undefined => {
 		return ops.length
 			? Buffer.from(JSON.stringify(ops[ops.length - 1].serverOrder)).toString(
 					'base64',
@@ -518,7 +518,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			globalServerOrder,
 		);
 
-		const opsToApply: Record<string, OperationSpec[]> = {};
+		const opsToApply: Record<string, StoredOperation[]> = {};
 		// if we encounter a sequential operation in history which does
 		// not meet our conditions, we must ignore subsequent operations
 		// applied to that document.

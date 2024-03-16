@@ -1,17 +1,20 @@
 import {
 	applyPatch,
 	DocumentBaseline,
-	getAllFileFields,
 	Operation,
 	Ref,
 } from '@verdant-web/common';
 import { Database } from 'better-sqlite3';
-import { DocumentBaselineSpec } from './types.js';
+import {
+	StoredDocumentBaseline,
+	HydratedDocumentBaseline,
+	StoredOperation,
+} from '../types.js';
 
 export class Baselines {
 	constructor(private db: Database) {}
 
-	get = (libraryId: string, oid: string): DocumentBaseline<any> | null => {
+	get = (libraryId: string, oid: string): HydratedDocumentBaseline | null => {
 		const row = this.db
 			.prepare(
 				`
@@ -28,7 +31,20 @@ export class Baselines {
 		return this.hydrateSnapshot(row);
 	};
 
-	set = (libraryId: string, baseline: DocumentBaseline) => {
+	getAll = (libraryId: string): DocumentBaseline<any>[] => {
+		return this.db
+			.prepare(
+				`
+			SELECT * FROM DocumentBaseline
+			WHERE libraryId = ?
+			ORDER BY timestamp ASC
+		`,
+			)
+			.all(libraryId)
+			.map(this.hydrateSnapshot);
+	};
+
+	private set = (libraryId: string, baseline: DocumentBaseline) => {
 		if (!baseline.snapshot) {
 			return this.db
 				.prepare(
@@ -77,46 +93,18 @@ export class Baselines {
 	};
 
 	private hydrateSnapshot = (
-		snapshot: DocumentBaselineSpec,
-	): DocumentBaseline<any> => {
+		snapshot: StoredDocumentBaseline,
+	): HydratedDocumentBaseline => {
 		return {
 			...snapshot,
 			snapshot: JSON.parse(snapshot.snapshot),
 		};
 	};
 
-	getAllAfter = (
-		libraryId: string,
-		timestamp: string | null,
-	): DocumentBaseline<any>[] => {
-		if (!timestamp) {
-			return this.db
-				.prepare(
-					`
-					SELECT * FROM DocumentBaseline
-					WHERE libraryId = ?
-					ORDER BY timestamp ASC
-				`,
-				)
-				.all(libraryId)
-				.map(this.hydrateSnapshot);
-		}
-		return this.db
-			.prepare(
-				`
-      SELECT * FROM DocumentBaseline
-      WHERE libraryId = ? AND timestamp > ?
-      ORDER BY timestamp ASC
-    `,
-			)
-			.all(libraryId, timestamp)
-			.map(this.hydrateSnapshot);
-	};
-
 	applyOperations = (
 		libraryId: string,
 		oid: string,
-		operations: Operation[],
+		operations: StoredOperation[],
 		deletedRefs?: Ref[],
 	) => {
 		if (operations.length === 0) return [];
@@ -127,6 +115,7 @@ export class Baselines {
 				oid,
 				snapshot: {},
 				timestamp: operations[0].timestamp,
+				libraryId,
 			};
 		}
 		for (const operation of operations) {

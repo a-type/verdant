@@ -1,6 +1,6 @@
 import { Operation } from '@verdant-web/common';
 import { Database } from 'better-sqlite3';
-import { OperationSpec } from './types.js';
+import { StoredOperation } from '../types.js';
 
 type StoredOperationHistoryItem = Omit<Operation, 'data'> & {
 	data: string;
@@ -16,7 +16,7 @@ export class OperationHistory {
 		libraryId: _,
 		data,
 		...rest
-	}: StoredOperationHistoryItem): OperationSpec => {
+	}: StoredOperationHistoryItem): StoredOperation => {
 		return {
 			...rest,
 			data: JSON.parse(data),
@@ -138,7 +138,7 @@ export class OperationHistory {
 
 	dropAll = async (
 		libraryId: string,
-		items: Pick<OperationSpec, 'replicaId' | 'oid' | 'timestamp'>[],
+		items: Pick<StoredOperation, 'replicaId' | 'oid' | 'timestamp'>[],
 	) => {
 		const deleteStatement = this.db.prepare(
 			`
