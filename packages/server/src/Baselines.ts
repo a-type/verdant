@@ -28,22 +28,6 @@ export class Baselines {
 		return this.hydrateSnapshot(row);
 	};
 
-	getAllWithSubObjects = (
-		libraryId: string,
-		oid: string,
-	): DocumentBaseline<any>[] => {
-		const rows = this.db
-			.prepare(
-				`
-			SELECT * FROM DocumentBaseline
-			WHERE libraryId = ? AND oid LIKE ?
-		`,
-			)
-			.all(libraryId, `${oid}%`);
-
-		return rows.map(this.hydrateSnapshot);
-	};
-
 	set = (libraryId: string, baseline: DocumentBaseline) => {
 		if (!baseline.snapshot) {
 			return this.db
@@ -126,22 +110,6 @@ export class Baselines {
     `,
 			)
 			.all(libraryId, timestamp)
-			.map(this.hydrateSnapshot);
-	};
-
-	getFromServerOrder = (
-		libraryId: string,
-		serverOrder: number,
-	): DocumentBaseline<any>[] => {
-		return this.db
-			.prepare(
-				`
-			SELECT * FROM DocumentBaseline
-			WHERE libraryId = ? AND serverOrder >= ?
-			ORDER BY serverOrder ASC
-		`,
-			)
-			.all(libraryId, serverOrder)
 			.map(this.hydrateSnapshot);
 	};
 

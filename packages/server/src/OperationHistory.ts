@@ -36,45 +36,6 @@ export class OperationHistory {
 			.map(this.hydratePatch);
 	};
 
-	getEarliest = (libraryId: string, count: number) => {
-		return this.db
-			.prepare(
-				`
-      SELECT * FROM OperationHistory
-      WHERE libraryId = ?
-      ORDER BY timestamp ASC
-      LIMIT ?
-    `,
-			)
-			.all(libraryId, count)
-			.map(this.hydratePatch);
-	};
-
-	getAfter = (libraryId: string, timestamp: string | null = null) => {
-		if (timestamp === null) {
-			return this.db
-				.prepare(
-					`
-					SELECT * FROM OperationHistory
-					WHERE libraryId = ?
-					ORDER BY timestamp ASC
-				`,
-				)
-				.all(libraryId)
-				.map(this.hydratePatch);
-		}
-		return this.db
-			.prepare(
-				`
-      SELECT * FROM OperationHistory
-      WHERE libraryId = ? AND timestamp > ?
-      ORDER BY timestamp ASC
-    `,
-			)
-			.all(libraryId, timestamp)
-			.map(this.hydratePatch);
-	};
-
 	/**
 	 * Returns all operations before the given server order
 	 * in ascending chronological order
@@ -134,27 +95,6 @@ export class OperationHistory {
 			.get(libraryId);
 
 		return result?.count || 0;
-	};
-
-	/**
-	 * Adds a new operation or replaces an existing one.
-	 * The server order will be set to the current max + 1
-	 */
-	insert = (libraryId: string, replicaId: string, item: Operation) => {
-		return this.db
-			.prepare(
-				`
-      INSERT OR REPLACE INTO OperationHistory (libraryId, oid, data, timestamp, replicaId, serverOrder)
-      VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(serverOrder), 0) FROM OperationHistory WHERE libraryId = ?) + 1)
-    `,
-			)
-			.run(
-				libraryId,
-				item.oid,
-				JSON.stringify(item.data),
-				item.timestamp,
-				replicaId,
-			);
 	};
 
 	/**
