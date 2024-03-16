@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.3.1
+
+### Patch Changes
+
+- ecc696c: Fix broken fetch default binding
+
 ## 3.3.0
 
 ### Minor Changes
