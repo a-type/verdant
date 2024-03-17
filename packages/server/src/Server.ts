@@ -9,28 +9,23 @@ import {
 	ServerMessage,
 	VerdantError,
 } from '@verdant-web/common';
-import EventEmitter from 'events';
-import { IncomingMessage, Server as HttpServer, ServerResponse } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
-import { UserProfileLoader, UserProfiles } from './Profiles.js';
-import create from 'better-sqlite3';
-import { MessageSender } from './MessageSender.js';
-import { URL } from 'url';
-import { ClientConnectionManager } from './ClientConnection.js';
-import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
-import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
 import busboy from 'busboy';
-import { FileInfo, FileStorage } from './files/FileStorage.js';
+import EventEmitter from 'events';
+import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http';
+import { TransformStream } from 'node:stream/web';
 import internal, { Readable } from 'stream';
+import { URL } from 'url';
+import { WebSocket, WebSocketServer } from 'ws';
+import { ClientConnectionManager } from './ClientConnection.js';
 import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
-import { ServerLibrary } from './ServerLibrary.js';
+import { FileInfo, FileStorage } from './files/FileStorage.js';
+import { MessageSender } from './MessageSender.js';
 import { migrations } from './migrations.js';
-import {
-	ReadableStream,
-	ReadableWritablePair,
-	TransformStream,
-	WritableStream,
-} from 'node:stream/web';
+import { UserProfileLoader, UserProfiles } from './Profiles.js';
+import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
+import { ServerLibrary } from './ServerLibrary.js';
+import { TokenInfo, TokenVerifier } from './TokenVerifier.js';
+import { Storage, StorageFactory } from './storage/Storage.js';
 
 export interface ServerOptions {
 	/**
@@ -45,9 +40,10 @@ export interface ServerOptions {
 	 */
 	tokenSecret: string;
 	/**
-	 * The path to your SQLite database.
+	 * Your storage implementation. See the sqlStorage export for a built-in
+	 * option.
 	 */
-	databaseFile: string;
+	storage: StorageFactory;
 	/**
 	 * Optionally provide an implementation of the UserProfiles interface to look up
 	 * static user profile data to use in persistence. This data is considered trusted
@@ -117,7 +113,7 @@ export class Server extends EventEmitter implements MessageSender {
 	private httpServer!: HttpServer;
 	private wss: WebSocketServer;
 	private fileStorage?: FileStorage;
-	private fileMetadata;
+	private storage: Storage;
 	private library;
 
 	private clientConnections = new ClientConnectionManager();
@@ -144,21 +140,19 @@ export class Server extends EventEmitter implements MessageSender {
 		});
 
 		this.fileStorage = options.fileStorage;
-
-		const db = create(options.databaseFile);
-		migrations(db);
-
-		this.fileMetadata = new FileMetadata(db, options.fileConfig);
+		this.storage = options.storage({
+			fileDeleteExpirationDays: options.fileConfig?.deleteExpirationDays ?? 14,
+			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 14,
+		});
 
 		this.library = new ServerLibrary({
-			db,
+			storage: this.storage,
 			sender: this,
 			profiles: new UserProfileLoader(
 				options.profiles || new DefaultProfiles(),
 			),
 			log: this.log,
 			disableRebasing: options.disableRebasing,
-			fileMetadata: this.fileMetadata,
 			fileStorage: this.fileStorage,
 			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 14,
 		});
@@ -581,7 +575,7 @@ export class Server extends EventEmitter implements MessageSender {
 				};
 				// write metadata to storage
 				try {
-					this.fileMetadata.put(info.libraryId, lofiFileInfo);
+					this.storage.fileMetadata.put(info.libraryId, lofiFileInfo);
 					fs.put(stream, lofiFileInfo);
 				} catch (e) {
 					reject(e);
@@ -620,7 +614,7 @@ export class Server extends EventEmitter implements MessageSender {
 	): Promise<FileData> => {
 		const fs = this.getFileStorageOrThrow();
 
-		const fileInfo = this.fileMetadata.get(info.libraryId, id);
+		const fileInfo = await this.storage.fileMetadata.get(info.libraryId, id);
 		if (!fileInfo) {
 			throw new VerdantError(
 				VerdantError.Code.NotFound,
@@ -735,7 +729,7 @@ export class Server extends EventEmitter implements MessageSender {
 				});
 			}),
 		]);
-		this.library.close();
+		await this.storage.close();
 	};
 
 	/**

@@ -29,6 +29,7 @@ import { TokenInfo } from './TokenVerifier.js';
 import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
 import { LibraryInfo, StoredOperation } from './types.js';
+import { Storage } from './storage/Storage.js';
 
 export type ServerLibraryEvents = {
 	changes: (
@@ -39,48 +40,38 @@ export type ServerLibraryEvents = {
 };
 
 export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
-	private db;
+	private storage;
 	private sender;
 	private profiles;
-	private replicas;
-	private operations;
-	private baselines;
 	private presences = new Presence();
 	private disableRebasing: boolean;
-	private files;
 	private fileStorage: FileStorage | undefined;
 
 	private log: (...args: any[]) => void;
 	constructor({
-		db,
+		storage,
 		sender,
 		profiles,
 		replicaTruancyMinutes,
 		log = () => {},
 		disableRebasing,
-		fileMetadata,
 		fileStorage,
 	}: {
-		db: Database;
+		storage: Storage;
 		sender: MessageSender;
 		profiles: UserProfileLoader<any>;
 		replicaTruancyMinutes: number;
 		log?: (...args: any[]) => void;
 		disableRebasing?: boolean;
-		fileMetadata: FileMetadata;
 		fileStorage?: FileStorage;
 	}) {
 		super();
 
-		this.db = db;
 		this.log = log;
 		this.disableRebasing = !!disableRebasing;
 		this.sender = sender;
 		this.profiles = profiles;
-		this.replicas = new ReplicaInfos(this.db, replicaTruancyMinutes);
-		this.operations = new OperationHistory(this.db);
-		this.baselines = new Baselines(this.db);
-		this.files = fileMetadata;
+		this.storage = storage;
 		this.fileStorage = fileStorage;
 		this.presences.on('lost', this.onPresenceLost);
 	}
@@ -90,8 +81,11 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	 * exist, a user may create it. But if it does exist, its user (clientId)
 	 * must match the user making the request.
 	 */
-	private validateReplicaAccess = (replicaId: string, info: TokenInfo) => {
-		const replica = this.replicas.get(info.libraryId, replicaId);
+	private validateReplicaAccess = async (
+		replicaId: string,
+		info: TokenInfo,
+	) => {
+		const replica = await this.storage.replicas.get(info.libraryId, replicaId);
 		if (replica && replica.clientId !== info.userId) {
 			throw new Error(
 				`Replica ${replicaId} does not belong to client ${info.userId}`,
@@ -111,20 +105,20 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		this.validateReplicaAccess(message.replicaId, info);
+		await this.validateReplicaAccess(message.replicaId, info);
 
 		switch (message.type) {
 			case 'op':
-				this.handleOperation(message, clientKey, info);
+				await this.handleOperation(message, clientKey, info);
 				break;
 			case 'sync':
-				this.handleSync(message, clientKey, info);
+				await this.handleSync(message, clientKey, info);
 				break;
 			case 'ack':
-				this.handleAck(message, clientKey, info);
+				await this.handleAck(message, clientKey, info);
 				break;
 			case 'heartbeat':
-				this.handleHeartbeat(message, clientKey, info);
+				await this.handleHeartbeat(message, clientKey, info);
 				break;
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
@@ -133,14 +127,17 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				this.log('Unknown message type', (message as any).type);
 				break;
 		}
-		this.replicas.updateLastSeen(info.libraryId, message.replicaId);
+		await this.storage.replicas.updateLastSeen(
+			info.libraryId,
+			message.replicaId,
+		);
 	};
 
 	remove = (libraryId: string, replicaId: string) => {
 		this.presences.removeReplica(libraryId, replicaId);
 	};
 
-	private handleOperation = (
+	private handleOperation = async (
 		message: OperationMessage,
 		clientKey: string,
 		info: TokenInfo,
@@ -154,16 +151,13 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			return;
 		}
 
-		const run = this.db.transaction(() => {
-			// insert patches into history
-			this.operations.insertAll(
-				info.libraryId,
-				message.replicaId,
-				message.operations,
-			);
-		});
-
-		run();
+		// TODO: can we defer this and rebroadcast in parallel?
+		// insert patches into history
+		await this.storage.operations.insertAll(
+			info.libraryId,
+			message.replicaId,
+			message.operations,
+		);
 
 		this.enqueueRebase(info.libraryId);
 
@@ -182,7 +176,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			timestamp: message.timestamp,
 		});
 
-		this.updateHighwater(
+		await this.updateHighwater(
 			message.replicaId,
 			message.operations[message.operations.length - 1].timestamp,
 			info,
@@ -197,7 +191,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		return omit(operation, ['replicaId', 'serverOrder']);
 	};
 
-	private rebroadcastOperations = (
+	private rebroadcastOperations = async (
 		libraryId: string,
 		clientKey: string,
 		replicaId: string,
@@ -222,36 +216,40 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				operations: ops,
 				baselines,
 				replicaId,
-				globalAckTimestamp: this.replicas.getGlobalAck(libraryId),
+				globalAckTimestamp:
+					(await this.storage.replicas.getGlobalAck(libraryId)) ?? undefined,
 			},
 			[clientKey],
 		);
 	};
 
-	private handleSync = (
+	private handleSync = async (
 		message: SyncMessage,
 		clientKey: string,
 		info: TokenInfo,
 	) => {
 		const replicaId = message.replicaId;
 
-		// TODO: is this right? shouldn't read-only replicas still be able to sync,
-		// just not send ops?
-		if (!this.hasWriteAccess(info)) {
+		// TODO: is this the right way to do this? should it just ignore
+		// read-only changes?
+		if (
+			!this.hasWriteAccess(info) &&
+			(message.operations.length > 0 || message.baselines.length > 0)
+		) {
 			this.sender.send(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
-			this.log('warn', 'sync from read-only replica', replicaId);
+			this.log('warn', 'sync with changes from read-only replica', replicaId);
 			return;
 		}
 
 		if (message.resyncAll) {
 			// forget our local understanding of the replica and reset it
-			this.replicas.delete(info.libraryId, replicaId);
+			await this.storage.replicas.delete(info.libraryId, replicaId);
 		}
 
 		const { status, replicaInfo: clientReplicaInfo } =
-			this.replicas.getOrCreate(info.libraryId, replicaId, info);
+			await this.storage.replicas.getOrCreate(info.libraryId, replicaId, info);
 
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
@@ -261,7 +259,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		);
 
 		// lookup operations after the last ack the client gave us
-		const ops = this.operations.getFromServerOrder(
+		const ops = await this.storage.operations.getAfterServerOrder(
 			info.libraryId,
 			clientReplicaInfo.ackedServerOrder,
 		);
@@ -276,7 +274,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// replica will generate the same baseline locally, so it
 		// doesn't need to receive it from the server.
 		const baselines = replicaShouldReset
-			? this.baselines.getAll(info.libraryId)
+			? await this.storage.baselines.getAll(info.libraryId)
 			: [];
 
 		// We detect that a library is new by checking if it has any history.
@@ -337,7 +335,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// we are not overwriting the replica's data
 		if (!overwriteLocalData) {
 			// store all incoming operations and baselines
-			this.baselines.insertAll(info.libraryId, message.baselines);
+			await this.storage.baselines.insertAll(info.libraryId, message.baselines);
 
 			this.log(
 				'debug',
@@ -347,8 +345,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				message.operations.length,
 				'operations',
 			);
-			this.operations.insertAll(info.libraryId, replicaId, message.operations);
-			this.replicas.updateAcknowledged(
+			await this.storage.operations.insertAll(
+				info.libraryId,
+				replicaId,
+				message.operations,
+			);
+			await this.storage.replicas.updateAcknowledgedLogicalTime(
 				info.libraryId,
 				replicaId,
 				message.timestamp,
@@ -391,7 +393,8 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				snapshot: baseline.snapshot,
 				timestamp: baseline.timestamp,
 			})),
-			globalAckTimestamp: this.replicas.getGlobalAck(info.libraryId),
+			globalAckTimestamp:
+				(await this.storage.replicas.getGlobalAck(info.libraryId)) ?? undefined,
 			peerPresence: this.presences.all(info.libraryId),
 			// only request the client to overwrite local data if a reset is requested
 			// and there is data to overwrite it. otherwise the client may still
@@ -410,7 +413,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			: undefined;
 	};
 
-	private handleAck = (
+	private handleAck = async (
 		message: AckMessage,
 		clientKey: string,
 		info: TokenInfo,
@@ -434,14 +437,20 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			}
 
 			const replicaId = message.replicaId;
-			this.replicas.updateServerOrder(info.libraryId, replicaId, decodedNonce);
+			await this.storage.replicas.updateAckedServerOrder(
+				info.libraryId,
+				replicaId,
+				decodedNonce,
+			);
 		} else if (message.timestamp) {
-			this.replicas.acknowledgeOperation(
+			await this.storage.replicas.acknowledgeOperation(
 				info.libraryId,
 				message.replicaId,
 				message.timestamp,
 			);
-			const globalAck = this.replicas.getGlobalAck(info.libraryId);
+			const globalAck = await this.storage.replicas.getGlobalAck(
+				info.libraryId,
+			);
 			if (globalAck) {
 				this.sender.broadcast(info.libraryId, {
 					type: 'global-ack',
@@ -451,14 +460,20 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		}
 	};
 
-	private updateHighwater = (
+	private updateHighwater = async (
 		replicaId: string,
 		timestamp: string,
 		info: TokenInfo,
 		ignoreClientKeys: string[] = [],
 	) => {
-		this.replicas.updateAcknowledged(info.libraryId, replicaId, timestamp);
-		const newGlobalAck = this.replicas.getGlobalAck(info.libraryId);
+		await this.storage.replicas.updateAcknowledgedLogicalTime(
+			info.libraryId,
+			replicaId,
+			timestamp,
+		);
+		const newGlobalAck = await this.storage.replicas.getGlobalAck(
+			info.libraryId,
+		);
 		if (newGlobalAck) {
 			this.sender.broadcast(
 				info.libraryId,
@@ -480,7 +495,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		}
 	};
 
-	private rebase = (libraryId: string) => {
+	private rebase = async (libraryId: string) => {
 		if (this.disableRebasing) return;
 
 		this.log('debug', 'Performing rebase check');
@@ -504,9 +519,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const activeReplicaIds = Object.values(this.presences.all(libraryId)).map(
 			(p) => p.replicaId,
 		);
-		const globalAck = this.replicas.getGlobalAck(libraryId, activeReplicaIds);
+		const globalAck = await this.storage.replicas.getGlobalAck(
+			libraryId,
+			activeReplicaIds,
+		);
 		const globalServerOrder =
-			this.replicas.getEarliestAckedServerOrder(libraryId);
+			await this.storage.replicas.getEarliestAckedServerOrder(libraryId);
 
 		if (!globalAck) {
 			this.log('debug', 'No global ack, skipping rebase');
@@ -519,7 +537,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		}
 
 		// these are in forward chronological order
-		const ops = this.operations.getBeforeServerOrder(
+		const ops = await this.storage.operations.getBeforeServerOrder(
 			libraryId,
 			globalServerOrder,
 		);
@@ -543,8 +561,13 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const deletedRefs = new Array<Ref>();
 		for (const [documentId, ops] of Object.entries(opsToApply)) {
 			this.log('Rebasing', documentId);
-			this.baselines.applyOperations(libraryId, documentId, ops, deletedRefs),
-				this.operations.dropAll(libraryId, ops);
+			await this.storage.baselines.applyOperations(
+				libraryId,
+				documentId,
+				ops,
+				deletedRefs,
+			);
+			await this.storage.operations.delete(libraryId, ops);
 		}
 
 		// hint to clients they can rebase too
@@ -554,11 +577,13 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		});
 
 		// cleanup deleted files
-		for (const ref of deletedRefs) {
-			if (isFileRef(ref)) {
-				this.files.markPendingDelete(libraryId, ref.id);
-			}
-		}
+		await Promise.all(
+			deletedRefs
+				.filter(isFileRef)
+				.map((ref) =>
+					this.storage.fileMetadata.markPendingDelete(libraryId, ref.id),
+				),
+		);
 	};
 
 	private handleHeartbeat = (
@@ -613,11 +638,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		if (Object.keys(this.presences.all(libraryId)).length === 0) {
 			this.log('info', `All users have disconnected from ${libraryId}`);
 			// could happen - if the server is shutting down manually
-			if (!this.db.open) {
+			if (!this.storage.open) {
 				this.log('debug', 'Database not open, skipping cleanup');
 				return;
 			}
-			const pendingDelete = this.files.getPendingDeletes(libraryId);
+			const pendingDelete =
+				await this.storage.fileMetadata.getPendingDelete(libraryId);
 			if (pendingDelete.length > 0) {
 				if (!this.fileStorage) {
 					throw new Error('File storage not configured, cannot delete files');
@@ -636,7 +662,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 								id: fileInfo.fileId,
 								type: fileInfo.type,
 							});
-							this.files.delete(libraryId, fileInfo.fileId);
+							this.storage.fileMetadata.delete(libraryId, fileInfo.fileId);
 						} catch (e) {
 							this.log(
 								'error',
@@ -655,10 +681,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	destroy = async (libraryId: string) => {
 		this.log('info', 'Destroying library', libraryId);
 		this.presences.clear(libraryId);
-		this.replicas.deleteAll(libraryId);
-		this.operations.deleteAll(libraryId);
-		this.baselines.deleteAll(libraryId);
-		const allFiles = this.files.getAll(libraryId);
+		await Promise.all([
+			this.storage.replicas.deleteAll(libraryId),
+			this.storage.operations.deleteAll(libraryId),
+			this.storage.baselines.deleteAll(libraryId),
+		]);
+		const allFiles = await this.storage.fileMetadata.getAll(libraryId);
 		if (allFiles.length > 0) {
 			this.log(
 				'info',
@@ -673,7 +701,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 					type: fileInfo.type,
 				});
 			}
-			this.files.deleteAll(libraryId);
+			await this.storage.fileMetadata.deleteAll(libraryId);
 		}
 	};
 
@@ -682,7 +710,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	};
 
 	getInfo = async (libraryId: string): Promise<LibraryInfo | null> => {
-		const rawReplicas = this.replicas.getAll(libraryId);
+		const rawReplicas = await this.storage.replicas.getAll(libraryId);
 		const profiles = await Promise.all(
 			rawReplicas.map((r) => this.profiles.get(r.clientId)),
 		);
@@ -693,17 +721,18 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			type: r.type,
 			truant:
 				!!r.lastSeenWallClockTime &&
-				r.lastSeenWallClockTime < this.replicas.truantCutoff,
+				r.lastSeenWallClockTime < this.storage.replicas.truantCutoff,
 			profile: profiles[index],
 		}));
 
 		const data = {
 			id: libraryId,
 			replicas,
-			latestServerOrder: this.operations.getLatestServerOrder(libraryId),
-			operationsCount: this.operations.getCount(libraryId),
-			baselinesCount: this.baselines.getCount(libraryId),
-			globalAck: this.replicas.getGlobalAck(libraryId) ?? null,
+			latestServerOrder:
+				await this.storage.operations.getLatestServerOrder(libraryId),
+			operationsCount: await this.storage.operations.getCount(libraryId),
+			baselinesCount: await this.storage.baselines.getCount(libraryId),
+			globalAck: (await this.storage.replicas.getGlobalAck(libraryId)) ?? null,
 		};
 
 		if (
@@ -717,50 +746,59 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		return data;
 	};
 
-	evictUser = (libraryId: string, userId: string) => {
-		this.replicas.deleteAllForUser(libraryId, userId);
+	evictUser = async (libraryId: string, userId: string) => {
+		await this.storage.replicas.deleteAllForUser(libraryId, userId);
 	};
 
 	getDocumentSnapshot = (libraryId: string, oid: string) => {
 		return this.hydrateObject(libraryId, oid);
 	};
 
-	private getObjectSnapshot = (libraryId: string, oid: string) => {
-		const baseline = this.baselines.get(libraryId, oid);
-		const ops = this.operations.getAllFor(libraryId, oid);
+	private getObjectSnapshot = async (libraryId: string, oid: string) => {
+		const [baseline, ops] = await Promise.all([
+			this.storage.baselines.get(libraryId, oid),
+			this.storage.operations.getAll(libraryId, oid),
+		]);
 		const snapshot = applyOperations(baseline?.snapshot ?? undefined, ops);
 		return snapshot;
 	};
 
-	private hydrateObject = (libraryId: string, oid: string): any => {
-		const snapshot = this.getObjectSnapshot(libraryId, oid);
+	private hydrateObject = async (
+		libraryId: string,
+		oid: string,
+	): Promise<any> => {
+		const snapshot = await this.getObjectSnapshot(libraryId, oid);
 		if (Array.isArray(snapshot)) {
-			return snapshot.map((item, index) => {
-				if (isObjectRef(item)) {
-					return this.hydrateObject(libraryId, item.id);
-				} else if (isFileRef(item)) {
-					return this.hydrateFile(libraryId, item.id);
-				} else {
-					return item;
-				}
-			});
+			return Promise.all(
+				snapshot.map(async (item: any) => {
+					if (isObjectRef(item)) {
+						return this.hydrateObject(libraryId, item.id);
+					} else if (isFileRef(item)) {
+						return this.hydrateFile(libraryId, item.id);
+					} else {
+						return item;
+					}
+				}),
+			);
 		} else if (snapshot && typeof snapshot === 'object') {
 			const hydrated = { ...snapshot };
-			for (const [key, value] of Object.entries(snapshot)) {
-				if (isObjectRef(value)) {
-					hydrated[key] = this.hydrateObject(libraryId, value.id);
-				} else if (isFileRef(value)) {
-					hydrated[key] = this.hydrateFile(libraryId, value.id);
-				}
-			}
+			await Promise.all(
+				Object.entries(snapshot).map(async ([key, value]) => {
+					if (isObjectRef(value)) {
+						hydrated[key] = await this.hydrateObject(libraryId, value.id);
+					} else if (isFileRef(value)) {
+						hydrated[key] = await this.hydrateFile(libraryId, value.id);
+					}
+				}),
+			);
 			return hydrated;
 		} else {
 			return snapshot;
 		}
 	};
 
-	private hydrateFile = (libraryId: string, fileId: string) => {
-		const data = this.files.get(libraryId, fileId);
+	private hydrateFile = async (libraryId: string, fileId: string) => {
+		const data = await this.storage.fileMetadata.get(libraryId, fileId);
 		if (data) {
 			const url =
 				this.fileStorage?.getUrl({
@@ -779,9 +817,5 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		} else {
 			return null;
 		}
-	};
-
-	close = () => {
-		this.db.close();
 	};
 }

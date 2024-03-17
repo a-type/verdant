@@ -229,4 +229,8 @@ export class FileManager {
 			`Marked ${fileRefs.length} files as pending delete`,
 		);
 	};
+
+	close = () => {
+		this.storage.dispose();
+	};
 }

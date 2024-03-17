@@ -1,8 +1,7 @@
 import { ReplicaType } from '@verdant-web/server';
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import { Client, ClientDescriptor } from './client/index.js';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { expect, it } from 'vitest';
+import { ClientDescriptor } from './client/index.js';
+import { createTestContext } from './lib/createTestContext.js';
 import {
 	waitForBaselineCount,
 	waitForEverythingToRebase,
@@ -11,9 +10,10 @@ import {
 	waitForTime,
 } from './lib/waits.js';
 import migrations from './migrations/index.js';
-import { createTestContext } from './lib/createTestContext.js';
 
-const context = createTestContext();
+const context = createTestContext({
+	// serverLog: true,
+});
 
 it('an offline client rebases everything', async () => {
 	const indexedDb = new IDBFactory();
@@ -122,10 +122,9 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	// can client C come back online and sync up to the latest state?
 	// console.info('🔺 --- Reconnecting passive replica ---');
 	clientC.sync.start();
-	await waitForQueryResult(clientC.items.get(oranges.get('id')));
-	expect(
-		(await clientC.items.get(oranges.get('id')).resolved)!.get('purchased'),
-	).toBe(true);
+	const queryCOranges = clientC.items.get(oranges.get('id'));
+	await waitForQueryResult(queryCOranges, (res) => !!res?.get('purchased'));
+	expect(queryCOranges.current!.get('purchased')).toBe(true);
 });
 
 it("server does not rebase old offline operations that haven't yet synced to online replicas", async () => {

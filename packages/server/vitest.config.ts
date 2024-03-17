@@ -8,4 +8,7 @@ export default defineConfig({
 	resolve: {
 		conditions: ['development', 'import'],
 	},
+	build: {
+		sourcemap: true,
+	},
 });

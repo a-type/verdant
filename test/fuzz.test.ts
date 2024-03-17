@@ -15,13 +15,13 @@ import { IDBFactory } from 'fake-indexeddb';
 import { waitForCondition } from './lib/waits.js';
 import { stableStringify } from '@verdant-web/common';
 
-const fuzzCollectionSchema = collection({
+const fuzzCollectionSchema = schema.collection({
 	name: 'fuzz',
-	fields: {
-		id: { type: 'string' },
-		data: { type: 'any' },
-	},
 	primaryKey: 'id',
+	fields: {
+		id: schema.fields.string(),
+		data: schema.fields.any(),
+	},
 });
 
 const fuzzSchema = schema({
@@ -193,23 +193,23 @@ async function fuzz(
 async function waitForConsistency(
 	client1: ClientWithCollections,
 	client2: ClientWithCollections,
+	debugTag: string,
 ) {
 	let attempts = 0;
+	let snap1 = '';
+	let snap2 = '';
 	await waitForCondition(
 		async () => {
 			attempts++;
 			const fuzz1 = await getFuzz(client1);
 			const fuzz2 = await getFuzz(client2);
-			return (
-				!!fuzz1 &&
-				!!fuzz2 &&
-				stableStringify(fuzz1?.getSnapshot()) ===
-					stableStringify(fuzz2?.getSnapshot())
-			);
+			snap1 = stableStringify(fuzz1?.getSnapshot());
+			snap2 = stableStringify(fuzz2?.getSnapshot());
+			return !!fuzz1 && !!fuzz2 && snap1 === snap2;
 		},
-		1500,
+		5000,
 		() => {
-			return 'consistency';
+			return `[${debugTag}] constistency: ${snap1} !== ${snap2} after ${attempts} attempts`;
 		},
 	);
 	const finalFuzz1 = await getFuzz(client1);
@@ -230,7 +230,7 @@ let server: { cleanup: () => Promise<void>; port: number };
 
 beforeAll(async () => {
 	server = await startTestServer({
-		// log: true,
+		log: true,
 		// disableRebasing: true,
 	});
 });
@@ -246,55 +246,56 @@ it(
 			user: 'a',
 			server,
 			indexedDb: client1IndexedDB,
-			// logId: 'a',
+			logId: 'a',
 		});
 		const client2IndexedDB = new IDBFactory();
 		const client2 = await createTestClient({
 			user: 'b',
 			server,
 			indexedDb: client2IndexedDB,
-			// logId: 'b',
+			logId: 'b',
 		});
 
 		// make a bunch of random changes to the data
-		let promises: Promise<any>[] = [];
-		for (let i = 0; i < fuzzCount; i++) {
-			promises.push(fuzz(client1, { avoidLists, avoidDelete }));
-			promises.push(fuzz(client2, { avoidLists, avoidDelete }));
+		function doFuzzReturnPromise() {
+			let promises: Promise<any>[] = [];
+			for (let i = 0; i < fuzzCount; i++) {
+				promises.push(fuzz(client1, { avoidLists, avoidDelete }));
+				promises.push(fuzz(client2, { avoidLists, avoidDelete }));
+			}
+			return Promise.all(promises);
 		}
+		let fuzzPromise = doFuzzReturnPromise();
 
 		// purposefully sync while things are still happening
 		client1.sync.start();
 		client2.sync.start();
 
-		await Promise.all(promises);
+		await fuzzPromise;
 
-		await waitForConsistency(client1, client2);
+		await waitForConsistency(client1, client2, 'initial');
 		console.info('✅ Initial consistency achieved');
 
-		for (let i = 0; i < fuzzCount; i++) {
-			fuzz(client1, { avoidLists, avoidDelete });
-			fuzz(client2, { avoidLists, avoidDelete });
-		}
+		fuzzPromise = doFuzzReturnPromise();
 
-		await waitForConsistency(client1, client2);
+		await waitForConsistency(client1, client2, 'online');
 		console.info('✅ Online consistency achieved');
+
+		await fuzzPromise;
 
 		client1.sync.stop();
 		client2.sync.stop();
 
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		for (let i = 0; i < fuzzCount; i++) {
-			fuzz(client1, { avoidLists, avoidDelete });
-			fuzz(client2, { avoidLists, avoidDelete });
-		}
+		// do all the work offline
+		await doFuzzReturnPromise();
 
 		client1.sync.start();
 		client2.sync.start();
 
-		await waitForConsistency(client1, client2);
+		await waitForConsistency(client1, client2, 'offline');
 		console.info('✅ Offline consistency achieved');
 	},
-	{ timeout: 30 * 1000 },
+	{ timeout: 60 * 1000 },
 );

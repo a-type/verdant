@@ -624,7 +624,7 @@ it(
 
 it('migrates in an online world where old operations still come in', async () => {
 	const server = await startTestServer({
-		log: true,
+		// log: true,
 	});
 	const indexedDbA = new IDBFactory();
 	const indexedDBB = new IDBFactory();

@@ -46,6 +46,14 @@ export type LibraryInfo<Profile = unknown> = {
 	globalAck: string | null;
 };
 
+export interface FileMetadata {
+	libraryId: string;
+	fileId: string;
+	name: string;
+	type: string;
+	pendingDeleteAt: number | null;
+}
+
 // patch File
 declare global {
 	interface File {
