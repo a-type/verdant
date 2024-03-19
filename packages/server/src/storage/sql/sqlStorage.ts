@@ -21,8 +21,9 @@ export const sqlStorage = ({
 			database: new Database(dbFile),
 		}),
 	});
+	let ready = Promise.resolve<void>(undefined);
 	if (!skipMigrations) {
-		migrateToLatest(db, migrations);
+		ready = migrateToLatest(db, migrations);
 	}
 	return (options) => {
 		const baselines = new SqlBaselines(db, 'sqlite');
@@ -47,8 +48,12 @@ export const sqlStorage = ({
 			replicas,
 			fileMetadata,
 			close,
-			open: true,
+			open: false,
+			ready,
 		};
+		ready.then(() => {
+			storage.open = true;
+		});
 		return storage;
 	};
 };

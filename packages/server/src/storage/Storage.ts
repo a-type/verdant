@@ -112,6 +112,7 @@ export interface Storage {
 	fileMetadata: FileMetadataStorage;
 	close(): Promise<void>;
 	readonly open: boolean;
+	readonly ready: Promise<void>;
 }
 
 export type StorageFactory = (options: StorageOptions) => Storage;

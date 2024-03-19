@@ -1,35 +1,31 @@
 import {
 	AckMessage,
-	applyOperations,
 	ClientMessage,
 	DocumentBaseline,
+	EventSubscriber,
 	HeartbeatMessage,
-	omit,
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
+	Ref,
 	ReplicaType,
 	SyncMessage,
-	isObjectRef,
-	FileRef,
-	ObjectIdentifier,
-	Ref,
+	applyOperations,
 	isFileRef,
-	SyncAckMessage,
-	EventSubscriber,
+	isObjectRef,
+	omit,
 } from '@verdant-web/common';
-import { Database } from 'better-sqlite3';
-import { ReplicaInfos } from './storage/Replicas.js';
 import { MessageSender } from './MessageSender.js';
-import { OperationHistory } from './storage/OperationHistory.js';
-import { Baselines } from './storage/Baselines.js';
 import { Presence } from './Presence.js';
 import { UserProfileLoader } from './Profiles.js';
 import { TokenInfo } from './TokenVerifier.js';
-import { FileMetadata } from './files/FileMetadata.js';
 import { FileStorage } from './files/FileStorage.js';
-import { LibraryInfo, StoredOperation } from './types.js';
 import { Storage } from './storage/Storage.js';
+import {
+	LibraryInfo,
+	StoredDocumentBaseline,
+	StoredOperation,
+} from './types.js';
 
 export type ServerLibraryEvents = {
 	changes: (
@@ -52,7 +48,6 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		storage,
 		sender,
 		profiles,
-		replicaTruancyMinutes,
 		log = () => {},
 		disableRebasing,
 		fileStorage,
@@ -60,7 +55,6 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		storage: Storage;
 		sender: MessageSender;
 		profiles: UserProfileLoader<any>;
-		replicaTruancyMinutes: number;
 		log?: (...args: any[]) => void;
 		disableRebasing?: boolean;
 		fileStorage?: FileStorage;
@@ -83,14 +77,17 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	 */
 	private validateReplicaAccess = async (
 		replicaId: string,
+		clientKey: string,
 		info: TokenInfo,
 	) => {
 		const replica = await this.storage.replicas.get(info.libraryId, replicaId);
 		if (replica && replica.clientId !== info.userId) {
-			throw new Error(
-				`Replica ${replicaId} does not belong to client ${info.userId}`,
-			);
+			this.sender.send(info.libraryId, clientKey, {
+				type: 'forbidden',
+			});
+			return false;
 		}
+		return true;
 	};
 
 	private hasWriteAccess = (info: TokenInfo) => {
@@ -105,7 +102,14 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		await this.validateReplicaAccess(message.replicaId, info);
+		await this.storage.ready;
+
+		const allowed = await this.validateReplicaAccess(
+			message.replicaId,
+			clientKey,
+			info,
+		);
+		if (!allowed) return;
 
 		switch (message.type) {
 			case 'op':
@@ -167,7 +171,6 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			clientKey,
 			message.replicaId,
 			message.operations,
-			[],
 		);
 
 		// tell sender we got and processed their operation
@@ -185,36 +188,21 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		this.emit(`changes`, info, message.operations, []);
 	};
 
-	private removeExtraOperationData = (
-		operation: StoredOperation,
-	): Operation => {
-		return omit(operation, ['replicaId', 'serverOrder']);
-	};
-
 	private rebroadcastOperations = async (
 		libraryId: string,
 		clientKey: string,
 		replicaId: string,
 		ops: Operation[],
-		baselines: DocumentBaseline[],
 	) => {
-		if (ops.length === 0 && baselines.length === 0) return;
+		if (ops.length === 0) return;
 
-		this.log(
-			'info',
-			'Rebroadcasting',
-			ops.length,
-			'operations and',
-			baselines.length,
-			'baselines',
-		);
+		this.log('info', 'Rebroadcasting', ops.length, 'operations');
 
 		this.sender.broadcast(
 			libraryId,
 			{
 				type: 'op-re',
 				operations: ops,
-				baselines,
 				replicaId,
 				globalAckTimestamp:
 					(await this.storage.replicas.getGlobalAck(libraryId)) ?? undefined,
@@ -361,7 +349,6 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				clientKey,
 				message.replicaId,
 				message.operations,
-				message.baselines,
 			);
 			if (message.operations.length || message.baselines.length) {
 				this.emit(`changes`, info, message.operations, message.baselines);
@@ -385,14 +372,14 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			baselines.length,
 			'baselines',
 		);
+
+		// mutating baselines/operations to remove extra data -
+		// mutating just to save on allocations here.
+
 		this.sender.send(info.libraryId, clientKey, {
 			type: 'sync-resp',
-			operations: ops.map(this.removeExtraOperationData),
-			baselines: baselines.map((baseline) => ({
-				oid: baseline.oid,
-				snapshot: baseline.snapshot,
-				timestamp: baseline.timestamp,
-			})),
+			operations: this.removeOperationExtras(ops),
+			baselines: this.removeBaselineExtras(baselines),
 			globalAckTimestamp:
 				(await this.storage.replicas.getGlobalAck(info.libraryId)) ?? undefined,
 			peerPresence: this.presences.all(info.libraryId),
@@ -817,5 +804,33 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		} else {
 			return null;
 		}
+	};
+
+	// MUTATES DATA. ONLY USE WHEN RETURNING DATA TO CLIENT WHICH WILL OTHERWISE
+	// NOT BE REFERENCED.
+	private removeBaselineExtras = (
+		baselines: StoredDocumentBaseline[],
+	): DocumentBaseline[] => {
+		for (const baseline of baselines) {
+			// @ts-expect-error
+			delete baseline.libraryId;
+		}
+		return baselines as unknown as DocumentBaseline[];
+	};
+
+	// MUTATES DATA. ONLY USE WHEN RETURNING DATA TO CLIENT WHICH WILL OTHERWISE
+	// NOT BE REFERENCED.
+	private removeOperationExtras = (
+		operations: StoredOperation[],
+	): Operation[] => {
+		for (const operation of operations) {
+			// @ts-expect-error
+			delete operation.libraryId;
+			// @ts-expect-error
+			delete operation.replicaId;
+			// @ts-expect-error
+			delete operation.serverOrder;
+		}
+		return operations as unknown as Operation[];
 	};
 }

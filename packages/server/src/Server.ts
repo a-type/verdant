@@ -154,7 +154,6 @@ export class Server extends EventEmitter implements MessageSender {
 			log: this.log,
 			disableRebasing: options.disableRebasing,
 			fileStorage: this.fileStorage,
-			replicaTruancyMinutes: options.replicaTruancyMinutes || 60 * 24 * 14,
 		});
 
 		this.library.subscribe(
@@ -565,7 +564,7 @@ export class Server extends EventEmitter implements MessageSender {
 		return new Promise((resolve, reject) => {
 			const bb = busboy({ headers });
 
-			bb.on('file', (fieldName, stream, fileInfo) => {
+			bb.on('file', async (fieldName, stream, fileInfo) => {
 				// too many 'info's....
 				const lofiFileInfo: FileInfo = {
 					id,
@@ -575,7 +574,8 @@ export class Server extends EventEmitter implements MessageSender {
 				};
 				// write metadata to storage
 				try {
-					this.storage.fileMetadata.put(info.libraryId, lofiFileInfo);
+					await this.storage.ready;
+					await this.storage.fileMetadata.put(info.libraryId, lofiFileInfo);
 					fs.put(stream, lofiFileInfo);
 				} catch (e) {
 					reject(e);
@@ -614,6 +614,7 @@ export class Server extends EventEmitter implements MessageSender {
 	): Promise<FileData> => {
 		const fs = this.getFileStorageOrThrow();
 
+		await this.storage.ready;
 		const fileInfo = await this.storage.fileMetadata.get(info.libraryId, id);
 		if (!fileInfo) {
 			throw new VerdantError(
