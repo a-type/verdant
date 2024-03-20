@@ -3,6 +3,7 @@ import { Kysely } from 'kysely';
 export async function up(db: Kysely<any>) {
 	await db.schema
 		.createTable('DocumentBaseline')
+		.ifNotExists()
 		.addColumn('oid', 'text')
 		.addColumn('snapshot', 'text')
 		.addColumn('timestamp', 'text', (cb) => cb.notNull())
@@ -15,6 +16,7 @@ export async function up(db: Kysely<any>) {
 
 	await db.schema
 		.createTable('OperationHistory')
+		.ifNotExists()
 		.addColumn('oid', 'text', (cb) => cb.notNull())
 		.addColumn('timestamp', 'text', (cb) => cb.notNull())
 		.addColumn('data', 'text', (cb) => cb.notNull())
@@ -31,6 +33,7 @@ export async function up(db: Kysely<any>) {
 
 	await db.schema
 		.createTable('ReplicaInfo')
+		.ifNotExists()
 		.addColumn('id', 'text')
 		.addColumn('libraryId', 'text', (cb) => cb.notNull())
 		.addColumn('clientId', 'text', (cb) => cb.notNull())
@@ -43,6 +46,7 @@ export async function up(db: Kysely<any>) {
 
 	await db.schema
 		.createTable('FileMetadata')
+		.ifNotExists()
 		.addColumn('libraryId', 'text', (cb) => cb.notNull())
 		.addColumn('fileId', 'text', (cb) => cb.notNull())
 		.addColumn('name', 'text', (cb) => cb.notNull())
