@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.3.2
+
+### Patch Changes
+
+- 5303b94: Tweak transactions to improve client query performance
+
 ## 3.3.1
 
 ### Patch Changes
