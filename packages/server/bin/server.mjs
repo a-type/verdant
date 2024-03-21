@@ -8,6 +8,7 @@ import {
 	TokenProvider,
 	ReplicaType,
 } from '../dist/esm/index.js';
+import { sqlStorage } from '../dist/esm/storage/index.js';
 import minimist from 'minimist';
 
 const argv = minimist(process.argv.slice(1));
@@ -80,7 +81,9 @@ const http = createServer((req, res) => {
 });
 
 const verdant = new Server({
-	databaseFile: 'verdant.sqlite',
+	storage: sqlStorage({
+		databaseFile: 'verdant.sqlite',
+	}),
 	tokenSecret: SECRET,
 	fileStorage: new LocalFileStorage({
 		rootDirectory: 'files',
