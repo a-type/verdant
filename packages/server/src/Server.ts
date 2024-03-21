@@ -17,10 +17,8 @@ import internal, { Readable } from 'stream';
 import { URL } from 'url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { ClientConnectionManager } from './ClientConnection.js';
-import { FileMetadata, FileMetadataConfig } from './files/FileMetadata.js';
 import { FileInfo, FileStorage } from './files/FileStorage.js';
 import { MessageSender } from './MessageSender.js';
-import { migrations } from './migrations.js';
 import { UserProfileLoader, UserProfiles } from './Profiles.js';
 import { ReplicaKeepaliveTimers } from './ReplicaKeepaliveTimers.js';
 import { ServerLibrary } from './ServerLibrary.js';
@@ -72,7 +70,7 @@ export interface ServerOptions {
 	 * of this library.
 	 */
 	fileStorage?: FileStorage;
-	fileConfig?: FileMetadataConfig;
+	fileConfig?: { deleteExpirationDays?: number };
 }
 
 class DefaultProfiles implements UserProfiles<{ id: string }> {
