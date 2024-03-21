@@ -21,7 +21,9 @@ export async function startTestServer({
 	const app = express();
 	const httpServer = createServer(app);
 
-	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
+	const dbFileName = keepDb
+		? `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
+		: ':memory:';
 	console.log(`Using database file ${dbFileName}`);
 
 	const server = new Server({
@@ -91,9 +93,6 @@ export async function startTestServer({
 		cleanup: async () => {
 			try {
 				await server.close();
-				if (!keepDb) {
-					await fs.unlink(dbFileName);
-				}
 			} catch (err) {
 				console.error(err);
 			}

@@ -157,7 +157,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 	private addData = (data: {
 		operations: Operation[];
-		baselines: DocumentBaseline[];
+		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
 		return this._entities.addData(data);

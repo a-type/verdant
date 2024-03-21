@@ -155,6 +155,14 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			return;
 		}
 
+		// rebroadcast to whole library except the sender
+		this.rebroadcastOperations(
+			info.libraryId,
+			clientKey,
+			message.replicaId,
+			message.operations,
+		);
+
 		// TODO: can we defer this and rebroadcast in parallel?
 		// insert patches into history
 		await this.storage.operations.insertAll(
@@ -164,14 +172,6 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		);
 
 		this.enqueueRebase(info.libraryId);
-
-		// rebroadcast to whole library except the sender
-		this.rebroadcastOperations(
-			info.libraryId,
-			clientKey,
-			message.replicaId,
-			message.operations,
-		);
 
 		// tell sender we got and processed their operation
 		this.sender.send(info.libraryId, clientKey, {
