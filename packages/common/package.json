@@ -5,18 +5,16 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"import": "./src/index.ts",
-			"require": "./dist/cjs/index.js"
+			"development": "./src/index.ts",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/esm/index.d.ts"
 		}
 	},
 	"publishConfig": {
-		"types": "./dist/esm/index.d.ts",
-		"main": "./dist/cjs/index.js",
-		"module": "./dist/esm/index.js",
 		"exports": {
 			".": {
 				"import": "./dist/esm/index.js",
-				"require": "./dist/cjs/index.js"
+				"types": "./dist/esm/index.d.ts"
 			}
 		},
 		"access": "public"
@@ -28,7 +26,7 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"build": "tsc -p tsconfig.json",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
 		"typecheck": "tsc --noEmit"
@@ -41,7 +39,7 @@
 	"devDependencies": {
 		"@types/object-hash": "^3.0.4",
 		"@types/uuid": "^8.3.4",
-		"typescript": "^4.7.4",
+		"typescript": "^5.4.2",
 		"vitest": "^1.1.0"
 	}
 }

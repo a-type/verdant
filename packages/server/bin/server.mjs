@@ -92,24 +92,39 @@ const verdant = new Server({
 		}),
 	},
 	httpServer: http,
-	log: console.log,
+	log: (level, ...rest) => {
+		if (process.env.VERDANT_LOG === 'false') {
+			return;
+		}
+		if (level === 'debug' && process.env.VERDANT_DEBUG !== 'true') {
+			return;
+		}
+		console.log(level, ...rest);
+	},
 });
 
 verdant.on('error', (err) => {
 	console.error(err);
 });
 
-http.listen(PORT, () => {
-	console.log(`🌿 Verdant standalone server listening on port ${PORT}`);
-	console.log(``);
-	console.log(
-		`It's not recommended you use this server in production. It's a convenient way to test syncing locally, but has no authorization.`,
-	);
-	console.log(``);
-	console.log(
-		`To connect your client, supply "http://localhost:${PORT}/auth/<libraryId>?userId=<userId>" to sync.authEndpoint.`,
-	);
-	console.log(
-		`<libraryId> and <userId> are up to you and your app. Clients on the same library ID will sync data.`,
-	);
+export default new Promise((resolve) => {
+	http.listen(PORT, () => {
+		console.log(`🌿 Verdant standalone server listening on port ${PORT}`);
+		console.log(``);
+		console.log(
+			`It's not recommended you use this server in production. It's a convenient way to test syncing locally, but has no authorization.`,
+		);
+		console.log(``);
+		console.log(
+			`To connect your client, supply "http://localhost:${PORT}/auth/<libraryId>?userId=<userId>" to sync.authEndpoint.`,
+		);
+		console.log(
+			`<libraryId> and <userId> are up to you and your app. Clients on the same library ID will sync data.`,
+		);
+
+		resolve({
+			httpServer: http,
+			verdant,
+		});
+	});
 });

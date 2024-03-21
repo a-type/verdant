@@ -3,16 +3,18 @@
 	"version": "1.0.15",
 	"access": "public",
 	"type": "module",
-	"main": "src/index.ts",
-	"module": "src/index.ts",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/types/index.d.ts"
+		}
+	},
 	"publishConfig": {
-		"types": "./dist/esm/index.d.ts",
-		"main": "./dist/cjs/index.js",
-		"module": "./dist/esm/index.js",
 		"exports": {
 			".": {
 				"import": "./dist/esm/index.js",
-				"require": "./dist/cjs/index.js"
+				"types": "./dist/types/index.d.ts"
 			}
 		},
 		"access": "public"
@@ -22,7 +24,7 @@
 		"src/"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"build": "tsc -p tsconfig.json",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
 		"//test": "vitest"
@@ -33,7 +35,7 @@
 		"@verdant-web/server": "workspace:*"
 	},
 	"devDependencies": {
-		"typescript": "^4.7.4",
+		"typescript": "^5.4.2",
 		"vitest": "^1.1.0"
 	}
 }

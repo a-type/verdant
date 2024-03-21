@@ -241,7 +241,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			this.sender.send(info.libraryId, clientKey, {
 				type: 'forbidden',
 			});
-			this.log('warning', 'sync from read-only replica', replicaId);
+			this.log('warn', 'sync from read-only replica', replicaId);
 			return;
 		}
 
@@ -256,6 +256,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const changesSince =
 			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
 		this.log(
+			'info',
 			`Sync from ${replicaId} (user: ${info.userId}) [ackedLogicalTime: ${changesSince}, ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}, status: ${status}}]`,
 		);
 
@@ -297,6 +298,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// this replica should respond with a full history.
 		if (isEmptyLibrary && status === 'new' && message.since !== null) {
 			this.log(
+				'info',
 				'Detected local data is incomplete, requesting full history from replica',
 				replicaId,
 			);
@@ -310,6 +312,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			// but the library already has data. the replica should
 			// reset to the server version
 			this.log(
+				'warn',
 				'Detected replica',
 				replicaId,
 				'is providing a full history but the library already has data. Requesting replica reset.',
@@ -319,6 +322,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 
 		if (overwriteLocalData) {
 			this.log(
+				'info',
 				'Overwriting local data for replica',
 				replicaId,
 				'with',
@@ -336,6 +340,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			this.baselines.insertAll(info.libraryId, message.baselines);
 
 			this.log(
+				'debug',
 				'Storing',
 				message.baselines.length,
 				'baselines and',
@@ -362,7 +367,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		}
 
 		if (status === 'truant') {
-			this.log('A truant replica has reconnected', replicaId);
+			this.log('info', 'A truant replica has reconnected', replicaId);
 		}
 
 		// create the nonce by encoding the server order of the last operation
@@ -371,6 +376,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// respond to client
 
 		this.log(
+			'info',
 			'Sending sync response with',
 			ops.length,
 			'operations and',
@@ -477,7 +483,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	private rebase = (libraryId: string) => {
 		if (this.disableRebasing) return;
 
-		this.log('Performing rebase check');
+		this.log('debug', 'Performing rebase check');
 
 		// fundamentally a rebase occurs when some conditions are met:
 		// 1. the replica which created an operation has dropped that operation
@@ -503,12 +509,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			this.replicas.getEarliestAckedServerOrder(libraryId);
 
 		if (!globalAck) {
-			this.log('No global ack, skipping rebase');
+			this.log('debug', 'No global ack, skipping rebase');
 			return;
 		}
 
 		if (globalServerOrder === null) {
-			this.log('No global server order, skipping rebase');
+			this.log('debug', 'No global server order, skipping rebase');
 			return;
 		}
 
@@ -598,14 +604,14 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		replicaId: string,
 		userId: string,
 	) => {
-		this.log('User disconnected from all replicas:', userId);
+		this.log('info', 'User disconnected from all replicas:', userId);
 		this.sender.broadcast(libraryId, {
 			type: 'presence-offline',
 			replicaId,
 			userId,
 		});
 		if (Object.keys(this.presences.all(libraryId)).length === 0) {
-			this.log(`All users have disconnected from ${libraryId}`);
+			this.log('info', `All users have disconnected from ${libraryId}`);
 			// could happen - if the server is shutting down manually
 			if (!this.db.open) {
 				this.log('debug', 'Database not open, skipping cleanup');
@@ -617,11 +623,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 					throw new Error('File storage not configured, cannot delete files');
 				}
 				this.log(
+					'info',
 					'Deleting files:',
 					pendingDelete.map((f) => f.fileId).join(', '),
 				);
 				await Promise.all(
-					pendingDelete.map(async (fileInfo) => {
+					pendingDelete.map(async (fileInfo): Promise<void> => {
 						try {
 							await this.fileStorage?.delete({
 								libraryId: fileInfo.libraryId,
@@ -632,6 +639,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 							this.files.delete(libraryId, fileInfo.fileId);
 						} catch (e) {
 							this.log(
+								'error',
 								'Failed to delete file',
 								fileInfo.fileId,
 								' the file will remain in a pending delete state',
@@ -645,6 +653,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	};
 
 	destroy = async (libraryId: string) => {
+		this.log('info', 'Destroying library', libraryId);
 		this.presences.clear(libraryId);
 		this.replicas.deleteAll(libraryId);
 		this.operations.deleteAll(libraryId);
@@ -652,6 +661,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const allFiles = this.files.getAll(libraryId);
 		if (allFiles.length > 0) {
 			this.log(
+				'info',
 				`Deleting ${allFiles.length} files for library ${libraryId}`,
 				allFiles.map((f) => f.fileId).join(', '),
 			);

@@ -6,7 +6,7 @@
 		"sourceMap": true,
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"lib": ["dom", "esnext", "webworker"],
+		"lib": ["esnext"],
 		"skipLibCheck": true,
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
@@ -16,24 +16,8 @@
 		"jsx": "react-jsx",
 		"downlevelIteration": true,
 		"experimentalDecorators": true,
-		"isolatedModules": true
+		"isolatedModules": true,
+		"customConditions": ["development"]
 	},
-	"exclude": ["node_modules", "**/*/dist"],
-	"references": [
-		{
-			"path": "./packages/web"
-		},
-		{
-			"path": "./packages/common"
-		},
-		{
-			"path": "./packages/server"
-		},
-		{
-			"path": "./packages/react"
-		},
-		{
-			"path": "./test"
-		}
-	]
+	"exclude": ["node_modules", "**/*/dist"]
 }

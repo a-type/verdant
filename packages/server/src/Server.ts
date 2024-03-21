@@ -396,7 +396,7 @@ export class Server extends EventEmitter implements MessageSender {
 
 	private writeErrorResponse(e: unknown, res: ServerResponse) {
 		this.emit('error', e);
-		this.log('Error handling request', e);
+		this.log('error', 'Error handling request', e);
 
 		if (e instanceof VerdantError) {
 			// write error data to response
@@ -416,7 +416,7 @@ export class Server extends EventEmitter implements MessageSender {
 	// for fetch-style
 	private getErrorResponse(e: unknown) {
 		this.emit('error', e);
-		this.log('Error handling request', e);
+		this.log('error', 'Error handling request', e);
 
 		if (e instanceof VerdantError) {
 			return new Response(JSON.stringify(e.toResponse()), {
@@ -467,7 +467,7 @@ export class Server extends EventEmitter implements MessageSender {
 					headers: req.headers,
 					id,
 				});
-				this.log('File upload complete');
+				this.log('info', 'File upload complete', id);
 				res.writeHead(200);
 				res.write(JSON.stringify({ success: true }));
 				res.end();
@@ -525,7 +525,7 @@ export class Server extends EventEmitter implements MessageSender {
 					headers: headersAsRecord,
 					id,
 				});
-				this.log('File upload complete');
+				this.log('info', 'File upload complete', id);
 				return new Response(JSON.stringify({ success: true }), {
 					status: 200,
 					headers: {
@@ -663,6 +663,7 @@ export class Server extends EventEmitter implements MessageSender {
 		message: ClientMessage,
 	) => {
 		this.log(
+			'debug',
 			'Got message from user',
 			info.userId,
 			', library',
@@ -715,22 +716,22 @@ export class Server extends EventEmitter implements MessageSender {
 		await Promise.all([
 			new Promise<void>((resolve) => {
 				setTimeout(() => {
-					console.warn('HTTP server close timed out');
+					this.log('warn', 'HTTP server close timed out');
 					resolve();
 				}, 5 * 1000);
 				this.httpServer.close(() => {
 					resolve();
-					this.log('HTTP server closed');
+					this.log('info', 'HTTP server closed');
 				});
 			}),
 			new Promise<void>((resolve) => {
 				setTimeout(() => {
-					console.warn('Socket server close timed out');
+					this.log('warn', 'Socket server close timed out');
 					resolve();
 				}, 5 * 1000);
 				this.wss.close(() => {
 					resolve();
-					this.log('Socket server closed');
+					this.log('info', 'Socket server closed');
 				});
 			}),
 		]);
@@ -749,7 +750,7 @@ export class Server extends EventEmitter implements MessageSender {
 		// disconnect all clients
 		this.clientConnections.disconnectAll(libraryId);
 		this.library.destroy(libraryId);
-		this.log('Evicted library', libraryId);
+		this.log('info', 'Evicted library', libraryId);
 	};
 
 	/**
@@ -775,7 +776,7 @@ export class Server extends EventEmitter implements MessageSender {
 	 */
 	evictUser = (libraryId: string, userId: string) => {
 		this.library.evictUser(libraryId, userId);
-		this.log('Evicted user', userId, 'from library', libraryId);
+		this.log('info', 'Evicted user', userId, 'from library', libraryId);
 	};
 
 	/**

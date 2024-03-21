@@ -50,6 +50,9 @@
 		},
 		{
 			"path": "../packages/file-storage-s3"
+		},
+		{
+			"path": ".."
 		}
 	],
 	"settings": {

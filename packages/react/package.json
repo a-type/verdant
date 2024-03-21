@@ -3,16 +3,19 @@
 	"version": "28.0.1",
 	"access": "public",
 	"type": "module",
-	"main": "src/index.ts",
-	"module": "src/index.ts",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"production": "./dist/esm/index.js",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/esm/index.d.ts"
+		}
+	},
 	"publishConfig": {
-		"types": "./dist/esm/index.d.ts",
-		"main": "./dist/cjs/index.js",
-		"module": "./dist/esm/index.js",
 		"exports": {
 			".": {
 				"import": "./dist/esm/index.js",
-				"require": "./dist/cjs/index.js"
+				"types": "./dist/esm/index.d.ts"
 			}
 		},
 		"access": "public"
@@ -22,7 +25,7 @@
 		"src/"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"build": "tsc -p tsconfig.json",
 		"prepublish": "pnpm run build",
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
@@ -45,7 +48,7 @@
 		"fake-indexeddb": "^5.0.1",
 		"jsdom": "^20.0.0",
 		"react": "^18.2.0",
-		"typescript": "^4.7.4",
+		"typescript": "^5.4.2",
 		"vitest": "^1.1.0"
 	}
 }
