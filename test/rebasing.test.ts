@@ -131,10 +131,12 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	const clientA = await context.createTestClient({
 		library: 'old-rebase-sync-1',
 		user: 'A',
+		// logId: 'A',
 	});
 	const clientB = await context.createTestClient({
 		library: 'old-rebase-sync-1',
 		user: 'B',
+		// logId: 'B',
 	});
 
 	clientA.sync.start();

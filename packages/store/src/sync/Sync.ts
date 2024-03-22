@@ -354,6 +354,7 @@ export class ServerSync<Presence = any, Profile = any>
 			case 'op-re':
 				await this.onData({
 					operations: message.operations,
+					baselines: message.baselines,
 				});
 				if (message.globalAckTimestamp) {
 					await this.meta.setGlobalAck(message.globalAckTimestamp);

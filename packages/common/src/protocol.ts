@@ -37,11 +37,6 @@ export type OperationMessage = {
 export type OperationRebroadcastMessage = {
 	type: 'op-re';
 	operations: Operation[];
-	/**
-	 * @deprecated - there is no scenario where baselines would need
-	 * to be rebroadcast to other replicas. Each replica should
-	 * rebase its own data.
-	 */
 	baselines?: DocumentBaseline[];
 	replicaId: string;
 	globalAckTimestamp: string | undefined;

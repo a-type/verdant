@@ -193,16 +193,25 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		clientKey: string,
 		replicaId: string,
 		ops: Operation[],
+		baselines?: DocumentBaseline[],
 	) => {
-		if (ops.length === 0) return;
+		if (ops.length === 0 && !baselines?.length) return;
 
-		this.log('info', 'Rebroadcasting', ops.length, 'operations');
+		this.log(
+			'info',
+			'Rebroadcasting',
+			ops.length,
+			'operations',
+			baselines?.length ?? 0,
+			'baselines',
+		);
 
 		this.sender.broadcast(
 			libraryId,
 			{
 				type: 'op-re',
 				operations: ops,
+				baselines,
 				replicaId,
 				globalAckTimestamp:
 					(await this.storage.replicas.getGlobalAck(libraryId)) ?? undefined,
@@ -275,6 +284,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// and not rely on seemingly unrelated data.
 		const isEmptyLibrary =
 			changesSince === null && ops.length === 0 && baselines.length === 0;
+		if (isEmptyLibrary) {
+			this.log('info', 'Received sync from new library', replicaId);
+		}
 
 		let overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
 
@@ -349,6 +361,11 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				clientKey,
 				message.replicaId,
 				message.operations,
+				// we only need to broadcast baselines if we just initialized
+				// this library, if any other clients (with empty libraries)
+				// are listening for initial data, too. this happens in
+				// rebasing.test.ts, for example.
+				isEmptyLibrary ? message.baselines : undefined,
 			);
 			if (message.operations.length || message.baselines.length) {
 				this.emit(`changes`, info, message.operations, message.baselines);
