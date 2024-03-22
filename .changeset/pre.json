@@ -11,5 +11,7 @@
     "@verdant-web/server": "2.1.3",
     "@verdant-web/store": "3.3.2"
   },
-  "changesets": []
+  "changesets": [
+    "silent-birds-tan"
+  ]
 }
