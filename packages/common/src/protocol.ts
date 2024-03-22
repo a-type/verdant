@@ -37,7 +37,7 @@ export type OperationMessage = {
 export type OperationRebroadcastMessage = {
 	type: 'op-re';
 	operations: Operation[];
-	baselines: DocumentBaseline[];
+	baselines?: DocumentBaseline[];
 	replicaId: string;
 	globalAckTimestamp: string | undefined;
 	ackThisNonce?: string;

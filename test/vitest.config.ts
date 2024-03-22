@@ -9,4 +9,7 @@ export default defineConfig({
 
 		testTimeout: 30000,
 	},
+	resolve: {
+		conditions: ['development', 'default'],
+	},
 });

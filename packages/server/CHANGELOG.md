@@ -1,5 +1,16 @@
 # @lo-fi/server
 
+## 3.0.0-next.0
+
+### Major Changes
+
+- 43edd7a: Introduces support for custom server storage solutions via interface implementation. This change also makes server storage queries and writes async (they weren't before), which improves compatibility with custom solutions and performance overall with high message concurrency.
+
+### Patch Changes
+
+- Updated dependencies [43edd7a]
+  - @verdant-web/common@2.3.0-next.0
+
 ## 2.1.3
 
 ### Patch Changes

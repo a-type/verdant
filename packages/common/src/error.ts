@@ -4,6 +4,7 @@ export enum VerdantErrorCode {
 	NoToken = 4010,
 	InvalidToken = 4011,
 	TokenExpired = 4012,
+	Forbidden = 4030,
 	NotFound = 4040,
 	Unexpected = 5000,
 	ConfigurationError = 5010,

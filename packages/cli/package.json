@@ -6,6 +6,12 @@
 	"bin": {
 		"verdant": "dist/bin/index.js"
 	},
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"types": "./src/index.ts"
+		}
+	},
 	"publishConfig": {
 		"access": "public"
 	},
@@ -16,7 +22,7 @@
 	"scripts": {
 		"build": "tsc",
 		"link": "pnpm link --global",
-		"exec": "tsx ./src/bin/index.ts",
+		"exec": "tsx --conditions=development ./src/bin/index.ts",
 		"test": "pnpm run pretest && vitest",
 		"ci:test:unit": "pnpm run pretest && vitest run",
 		"pretest": "pnpm run exec -s ./test/schema.ts -o ./test/.generated -r --select=publish --module=esm",

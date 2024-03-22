@@ -5,4 +5,7 @@ export default defineConfig({
 		clearMocks: true,
 		environment: 'jsdom',
 	},
+	resolve: {
+		conditions: ['development', 'default'],
+	},
 });

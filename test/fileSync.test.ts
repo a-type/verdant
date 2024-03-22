@@ -31,7 +31,7 @@ it(
 		const clientA = await context.createTestClient({
 			library: 'file-sync-1',
 			user: 'User A',
-			logId: 'A',
+			// logId: 'A',
 		});
 		clientA.sync.start();
 

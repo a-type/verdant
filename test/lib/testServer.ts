@@ -2,7 +2,8 @@ import { Server, TokenProvider, ReplicaType } from '@verdant-web/server';
 import express from 'express';
 import { createServer } from 'http';
 import * as fs from 'fs/promises';
-import { LocalFileStorage } from '@verdant-web/server/src/files/FileStorage.js';
+import { LocalFileStorage } from '@verdant-web/server';
+import { sqlStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';
 
 const SECRET = 'notsecret';
@@ -20,12 +21,16 @@ export async function startTestServer({
 	const app = express();
 	const httpServer = createServer(app);
 
-	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
+	const dbFileName = keepDb
+		? `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
+		: ':memory:';
 	console.log(`Using database file ${dbFileName}`);
 
 	const server = new Server({
 		disableRebasing,
-		databaseFile: dbFileName,
+		storage: sqlStorage({
+			databaseFile: dbFileName,
+		}),
 		tokenSecret: SECRET,
 		profiles: {
 			get: async (userId: string) => {
@@ -88,9 +93,6 @@ export async function startTestServer({
 		cleanup: async () => {
 			try {
 				await server.close();
-				if (!keepDb) {
-					await fs.unlink(dbFileName);
-				}
 			} catch (err) {
 				console.error(err);
 			}

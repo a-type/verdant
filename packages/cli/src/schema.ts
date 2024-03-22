@@ -47,6 +47,8 @@ export async function readSchema({
 		target: 'esnext',
 		platform: 'node',
 		allowOverwrite: true,
+		// makes this work in tests / development
+		conditions: ['development'],
 		banner: {
 			js: `
       import path from 'path';

@@ -19,6 +19,7 @@ import {
 } from './lib/waits.js';
 import { createTestFile } from './lib/createTestFile.js';
 import { assert } from '@a-type/utils';
+import { sqlStorage } from '@verdant-web/server/storage';
 
 async function createIttyServer() {
 	const port = await getPort();
@@ -32,7 +33,9 @@ async function createIttyServer() {
 	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
 
 	const server = new Server({
-		databaseFile: dbFileName,
+		storage: sqlStorage({
+			databaseFile: dbFileName,
+		}),
 		tokenSecret: 'notsecret',
 		profiles: {
 			get: async (userId: string) => {

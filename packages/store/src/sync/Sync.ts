@@ -182,7 +182,7 @@ export class ServerSync<Presence = any, Profile = any>
 	private endpointProvider;
 	private onData: (data: {
 		operations: Operation[];
-		baselines: DocumentBaseline[];
+		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => Promise<void>;
 	private broadcastChannel: BroadcastChannel | null = null;
@@ -217,7 +217,7 @@ export class ServerSync<Presence = any, Profile = any>
 			log?: (...args: any[]) => void;
 			onData: (data: {
 				operations: Operation[];
-				baselines: DocumentBaseline[];
+				baselines?: DocumentBaseline[];
 				reset?: boolean;
 			}) => Promise<void>;
 		},

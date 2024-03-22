@@ -6,6 +6,6 @@ export default defineConfig({
 		environment: 'node',
 	},
 	resolve: {
-		conditions: ['development', 'import'],
+		conditions: ['development', 'default'],
 	},
 });

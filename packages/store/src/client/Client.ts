@@ -157,7 +157,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 	private addData = (data: {
 		operations: Operation[];
-		baselines: DocumentBaseline[];
+		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
 		return this._entities.addData(data);
@@ -200,6 +200,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	stats = async () => {
 		const collectionNames = Object.keys(this.schema.collections);
 		let collections = {} as Record<string, { count: number; size: number }>;
+		if (this.disposed) {
+			return {} as any;
+		}
 		for (const collectionName of collectionNames) {
 			try {
 				collections[collectionName] = await getSizeOfObjectStore(
@@ -209,6 +212,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			} catch (err) {
 				this.context.log?.('error', err);
 			}
+		}
+		if (this.disposed) {
+			return { collections } as any;
 		}
 		const meta = await this.meta.stats();
 		const storage =
@@ -244,6 +250,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		this._closed = true;
 		this.sync.ignoreIncoming();
 		await this._entities.flushAllBatches();
+		this._fileManager.close();
 		this.sync.stop();
 		this.sync.destroy();
 		// this step does have the potential to flush

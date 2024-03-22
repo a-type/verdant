@@ -17,7 +17,8 @@
 		"downlevelIteration": true,
 		"experimentalDecorators": true,
 		"isolatedModules": true,
-		"customConditions": ["development"]
+		"customConditions": ["development"],
+		"declaration": true
 	},
 	"exclude": ["node_modules", "**/*/dist"]
 }

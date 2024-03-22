@@ -6,6 +6,9 @@ export default defineConfig({
 		environment: 'node',
 	},
 	resolve: {
-		conditions: ['development', 'import'],
+		conditions: ['development', 'default'],
+	},
+	build: {
+		sourcemap: true,
 	},
 });

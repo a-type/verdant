@@ -4,12 +4,11 @@ import { ClientWithCollections } from '@verdant-web/store';
 import { stableStringify } from '@verdant-web/common';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
-	return new Promise<void>((resolve) => {
-		setInterval(() => {
-			if (mock.mock.calls.length >= calls) {
-				resolve();
-			}
-		}, 100);
+	return waitForCondition(() => {
+		if (mock.mock.calls.length >= calls) {
+			return true;
+		}
+		return false;
 	});
 }
 
@@ -90,23 +89,21 @@ export async function waitForQueryResult(
 }
 
 export async function waitForEverythingToRebase(client: Client) {
-	await new Promise<void>((resolve) => {
-		setInterval(async () => {
-			if ((await client.stats()).meta.operationsSize.count === 0) {
-				resolve();
-			}
-		}, 300);
+	await waitForCondition(async () => {
+		if ((await client.stats()).meta.operationsSize.count === 0) {
+			return true;
+		}
+		return false;
 	});
 }
 
 export async function waitForBaselineCount(client: Client, count = 1) {
-	await new Promise<void>((resolve) => {
-		setInterval(async () => {
-			const stats = await client.stats();
-			if (stats.meta.baselinesSize.count >= count) {
-				resolve();
-			}
-		}, 300);
+	await waitForCondition(async () => {
+		const stats = await client.stats();
+		if (stats.meta.baselinesSize.count >= count) {
+			return true;
+		}
+		return false;
 	});
 }
 

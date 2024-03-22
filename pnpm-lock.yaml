@@ -340,6 +340,9 @@ importers:
 
   packages/server:
     dependencies:
+      '@a-type/kysely':
+        specifier: ^1.0.1
+        version: 1.0.1(kysely@0.27.3)
       '@verdant-web/common':
         specifier: workspace:*
         version: link:../common
@@ -355,6 +358,12 @@ importers:
       jsonwebtoken:
         specifier: ^8.5.1
         version: 8.5.1
+      kysely:
+        specifier: 0.27.3
+        version: 0.27.3
+      kysely-plugin-serialize:
+        specifier: ^0.5.7
+        version: 0.5.7(kysely@0.27.3)
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
@@ -13391,6 +13400,14 @@ packages:
 
   /ktx-parse@0.4.5:
     resolution: {integrity: sha512-MK3FOody4TXbFf8Yqv7EBbySw7aPvEcPX++Ipt6Sox+/YMFvR5xaTyhfNSk1AEmMy+RYIw81ctN4IMxCB8OAlg==}
+    dev: false
+
+  /kysely-plugin-serialize@0.5.7(kysely@0.27.3):
+    resolution: {integrity: sha512-FWPcH7eR3i059iogfzQS3qzNABQbUEnJug1paQ74G3MSUUgKAC5hp7T75oeHrnWgNHYCvQJfppD29vHXGVRgAg==}
+    peerDependencies:
+      kysely: '>=0.26'
+    dependencies:
+      kysely: 0.27.3
     dev: false
 
   /kysely@0.27.3:
