@@ -5,7 +5,9 @@ export default defineConfig({
 		clearMocks: true,
 		environment: 'node',
 	},
-
+	resolve: {
+		conditions: ['development', 'default'],
+	},
 	build: {
 		sourcemap: true,
 	},

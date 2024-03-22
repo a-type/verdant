@@ -7,4 +7,7 @@ export default defineConfig({
 
 		setupFiles: ['test/setup/indexedDB.ts'],
 	},
+	resolve: {
+		conditions: ['development', 'default'],
+	},
 });
