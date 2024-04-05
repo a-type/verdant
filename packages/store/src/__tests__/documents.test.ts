@@ -1,5 +1,4 @@
 import { assert } from '@verdant-web/common';
-import cuid from 'cuid';
 import { describe, it, expect, vi, MockedFunction, vitest } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 import { EntityFile } from '../index.js';
@@ -505,7 +504,9 @@ describe('storage documents', () => {
 
 		expect(() => {
 			item1.set('id', 'foo');
-		}).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot set readonly key id]`);
+		}).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Cannot set readonly key id]`,
+		);
 	});
 
 	it('should properly handle pushing to a list of files', async () => {
@@ -558,5 +559,37 @@ describe('storage documents', () => {
 		expect(fileList.get(0)).toBe(file2Ref);
 		expect(fileList.get(1)).toBe(file3Ref);
 		expect(fileList.get(2)).toBe(file1Ref);
+	});
+
+	it('should return nullish for missing map items', async () => {
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+
+		const map = weird.get('map');
+		expect(map.get('foo')).toBeUndefined();
+		const objectMap = weird.get('objectMap');
+		expect(objectMap.get('foo')).toBeUndefined();
+		const arrayMap = weird.get('arrayMap');
+		expect(arrayMap.get('foo')).toBeUndefined();
+	});
+
+	it('should allow getOrSet for nullable fields', async () => {
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+
+		const map = weird.get('map');
+		const foo = map.getOrSet('foo', 'bar');
+		expect(foo).toBe('bar');
+		expect(map.get('foo')).toBe('bar');
+
+		const objectMap = weird.get('objectMap');
+		const fooObject = objectMap.getOrSet('foo', { content: 'bar' });
+		expect(fooObject.get('content')).toBe('bar');
+		expect(objectMap.get('foo').get('content')).toBe('bar');
+
+		const arrayMap = weird.get('arrayMap');
+		const fooArray = arrayMap.getOrSet('foo', ['bar']);
+		expect(fooArray.get(0)).toEqual('bar');
+		expect(arrayMap.get('foo').get(0)).toEqual('bar');
 	});
 });

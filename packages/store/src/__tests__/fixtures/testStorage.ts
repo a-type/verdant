@@ -70,6 +70,11 @@ export const weirdCollection = schema.collection({
 				},
 			}),
 		}),
+		arrayMap: schema.fields.map({
+			values: schema.fields.array({
+				items: schema.fields.string(),
+			}),
+		}),
 	},
 });
 

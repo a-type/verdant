@@ -549,21 +549,23 @@ export class Entity<
 			);
 		}
 		const child = view[key as any];
-		const schema = getChildFieldSchema(this.schema, key);
-		if (!schema) {
+		const fieldSchema = getChildFieldSchema(this.schema, key);
+		if (!fieldSchema) {
 			throw new Error(
 				`No schema for key ${String(key)} in ${JSON.stringify(this.schema)}`,
 			);
 		}
 		if (isRef(child)) {
 			if (isFileRef(child)) {
-				if (schema.type !== 'file') {
+				if (fieldSchema.type !== 'file') {
 					throw new Error(
-						`Expected file schema for key ${String(key)}, got ${schema.type}`,
+						`Expected file schema for key ${String(key)}, got ${
+							fieldSchema.type
+						}`,
 					);
 				}
 				const file = this.files.get(child.id, {
-					downloadRemote: !!schema.downloadRemote,
+					downloadRemote: !!fieldSchema.downloadRemote,
 				});
 
 				// FIXME: this seems bad and inconsistent
@@ -576,26 +578,55 @@ export class Entity<
 				return this.getChild(key, child.id) as KeyValue[Key];
 			}
 		} else {
+			// if this is a Map type, a missing child is
+			// just an empty spot
+			if (this.schema.type === 'map' && child === undefined) {
+				return undefined as KeyValue[Key];
+			}
 			// prune invalid primitive fields
 			if (
 				validateEntityField({
-					field: schema,
+					field: fieldSchema,
 					value: child,
 					fieldPath: [...this.fieldPath, key],
 					depth: 1,
 					requireDefaults: true,
 				})
 			) {
-				if (hasDefault(schema)) {
-					return getDefault(schema);
+				if (hasDefault(fieldSchema)) {
+					return getDefault(fieldSchema);
 				}
-				if (isNullable(schema)) {
+				if (isNullable(fieldSchema)) {
 					return null as any;
 				}
 				return undefined as any;
 			}
 			return child as KeyValue[Key];
 		}
+	};
+
+	/**
+	 * Gets a value on this entity. If the value is not
+	 * present, it will be set to the provided default
+	 * and returned synchronously. This method only sets
+	 * a new value once when a field is empty; subsequent
+	 * calls will retrieve the created value until it is
+	 * deleted.
+	 *
+	 * Note that this should only be called for nullable
+	 * fields. If the field is not nullable, the existing
+	 * value or the default value will always be returned,
+	 * and the default will not be set.
+	 */
+	getOrSet = <Key extends keyof Init & keyof KeyValue>(
+		key: Key,
+		init: Init[Key],
+	): KeyValue[Key] => {
+		assertNotSymbol(key);
+		const existing = this.get(key);
+		if (existing) return existing;
+		this.set(key as any, init);
+		return this.get(key);
 	};
 
 	private processInputValue = (value: any, key: any) => {
