@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { useScrollRestoration } from './hooks.js';
 
 export interface RestoreScrollProps {
@@ -74,3 +74,72 @@ export const RestoreScroll = memo(function RestoreScroll({
 
 	return null;
 });
+
+function findScrollableParent(
+	element: HTMLElement | null,
+): HTMLElement | Window | null {
+	if (!element) {
+		return null;
+	}
+
+	const style = getComputedStyle(element);
+	const overflowY = style.overflowY || style.overflow;
+
+	if (overflowY !== 'visible' && overflowY !== 'hidden') {
+		return element;
+	}
+
+	if (!element.parentElement) {
+		return window;
+	}
+
+	return findScrollableParent(element.parentElement);
+}
+
+/**
+ * Experimental! Render this component anywhere and it will attempt to restore the
+ * scroll position of the nearest scrollable container (including the page) when
+ * navigation happens.
+ *
+ * If you have multiple AutoRestoreScroll components in different containers,
+ * you must provide a unique `id` prop to each.
+ */
+export function AutoRestoreScroll({
+	id,
+	debug,
+}: {
+	id?: string;
+	debug?: boolean;
+}) {
+	const ref = useRef<HTMLDivElement>(null);
+	useScrollRestoration({
+		onGetScrollPosition() {
+			const scrollable = findScrollableParent(ref.current);
+			if (!scrollable) return false;
+
+			if (scrollable instanceof HTMLElement) {
+				return [scrollable.scrollLeft, scrollable.scrollTop];
+			}
+			return [scrollable.scrollX, scrollable.scrollY];
+		},
+		onScrollRestored(position) {
+			const scrollable = findScrollableParent(ref.current);
+			if (!scrollable) return;
+
+			if (scrollable instanceof HTMLElement) {
+				scrollable.scrollTo(position[0], position[1]);
+			} else {
+				scrollable.scrollTo({
+					left: position[0],
+					top: position[1],
+				});
+			}
+		},
+		id,
+		debug,
+	});
+
+	return (
+		<div className="absolute z--1 w-0 h-0 pointer-events-none" ref={ref} />
+	);
+}
