@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react-router",
-	"version": "0.6.1",
+	"version": "0.6.2",
 	"access": "public",
 	"type": "module",
 	"exports": {

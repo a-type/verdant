@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.6.2
+
+### Patch Changes
+
+- b9bfda3: Add AutoRestoreScroll experimental component
+
 ## 0.6.1
 
 ### Patch Changes
