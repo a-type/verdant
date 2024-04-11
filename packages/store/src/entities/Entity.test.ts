@@ -215,4 +215,27 @@ describe('Entity', () => {
 			});
 		});
 	});
+
+	describe('changes', () => {
+		it('can apply partial updates including undefineds', () => {
+			const { entity, initialize } = createTestEntity();
+
+			initialize({
+				id: 'hi',
+				string: 'world',
+				number: 1,
+				nullable: null,
+				nonNullable: { first: { inner: 'foo' } },
+				map: {},
+				list: [20, { inner: 'yay' }],
+			});
+
+			entity.update({
+				string: 'new world',
+				number: undefined,
+			});
+
+			expect(entity.get('string')).toBe('new world');
+		});
+	});
 });

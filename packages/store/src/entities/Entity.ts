@@ -786,7 +786,12 @@ export class Entity<
 		{
 			merge = true,
 			replaceSubObjects = false,
-		}: { replaceSubObjects?: boolean; merge?: boolean } = {},
+			preserveUndefined = false,
+		}: {
+			replaceSubObjects?: boolean;
+			merge?: boolean;
+			preserveUndefined?: boolean;
+		} = {},
 	): void => {
 		if (!merge && this.schema.type !== 'any' && this.schema.type !== 'map') {
 			throw new Error(
@@ -799,6 +804,9 @@ export class Entity<
 			if (this.readonlyKeys.includes(key as any)) {
 				throw new Error(`Cannot set readonly key ${key.toString()}`);
 			}
+			// ignore undefined values unless overridden
+			if (field === undefined && !preserveUndefined) continue;
+
 			const fieldSchema = getChildFieldSchema(this.schema, key);
 			if (fieldSchema) {
 				traverseCollectionFieldsAndApplyDefaults(field, fieldSchema);
