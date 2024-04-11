@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.5.1
+
+### Patch Changes
+
+- 938cfb2: Allow explicit undefined values in Entity.update. Ignore them by default.
+
 ## 3.5.0
 
 ### Minor Changes
