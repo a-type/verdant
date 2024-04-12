@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.0.1
+
+### Patch Changes
+
+- 2add1d9: Important: fixes accidental operation deletion in rebasing logic
+
 ## 3.0.0
 
 ### Major Changes
