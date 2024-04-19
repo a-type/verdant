@@ -136,14 +136,15 @@ export class SqlOperations implements OperationStorage {
 		libraryId: string,
 		operations: Operation[],
 	): Promise<void> => {
-		await this.db
-			.deleteFrom('OperationHistory')
-			.where('libraryId', '=', libraryId)
-			.where(
-				'oid',
-				'in',
-				operations.map((o) => o.oid),
-			)
-			.execute();
+		await this.db.transaction().execute(async (tx) => {
+			for (const item of operations) {
+				await tx
+					.deleteFrom('OperationHistory')
+					.where('libraryId', '=', libraryId)
+					.where('oid', '=', item.oid)
+					.where('timestamp', '=', item.timestamp)
+					.execute();
+			}
+		});
 	};
 }
