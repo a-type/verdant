@@ -54,3 +54,4 @@ export type { QueryStatus } from './queries/BaseQuery.js';
 export type { CollectionQueries } from './queries/CollectionQueries.js';
 export { MigrationPathError } from './migration/errors.js';
 export * from './utils/id.js';
+export { UndoHistory } from './UndoHistory.js';
