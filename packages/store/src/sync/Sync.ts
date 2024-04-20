@@ -493,6 +493,15 @@ export class ServerSync<Presence = any, Profile = any>
 		return this.activeSync.reconnect();
 	};
 
+	/**
+	 * Runs one isolated sync cycle over HTTP. This is useful for
+	 * syncing via a periodic background job in a service worker,
+	 * which keeps a client up to date while the app isn't open.
+	 */
+	public syncOnce = () => {
+		return this.pushPullSync.syncOnce();
+	};
+
 	public get isConnected(): boolean {
 		return this.activeSync.isConnected;
 	}

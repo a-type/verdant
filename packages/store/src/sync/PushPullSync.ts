@@ -85,13 +85,11 @@ export class PushPullSync
 				const json = (await response.json()) as {
 					messages: ServerMessage[];
 				};
-				for (const message of json.messages) {
-					this.handleServerMessage(message);
-				}
 				if (!this._isConnected) {
 					this._isConnected = true;
 					this.emit('onlineChange', true);
 				}
+				await Promise.all(json.messages.map(this.handleServerMessage));
 			} else {
 				this.log('Sync request failed', response.status, await response.text());
 
@@ -130,7 +128,7 @@ export class PushPullSync
 			if (message.ackThisNonce) {
 				// we need to ack the nonce to confirm that we received the sync-resp
 				this.log('Sending sync ack', message.ackThisNonce);
-				this.sendRequest([
+				return this.sendRequest([
 					await this.meta.messageCreator.createAck(message.ackThisNonce),
 				]);
 			}
@@ -198,6 +196,10 @@ export class PushPullSync
 		this.emit('onlineChange', false);
 		this.log('Missed heartbeat');
 		this._isConnected = false;
+	};
+
+	syncOnce = async () => {
+		await this.sendRequest([await this.meta.messageCreator.createSyncStep1()]);
 	};
 
 	get isConnected(): boolean {
