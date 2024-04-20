@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 3.5.2
+
+### Patch Changes
+
+- 39cd3a0: Expose an id generator
+- f4bfccc: Expose UndoHistory from library
+
 ## 3.5.1
 
 ### Patch Changes
