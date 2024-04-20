@@ -1,15 +1,15 @@
 import { ReplicaType } from '@verdant-web/server';
 import { expect, it } from 'vitest';
-import { ClientDescriptor } from './client/index.js';
-import { createTestContext } from './lib/createTestContext.js';
+import { ClientDescriptor } from '../client/index.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForBaselineCount,
 	waitForEverythingToRebase,
 	waitForPeerCount,
 	waitForQueryResult,
 	waitForTime,
-} from './lib/waits.js';
-import migrations from './migrations/index.js';
+} from '../lib/waits.js';
+import migrations from '../migrations/index.js';
 
 const context = createTestContext({
 	// serverLog: true,

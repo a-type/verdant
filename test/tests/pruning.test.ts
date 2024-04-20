@@ -1,5 +1,5 @@
 import { it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	Migration,
 	collection,
@@ -11,7 +11,7 @@ import {
 	waitForEntitySnapshot,
 	waitForPeerCount,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 
 const ctx = createTestContext({
 	// testLog: true,

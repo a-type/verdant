@@ -1,11 +1,11 @@
 import { expect, it, vitest } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import { ReplicaType } from '@verdant-web/server';
 import {
 	waitForCondition,
 	waitForOnline,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 import { assert } from '@a-type/utils';
 
 const context = createTestContext({

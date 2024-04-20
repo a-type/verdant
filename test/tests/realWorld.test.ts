@@ -4,18 +4,18 @@ import {
 	createMigration,
 	migrate,
 } from '@verdant-web/common';
-import defaultMigrations from './migrations/index.js';
-import defaultSchema from './schema.js';
+import defaultMigrations from '../migrations/index.js';
+import defaultSchema from '../schema.js';
 import { ClientWithCollections } from '@verdant-web/store';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import { expect, it } from 'vitest';
 import {
 	waitForCondition,
 	waitForOnline,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 
 const context = createTestContext({
 	// testLog: true,

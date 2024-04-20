@@ -8,7 +8,7 @@ import {
 } from '@verdant-web/common';
 import { ClientWithCollections, StorageDescriptor } from '@verdant-web/store';
 import { expect, it } from 'vitest';
-import defaultSchema from './schema.js';
+import defaultSchema from '../schema.js';
 
 async function createTestClient({
 	schema,

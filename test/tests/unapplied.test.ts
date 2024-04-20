@@ -1,12 +1,12 @@
 import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForCondition,
 	waitForMockCall,
 	waitForQueryResult,
-} from './lib/waits.js';
-import defaultMigrations from './migrations/index.js';
-import defaultSchema from './schema.js';
+} from '../lib/waits.js';
+import defaultMigrations from '../migrations/index.js';
+import defaultSchema from '../schema.js';
 import {
 	schema,
 	collection,

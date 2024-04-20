@@ -1,8 +1,8 @@
 import { it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import { collection, createMigration, schema } from '@verdant-web/common';
 import { ClientWithCollections } from '@verdant-web/store';
-import { waitForEntityCondition } from './lib/waits.js';
+import { waitForEntityCondition } from '../lib/waits.js';
 
 const context = createTestContext();
 

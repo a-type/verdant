@@ -9,15 +9,15 @@ import { Router, error, json, text } from 'itty-router';
 import { createServerAdapter } from '@whatwg-node/server';
 import { describe, expect, it } from 'vitest';
 import { createServer } from 'http';
-import { createTestClient } from './lib/testClient.js';
+import { createTestClient } from '../lib/testClient.js';
 import {
 	waitForCondition,
 	waitForEntityCondition,
 	waitForPeerCount,
 	waitForQueryResult,
 	waitForTime,
-} from './lib/waits.js';
-import { createTestFile } from './lib/createTestFile.js';
+} from '../lib/waits.js';
+import { createTestFile } from '../lib/createTestFile.js';
 import { assert } from '@a-type/utils';
 import { sqlStorage } from '@verdant-web/server/storage';
 

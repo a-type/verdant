@@ -9,8 +9,8 @@ import {
 import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { startTestServer } from './lib/testServer.js';
-import { waitForQueryResult } from './lib/waits.js';
+import { startTestServer } from '../lib/testServer.js';
+import { waitForQueryResult } from '../lib/waits.js';
 
 async function createTestClient({
 	schema,

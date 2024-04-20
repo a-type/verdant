@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
+import { createTestClient } from '../lib/testClient.js';
+import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForCondition,
 	waitForPeerCount,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 import * as fs from 'fs';
-import { createTestFile } from './lib/createTestFile.js';
+import { createTestFile } from '../lib/createTestFile.js';
 import { assert, hashObject } from '@verdant-web/common';
 
 let server: ReturnType<typeof startTestServer> extends Promise<infer T>

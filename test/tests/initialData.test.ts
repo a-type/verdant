@@ -1,7 +1,7 @@
-import { migrate } from '@verdant-web/store';
+import { createMigration } from '@verdant-web/store';
 import { it, expect } from 'vitest';
-import v1 from './client/schemaVersions/v1.js';
-import { createTestClient } from './lib/testClient.js';
+import v1 from '../client/schemaVersions/v1.js';
+import { createTestClient } from '../lib/testClient.js';
 import { assert } from '@verdant-web/common';
 
 async function fakeApi() {
@@ -18,7 +18,7 @@ it('can load initial data before the client opens', async () => {
 	// using a custom v1 migration to create the initial data
 	let migrationsInvokedCount = 0;
 	const migrations = [
-		migrate(v1, async ({ mutations }) => {
+		createMigration(v1, async ({ mutations }) => {
 			migrationsInvokedCount++;
 			const category = await mutations.categories.put({
 				name: 'default',

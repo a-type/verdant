@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, it } from 'vitest';
-import { createTestClient } from './lib/testClient.js';
-import { startTestServer } from './lib/testServer.js';
-import { waitForPeerCount, waitForPeerPresence } from './lib/waits.js';
+import { createTestClient } from '../lib/testClient.js';
+import { startTestServer } from '../lib/testServer.js';
+import { waitForPeerCount, waitForPeerPresence } from '../lib/waits.js';
 
 let server: { port: number; cleanup: () => Promise<void> };
 beforeAll(async () => {

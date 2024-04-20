@@ -1,6 +1,6 @@
 import { expect, it, vitest } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
-import { waitForMockCall, waitForOnline } from './lib/waits.js';
+import { createTestContext } from '../lib/createTestContext.js';
+import { waitForMockCall, waitForOnline } from '../lib/waits.js';
 
 const ctx = createTestContext({});
 

@@ -9,10 +9,10 @@ import {
 	StorageDescriptor,
 } from '@verdant-web/store';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { startTestServer } from './lib/testServer.js';
+import { startTestServer } from '../lib/testServer.js';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import { waitForCondition } from './lib/waits.js';
+import { waitForCondition } from '../lib/waits.js';
 import { stableStringify } from '@verdant-web/common';
 
 const fuzzCollectionSchema = schema.collection({

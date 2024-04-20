@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
-import { createTestFile } from './lib/createTestFile.js';
-import { waitForQueryResult } from './lib/waits.js';
+import { createTestContext } from '../lib/createTestContext.js';
+import { createTestFile } from '../lib/createTestFile.js';
+import { waitForQueryResult } from '../lib/waits.js';
 import {
 	createClientBackup,
 	importClientBackup,

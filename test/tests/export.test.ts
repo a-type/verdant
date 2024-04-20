@@ -7,8 +7,8 @@ import {
 	StorageDescriptor,
 } from '@verdant-web/store';
 import { expect, it, vitest } from 'vitest';
-import { waitForQueryResult } from './lib/waits.js';
-import { createTestFile } from './lib/createTestFile.js';
+import { waitForQueryResult } from '../lib/waits.js';
+import { createTestFile } from '../lib/createTestFile.js';
 
 async function createTestClient({
 	schema,

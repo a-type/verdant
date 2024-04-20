@@ -1,9 +1,9 @@
 import { assert } from '@a-type/utils';
 import { EntityFile } from '@verdant-web/store';
 import { expect, it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
-import { createTestFile } from './lib/createTestFile.js';
-import { waitForEverythingToRebase } from './lib/waits.js';
+import { createTestContext } from '../lib/createTestContext.js';
+import { createTestFile } from '../lib/createTestFile.js';
+import { waitForEverythingToRebase } from '../lib/waits.js';
 
 const context = createTestContext({
 	// serverLog: true,

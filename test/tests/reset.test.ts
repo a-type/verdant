@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 
 const ctx = createTestContext({
 	// testLog: true,

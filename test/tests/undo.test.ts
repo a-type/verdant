@@ -1,11 +1,11 @@
 import { expect, it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForCondition,
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
 
 const context = createTestContext({

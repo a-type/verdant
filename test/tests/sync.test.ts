@@ -1,12 +1,12 @@
 import { assert } from '@verdant-web/common';
 import { expect, it, vitest } from 'vitest';
-import { Client, Item } from './client/index.js';
-import { createTestContext } from './lib/createTestContext.js';
+import { Client, Item } from '../client/index.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForEntityCondition,
 	waitForPeerCount,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 
 const context = createTestContext({
 	// testLog: true,

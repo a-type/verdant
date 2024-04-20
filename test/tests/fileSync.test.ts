@@ -1,12 +1,12 @@
 import { assert } from '@a-type/utils';
 import { afterAll, expect, it } from 'vitest';
-import { createTestContext } from './lib/createTestContext.js';
-import { createTestFile } from './lib/createTestFile.js';
+import { createTestContext } from '../lib/createTestContext.js';
+import { createTestFile } from '../lib/createTestFile.js';
 import {
 	waitForCondition,
 	waitForEntityCondition,
 	waitForQueryResult,
-} from './lib/waits.js';
+} from '../lib/waits.js';
 import * as fs from 'fs';
 
 const context = createTestContext({
