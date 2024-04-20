@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.6.0
+
+### Minor Changes
+
+- f4bfccc: Remove "grant" template (this is in my Biscuits scaffolding now)
+
 ## 0.5.0
 
 ### Minor Changes
