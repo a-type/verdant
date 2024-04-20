@@ -59,6 +59,7 @@ export interface Sync<Presence = any, Profile = any>
 	ignoreIncoming(): void;
 	destroy(): void;
 	reconnect(): void;
+	syncOnce(): Promise<void>;
 	readonly isConnected: boolean;
 	readonly status: 'active' | 'paused';
 	readonly mode: SyncTransportMode;
@@ -113,6 +114,8 @@ export class NoSync<Presence = any, Profile = any>
 			retry: false,
 		};
 	};
+
+	syncOnce: () => Promise<void> = async () => {};
 }
 
 export type SyncTransportMode = 'realtime' | 'pull';
