@@ -18,7 +18,7 @@ it('can use syncOnce to manually sync an offline client', async () => {
 		server,
 		library: 'syncOnce-1',
 		user: 'B',
-		logId: 'offline',
+		// logId: 'offline',
 	});
 
 	onlineClient.sync.start();
