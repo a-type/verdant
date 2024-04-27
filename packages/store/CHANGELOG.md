@@ -1,5 +1,17 @@
 # @lo-fi/web
 
+## 3.6.0
+
+### Minor Changes
+
+- 848c1c2: Expose a "syncOnce" method for periodic background sync usage. This can be used to perform one "sync up" cycle without initiating a regular interval.
+
+### Patch Changes
+
+- 1ab35f2: Make broadcast channel namespace-specific
+- Updated dependencies [1ab35f2]
+  - @verdant-web/common@2.3.1
+
 ## 3.5.2
 
 ### Patch Changes

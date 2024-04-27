@@ -1,5 +1,12 @@
 # @verdant-web/s3-file-storage
 
+## 1.0.18
+
+### Patch Changes
+
+- 1ab35f2: Fix suspicious path joining
+  - @verdant-web/server@3.0.2
+
 ## 1.0.17
 
 ### Patch Changes
