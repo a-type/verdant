@@ -65,7 +65,7 @@ export class S3FileStorage implements FileStorage {
 		}
 	};
 	getUrl = (data: FileInfo): string => {
-		return path.join(this.host, this.getPath(data));
+		return this.host + '/' + this.getPath(data);
 	};
 	delete = async (data: FileInfo): Promise<void> => {
 		await this.s3Client.send(

@@ -16,6 +16,7 @@ import {
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
+import { Context } from '../context.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
@@ -210,11 +211,11 @@ export class ServerSync<Presence = any, Profile = any>
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
-			log,
+			ctx,
 			onData,
 		}: {
 			meta: Metadata;
-			log?: (...args: any[]) => void;
+			ctx: Context;
 			onData: (data: {
 				operations: Operation[];
 				baselines?: DocumentBaseline[];
@@ -225,7 +226,7 @@ export class ServerSync<Presence = any, Profile = any>
 		super();
 		this.meta = meta;
 		this.onData = onData;
-		this.log = log || (() => {});
+		this.log = ctx.log;
 		this.presence = new PresenceManager({
 			initialPresence,
 			defaultProfile,
@@ -257,7 +258,7 @@ export class ServerSync<Presence = any, Profile = any>
 			log: this.log,
 		});
 		if (useBroadcastChannel && 'BroadcastChannel' in window) {
-			this.broadcastChannel = new BroadcastChannel('verdant');
+			this.broadcastChannel = new BroadcastChannel(`verdant-${ctx.namespace}`);
 			this.broadcastChannel.addEventListener(
 				'message',
 				this.handleBroadcastChannelMessage,
