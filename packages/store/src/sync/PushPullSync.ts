@@ -85,13 +85,17 @@ export class PushPullSync
 				const json = (await response.json()) as {
 					messages: ServerMessage[];
 				};
-				for (const message of json.messages) {
-					this.handleServerMessage(message);
-				}
+				// for (const message of json.messages) {
+				// 	this.handleServerMessage(message);
+				// }
+				const handlePromise = Promise.all(
+					json.messages.map(this.handleServerMessage),
+				);
 				if (!this._isConnected) {
 					this._isConnected = true;
 					this.emit('onlineChange', true);
 				}
+				await handlePromise;
 			} else {
 				this.log('Sync request failed', response.status, await response.text());
 
@@ -127,15 +131,15 @@ export class PushPullSync
 
 	private handleServerMessage = async (message: ServerMessage) => {
 		if (message.type === 'sync-resp') {
+			// we need to ack the nonce to confirm that we received the sync-resp
+			// but we can go ahead and preemptively allow ops to be sent
+			this._hasSynced = true;
 			if (message.ackThisNonce) {
-				// we need to ack the nonce to confirm that we received the sync-resp
 				this.log('Sending sync ack', message.ackThisNonce);
-				this.sendRequest([
+				await this.sendRequest([
 					await this.meta.messageCreator.createAck(message.ackThisNonce),
 				]);
 			}
-			// but we can go ahead and preemptively allow ops to be sent
-			this._hasSynced = true;
 		}
 		this.emit('message', message);
 	};
@@ -198,6 +202,10 @@ export class PushPullSync
 		this.emit('onlineChange', false);
 		this.log('Missed heartbeat');
 		this._isConnected = false;
+	};
+
+	syncOnce = async () => {
+		await this.sendRequest([await this.meta.messageCreator.createSyncStep1()]);
 	};
 
 	get isConnected(): boolean {

@@ -60,6 +60,7 @@ export interface Sync<Presence = any, Profile = any>
 	ignoreIncoming(): void;
 	destroy(): void;
 	reconnect(): void;
+	syncOnce(): Promise<void>;
 	readonly isConnected: boolean;
 	readonly status: 'active' | 'paused';
 	readonly mode: SyncTransportMode;
@@ -114,6 +115,8 @@ export class NoSync<Presence = any, Profile = any>
 			retry: false,
 		};
 	};
+
+	syncOnce: () => Promise<void> = async () => {};
 }
 
 export type SyncTransportMode = 'realtime' | 'pull';
@@ -492,6 +495,15 @@ export class ServerSync<Presence = any, Profile = any>
 
 	public reconnect = () => {
 		return this.activeSync.reconnect();
+	};
+
+	/**
+	 * Runs one isolated sync cycle over HTTP. This is useful for
+	 * syncing via a periodic background job in a service worker,
+	 * which keeps a client up to date while the app isn't open.
+	 */
+	public syncOnce = () => {
+		return this.pushPullSync.syncOnce();
 	};
 
 	public get isConnected(): boolean {
