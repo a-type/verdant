@@ -4,7 +4,7 @@ import { ExportData } from './metadata/Metadata.js';
 import { ReturnedFileData } from './files/FileStorage.js';
 
 // narrow type to just what's needed
-type BackupClient = Pick<Client, 'export' | 'import'>;
+type BackupClient = Pick<Client, 'export' | 'import' | 'namespace'>;
 
 export async function createClientBackup(client: BackupClient) {
 	const exportData = await client.export();
@@ -150,7 +150,8 @@ export async function transferOrigins(
 		onComplete?: () => void;
 	} = {},
 ) {
-	if (window.localStorage.getItem('already-transferred')) {
+	const transferKey = `@@verdant-${client.namespace}-transferred`;
+	if (window.localStorage.getItem(transferKey) === 'true') {
 		return;
 	}
 
@@ -159,7 +160,7 @@ export async function transferOrigins(
 		const url = new URL(window.location.href);
 		url.searchParams.delete('transfer');
 		window.history.replaceState({}, '', url.toString());
-		window.localStorage.setItem('already-transferred', 'true');
+		window.localStorage.setItem(transferKey, 'true');
 		handlers.onComplete?.();
 	}
 
