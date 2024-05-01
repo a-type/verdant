@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.6.2
+
+### Patch Changes
+
+- 5e4dfd7: Fix 'already transferred' check
+
 ## 3.6.1
 
 ### Patch Changes
