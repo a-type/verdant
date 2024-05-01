@@ -22,13 +22,13 @@ Since local-first apps are tied to a domain for their local storage, exporting c
 
 > First off, **if your users are using sync, you don't need to do this** - you can instead use the sync server to transfer data by moving users' sync endpoint over to the new server before completing the domain migration. A replica will populate the new sync server automatically and then you're ready to transition.
 
-> Also this **only works in PWAs on non-iPhones**. Apple restricts the storage context of PWAs on iPhones, so although the transfer itself will work, the new origin won't have access to the data when launched in Safari or installed as a new PWA. Aren't iPhones fun?
+> Also, **on iOS, this doesn't work in a PWA**. Apple restricts the storage context of PWAs on iPhones, so although the transfer itself will work, the new origin won't have access to the data when launched in Safari or installed as a new PWA. Aren't iPhones fun?
 
 Verdant has built-in tools to easily transfer a library from one origin (website) to another built on top of the `export` functionality documented above. This is an experimental tool which uses an embedded `iframe` to transmit the data file directly through the browser - no server required!
 
 First off, it's important that both sites are running the exact same codebase. To make the transition, point DNS records for both origins to the same hosted webpage. Any discrepancy in schemas will cause unworkable errors.
 
-**Then, add the following code snippet anywhere in your app:**
+Then, add the following code snippet anywhere in your app:
 
 ```ts
 // assuming you have a ClientDescriptor instance handy here. You probably
