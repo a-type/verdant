@@ -23,7 +23,6 @@ import {
 } from 'react';
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
-import { EntityChangeInfo } from '../../store/src/entities/types.js';
 
 function isQueryCurrentValid(query: Query<any>) {
 	return !(query.status === 'initial' || query.status === 'initializing');
@@ -121,7 +120,7 @@ export function createHooks<Presence = any, Profile = any>(
 
 	function useOnChange(
 		liveObject: Entity | EntityFile | null,
-		handler: (info: EntityChangeInfo & { target?: Entity }) => void,
+		handler: (info: { isLocal?: boolean; target?: Entity }) => void,
 		options?: { deep?: boolean },
 	) {
 		const handlerRef = useRef(handler);
