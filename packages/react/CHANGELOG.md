@@ -1,5 +1,16 @@
 # @lo-fi/react
 
+## 32.0.0
+
+### Major Changes
+
+- c701cfd: Add React hook "useOnChange" (fires a callback on entity changes). Add "deep" option to React hook "useWatch" to watch for deep changes. Remove the "field" variant of "useWatch." CLI must be updated to correctly generate new React hook types.
+
+### Patch Changes
+
+- Updated dependencies [c701cfd]
+  - @verdant-web/store@3.6.3
+
 ## 31.0.0
 
 ### Patch Changes
