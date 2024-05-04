@@ -17,11 +17,13 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 	useSyncExternalStore,
 } from 'react';
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
+import { EntityChangeInfo } from '../../store/src/entities/types.js';
 
 function isQueryCurrentValid(query: Query<any>) {
 	return !(query.status === 'initial' || query.status === 'initializing');
@@ -84,11 +86,22 @@ export function createHooks<Presence = any, Profile = any>(
 		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]) as any;
 	}
 
-	function useWatch(liveObject: Entity | EntityFile | null, prop?: any) {
+	function useWatch(
+		liveObject: Entity | EntityFile | null,
+		options?: { deep?: boolean },
+	) {
 		return useSyncExternalStore(
 			(handler) => {
 				if (liveObject) {
-					return (liveObject as any).subscribe('change', handler);
+					if ('isFile' in liveObject) {
+						return liveObject.subscribe('change', handler);
+					} else {
+						if (options?.deep) {
+							return liveObject.subscribe('change', handler);
+						} else {
+							return liveObject.subscribe('change', handler);
+						}
+					}
 				}
 				return () => {};
 			},
@@ -97,10 +110,6 @@ export function createHooks<Presence = any, Profile = any>(
 					if (liveObject instanceof EntityFile) {
 						return liveObject.url;
 					} else {
-						if (prop) {
-							return liveObject.get(prop);
-						}
-
 						return liveObject.getAll();
 					}
 				}
@@ -108,6 +117,35 @@ export function createHooks<Presence = any, Profile = any>(
 				return undefined;
 			},
 		);
+	}
+
+	function useOnChange(
+		liveObject: Entity | EntityFile | null,
+		handler: (info: EntityChangeInfo & { target?: Entity }) => void,
+		options?: { deep?: boolean },
+	) {
+		const handlerRef = useRef(handler);
+		handlerRef.current = handler;
+
+		return useEffect(() => {
+			if (!liveObject) return;
+
+			if ('isFile' in liveObject) {
+				return liveObject?.subscribe('change', () => {
+					handlerRef.current({});
+				});
+			} else {
+				if (options?.deep) {
+					return liveObject?.subscribe('changeDeep', (target, info) => {
+						handlerRef.current({ ...info, target: target as Entity });
+					});
+				}
+				return liveObject?.subscribe('change', (info) => {
+					info.isLocal ??= false;
+					handlerRef.current(info);
+				});
+			}
+		}, [liveObject, handlerRef]);
 	}
 
 	function useSelf() {
@@ -350,6 +388,7 @@ export function createHooks<Presence = any, Profile = any>(
 		useClient: useStorage,
 		useUnsuspendedClient,
 		useWatch,
+		useOnChange,
 		useSelf,
 		usePeerIds,
 		usePeer,

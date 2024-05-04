@@ -46,18 +46,21 @@ export interface GeneratedHooks<Presence, Profile> {
 	useFindPeers: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence>[];
   useSyncStatus: () => boolean;
 	useWatch<T extends AnyEntity<any, any, any> | null>(
-    entity: T
-  ): EntityDestructured<T>;
-  useWatch<
-    T extends AnyEntity<any, any, any> | null,
-    P extends keyof EntityShape<T>
-  >(
     entity: T,
-    prop: P
-  ): EntityDestructured<T>[P];
+		options?: { deep?: boolean },
+  ): EntityDestructured<T>;
 	useWatch<T extends EntityFile | null>(
 		file: T
 	): string | null;
+	useOnChange<T extends AnyEntity<any, any, any> | null>(
+		entity: T,
+		callback: (info: { isLocal: boolean; target?: AnyEntity<any, any, any> }) => void,
+		options?: { deep?: boolean },
+	): void;
+	useOnChange<T extends EntityFile | null>(
+		file: T,
+		callback: () => void,
+	): void;
 	useUndo(): () => void;
 	useRedo(): () => void;
 	useCanUndo(): boolean;

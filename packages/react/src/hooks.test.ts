@@ -1,38 +1,32 @@
-import { collection, schema } from '@verdant-web/store';
+import { schema } from '@verdant-web/store';
 import { describe, it, expect } from 'vitest';
 import { createHooks } from './hooks.js';
 
 describe('generated hooks', () => {
 	it('should create singular and plural hooks for all collections', () => {
-		const authors = collection({
+		const authors = schema.collection({
 			name: 'author',
 			primaryKey: 'id',
 			fields: {
 				id: {
 					type: 'string',
-					indexed: true,
 				},
 				name: {
 					type: 'string',
 				},
 			},
-			compounds: {},
-			synthetics: {},
 		});
-		const tallies = collection({
+		const tallies = schema.collection({
 			name: 'tally',
 			primaryKey: 'id',
 			fields: {
 				id: {
 					type: 'string',
-					indexed: true,
 				},
 				count: {
 					type: 'number',
 				},
 			},
-			compounds: {},
-			synthetics: {},
 		});
 		const testSchema = schema({
 			version: 1,
