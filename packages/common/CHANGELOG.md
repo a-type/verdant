@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.3.1
+
+### Patch Changes
+
+- 1ab35f2: Make broadcast channel namespace-specific
+
 ## 2.3.0
 
 ### Minor Changes
