@@ -463,6 +463,20 @@ describe('storage documents', () => {
 		expect(item1.get('tags').deepUpdatedAt).not.toEqual(time.getTime());
 	});
 
+	it('should expose namespace', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.todos.put({
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		expect(item1.namespace).toBe('test');
+	});
+
 	it('should allow creating a new document from another document snapshot', async () => {
 		const storage = await createTestStorage();
 		const item1 = await storage.todos.put({

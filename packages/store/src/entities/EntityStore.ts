@@ -451,6 +451,7 @@ export class EntityStore extends Disposable {
 			metadataFamily: metadataFamily,
 			patchCreator: this.meta.patchCreator,
 			events: this.events,
+			deleteSelf: this.delete.bind(this, oid),
 		});
 	};
 
