@@ -606,4 +606,18 @@ describe('storage documents', () => {
 		expect(fooArray.get(0)).toEqual('bar');
 		expect(arrayMap.get('foo').get(0)).toEqual('bar');
 	});
+
+	it('should not fire change event on delete', async () => {
+		const storage = await createTestStorage();
+		const created = await storage.weirds.put({});
+		const weird = await storage.weirds.get(created.get('id')).resolved!;
+
+		weird.subscribe('change', () => {
+			// never get a change with deleted data
+			expect(weird.deleted).toBe(false);
+		});
+
+		await storage.weirds.delete(weird.get('id'));
+		expect(true).toBe(true);
+	});
 });

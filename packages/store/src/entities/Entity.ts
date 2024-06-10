@@ -480,25 +480,10 @@ export class Entity<
 			// reset cached view
 			this._viewData = undefined;
 			this.cachedView = undefined;
-			// chain deepChanges to parents
-			this.deepChange(this, ev);
-			// emit the change, it's for us
-			this.ctx.log('Emitting change event', this.oid);
-			this.emit('change', { isLocal: ev.isLocal });
-			// for root entities, we need to go ahead and decide if we're
-			// deleted or not - so queries can exclude us if we are.
 			if (!this.parent) {
-				// newly deleted - emit event
-				if (this.deleted && !this.wasDeletedLastChange) {
-					this.ctx.log('debug', 'Entity deleted', this.oid);
-					this.emit('delete', { isLocal: ev.isLocal });
-					this.wasDeletedLastChange = true;
-				} else if (!this.deleted && this.wasDeletedLastChange) {
-					this.ctx.log('debug', 'Entity restored', this.oid);
-					// newly restored - emit event
-					this.emit('restore', { isLocal: ev.isLocal });
-					this.wasDeletedLastChange = false;
-				}
+				this.changeRoot(ev);
+			} else {
+				this.changeNested(ev);
 			}
 		} else {
 			// forward it to the correct family member. if none exists
@@ -508,6 +493,36 @@ export class Entity<
 				other.change(ev);
 			}
 		}
+	};
+	private changeRoot = (ev: EntityChange) => {
+		// for root entities, we need to determine if we're deleted or not
+		// before firing any events
+		if (this.deleted) {
+			if (!this.wasDeletedLastChange) {
+				this.ctx.log('debug', 'Entity deleted', this.oid);
+				this.emit('delete', { isLocal: ev.isLocal });
+				this.wasDeletedLastChange = true;
+			}
+			// already deleted, do nothing.
+		} else {
+			if (this.wasDeletedLastChange) {
+				this.ctx.log('debug', 'Entity restored', this.oid);
+				this.emit('restore', { isLocal: ev.isLocal });
+				this.wasDeletedLastChange = false;
+			}
+			// emit deepchange, too
+			this.deepChange(this, ev);
+			// emit the change, it's for us
+			this.ctx.log('Emitting change event', this.oid);
+			this.emit('change', { isLocal: ev.isLocal });
+		}
+	};
+	private changeNested = (ev: EntityChange) => {
+		// chain deepChanges to parents
+		this.deepChange(this, ev);
+		// emit the change, it's for us
+		this.ctx.log('Emitting change event', this.oid);
+		this.emit('change', { isLocal: ev.isLocal });
 	};
 	protected deepChange = (target: Entity, ev: EntityChange) => {
 		// reset cached deep updated at timestamp; either this
