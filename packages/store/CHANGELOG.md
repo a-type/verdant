@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.6.4
+
+### Patch Changes
+
+- 73e8c1b: Add entity features to enable multi-namespace use cases: access to parent namespace value, and self-delete method.
+
 ## 3.6.3
 
 ### Patch Changes
