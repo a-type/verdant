@@ -42,8 +42,4 @@ export interface Context {
 	 * Get the current logical timestamp
 	 */
 	getNow(): string;
-	/**
-	 * Globally accessible deletion method.
-	 */
-	delete(oid: string): Promise<void>;
 }
