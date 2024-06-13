@@ -1,55 +1,60 @@
 {
 	"folders": [
 		{
-			"name": "Store",
+			"name": "🫙 Store",
 			"path": "../packages/store"
 		},
 		{
-			"name": "Server",
+			"name": "💽 Server",
 			"path": "../packages/server"
 		},
 		{
-			"name": "Common",
+			"name": "📦 Common",
 			"path": "../packages/common"
 		},
 		{
-			"name": "CLI",
+			"name": "🧑🏻‍💻 CLI",
 			"path": "../packages/cli"
 		},
 		{
-			"name": "React",
+			"name": "⚛︎ React",
 			"path": "../packages/react"
 		},
 		{
-			"name": "Starter Kit",
+			"name": "🚀 Starter Kit",
 			"path": "../packages/create-app"
 		},
 		{
-			"name": "Integration Tests",
+			"name": "🧪 Integration Tests",
 			"path": "../test"
 		},
 		{
-			"name": "Router",
+			"name": "🗺️ Router",
 			"path": "../packages/react-router"
 		},
 		{
-			"name": "Docs",
+			"name": "📜 Docs",
 			"path": "../docs"
 		},
 		{
-			"name": "Examples",
+			"name": "💁🏻 Examples",
 			"path": "../examples"
 		},
 		{
-			"name": "Scratchpad",
+			"name": "🗒️ Scratchpad",
 			"path": "../scratchpad"
 		},
 		{
-			"name": "Scale Test",
+			"name": "📈 Scale Test",
 			"path": "../scaleTest"
 		},
 		{
+			"name": "🗄️ S3 Storage",
 			"path": "../packages/file-storage-s3"
+		},
+		{
+			"name": "🔧 Workflows",
+			"path": "../.github/workflows"
 		}
 	],
 	"settings": {
