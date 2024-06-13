@@ -84,6 +84,7 @@ export interface ObjectEntity<
 	Snapshot = DataFromInit<Init>,
 > extends BaseEntity<Init, Value, Snapshot> {
 	keys(): string[];
+	readonly size: number;
 	entries(): [string, Exclude<Value[keyof Value], undefined>][];
 	values(): Exclude<Value[keyof Value], undefined>[];
 	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
@@ -114,6 +115,16 @@ export interface ObjectEntity<
 			merge?: boolean;
 		},
 	): void;
+	/**
+	 * Deletes the entity from either its parent (if it's a nested value)
+	 * or the database itself. WARNING: this method is tricky. It will
+	 * throw an error on nested fields which are not deletable in the
+	 * schema. Deleting any entity and then attempting to access its
+	 * data will also result in an error.
+	 *
+	 * Prefer using client.<collection>.delete(id) instead.
+	 */
+	deleteSelf(): void;
 	readonly isList: false;
 }
 

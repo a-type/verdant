@@ -79,6 +79,7 @@ describe('Entity', () => {
 			} as any as FileManager,
 			patchCreator,
 			readonlyKeys: ['id'],
+			deleteSelf: vi.fn(),
 		});
 
 		function initialize(data: any) {

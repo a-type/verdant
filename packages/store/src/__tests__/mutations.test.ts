@@ -54,4 +54,57 @@ describe('mutations', () => {
 		expect(itemAExists).toBeNull();
 		expect(itemBExists === itemB).toBe(true);
 	});
+
+	describe('on entities', () => {
+		it('should allow them to delete themselves (root level)', async () => {
+			const client = await createTestStorage();
+
+			const itemA = await client.todos.put({
+				id: '1',
+				content: 'itemA',
+				category: 'test',
+			});
+
+			await itemA.deleteSelf();
+
+			const itemAExists = await client.todos.get('1').resolved;
+
+			expect(itemAExists).toBeNull();
+		});
+
+		it('should allow them to delete themselves (nested array)', async () => {
+			const client = await createTestStorage();
+
+			const itemA = await client.todos.put({
+				id: '1',
+				content: 'itemA',
+				category: 'test',
+				attachments: [
+					{
+						name: 'foo',
+					},
+				],
+			});
+
+			itemA.get('attachments').get(0).deleteSelf();
+
+			expect(itemA.get('attachments').length).toBe(0);
+		});
+
+		it('should allow them to delete themselves (nested map)', async () => {
+			const client = await createTestStorage();
+
+			const weird = await client.weirds.put({
+				objectMap: {
+					foo: {
+						content: 'bar',
+					},
+				},
+			});
+
+			weird.get('objectMap').get('foo').deleteSelf();
+
+			expect(weird.get('objectMap').size).toBe(0);
+		});
+	});
 });

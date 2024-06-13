@@ -58,6 +58,7 @@ export interface EntityInit {
 	fieldPath?: (string | number)[];
 	patchCreator: PatchCreator;
 	events: EntityStoreEvents;
+	deleteSelf: () => void;
 }
 
 export class Entity<
@@ -94,6 +95,9 @@ export class Entity<
 	// only used for root entities to track delete/restore state.
 	private wasDeletedLastChange = false;
 	private cachedView: any | undefined = undefined;
+	// provided from external creators, this is a method to delete
+	// this entity.
+	private _deleteSelf: () => void;
 
 	constructor({
 		oid,
@@ -106,6 +110,7 @@ export class Entity<
 		files,
 		patchCreator,
 		events,
+		deleteSelf,
 	}: EntityInit) {
 		super();
 
@@ -125,6 +130,7 @@ export class Entity<
 		this.metadataFamily = metadataFamily;
 		this.events = events;
 		this.parent = parent;
+		this._deleteSelf = deleteSelf;
 
 		// TODO: should any but the root entity be listening to these?
 		if (!this.parent) {
@@ -367,6 +373,15 @@ export class Entity<
 	}
 
 	/**
+	 * Returns the storage namespace this entity came from. For example, if you
+	 * have multiple stores initialized from the same schema, you can use this
+	 * to figure out where an isolated entity was created / stored.
+	 */
+	get namespace() {
+		return this.ctx.namespace;
+	}
+
+	/**
 	 * Pruning - when entities have invalid children, we 'prune' that
 	 * data up to the nearest prunable point - a nullable field,
 	 * or a list.
@@ -465,25 +480,10 @@ export class Entity<
 			// reset cached view
 			this._viewData = undefined;
 			this.cachedView = undefined;
-			// chain deepChanges to parents
-			this.deepChange(this, ev);
-			// emit the change, it's for us
-			this.ctx.log('Emitting change event', this.oid);
-			this.emit('change', { isLocal: ev.isLocal });
-			// for root entities, we need to go ahead and decide if we're
-			// deleted or not - so queries can exclude us if we are.
 			if (!this.parent) {
-				// newly deleted - emit event
-				if (this.deleted && !this.wasDeletedLastChange) {
-					this.ctx.log('debug', 'Entity deleted', this.oid);
-					this.emit('delete', { isLocal: ev.isLocal });
-					this.wasDeletedLastChange = true;
-				} else if (!this.deleted && this.wasDeletedLastChange) {
-					this.ctx.log('debug', 'Entity restored', this.oid);
-					// newly restored - emit event
-					this.emit('restore', { isLocal: ev.isLocal });
-					this.wasDeletedLastChange = false;
-				}
+				this.changeRoot(ev);
+			} else {
+				this.changeNested(ev);
 			}
 		} else {
 			// forward it to the correct family member. if none exists
@@ -493,6 +493,36 @@ export class Entity<
 				other.change(ev);
 			}
 		}
+	};
+	private changeRoot = (ev: EntityChange) => {
+		// for root entities, we need to determine if we're deleted or not
+		// before firing any events
+		if (this.deleted) {
+			if (!this.wasDeletedLastChange) {
+				this.ctx.log('debug', 'Entity deleted', this.oid);
+				this.emit('delete', { isLocal: ev.isLocal });
+				this.wasDeletedLastChange = true;
+			}
+			// already deleted, do nothing.
+		} else {
+			if (this.wasDeletedLastChange) {
+				this.ctx.log('debug', 'Entity restored', this.oid);
+				this.emit('restore', { isLocal: ev.isLocal });
+				this.wasDeletedLastChange = false;
+			}
+			// emit deepchange, too
+			this.deepChange(this, ev);
+			// emit the change, it's for us
+			this.ctx.log('Emitting change event', this.oid);
+			this.emit('change', { isLocal: ev.isLocal });
+		}
+	};
+	private changeNested = (ev: EntityChange) => {
+		// chain deepChanges to parents
+		this.deepChange(this, ev);
+		// emit the change, it's for us
+		this.ctx.log('Emitting change event', this.oid);
+		this.emit('change', { isLocal: ev.isLocal });
 	};
 	protected deepChange = (target: Entity, ev: EntityChange) => {
 		// reset cached deep updated at timestamp; either this
@@ -530,6 +560,7 @@ export class Entity<
 			fieldPath: [...this.fieldPath, key],
 			patchCreator: this.patchCreator,
 			events: this.events,
+			deleteSelf: this.delete.bind(this, key),
 		});
 	};
 
@@ -781,6 +812,13 @@ export class Entity<
 		return Object.values(this.view);
 	};
 
+	get size() {
+		if (this.isList) {
+			return this.length;
+		}
+		return this.keys().length;
+	}
+
 	update = (
 		data: any,
 		{
@@ -975,6 +1013,21 @@ export class Entity<
 	};
 
 	includes = this.has;
+
+	/**
+	 * Deletes this entity. WARNING: this can be tricky to
+	 * use correctly. You must not reference this entity
+	 * instance in any way after the deletion happens, or
+	 * you will get an error!
+	 *
+	 * It's a little easier to delete using client.delete
+	 * if you can manage it with your app's code. For example,
+	 * in React, use hooks.useClient() to get the client and
+	 * call delete from there.
+	 */
+	deleteSelf = () => {
+		return this._deleteSelf();
+	};
 
 	// TODO: make these escape hatches unnecessary
 	__getViewData__ = (oid: ObjectIdentifier, type: 'confirmed' | 'pending') => {

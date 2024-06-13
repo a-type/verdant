@@ -39,6 +39,9 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	get downloadRemote() {
 		return this._downloadRemote;
 	}
+	get isFile() {
+		return true;
+	}
 
 	[UPDATE] = (fileData: FileData) => {
 		this._loading = false;

@@ -463,6 +463,20 @@ describe('storage documents', () => {
 		expect(item1.get('tags').deepUpdatedAt).not.toEqual(time.getTime());
 	});
 
+	it('should expose namespace', async () => {
+		const storage = await createTestStorage();
+
+		const item1 = await storage.todos.put({
+			content: 'item 1',
+			done: false,
+			tags: [],
+			category: 'general',
+			attachments: [],
+		});
+
+		expect(item1.namespace).toBe('test');
+	});
+
 	it('should allow creating a new document from another document snapshot', async () => {
 		const storage = await createTestStorage();
 		const item1 = await storage.todos.put({
@@ -591,5 +605,19 @@ describe('storage documents', () => {
 		const fooArray = arrayMap.getOrSet('foo', ['bar']);
 		expect(fooArray.get(0)).toEqual('bar');
 		expect(arrayMap.get('foo').get(0)).toEqual('bar');
+	});
+
+	it('should not fire change event on delete', async () => {
+		const storage = await createTestStorage();
+		const created = await storage.weirds.put({});
+		const weird = await storage.weirds.get(created.get('id')).resolved!;
+
+		weird.subscribe('change', () => {
+			// never get a change with deleted data
+			expect(weird.deleted).toBe(false);
+		});
+
+		await storage.weirds.delete(weird.get('id'));
+		expect(true).toBe(true);
 	});
 });

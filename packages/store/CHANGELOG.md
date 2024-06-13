@@ -1,5 +1,23 @@
 # @lo-fi/web
 
+## 3.6.4
+
+### Patch Changes
+
+- 73e8c1b: Add entity features to enable multi-namespace use cases: access to parent namespace value, and self-delete method.
+
+## 3.6.3
+
+### Patch Changes
+
+- c701cfd: Add React hook "useOnChange" (fires a callback on entity changes). Add "deep" option to React hook "useWatch" to watch for deep changes. Remove the "field" variant of "useWatch." CLI must be updated to correctly generate new React hook types.
+
+## 3.6.2
+
+### Patch Changes
+
+- 5e4dfd7: Fix 'already transferred' check
+
 ## 3.6.1
 
 ### Patch Changes
