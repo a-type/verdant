@@ -751,9 +751,24 @@ export class Entity<
 		}
 	};
 
-	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
+	set = <Key extends keyof Init>(
+		key: Key,
+		value: Init[Key],
+		options?: {
+			/**
+			 * Forces the creation of a change for this set even if the value is the same
+			 * as the current value for this key. This has an effect in situations where
+			 * offline changes from others are interleaved with local changes; when setting
+			 * a value to its current value (force=true), if that value were retroactively changed from
+			 * offline changes, the set would put it back to the value specified. If the
+			 * set is ignored because the value is the same (force=false), then retroactive
+			 * changes will be preserved.
+			 */
+			force: boolean;
+		},
+	) => {
 		assertNotSymbol(key);
-		if (this.get(key as any) === value) return;
+		if (!options?.force && this.get(key as any) === value) return;
 		this.addPendingOperations(
 			this.patchCreator.createSet(
 				this.oid,

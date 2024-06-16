@@ -149,6 +149,14 @@ export interface ListEntity<
 	removeFirst(item: ListItemValue<Value>): void;
 	removeLast(item: ListItemValue<Value>): void;
 	map<U>(callback: (value: ListItemValue<Value>, index: number) => U): U[];
+	reduce<U>(
+		callback: (
+			accumulator: U,
+			currentValue: ListItemValue<Value>,
+			index: number,
+		) => U,
+		initialValue: U,
+	): U;
 	filter(
 		callback: (value: ListItemValue<Value>, index: number) => boolean,
 	): ListItemValue<Value>[];
