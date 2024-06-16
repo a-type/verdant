@@ -753,6 +753,7 @@ export class Entity<
 
 	set = <Key extends keyof Init>(key: Key, value: Init[Key]) => {
 		assertNotSymbol(key);
+		if (this.get(key as any) === value) return;
 		this.addPendingOperations(
 			this.patchCreator.createSet(
 				this.oid,
@@ -996,6 +997,17 @@ export class Entity<
 		callback: (value: ListItemValue<KeyValue>, index: number) => void,
 	): void => {
 		this.view.forEach(callback);
+	};
+
+	reduce = <U>(
+		callback: (
+			previousValue: U,
+			currentValue: ListItemValue<KeyValue>,
+			index: number,
+		) => U,
+		initialValue: U,
+	): U => {
+		return this.view.reduce(callback, initialValue);
 	};
 
 	some = (predicate: (value: ListItemValue<KeyValue>) => boolean): boolean => {
