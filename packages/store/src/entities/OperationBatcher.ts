@@ -1,10 +1,13 @@
 import {
 	Batcher,
+	ObjectIdentifier,
 	Operation,
+	PropertyName,
 	generateId,
 	getOidRoot,
 	getUndoOperations,
 	groupPatchesByOid,
+	operationSupersedes,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { Context } from '../context.js';
@@ -74,6 +77,7 @@ export class OperationBatcher {
 			'to storage / sync',
 		);
 		if (!operations.length) return;
+		const committed: Operation[] = [];
 		// rewrite timestamps of all operations to now - this preserves
 		// the linear history of operations which are sent to the server.
 		// even if multiple batches are spun up in parallel and flushed
@@ -86,10 +90,40 @@ export class OperationBatcher {
 		// despite the provisional timestamp being earlier
 		// NOTE: this MUST be mutating the original operation object! this timestamp
 		// also serves as a unique ID for deduplication later.
-		for (const op of operations) {
+
+		// TODO: for supersession, iterate BACKWARDS over operations
+		// and flag superseding operation oid+(key where applicable),
+		// then when encountering superseded operations, skip them
+		// and call entities.dropPendingOperation on them
+		const supersessions: Record<ObjectIdentifier, boolean | PropertyName> = {};
+		for (let i = operations.length - 1; i >= 0; i--) {
+			const op = operations[i];
+
+			// check for supersession from later operation which either
+			// covers the whole id (true) or this key
+			const existingSupersession = supersessions[op.oid];
+			if (
+				existingSupersession === true ||
+				('name' in op.data && existingSupersession === op.data.name)
+			) {
+				this.entities.discardPendingOperation(op);
+				continue;
+			}
+
+			// determine if this operation supersedes others
+			const supersession = operationSupersedes(op);
+			if (supersession !== false) {
+				supersessions[op.oid] = supersession;
+			}
+
+			// add this operation to final list
+			committed.unshift(op);
+		}
+		// need to rewind back in order to set timestamps correctly
+		for (const op of committed) {
 			op.timestamp = this.meta.now;
 		}
-		await this.commitOperations(operations, meta);
+		await this.commitOperations(committed, meta);
 	};
 
 	/**

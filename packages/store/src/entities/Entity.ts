@@ -1061,6 +1061,10 @@ export class Entity<
 		return this.metadataFamily.get(oid).computeView(type === 'confirmed');
 	};
 	__getFamilyOids__ = () => this.metadataFamily.getAllOids();
+
+	__discardPendingOperation__ = (operation: Operation) => {
+		this.metadataFamily.discardPendingOperation(operation);
+	};
 }
 
 function assertNotSymbol<T>(key: T): asserts key is Exclude<T, symbol> {
