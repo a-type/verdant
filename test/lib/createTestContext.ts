@@ -8,7 +8,13 @@ export function createTestContext({
 	serverLog,
 	keepDb,
 	testLog,
-}: { serverLog?: boolean; keepDb?: boolean; testLog?: boolean } = {}) {
+	disableRebasing,
+}: {
+	serverLog?: boolean;
+	keepDb?: boolean;
+	testLog?: boolean;
+	disableRebasing?: boolean;
+} = {}) {
 	const idbMap = new Map<string, IDBFactory>();
 	const context = {
 		clients: [],
@@ -37,7 +43,11 @@ export function createTestContext({
 		) => (...args: any[]) => void;
 	};
 	beforeAll(async () => {
-		context.server = await startTestServer({ log: serverLog, keepDb });
+		context.server = await startTestServer({
+			log: serverLog,
+			keepDb,
+			disableRebasing,
+		});
 		context.createTestClient = async (
 			config: Parameters<typeof createTestClient>[0],
 		) => {

@@ -78,6 +78,42 @@ export class OperationBatcher {
 		);
 		if (!operations.length) return;
 		const committed: Operation[] = [];
+		// TODO: for supersession, iterate BACKWARDS over operations
+		// and flag superseding operation oid+(key where applicable),
+		// then when encountering superseded operations, skip them
+		// and call entities.dropPendingOperation on them
+		const supersessions: Record<
+			ObjectIdentifier,
+			Set<boolean | PropertyName>
+		> = {};
+		for (let i = operations.length - 1; i >= 0; i--) {
+			const op = operations[i];
+
+			// check for supersession from later operation which either
+			// covers the whole id (true) or this key
+			const existingSupersession = supersessions[op.oid];
+			if (
+				existingSupersession &&
+				(existingSupersession.has(true) ||
+					('name' in op.data && existingSupersession.has(op.data.name)))
+			) {
+				this.entities.discardPendingOperation(op);
+				continue;
+			}
+
+			// determine if this operation supersedes others
+			const supersession = operationSupersedes(op);
+			if (supersession !== false) {
+				if (!supersessions[op.oid]) {
+					supersessions[op.oid] = new Set<boolean | PropertyName>();
+				}
+				supersessions[op.oid]!.add(supersession);
+			}
+
+			// add this operation to final list
+			committed.unshift(op);
+		}
+
 		// rewrite timestamps of all operations to now - this preserves
 		// the linear history of operations which are sent to the server.
 		// even if multiple batches are spun up in parallel and flushed
@@ -91,35 +127,9 @@ export class OperationBatcher {
 		// NOTE: this MUST be mutating the original operation object! this timestamp
 		// also serves as a unique ID for deduplication later.
 
-		// TODO: for supersession, iterate BACKWARDS over operations
-		// and flag superseding operation oid+(key where applicable),
-		// then when encountering superseded operations, skip them
-		// and call entities.dropPendingOperation on them
-		const supersessions: Record<ObjectIdentifier, boolean | PropertyName> = {};
-		for (let i = operations.length - 1; i >= 0; i--) {
-			const op = operations[i];
-
-			// check for supersession from later operation which either
-			// covers the whole id (true) or this key
-			const existingSupersession = supersessions[op.oid];
-			if (
-				existingSupersession === true ||
-				('name' in op.data && existingSupersession === op.data.name)
-			) {
-				this.entities.discardPendingOperation(op);
-				continue;
-			}
-
-			// determine if this operation supersedes others
-			const supersession = operationSupersedes(op);
-			if (supersession !== false) {
-				supersessions[op.oid] = supersession;
-			}
-
-			// add this operation to final list
-			committed.unshift(op);
-		}
-		// need to rewind back in order to set timestamps correctly
+		// NOTE: need to rewind back in order to set timestamps correctly.
+		// cannot be done in reversed loop above or timestamps would be
+		// in reverse order.
 		for (const op of committed) {
 			op.timestamp = this.meta.now;
 		}

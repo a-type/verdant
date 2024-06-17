@@ -55,4 +55,82 @@ describe('batching operations', () => {
 
 		expect(item.deleted).toBe(true);
 	});
+
+	it('should overwrite superseded sequential set operations on the same key where applicable', async () => {
+		const onOperation = vi.fn();
+		const client = await createTestStorage({
+			onOperation,
+		});
+
+		const item = await client.todos.put({
+			content: 'hello world',
+			category: 'general',
+		});
+		onOperation.mockReset();
+
+		item.set('content', 'hello world 2');
+		item.set('content', 'hello world 3');
+		item.set('content', 'hello world 4');
+
+		await client.batch().commit();
+
+		expect(item.get('content')).toBe('hello world 4');
+		expect(onOperation.mock.calls.length).toBe(1);
+		expect(onOperation).toHaveBeenCalledWith({
+			oid: item.uid,
+			timestamp: expect.anything(),
+			isLocal: true,
+			data: {
+				op: 'set',
+				name: 'content',
+				value: 'hello world 4',
+			},
+		});
+	});
+
+	it('should not interfere with other fields when superseding', async () => {
+		const onOperation = vi.fn();
+		const client = await createTestStorage({
+			onOperation,
+		});
+
+		const item = await client.todos.put({
+			content: 'hello world',
+			category: 'general',
+		});
+		onOperation.mockReset();
+
+		item.set('content', 'hello world 2');
+		item.set('category', 'never');
+		item.set('content', 'hello world 3');
+		item.set('category', 'general');
+
+		await client.batch().commit();
+
+		expect(item.get('content')).toBe('hello world 3');
+		expect(item.get('category')).toBe('general');
+		expect(onOperation.mock.calls.length).toBe(2);
+
+		expect(onOperation).toHaveBeenCalledWith({
+			oid: item.uid,
+			timestamp: expect.anything(),
+			isLocal: true,
+			data: {
+				op: 'set',
+				name: 'content',
+				value: 'hello world 3',
+			},
+		});
+
+		expect(onOperation).toHaveBeenCalledWith({
+			oid: item.uid,
+			timestamp: expect.anything(),
+			isLocal: true,
+			data: {
+				op: 'set',
+				name: 'category',
+				value: 'general',
+			},
+		});
+	});
 });

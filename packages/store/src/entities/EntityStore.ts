@@ -455,10 +455,8 @@ export class EntityStore extends Disposable {
 	};
 
 	discardPendingOperation = (operation: Operation) => {
-		this.cache
-			.get(operation.oid)
-			?.deref()
-			?.__discardPendingOperation__(operation);
+		const root = getOidRoot(operation.oid);
+		this.cache.get(root)?.deref()?.__discardPendingOperation__(operation);
 	};
 
 	/**

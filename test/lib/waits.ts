@@ -110,15 +110,15 @@ export async function waitForBaselineCount(client: Client, count = 1) {
 export async function waitForCondition(
 	condition: () => boolean | Promise<boolean>,
 	timeout?: number,
-	debugName?: string | (() => string),
+	debugName?: string | (() => Promise<string> | string),
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (timeout) {
-			setTimeout(() => {
+			setTimeout(async () => {
 				reject(
 					new Error(
 						'Timed out waiting for condition ' +
-							(typeof debugName === 'function' ? debugName() : debugName),
+							(typeof debugName === 'function' ? await debugName() : debugName),
 					),
 				);
 			}, timeout);

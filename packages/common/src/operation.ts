@@ -770,11 +770,15 @@ export function substituteFirstLevelObjectsWithRefs<
 }
 
 export function operationSupersedes(op: Operation): PropertyName | boolean {
-	if (op.data.op === 'initialize' || op.data.op === 'delete') {
-		return true;
-	}
+	// if (op.data.op === 'initialize' || op.data.op === 'delete') {
+	// 	return true;
+	// }
 
-	if (op.data.op === 'set' || op.data.op === 'remove') {
+	// if (op.data.op === 'set' || op.data.op === 'remove') {
+	// 	return op.data.name;
+	// }
+
+	if (op.data.op === 'set') {
 		return op.data.name;
 	}
 

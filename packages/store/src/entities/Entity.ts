@@ -475,11 +475,15 @@ export class Entity<
 		}
 	};
 
+	private invalidateCachedView = () => {
+		this._viewData = undefined;
+		this.cachedView = undefined;
+	};
+
 	private change = (ev: EntityChange) => {
 		if (ev.oid === this.oid) {
 			// reset cached view
-			this._viewData = undefined;
-			this.cachedView = undefined;
+			this.invalidateCachedView();
 			if (!this.parent) {
 				this.changeRoot(ev);
 			} else {
@@ -1064,6 +1068,7 @@ export class Entity<
 
 	__discardPendingOperation__ = (operation: Operation) => {
 		this.metadataFamily.discardPendingOperation(operation);
+		this.invalidateCachedView();
 	};
 }
 

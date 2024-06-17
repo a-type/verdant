@@ -1,4 +1,4 @@
-import { ReplicaType } from '@verdant-web/server';
+import { ReplicaType, Server } from '@verdant-web/server';
 import {
 	ClientWithCollections,
 	collection,
@@ -208,8 +208,33 @@ async function waitForConsistency(
 			return !!fuzz1 && !!fuzz2 && snap1 === snap2;
 		},
 		5000,
-		() => {
-			return `[${debugTag}] constistency: ${snap1} !== ${snap2} after ${attempts} attempts`;
+		async () => {
+			const serverSnap = await server.server.getDocumentSnapshot(
+				'fuzz',
+				'fuzz',
+				'default',
+			);
+			const fuzz1 = await getFuzz(client1);
+			const fuzz2 = await getFuzz(client2);
+			const fuzz1Pending = fuzz1.metadata.pendingOperations;
+			const fuzz2Pending = fuzz2.metadata.pendingOperations;
+			return `[${debugTag}] consistency (${attempts} attempts):
+
+				${snap1}
+
+				!==
+
+				${snap2}
+
+				Server version:
+
+				${stableStringify(serverSnap.data)}
+
+				[A pending]
+				${stableStringify(fuzz1Pending)}
+
+				[B pending]
+				${stableStringify(fuzz2Pending)}`;
 		},
 	);
 	const finalFuzz1 = await getFuzz(client1);
@@ -226,7 +251,7 @@ const avoidLists = false;
 const avoidDelete = false;
 const fuzzCount = 50;
 
-let server: { cleanup: () => Promise<void>; port: number };
+let server: { cleanup: () => Promise<void>; port: number; server: Server };
 
 beforeAll(async () => {
 	server = await startTestServer({
@@ -246,14 +271,14 @@ it(
 			user: 'a',
 			server,
 			indexedDb: client1IndexedDB,
-			logId: 'a',
+			// logId: 'a',
 		});
 		const client2IndexedDB = new IDBFactory();
 		const client2 = await createTestClient({
 			user: 'b',
 			server,
 			indexedDb: client2IndexedDB,
-			logId: 'b',
+			// logId: 'b',
 		});
 
 		// make a bunch of random changes to the data

@@ -51,7 +51,9 @@ describe('Entity', () => {
 		},
 	} as const;
 
-	function createTestEntity() {
+	function createTestEntity({
+		onPendingOperations = vi.fn(),
+	}: { onPendingOperations?: () => void } = {}) {
 		const events: EntityStoreEvents = {
 			add: new WeakEvent(),
 			replace: new WeakEvent(),
@@ -70,7 +72,7 @@ describe('Entity', () => {
 			events,
 			metadataFamily: new EntityFamilyMetadata({
 				ctx: mockContext,
-				onPendingOperations: vi.fn(),
+				onPendingOperations,
 				rootOid: 'test/1',
 			}),
 			files: {
@@ -237,6 +239,32 @@ describe('Entity', () => {
 			});
 
 			expect(entity.get('string')).toBe('new world');
+		});
+	});
+
+	describe('dropping pending operations', () => {
+		it('drops the correct operation', () => {
+			const onPendingOperations = vi.fn();
+			const { entity, initialize } = createTestEntity({ onPendingOperations });
+
+			initialize({
+				id: 'hi',
+				string: 'world',
+				number: 1,
+				nullable: null,
+				nonNullable: { first: { inner: 'foo' } },
+				map: {},
+				list: [],
+			});
+
+			entity.update({ string: 'new world' });
+			expect(onPendingOperations).toHaveBeenCalledTimes(1);
+			const operation = onPendingOperations.mock.calls[0][0][0];
+			console.log(operation);
+
+			entity.__discardPendingOperation__(operation);
+
+			expect(entity.get('string')).toBe('world');
 		});
 	});
 });
