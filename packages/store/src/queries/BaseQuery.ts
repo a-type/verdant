@@ -42,6 +42,7 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	readonly collection;
 	readonly key;
+	readonly isListQuery;
 
 	constructor({
 		initial,
@@ -53,6 +54,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		super();
 		this._rawValue = initial;
 		this._value = initial;
+		this.isListQuery = Array.isArray(initial);
 		this._events = new EventSubscriber<BaseQueryEvents>(
 			(event: keyof BaseQueryEvents) => {
 				if (event === 'change') this._allUnsubscribedHandler?.(this);
@@ -135,24 +137,36 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 	}
 
-	protected setValue = (value: T) => {
+	protected setValue = (value: T, force = false) => {
+		this._status = 'ready';
+		// prevent excess change notifications by diffing
+		// value by identity for single-value queries,
+		// and by item identity for multi-value
+		if (!force) {
+			if (this.isListQuery) {
+				if (
+					(this._rawValue as any[]).length === (value as any[]).length &&
+					(this._rawValue as any[]).every((v, i) => v === (value as any[])[i])
+				) {
+					return;
+				}
+			} else {
+				if (this._rawValue === value) {
+					return;
+				}
+			}
+		}
+
 		this._rawValue = value;
 		this.subscribeToDeleteAndRestore(this._rawValue);
 		this._value = filterResultSet(value);
-		// validate the value
-		if (
-			Array.isArray(this._value) &&
-			this._value.some((v) => v.getSnapshot() === null)
-		) {
-			debugger;
-		}
-		this._status = 'ready';
+		this.context.log('debug', 'Query value changed', this.key);
 		this._events.emit('change', this._value);
 	};
 
 	// re-applies filtering if results have changed
 	protected refreshValue = () => {
-		this.setValue(this._rawValue);
+		this.setValue(this._rawValue, true);
 	};
 
 	private subscribeToDeleteAndRestore = (value: T) => {
