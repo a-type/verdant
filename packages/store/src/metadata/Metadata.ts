@@ -60,12 +60,16 @@ export class Metadata extends EventSubscriber<{
 
 	private context: Omit<Context, 'documentDb' | 'getNow'>;
 
+	private onOperation?: (operation: Operation) => void;
+
 	constructor({
 		disableRebasing,
 		context,
+		onOperation,
 	}: {
 		disableRebasing?: boolean;
 		context: Omit<Context, 'documentDb' | 'getNow'>;
+		onOperation?: (operation: Operation) => void;
 	}) {
 		super();
 		this.context = context;
@@ -76,6 +80,7 @@ export class Metadata extends EventSubscriber<{
 		this.ackInfo = new AckInfoStore(this.db);
 		this.messageCreator = new MessageCreator(this);
 		this.patchCreator = new PatchCreator(() => this.now);
+		this.onOperation = onOperation;
 		if (disableRebasing) this.disableRebasing = disableRebasing;
 	}
 
@@ -312,6 +317,10 @@ export class Metadata extends EventSubscriber<{
 
 		// we can now enqueue and check for rebase opportunities
 		this.tryAutonomousRebase();
+
+		if (this.onOperation) {
+			operations.forEach((o) => this.onOperation!(o));
+		}
 	};
 
 	/**
@@ -339,6 +348,10 @@ export class Metadata extends EventSubscriber<{
 		);
 
 		this.ack(operations[operations.length - 1].timestamp);
+
+		if (this.onOperation) {
+			operations.forEach((o) => this.onOperation!(o));
+		}
 
 		return affectedDocumentOids;
 	};

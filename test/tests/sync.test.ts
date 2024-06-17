@@ -219,16 +219,22 @@ it('can sync multiple clients even if they go offline', async () => {
 	clientA.sync.start();
 	clientB.sync.start();
 
-	await waitForQueryResult(
-		clientA.items.get(a_unknownItem.get('id')),
+	const a_unknownItemQ = clientA.items.get(a_unknownItem.get('id'));
+	const b_unknownItemQ = clientB.items.get(a_unknownItem.get('id'));
+	const c_unknownItemQ = clientC.items.get(a_unknownItem.get('id'));
+	await waitForQueryResult(a_unknownItemQ);
+	await waitForEntityCondition(
+		a_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
-	await waitForQueryResult(
-		clientB.items.get(a_unknownItem.get('id')),
+	await waitForQueryResult(b_unknownItemQ);
+	await waitForEntityCondition(
+		b_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
-	await waitForQueryResult(
-		clientC.items.get(a_unknownItem.get('id')),
+	await waitForQueryResult(c_unknownItemQ);
+	await waitForEntityCondition(
+		c_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
 }, 30000);

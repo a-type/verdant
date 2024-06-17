@@ -1,10 +1,13 @@
 import {
 	Batcher,
+	ObjectIdentifier,
 	Operation,
+	PropertyName,
 	generateId,
 	getOidRoot,
 	getUndoOperations,
 	groupPatchesByOid,
+	operationSupersedes,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { Context } from '../context.js';
@@ -74,6 +77,43 @@ export class OperationBatcher {
 			'to storage / sync',
 		);
 		if (!operations.length) return;
+		const committed: Operation[] = [];
+		// TODO: for supersession, iterate BACKWARDS over operations
+		// and flag superseding operation oid+(key where applicable),
+		// then when encountering superseded operations, skip them
+		// and call entities.dropPendingOperation on them
+		const supersessions: Record<
+			ObjectIdentifier,
+			Set<boolean | PropertyName>
+		> = {};
+		for (let i = operations.length - 1; i >= 0; i--) {
+			const op = operations[i];
+
+			// check for supersession from later operation which either
+			// covers the whole id (true) or this key
+			const existingSupersession = supersessions[op.oid];
+			if (
+				existingSupersession &&
+				(existingSupersession.has(true) ||
+					('name' in op.data && existingSupersession.has(op.data.name)))
+			) {
+				this.entities.discardPendingOperation(op);
+				continue;
+			}
+
+			// determine if this operation supersedes others
+			const supersession = operationSupersedes(op);
+			if (supersession !== false) {
+				if (!supersessions[op.oid]) {
+					supersessions[op.oid] = new Set<boolean | PropertyName>();
+				}
+				supersessions[op.oid]!.add(supersession);
+			}
+
+			// add this operation to final list
+			committed.unshift(op);
+		}
+
 		// rewrite timestamps of all operations to now - this preserves
 		// the linear history of operations which are sent to the server.
 		// even if multiple batches are spun up in parallel and flushed
@@ -86,10 +126,14 @@ export class OperationBatcher {
 		// despite the provisional timestamp being earlier
 		// NOTE: this MUST be mutating the original operation object! this timestamp
 		// also serves as a unique ID for deduplication later.
-		for (const op of operations) {
+
+		// NOTE: need to rewind back in order to set timestamps correctly.
+		// cannot be done in reversed loop above or timestamps would be
+		// in reverse order.
+		for (const op of committed) {
 			op.timestamp = this.meta.now;
 		}
-		await this.commitOperations(operations, meta);
+		await this.commitOperations(committed, meta);
 	};
 
 	/**
@@ -148,9 +192,34 @@ export class OperationBatcher {
 		max = null,
 		timeout = this.defaultBatchTimeout,
 	}: {
+		/** Allows turning off undo for this batch, making it 'permanent' */
 		undoable?: boolean;
+		/**
+		 * Provide a stable name to any invocation of .batch() and the changes made
+		 * within run() will all be added to the same batch. If a batch hits the max
+		 * limit or timeout and is flushed, the name will be reused for a new batch
+		 * automatically. Provide a stable name to make changes from anywhere in your
+		 * app to be grouped together in the same batch with the same limit behavior.
+		 *
+		 * Limit configuration provided to each invocation of .batch() with the same
+		 * name will overwrite any other invocation's limit configuration. It's
+		 * recommended to provide limits in one place and only provide a name
+		 * in others.
+		 */
 		batchName?: string;
+		/**
+		 * The maximum number of operations the batch will hold before flushing
+		 * automatically. If null, the batch will not flush automatically based
+		 * on operation count.
+		 */
 		max?: number | null;
+		/**
+		 * The number of milliseconds to wait before flushing the batch automatically.
+		 * If null, the batch will not flush automatically based on time. It is not
+		 * recommended to set this to null, as an unflushed batch will never be written
+		 * to storage or sync. If you do require undefined timing in a batch, make sure
+		 * to always call .commit() on the batch yourself.
+		 */
 		timeout?: number | null;
 	} = {}): OperationBatch => {
 		const internalBatch = this.batcher.add({

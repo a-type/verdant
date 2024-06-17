@@ -58,11 +58,15 @@ export function waitForPeerCount(
 
 export async function waitForQueryResult(
 	query: Query<any>,
+	/**
+	 *  DO NOT USE THIS FOR PREDICATES ON A SINGLE ENTITY VALUE.
+	 *  Use waitForEntityCondition instead.
+	 */
 	predicate: (value: any) => boolean = (value) => {
 		return !!value && (Array.isArray(value) ? value.length > 0 : true);
 	},
 	timeoutMs = 15000,
-	debug?: boolean,
+	debug?: string,
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (query.status !== 'initial' && predicate(query.current)) {
@@ -74,11 +78,12 @@ export async function waitForQueryResult(
 			if (debug) {
 				debugger;
 			}
-			reject(new Error('Timed out waiting for query ' + query.key));
+			reject(new Error('Timed out waiting for query ' + (debug || query.key)));
 		}, timeoutMs);
-		const unsubscribe = query.subscribe('change', (result) => {
+
+		const unsubscribe2 = query.subscribe('change', () => {
 			if (predicate(query.current)) {
-				unsubscribe();
+				unsubscribe2();
 				clearTimeout(timeout);
 				resolve();
 			}
@@ -110,15 +115,15 @@ export async function waitForBaselineCount(client: Client, count = 1) {
 export async function waitForCondition(
 	condition: () => boolean | Promise<boolean>,
 	timeout?: number,
-	debugName?: string | (() => string),
+	debugName?: string | (() => Promise<string> | string),
 ) {
 	await new Promise<void>((resolve, reject) => {
 		if (timeout) {
-			setTimeout(() => {
+			setTimeout(async () => {
 				reject(
 					new Error(
 						'Timed out waiting for condition ' +
-							(typeof debugName === 'function' ? debugName() : debugName),
+							(typeof debugName === 'function' ? await debugName() : debugName),
 					),
 				);
 			}, timeout);
@@ -154,14 +159,20 @@ export async function waitForEntityCondition<
 	return new Promise<void>((resolve, reject) => {
 		if (timeout) {
 			setTimeout(() => {
-				reject(new Error('Timed out waiting for condition ' + debugName));
+				reject(
+					new Error(
+						'Timed out waiting for condition ' +
+							debugName +
+							`. Entity snapshot: ${JSON.stringify(entity.getSnapshot())}`,
+					),
+				);
 			}, timeout);
 		}
 
 		if (condition(entity)) {
 			resolve();
 		} else {
-			entity.subscribe('change', () => {
+			entity.subscribe('changeDeep', () => {
 				if (condition(entity)) {
 					resolve();
 				}

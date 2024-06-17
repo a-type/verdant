@@ -173,6 +173,11 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	 * but is not yet thoroughly vetted.
 	 */
 	useBroadcastChannel?: boolean;
+	/**
+	 * Listen for outgoing messages from the client to the server.
+	 * Not sure why you want to do this, but be careful.
+	 */
+	onOutgoingMessage?: (message: ClientMessage) => void;
 }
 
 export class ServerSync<Presence = any, Profile = any>
@@ -196,6 +201,8 @@ export class ServerSync<Presence = any, Profile = any>
 
 	readonly presence: PresenceManager<Profile, Presence>;
 
+	private onOutgoingMessage?: (message: ClientMessage) => void;
+
 	private log;
 
 	constructor(
@@ -211,6 +218,7 @@ export class ServerSync<Presence = any, Profile = any>
 			presenceUpdateBatchTimeout,
 			defaultProfile,
 			useBroadcastChannel,
+			onOutgoingMessage,
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
@@ -230,6 +238,7 @@ export class ServerSync<Presence = any, Profile = any>
 		this.meta = meta;
 		this.onData = onData;
 		this.log = ctx.log;
+		this.onOutgoingMessage = onOutgoingMessage;
 		this.presence = new PresenceManager({
 			initialPresence,
 			defaultProfile,
@@ -444,9 +453,10 @@ export class ServerSync<Presence = any, Profile = any>
 		return this.pushPullSync.interval;
 	}
 
-	send = (message: ClientMessage) => {
+	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
-			return this.activeSync.send(message);
+			await this.activeSync.send(message);
+			this.onOutgoingMessage?.(message);
 		}
 	};
 

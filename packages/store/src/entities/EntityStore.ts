@@ -24,7 +24,6 @@ import { OperationBatcher } from './OperationBatcher.js';
 import { QueryableStorage } from '../queries/QueryableStorage.js';
 import { WeakEvent } from 'weak-event';
 import { processValueFiles } from '../files/utils.js';
-import { abort } from 'process';
 
 enum AbortReason {
 	Reset,
@@ -197,9 +196,6 @@ export class EntityStore extends Disposable {
 					});
 				});
 			} else {
-				if (this.cache.has(oid)) {
-					this.ctx.log('debug', 'Cache has', oid, ', an event should follow.');
-				}
 				event.invoke(this, {
 					oid,
 					baselines,
@@ -214,12 +210,11 @@ export class EntityStore extends Disposable {
 		};
 
 		// then, asynchronously add to the database
+		// this also emits messages to sync
+		// TODO: could messages be sent to sync before storage,
+		// so that realtime is lower latency? What would happen
+		// if the storage failed?
 		await this.meta.insertData(data, abortOptions);
-
-		// FIXME: entities hydrated here are not seeing
-		// the operations just inserted above!!
-		// IDEA: can we coordinate here with hydrate promises
-		// based on affected OIDs?
 
 		// recompute all affected documents for querying
 		const entities = await Promise.all(
@@ -457,6 +452,11 @@ export class EntityStore extends Disposable {
 
 	private onPendingOperations = (operations: Operation[]) => {
 		this.batcher.addOperations(operations);
+	};
+
+	discardPendingOperation = (operation: Operation) => {
+		const root = getOidRoot(operation.oid);
+		this.cache.get(root)?.deref()?.__discardPendingOperation__(operation);
 	};
 
 	/**

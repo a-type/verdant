@@ -1,6 +1,7 @@
 import {
 	EventSubscriber,
 	Migration,
+	Operation,
 	StorageSchema,
 	hashObject,
 } from '@verdant-web/common';
@@ -60,6 +61,13 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * Configuration for file management
 	 */
 	files?: FileManagerConfig;
+
+	/**
+	 * Listen for operations as they are applied to the database.
+	 * Wouldn't recommend using this unless you know what you're doing.
+	 * It's a very hot code path...
+	 */
+	onOperation?: (operation: Operation) => void;
 	/**
 	 * Enables experimental WeakRef usage to cull documents
 	 * from cache that aren't being used. This is a performance
@@ -173,6 +181,7 @@ export class ClientDescriptor<
 		const meta = new Metadata({
 			context,
 			disableRebasing: init.disableRebasing,
+			onOperation: init.onOperation,
 		});
 
 		// verify schema integrity

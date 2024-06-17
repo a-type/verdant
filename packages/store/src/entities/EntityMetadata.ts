@@ -176,17 +176,22 @@ export class EntityMetadata {
 			// FIXME: seems inefficient
 			// remove this incoming op from pending if it's in there
 			const pendingPrior = this.pendingOperations.length;
-			this.pendingOperations = this.pendingOperations.filter(
-				(pendingOp) => op.timestamp !== pendingOp.timestamp,
-			);
+			this.discardPendingOperation(op);
 			totalAdded -= pendingPrior - this.pendingOperations.length;
 		}
 		return totalAdded;
 	};
 
 	addPendingOperation = (operation: Operation) => {
+		// check to see if new operation supersedes the previous one
 		// we can assume pending ops are always newer
 		this.pendingOperations.push(operation);
+	};
+
+	discardPendingOperation = (operation: Operation) => {
+		this.pendingOperations = this.pendingOperations.filter(
+			(op) => op.timestamp !== operation.timestamp,
+		);
 	};
 
 	private applyOperations = (
@@ -360,5 +365,10 @@ export class EntityFamilyMetadata {
 			changes[oid] ??= { oid, isLocal: false };
 		}
 		return Object.values(changes);
+	};
+
+	discardPendingOperation = (operation: Operation) => {
+		const ent = this.entities.get(operation.oid);
+		ent?.discardPendingOperation(operation);
 	};
 }

@@ -1,4 +1,8 @@
-import { CollectionIndexFilter, StorageSchema } from '@verdant-web/common';
+import {
+	CollectionIndexFilter,
+	stableStringify,
+	StorageSchema,
+} from '@verdant-web/common';
 import {
 	Query,
 	SyncTransportMode,
@@ -62,6 +66,15 @@ function useLiveQueryStatus(liveQuery: Query<any> | null): QueryStatus {
 
 function capitalize<T extends string>(str: T) {
 	return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>;
+}
+
+function useStableIndex(index: CollectionIndexFilter | undefined) {
+	const indexRef = useRef(index);
+	const mismatch = stableStringify(indexRef.current) !== stableStringify(index);
+	if (mismatch) {
+		indexRef.current = index;
+	}
+	return indexRef.current;
 }
 
 type HookName = `use${string}`;
@@ -456,7 +469,7 @@ export function createHooks<Presence = any, Profile = any>(
 		const findOneHookName = `useOne${capitalize(collection.name)}`;
 		hooks[findOneHookName] = function useOne({
 			skip,
-			index,
+			index: unstableIndex,
 			key,
 		}: {
 			index?: CollectionIndexFilter;
@@ -464,6 +477,7 @@ export function createHooks<Presence = any, Profile = any>(
 			key?: string;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].findOne({ index, key });
 			}, [index, skip]);
@@ -472,7 +486,7 @@ export function createHooks<Presence = any, Profile = any>(
 		};
 		hooks[findOneHookName + 'Unsuspended'] = function useOneUnsuspended({
 			skip,
-			index,
+			index: unstableIndex,
 			key,
 		}: {
 			index?: CollectionIndexFilter;
@@ -480,6 +494,7 @@ export function createHooks<Presence = any, Profile = any>(
 			key?: string;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].findOne({ index, key });
 			}, [index, skip]);
@@ -491,7 +506,7 @@ export function createHooks<Presence = any, Profile = any>(
 
 		const getAllHookName = `useAll${capitalize(pluralName)}`;
 		hooks[getAllHookName] = function useAll({
-			index,
+			index: unstableIndex,
 			skip,
 			key,
 		}: {
@@ -500,6 +515,7 @@ export function createHooks<Presence = any, Profile = any>(
 			key?: string;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
@@ -510,7 +526,7 @@ export function createHooks<Presence = any, Profile = any>(
 			return data || [];
 		};
 		hooks[getAllHookName + 'Unsuspended'] = function useAllUnsuspended({
-			index,
+			index: unstableIndex,
 			skip,
 			key,
 		}: {
@@ -519,6 +535,7 @@ export function createHooks<Presence = any, Profile = any>(
 			key?: string;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
@@ -533,7 +550,7 @@ export function createHooks<Presence = any, Profile = any>(
 
 		const getAllPaginatedHookName = `useAll${capitalize(pluralName)}Paginated`;
 		hooks[getAllPaginatedHookName] = function useAllPaginated({
-			index,
+			index: unstableIndex,
 			skip,
 			pageSize = 10,
 			key,
@@ -546,6 +563,7 @@ export function createHooks<Presence = any, Profile = any>(
 			suspend?: false;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
@@ -586,7 +604,7 @@ export function createHooks<Presence = any, Profile = any>(
 		};
 		const getAllInfiniteHookName = `useAll${capitalize(pluralName)}Infinite`;
 		hooks[getAllInfiniteHookName] = function useAllInfinite({
-			index,
+			index: unstableIndex,
 			skip,
 			pageSize = 10,
 			key,
@@ -599,6 +617,7 @@ export function createHooks<Presence = any, Profile = any>(
 			suspend?: false;
 		} = {}) {
 			const storage = useStorage();
+			const index = useStableIndex(unstableIndex);
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(

@@ -123,13 +123,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	ctx.log('Waiting for client B to re-initialize');
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
-	await waitForQueryResult(
-		clientB.items.get(a_banana.get('id')),
-		(val) => {
-			return !!val;
-		},
-		1000,
-	);
+	await waitForQueryResult(clientB.items.get(a_banana.get('id')));
 	const b_pearQuery = clientB.items.get(pearId);
 	await waitForQueryResult(b_pearQuery, (val) => {
 		return !val;

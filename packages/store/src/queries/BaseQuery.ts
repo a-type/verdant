@@ -42,6 +42,7 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	readonly collection;
 	readonly key;
+	readonly isListQuery;
 
 	constructor({
 		initial,
@@ -53,6 +54,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		super();
 		this._rawValue = initial;
 		this._value = initial;
+		this.isListQuery = Array.isArray(initial);
 		this._events = new EventSubscriber<BaseQueryEvents>(
 			(event: keyof BaseQueryEvents) => {
 				if (event === 'change') this._allUnsubscribedHandler?.(this);
@@ -98,6 +100,19 @@ export abstract class BaseQuery<T> extends Disposable {
 		return this._status;
 	}
 
+	private set status(v: QueryStatus) {
+		if (this._status === v) return;
+		this._status = v;
+		this._events.emit('statusChange', this._status);
+	}
+
+	get hasDeleted() {
+		if (this.isListQuery) {
+			return (this._rawValue as any[]).length !== (this._value as any[]).length;
+		}
+		return !!this._rawValue && !this._value;
+	}
+
 	/**
 	 * Subscribe to changes in the query value.
 	 *
@@ -138,16 +153,38 @@ export abstract class BaseQuery<T> extends Disposable {
 	protected setValue = (value: T) => {
 		this._rawValue = value;
 		this.subscribeToDeleteAndRestore(this._rawValue);
-		this._value = filterResultSet(value);
-		// validate the value
-		if (
-			Array.isArray(this._value) &&
-			this._value.some((v) => v.getSnapshot() === null)
-		) {
-			debugger;
+		const filtered = filterResultSet(value);
+
+		// prevent excess change notifications by diffing
+		// value by identity for single-value queries,
+		// and by item identity for multi-value
+		let changed = true;
+		// always fire change when going from initial to ready
+		if (this.status === 'initializing' || this.status === 'initial') {
+			changed = true;
+		} else {
+			// compare values by identity, after filtering.
+			if (this.isListQuery) {
+				if (
+					(this._value as any[]).length === (filtered as any[]).length &&
+					(this._value as any[]).every((v, i) => v === (filtered as any[])[i])
+				) {
+					changed = false;
+				}
+			} else {
+				if (this._value === filtered) {
+					changed = false;
+				}
+			}
 		}
-		this._status = 'ready';
-		this._events.emit('change', this._value);
+
+		this._value = filtered;
+
+		if (changed) {
+			this.context.log('debug', 'Query value changed', this.key);
+			this._events.emit('change', this._value);
+		}
+		this.status = 'ready';
 	};
 
 	// re-applies filtering if results have changed
@@ -186,10 +223,10 @@ export abstract class BaseQuery<T> extends Disposable {
 	execute = () => {
 		this.context.log('debug', 'Executing query', this.key);
 
-		if (this._status === 'initial') {
-			this._status = 'initializing';
-		} else if (this._status === 'ready') {
-			this._status = 'revalidating';
+		if (this.status === 'initial') {
+			this.status = 'initializing';
+		} else if (this.status === 'ready') {
+			this.status = 'revalidating';
 		}
 		// no status change needed if already in a 'running' status.
 

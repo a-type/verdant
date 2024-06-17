@@ -475,11 +475,15 @@ export class Entity<
 		}
 	};
 
+	private invalidateCachedView = () => {
+		this._viewData = undefined;
+		this.cachedView = undefined;
+	};
+
 	private change = (ev: EntityChange) => {
 		if (ev.oid === this.oid) {
 			// reset cached view
-			this._viewData = undefined;
-			this.cachedView = undefined;
+			this.invalidateCachedView();
 			if (!this.parent) {
 				this.changeRoot(ev);
 			} else {
@@ -1061,6 +1065,11 @@ export class Entity<
 		return this.metadataFamily.get(oid).computeView(type === 'confirmed');
 	};
 	__getFamilyOids__ = () => this.metadataFamily.getAllOids();
+
+	__discardPendingOperation__ = (operation: Operation) => {
+		this.metadataFamily.discardPendingOperation(operation);
+		this.invalidateCachedView();
+	};
 }
 
 function assertNotSymbol<T>(key: T): asserts key is Exclude<T, symbol> {

@@ -197,7 +197,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		return this.entities.batch;
 	}
 
-	stats = async () => {
+	stats = async (): Promise<ClientStats> => {
 		const collectionNames = Object.keys(this.schema.collections);
 		let collections = {} as Record<string, { count: number; size: number }>;
 		if (this.disposed) {
@@ -426,4 +426,17 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		const exportData = await this.export();
 		await this.import(exportData);
 	};
+}
+
+export interface ClientStats {
+	collections: Record<string, { count: number; size: number }>;
+	meta: {
+		baselinesSize: { count: number; size: number };
+		operationsSize: { count: number; size: number };
+	};
+	storage: StorageEstimate | undefined;
+	totalMetaSize: number;
+	totalCollectionsSize: number;
+	metaToDataRatio: number;
+	quotaUsage: number | undefined;
 }
