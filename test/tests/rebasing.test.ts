@@ -4,6 +4,7 @@ import { ClientDescriptor } from '../client/index.js';
 import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForBaselineCount,
+	waitForEntityCondition,
 	waitForEverythingToRebase,
 	waitForPeerCount,
 	waitForQueryResult,
@@ -123,7 +124,11 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	// console.info('🔺 --- Reconnecting passive replica ---');
 	clientC.sync.start();
 	const queryCOranges = clientC.items.get(oranges.get('id'));
-	await waitForQueryResult(queryCOranges, (res) => !!res?.get('purchased'));
+	await waitForQueryResult(queryCOranges);
+	await waitForEntityCondition(
+		queryCOranges.current!,
+		(res) => !!res?.get('purchased'),
+	);
 	expect(queryCOranges.current!.get('purchased')).toBe(true);
 });
 

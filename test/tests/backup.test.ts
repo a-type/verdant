@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { waitForQueryResult } from '../lib/waits.js';
+import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
 import {
 	createClientBackup,
 	importClientBackup,
@@ -45,14 +45,12 @@ it('can backup to file', async () => {
 
 	// wait for B to sync everything
 	await waitForQueryResult(clientB.items.findAll(), (r) => r.length === 4);
-	await waitForQueryResult(
-		clientB.items.get('oranges'),
-		(o) => !!o?.get('purchased'),
-	);
-	await waitForQueryResult(
-		clientB.items.get('bananas'),
-		(b) => !!b?.get('image'),
-	);
+	const bOranges = clientB.items.get('oranges');
+	await waitForQueryResult(bOranges);
+	await waitForEntityCondition(bOranges.current!, (o) => !!o?.get('purchased'));
+	const bBananas = clientB.items.get('bananas');
+	await waitForQueryResult(bBananas);
+	await waitForEntityCondition(bBananas.current!, (b) => !!b?.get('image'));
 
 	ctx.log('Backing up from B');
 	const backupFile = await createClientBackup(clientB as any);
@@ -87,12 +85,10 @@ it('can backup to file', async () => {
 
 	// check the data
 	await waitForQueryResult(clientC.items.findAll(), (r) => r.length === 4);
-	await waitForQueryResult(
-		clientC.items.get('oranges'),
-		(o) => !!o?.get('purchased'),
-	);
-	await waitForQueryResult(
-		clientC.items.get('bananas'),
-		(b) => !!b?.get('image'),
-	);
+	const cOranges = clientC.items.get('oranges');
+	await waitForQueryResult(cOranges);
+	await waitForEntityCondition(cOranges.current!, (o) => !!o?.get('purchased'));
+	const cBananas = clientC.items.get('bananas');
+	await waitForQueryResult(cBananas);
+	await waitForEntityCondition(cBananas.current!, (b) => !!b?.get('image'));
 });

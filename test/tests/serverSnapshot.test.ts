@@ -1,14 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import * as fs from 'fs';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { createTestFile } from '../lib/createTestFile.js';
 import { createTestClient } from '../lib/testClient.js';
 import { startTestServer } from '../lib/testServer.js';
 import {
-	waitForCondition,
+	waitForEntityCondition,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import * as fs from 'fs';
-import { createTestFile } from '../lib/createTestFile.js';
-import { assert, hashObject } from '@verdant-web/common';
 
 let server: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
@@ -68,7 +67,7 @@ it('the server allows retrieving a document snapshot', async () => {
 		.run(() => {
 			a_apples.set('content', 'Apples 2');
 		})
-		.flush();
+		.commit();
 	clientA
 		.batch()
 		.run(() => {
@@ -83,25 +82,32 @@ it('the server allows retrieving a document snapshot', async () => {
 			});
 			a_apples.get('tags').push('a');
 		})
-		.flush();
+		.commit();
 	clientA
 		.batch()
 		.run(() => {
 			a_apples.get('comments').delete(1);
 		})
-		.flush();
+		.commit();
 
 	const match = a_apples.getSnapshot() as any;
 
 	// wait for B to get changes, which means they're on the server too
-	await waitForQueryResult(clientB.items.get(a_apples.get('id')), (doc) => {
-		return (
-			doc?.get('content') === 'Apples 2' &&
-			doc?.get('purchased') === true &&
-			doc?.get('comments').length === 1 &&
-			!!doc?.get('image')
-		);
-	});
+	const bApples = clientB.items.get(a_apples.get('id'));
+	await waitForQueryResult(bApples);
+	await waitForEntityCondition(
+		bApples.current!,
+		(doc) => {
+			return (
+				doc?.get('content') === 'Apples 2' &&
+				doc?.get('purchased') === true &&
+				doc?.get('comments').length === 1 &&
+				!!doc?.get('image')
+			);
+		},
+		5000,
+		'Apples 2, purchased, 1 comment, and image',
+	);
 
 	// now we can get a snapshot of the document
 	const snapshot = await server.server.getDocumentSnapshot(

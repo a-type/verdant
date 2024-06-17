@@ -8,13 +8,15 @@ import {
 } from '@verdant-web/common';
 import { ClientWithCollections } from '@verdant-web/store';
 import {
+	waitForCondition,
+	waitForEntityCondition,
 	waitForEntitySnapshot,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
 
 const ctx = createTestContext({
-	// testLog: true,
+	testLog: true,
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {

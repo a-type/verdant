@@ -100,6 +100,19 @@ export abstract class BaseQuery<T> extends Disposable {
 		return this._status;
 	}
 
+	private set status(v: QueryStatus) {
+		if (this._status === v) return;
+		this._status = v;
+		this._events.emit('statusChange', this._status);
+	}
+
+	get hasDeleted() {
+		if (this.isListQuery) {
+			return (this._rawValue as any[]).length !== (this._value as any[]).length;
+		}
+		return !!this._rawValue && !this._value;
+	}
+
 	/**
 	 * Subscribe to changes in the query value.
 	 *
@@ -137,36 +150,46 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 	}
 
-	protected setValue = (value: T, force = false) => {
-		this._status = 'ready';
+	protected setValue = (value: T) => {
+		this._rawValue = value;
+		this.subscribeToDeleteAndRestore(this._rawValue);
+		const filtered = filterResultSet(value);
+
 		// prevent excess change notifications by diffing
 		// value by identity for single-value queries,
 		// and by item identity for multi-value
-		if (!force) {
+		let changed = true;
+		// always fire change when going from initial to ready
+		if (this.status === 'initializing' || this.status === 'initial') {
+			changed = true;
+		} else {
+			// compare values by identity, after filtering.
 			if (this.isListQuery) {
 				if (
-					(this._rawValue as any[]).length === (value as any[]).length &&
-					(this._rawValue as any[]).every((v, i) => v === (value as any[])[i])
+					(this._value as any[]).length === (filtered as any[]).length &&
+					(this._value as any[]).every((v, i) => v === (filtered as any[])[i])
 				) {
-					return;
+					changed = false;
 				}
 			} else {
-				if (this._rawValue === value) {
-					return;
+				if (this._value === filtered) {
+					changed = false;
 				}
 			}
 		}
 
-		this._rawValue = value;
-		this.subscribeToDeleteAndRestore(this._rawValue);
-		this._value = filterResultSet(value);
-		this.context.log('debug', 'Query value changed', this.key);
-		this._events.emit('change', this._value);
+		this._value = filtered;
+
+		if (changed) {
+			this.context.log('debug', 'Query value changed', this.key);
+			this._events.emit('change', this._value);
+		}
+		this.status = 'ready';
 	};
 
 	// re-applies filtering if results have changed
 	protected refreshValue = () => {
-		this.setValue(this._rawValue, true);
+		this.setValue(this._rawValue);
 	};
 
 	private subscribeToDeleteAndRestore = (value: T) => {
@@ -200,10 +223,10 @@ export abstract class BaseQuery<T> extends Disposable {
 	execute = () => {
 		this.context.log('debug', 'Executing query', this.key);
 
-		if (this._status === 'initial') {
-			this._status = 'initializing';
-		} else if (this._status === 'ready') {
-			this._status = 'revalidating';
+		if (this.status === 'initial') {
+			this.status = 'initializing';
+		} else if (this.status === 'ready') {
+			this.status = 'revalidating';
 		}
 		// no status change needed if already in a 'running' status.
 
