@@ -192,9 +192,34 @@ export class OperationBatcher {
 		max = null,
 		timeout = this.defaultBatchTimeout,
 	}: {
+		/** Allows turning off undo for this batch, making it 'permanent' */
 		undoable?: boolean;
+		/**
+		 * Provide a stable name to any invocation of .batch() and the changes made
+		 * within run() will all be added to the same batch. If a batch hits the max
+		 * limit or timeout and is flushed, the name will be reused for a new batch
+		 * automatically. Provide a stable name to make changes from anywhere in your
+		 * app to be grouped together in the same batch with the same limit behavior.
+		 *
+		 * Limit configuration provided to each invocation of .batch() with the same
+		 * name will overwrite any other invocation's limit configuration. It's
+		 * recommended to provide limits in one place and only provide a name
+		 * in others.
+		 */
 		batchName?: string;
+		/**
+		 * The maximum number of operations the batch will hold before flushing
+		 * automatically. If null, the batch will not flush automatically based
+		 * on operation count.
+		 */
 		max?: number | null;
+		/**
+		 * The number of milliseconds to wait before flushing the batch automatically.
+		 * If null, the batch will not flush automatically based on time. It is not
+		 * recommended to set this to null, as an unflushed batch will never be written
+		 * to storage or sync. If you do require undefined timing in a batch, make sure
+		 * to always call .commit() on the batch yourself.
+		 */
 		timeout?: number | null;
 	} = {}): OperationBatch => {
 		const internalBatch = this.batcher.add({
