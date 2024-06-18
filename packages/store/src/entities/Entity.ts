@@ -755,9 +755,9 @@ export class Entity<
 		}
 	};
 
-	set = <Key extends keyof Init>(
-		key: Key,
-		value: Init[Key],
+	set = (
+		key: any,
+		value: any,
 		options?: {
 			/**
 			 * Forces the creation of a change for this set even if the value is the same
@@ -772,14 +772,25 @@ export class Entity<
 		},
 	) => {
 		assertNotSymbol(key);
-		if (!options?.force && this.get(key as any) === value) return;
-		this.addPendingOperations(
-			this.patchCreator.createSet(
-				this.oid,
-				key,
-				this.processInputValue(value, key),
-			),
-		);
+		if (!options?.force && this.get(key) === value) return;
+
+		if (this.isList) {
+			this.addPendingOperations(
+				this.patchCreator.createListSet(
+					this.oid,
+					key,
+					this.processInputValue(value, key),
+				),
+			);
+		} else {
+			this.addPendingOperations(
+				this.patchCreator.createSet(
+					this.oid,
+					key,
+					this.processInputValue(value, key),
+				),
+			);
+		}
 	};
 
 	/**

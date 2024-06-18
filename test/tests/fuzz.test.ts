@@ -161,15 +161,16 @@ async function fuzz(
 				? keys[Math.floor(Math.random() * keys.length)]
 				: randomString();
 			current.set(key, randomInitialData(avoidLists));
+			console.log(client.namespace, current.uid, 'set', key);
 		} else {
 			if (Math.random() < 0.2) {
 				// testing set adding with the same value
 				current.add(Math.random() < 0.5 ? 'fuzz' : 'bazz');
+				console.log(client.namespace, current.uid, 'add');
 			} else {
-				current.set(
-					Math.floor(Math.random() * Math.max(1, current.length)),
-					randomInitialData(avoidLists),
-				);
+				const key = Math.floor(Math.random() * Math.max(1, current.length));
+				current.set(key, randomInitialData(avoidLists));
+				console.log(client.namespace, current.uid, 'set', key);
 			}
 		}
 		// DELETE
@@ -181,11 +182,14 @@ async function fuzz(
 			}
 			const key = keys[Math.floor(Math.random() * keys.length)];
 			current.delete(key);
+			console.log(client.namespace, current.uid, 'delete', key);
 		} else {
 			if (current.length === 0) {
 				return;
 			}
-			current.delete(Math.floor(Math.random() * current.length));
+			const key = Math.floor(Math.random() * current.length);
+			current.delete(key);
+			console.log(client.namespace, current.uid, 'delete', key);
 		}
 	}
 }
@@ -218,6 +222,7 @@ async function waitForConsistency(
 			const fuzz2 = await getFuzz(client2);
 			const fuzz1Pending = fuzz1.metadata.pendingOperations;
 			const fuzz2Pending = fuzz2.metadata.pendingOperations;
+			debugger;
 			return `[${debugTag}] consistency (${attempts} attempts):
 
 				${snap1}
@@ -255,7 +260,7 @@ let server: { cleanup: () => Promise<void>; port: number; server: Server };
 
 beforeAll(async () => {
 	server = await startTestServer({
-		log: true,
+		// log: true,
 		// disableRebasing: true,
 	});
 });
@@ -264,7 +269,7 @@ afterAll(() => {
 }, 30 * 1000);
 
 it(
-	'withstands numerous arbitrary changes to data from clients offline and online and arrives at consistency',
+	'withstands numerous arbitrary fuzz changes to data from clients offline and online and arrives at consistency',
 	async () => {
 		const client1IndexedDB = new IDBFactory();
 		const client1 = await createTestClient({

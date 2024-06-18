@@ -7,6 +7,7 @@ import {
 	getOidRoot,
 	getUndoOperations,
 	groupPatchesByOid,
+	isSuperseded,
 	operationSupersedes,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
@@ -77,11 +78,12 @@ export class OperationBatcher {
 			'to storage / sync',
 		);
 		if (!operations.length) return;
+
+		// next block of logic computes superseding rules to eliminate
+		// operations which are 'overshadowed' by later ones on the same
+		// key.
+
 		const committed: Operation[] = [];
-		// TODO: for supersession, iterate BACKWARDS over operations
-		// and flag superseding operation oid+(key where applicable),
-		// then when encountering superseded operations, skip them
-		// and call entities.dropPendingOperation on them
 		const supersessions: Record<
 			ObjectIdentifier,
 			Set<boolean | PropertyName>
@@ -92,11 +94,7 @@ export class OperationBatcher {
 			// check for supersession from later operation which either
 			// covers the whole id (true) or this key
 			const existingSupersession = supersessions[op.oid];
-			if (
-				existingSupersession &&
-				(existingSupersession.has(true) ||
-					('name' in op.data && existingSupersession.has(op.data.name)))
-			) {
+			if (existingSupersession && isSuperseded(op, existingSupersession)) {
 				this.entities.discardPendingOperation(op);
 				continue;
 			}

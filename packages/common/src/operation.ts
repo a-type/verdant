@@ -73,6 +73,11 @@ export interface OperationPatchRemove extends BaseOperationPatch {
 	op: 'remove';
 	name: PropertyName;
 }
+export interface OperationPatchListSet extends BaseOperationPatch {
+	op: 'list-set';
+	index: number;
+	value: PropertyValue;
+}
 export interface OperationPatchListPush extends BaseOperationPatch {
 	op: 'list-push';
 	value: PropertyValue;
@@ -136,6 +141,7 @@ export type OperationPatch =
 	| OperationPatchInitialize
 	| OperationPatchSet
 	| OperationPatchRemove
+	| OperationPatchListSet
 	| OperationPatchListPush
 	| OperationPatchListInsert
 	| OperationPatchListDelete
@@ -183,20 +189,37 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 ): Operation[] {
 	const oid = getOid(from);
 
-	function diffItems(key: string | number, value: any, oldValue: any) {
+	function diffItems(
+		key: string | number,
+		value: any,
+		oldValue: any,
+		isList: boolean,
+	) {
 		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
 			if (!compareNonDiffable(value, oldValue)) {
-				patches.push({
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'set',
-						name: key,
-						value,
-					},
-				});
+				if (isList) {
+					patches.push({
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'list-set',
+							index: key as number,
+							value,
+						},
+					});
+				} else {
+					patches.push({
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'set',
+							name: key,
+							value,
+						},
+					});
+				}
 			}
 		} else {
 			const oldValueOid = maybeGetOid(oldValue);
@@ -269,7 +292,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		for (let i = 0; i < to.length; i++) {
 			const value = to[i];
 			const oldValue = from[i];
-			diffItems(i, value, oldValue);
+			diffItems(i, value, oldValue, true);
 		}
 		// remove any remaining items at the end of the array
 		const deletedItemsAtEnd = from.length - to.length;
@@ -312,7 +335,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 
 			const oldValue = from[key];
 
-			diffItems(key, value, oldValue);
+			diffItems(key, value, oldValue, false);
 		}
 
 		// this set now only contains keys which were not in the new object
@@ -343,20 +366,37 @@ export function shallowDiffToPatches(
 ) {
 	const oid = getOid(from);
 
-	function diffItems(key: string | number, value: any, oldValue: any) {
+	function diffItems(
+		key: string | number,
+		value: any,
+		oldValue: any,
+		isList: boolean,
+	) {
 		if (!isDiffableObject(value)) {
 			// for primitive fields, we can use plain sets and
 			// do not need to recurse, of course
 			if (!compareNonDiffable(value, oldValue)) {
-				patches.push({
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'set',
-						name: key,
-						value,
-					},
-				});
+				if (isList) {
+					patches.push({
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'list-set',
+							index: key as number,
+							value,
+						},
+					});
+				} else {
+					patches.push({
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'set',
+							name: key,
+							value,
+						},
+					});
+				}
 			}
 		} else {
 			throw new Error(
@@ -372,7 +412,7 @@ export function shallowDiffToPatches(
 		for (let i = 0; i < to.length; i++) {
 			const value = to[i];
 			const oldValue = from[i];
-			diffItems(i, value, oldValue);
+			diffItems(i, value, oldValue, true);
 		}
 		// remove any remaining items at the end of the array
 		const deletedItemsAtEnd = from.length - to.length;
@@ -399,7 +439,7 @@ export function shallowDiffToPatches(
 
 			const oldValue = from[key];
 
-			diffItems(key, value, oldValue);
+			diffItems(key, value, oldValue, false);
 		}
 
 		// this set now only contains keys which were not in the new object
@@ -566,6 +606,12 @@ export function applyPatch<T extends NormalizedObject>(
 		case 'remove':
 			checkRef(baseAsAny[patch.name]);
 			delete baseAsAny[patch.name];
+			break;
+		case 'list-set':
+			if (listCheck(base)) {
+				checkRef(base[patch.index]);
+				base[patch.index] = patch.value;
+			}
 			break;
 		case 'list-push':
 			if (listCheck(base)) {
@@ -770,16 +816,27 @@ export function substituteFirstLevelObjectsWithRefs<
 }
 
 export function operationSupersedes(op: Operation): PropertyName | boolean {
-	// if (op.data.op === 'initialize' || op.data.op === 'delete') {
-	// 	return true;
-	// }
-
-	// if (op.data.op === 'set' || op.data.op === 'remove') {
-	// 	return op.data.name;
-	// }
-
+	// todo: add 'remove'
 	if (op.data.op === 'set') {
 		return op.data.name;
+	}
+
+	return false;
+}
+
+/**
+ * Determine if an operation is superseded by a set of supersession values
+ * provided by operationSupersedes. Assumes the operation OID matches
+ * already.
+ */
+export function isSuperseded(
+	op: Operation,
+	supersession: Set<PropertyName | boolean>,
+) {
+	if (supersession.has(true)) {
+		return true;
+	} else if (op.data.op === 'set' || op.data.op === 'remove') {
+		return supersession.has(op.data.name);
 	}
 
 	return false;

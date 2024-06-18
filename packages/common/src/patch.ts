@@ -88,6 +88,40 @@ export class PatchCreator {
 		];
 	};
 
+	createListSet = (
+		oid: ObjectIdentifier,
+		index: number,
+		value: any,
+	): Operation[] => {
+		if (this.isPrimitive(value)) {
+			return [
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-set',
+						index,
+						value,
+					},
+				},
+			];
+		} else {
+			const itemOid = createSubOid(oid, this.createSubId);
+			return [
+				...initialToPatches(value, itemOid, this.getNow),
+				{
+					oid,
+					timestamp: this.getNow(),
+					data: {
+						op: 'list-set',
+						index,
+						value: createRef(itemOid),
+					},
+				},
+			];
+		}
+	};
+
 	createListPush = (oid: ObjectIdentifier, value: any): Operation[] => {
 		if (this.isPrimitive(value)) {
 			return [

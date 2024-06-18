@@ -55,3 +55,30 @@ it('overwrites superseded operations to the same key before syncing', async () =
 	// +1 for write of categoryId, +1 for write of purchased
 	expect(stats?.operationsCount).toBe(3);
 });
+
+it('superseding handles list items moving around', async () => {
+	const clientA = await ctx.createTestClient({
+		library: 'superseding2',
+		user: 'A',
+	});
+
+	const item = await clientA.items.put({
+		content: 'Apples',
+		tags: ['a', 'b'],
+	});
+
+	await clientA
+		.batch()
+		.run(() => {
+			const tags = item.get('tags');
+			tags.set(1, 'c');
+			tags.delete(1);
+			tags.delete(0);
+			tags.add('a');
+			tags.set(0, 'b');
+			tags.delete(0);
+		})
+		.commit();
+
+	expect(item.get('tags').getSnapshot()).toHaveLength(0);
+});

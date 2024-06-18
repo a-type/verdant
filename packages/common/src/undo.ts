@@ -189,6 +189,18 @@ function getUndoOperation(
 					},
 				},
 			];
+		case 'list-set':
+			return [
+				{
+					oid,
+					timestamp: getNow(),
+					data: {
+						op: 'list-set',
+						index: data.index,
+						value: initial[data.index],
+					},
+				},
+			];
 		case 'initialize':
 			return [
 				{

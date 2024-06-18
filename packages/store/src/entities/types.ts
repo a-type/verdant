@@ -87,7 +87,11 @@ export interface ObjectEntity<
 	readonly size: number;
 	entries(): [string, Exclude<Value[keyof Value], undefined>][];
 	values(): Exclude<Value[keyof Value], undefined>[];
-	set<Key extends keyof Init>(key: Key, value: Init[Key]): void;
+	set<Key extends keyof Init>(
+		key: Key,
+		value: Init[Key],
+		options?: { force?: boolean },
+	): void;
 	delete(key: DeletableKeys<Value>): void;
 	update(
 		value: DeepPartial<Init>,
@@ -136,6 +140,11 @@ export interface ListEntity<
 		BaseEntity<Init, Value, Snapshot> {
 	readonly isList: true;
 	readonly length: number;
+	set(
+		index: number,
+		value: ListItemInit<Init>,
+		options?: { force?: boolean },
+	): void;
 	push(value: ListItemInit<Init>): void;
 	insert(index: number, value: ListItemInit<Init>): void;
 	move(from: number, to: number): void;
