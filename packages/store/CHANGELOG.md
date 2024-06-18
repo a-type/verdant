@@ -1,5 +1,18 @@
 # @lo-fi/web
 
+## 3.7.0
+
+### Minor Changes
+
+- c2a3c78: Fixed some big performance gaps in React hooks - query hooks no longer refresh queries on each render! Also dramatically reduced the number of times a query emits 'change' events to match only changes in the identities of returned documents, as designed, by fixing a mistake in change notification logic. Combined, these drastically improve performance in apps with frequent or real-time changes!
+- 91a6a64: Add operation "overlaying," which compresses multiple batched changes to the same field into a single operation before persisting to storage and sync. This preserves the instantaneous nature of immediate changes, while also improving storage and network efficiency by not flushing every instantaneous operation to sync.
+
+### Patch Changes
+
+- e202bdd: Don't add set operations if the value hasn't changed. Add ListEntity.reduce.
+- Updated dependencies [91a6a64]
+  - @verdant-web/common@2.3.2
+
 ## 3.6.4
 
 ### Patch Changes

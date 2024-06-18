@@ -1,5 +1,19 @@
 # @lo-fi/react
 
+## 33.0.0
+
+### Minor Changes
+
+- c2a3c78: Fixed some big performance gaps in React hooks - query hooks no longer refresh queries on each render! Also dramatically reduced the number of times a query emits 'change' events to match only changes in the identities of returned documents, as designed, by fixing a mistake in change notification logic. Combined, these drastically improve performance in apps with frequent or real-time changes!
+
+### Patch Changes
+
+- Updated dependencies [e202bdd]
+- Updated dependencies [c2a3c78]
+- Updated dependencies [91a6a64]
+  - @verdant-web/store@3.7.0
+  - @verdant-web/common@2.3.2
+
 ## 32.0.0
 
 ### Major Changes

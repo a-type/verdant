@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.3.2
+
+### Patch Changes
+
+- 91a6a64: Add operation "overlaying," which compresses multiple batched changes to the same field into a single operation before persisting to storage and sync. This preserves the instantaneous nature of immediate changes, while also improving storage and network efficiency by not flushing every instantaneous operation to sync.
+
 ## 2.3.1
 
 ### Patch Changes
