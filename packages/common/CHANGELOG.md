@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.3.3
+
+### Patch Changes
+
+- c9a0183: Putting a new document now ignores keys not included in the schema. Putting a new document also now properly validates incoming data against the schema and errors on data of the wrong type.
+
 ## 2.3.2
 
 ### Patch Changes
