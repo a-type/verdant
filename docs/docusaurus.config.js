@@ -112,19 +112,6 @@ const config = {
 						],
 					},
 					{
-						title: 'Community',
-						items: [
-							{
-								label: 'GitHub',
-								href: 'https://github.com/a-type/verdant/discussions',
-							},
-							{
-								label: 'Discord',
-								href: 'https://discord.gg/V9NzJrYVKU',
-							},
-						],
-					},
-					{
 						title: 'More',
 						items: [
 							{
@@ -132,7 +119,7 @@ const config = {
 								href: 'https://github.com/a-type/verdant',
 							},
 							{
-								label: 'Grant',
+								label: 'Who made this?',
 								to: 'https://gfor.rest',
 							},
 						],

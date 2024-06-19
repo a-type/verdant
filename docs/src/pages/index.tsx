@@ -124,6 +124,10 @@ post.get('tags').push('local-first');
 					pace, free from the expectations of endless growth and pressures of
 					cycles of debt.
 				</p>
+				<p>
+					Want to see it in action? Verdant powers all{' '}
+					<a href="https://biscuits.club">Biscuits.club</a> apps.
+				</p>
 			</section>
 			<section className={styles.explanation}>
 				<p>
@@ -172,9 +176,9 @@ post.get('tags').push('local-first');
 					</li>
 				</ul>
 				<p>
-					I made <strong>Verdant</strong> to build my cooking app{' '}
-					<a href="https://gnocchi.club">Gnocchi</a>, and I've open-sourced it
-					for anyone else with similar goals. My ambition is not to
+					I made <strong>Verdant</strong> to build{' '}
+					<a href="https://biscuits.club">my own apps</a>, and I've open-sourced
+					it for anyone else with similar goals. My ambition is not to
 					revolutionize computing, it's only to build sustainable, human apps.
 				</p>
 				<p>To do this, I've adopted a few principles:</p>
@@ -245,30 +249,22 @@ post.get('tags').push('local-first');
 	collection,
 	schema
 } from '@verdant-web/store';
-import cuid from 'cuid';
 
 const posts = collection({
 	name: 'post',
 	primaryKey: 'id',
 	fields: {
-		id: {
-			type: 'string',
-			default: cuid,
-		},
-		title: {
-			type: 'string',
-		},
-		body: {
-			type: 'string',
-		},
-		createdAt: {
-			type: 'number',
+		id: schema.fields.string({
+			default: schema.generated.id,
+		}),
+		title: schema.fields.string(),
+		body: schema.fields.string(),
+		createdAt: schema.fields.number({
 			default: Date.now,
-		},
-		image: {
-			type: 'file',
+		}),
+		image: schema.fields.file({
 			nullable: true,
-		}
+		}),
 	},
 });
 
