@@ -9,9 +9,9 @@ import {
 import { assert } from '@a-type/utils';
 
 const context = createTestContext({
-	serverLog: true,
+	// serverLog: true,
 	// keepDb: true,
-	testLog: true,
+	// testLog: true,
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {

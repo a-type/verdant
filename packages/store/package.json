@@ -42,7 +42,8 @@
 		"link": "pnpm link --global",
 		"typecheck": "tsc --noEmit",
 		"perf:build": "esbuild perf/perfTest.ts --bundle --format=cjs --outfile=perf/perfTest.js --sourcemap --platform=browser",
-		"perf": "pnpm perf:build && node ./perf/run.mjs"
+		"perf": "pnpm perf:build && node ./perf/run.mjs",
+		"changeset": "cd ../../ && pnpm changeset"
 	},
 	"dependencies": {
 		"@a-type/kysely": "^1.0.1",

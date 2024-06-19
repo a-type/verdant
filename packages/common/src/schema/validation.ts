@@ -1,6 +1,6 @@
 import { OID_KEY } from '../oids.js';
 import { isObject } from '../utils.js';
-import { hasDefault, isNullable } from './fields.js';
+import { getFieldDefault, hasDefault, isNullable } from './fields.js';
 import { StorageFieldSchema, StorageFieldsSchema } from './types.js';
 
 export function validateEntity(
@@ -186,4 +186,81 @@ export function validateEntityField({
 function formatField(fieldPath: (string | number)[]) {
 	if (fieldPath.length === 0) return 'root';
 	return fieldPath.join('.');
+}
+
+export function constrainEntity(schema: StorageFieldsSchema, entity: any): any {
+	const constrained: any = {};
+	for (const [key, value] of Object.entries(entity)) {
+		if (!schema[key]) continue;
+		constrained[key] = constrainEntityField({
+			field: schema[key],
+			value,
+			fieldPath: [key],
+		});
+	}
+	return constrained;
+}
+
+export function constrainEntityField({
+	field,
+	value,
+	fieldPath = [],
+	depth,
+}: {
+	field: StorageFieldSchema;
+	value: any;
+	fieldPath?: (string | number)[];
+	depth?: number;
+}): any {
+	const validationProblem = validateEntityField({
+		field,
+		value,
+		fieldPath,
+		depth,
+		requireDefaults: true,
+	});
+
+	if (validationProblem) {
+		throw new Error(`Validation error: ${validationProblem.message}`);
+	}
+
+	if (field.type === 'object') {
+		if (!isObject(value)) return value;
+		const constrained: any = {};
+		for (const [key, subField] of Object.entries(
+			field.properties as StorageFieldsSchema,
+		)) {
+			constrained[key] = constrainEntityField({
+				field: subField,
+				value: value[key],
+				fieldPath: [...fieldPath, key],
+				depth: depth !== undefined ? depth - 1 : undefined,
+			});
+		}
+		return constrained;
+	} else if (field.type === 'array') {
+		if (!Array.isArray(value)) return value;
+		return value.map((item) =>
+			constrainEntityField({
+				field: field.items,
+				value: item,
+				fieldPath: [...fieldPath, '[]'],
+				depth: depth !== undefined ? depth - 1 : undefined,
+			}),
+		);
+	} else if (field.type === 'map') {
+		if (!isObject(value)) return value;
+		const constrained: any = {};
+		for (const [key, item] of Object.entries(value)) {
+			constrained[key] = constrainEntityField({
+				field: field.values,
+				value: item,
+				fieldPath: [...fieldPath, key],
+				depth: depth !== undefined ? depth - 1 : undefined,
+			});
+		}
+		return constrained;
+	} else {
+		return value;
+	}
 }

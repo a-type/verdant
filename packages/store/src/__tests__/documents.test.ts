@@ -620,4 +620,23 @@ describe('storage documents', () => {
 		await storage.weirds.delete(weird.get('id'));
 		expect(true).toBe(true);
 	});
+
+	it('should ignore unknown keys in initialization', async () => {
+		const storage = await createTestStorage();
+		const item = await storage.todos.put({
+			content: 'item',
+			unknown: 'key',
+		});
+
+		expect(item.get('content')).toBe('item');
+	});
+
+	it('should error on invalid values passed to initialization', async () => {
+		const storage = await createTestStorage();
+		expect(() => {
+			storage.todos.put({
+				content: { invalid: 'value' },
+			});
+		}).toThrowErrorMatchingInlineSnapshot(`[Error: Validation error: Expected string  for field content, got [object Object]]`);
+	});
 });

@@ -1,5 +1,6 @@
 import {
 	addFieldDefaults,
+	constrainEntity,
 	assert,
 	createOid,
 	SchemaCollection,
@@ -45,15 +46,23 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return addFieldDefaults(collection, init);
 	};
 
+	private validate = (collectionName: string, init: any) => {
+		const collection = this.schema.collections[
+			collectionName
+		] as StorageCollectionSchema;
+		return constrainEntity(collection.fields, init);
+	};
+
 	create = (
 		collection: string,
 		init: any,
 		options: { undoable?: boolean } = {},
 	) => {
 		const defaulted = this.addDefaults(collection, init);
-		const oid = this.getOid(collection, defaulted);
+		const validated = this.validate(collection, defaulted);
+		const oid = this.getOid(collection, validated);
 		// documents are always objects at the root
-		return this.entities.create(defaulted, oid, options) as any;
+		return this.entities.create(validated, oid, options) as any;
 	};
 
 	delete = async (
