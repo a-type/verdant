@@ -153,3 +153,29 @@ export function debounce<T extends (...args: any[]) => any>(
 		timeout = setTimeout(() => fn.apply(context, args), wait);
 	} as any;
 }
+
+export function throttle<T extends (...args: any[]) => any>(
+	fn: T,
+	wait: number,
+): T {
+	let lastTime = 0;
+
+	// invoke once for the last call
+	let trailingTimeout: any;
+
+	return function (this: any, ...args: any[]) {
+		const context = this;
+		const now = Date.now();
+		if (now - lastTime >= wait) {
+			lastTime = now;
+			fn.apply(context, args);
+			clearTimeout(trailingTimeout);
+		} else {
+			clearTimeout(trailingTimeout);
+			trailingTimeout = setTimeout(() => {
+				lastTime = now;
+				fn.apply(context, args);
+			}, wait);
+		}
+	} as any;
+}

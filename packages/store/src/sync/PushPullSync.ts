@@ -1,9 +1,12 @@
 import {
 	ClientMessage,
 	EventSubscriber,
+	PresenceUpdateMessage,
 	ServerMessage,
 	VerdantErrorCode,
+	debounce,
 	isVerdantErrorResponse,
+	throttle,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
@@ -144,10 +147,17 @@ export class PushPullSync
 		this.emit('message', message);
 	};
 
+	// reduce rate of presence messages sent; each one would trigger an HTTP
+	// request, which is not ideal if presence is updating rapidly.
+	throttledPresenceUpdate = throttle((message: PresenceUpdateMessage) => {
+		this.sendRequest([message]);
+	}, 3000);
+
 	send = (message: ClientMessage) => {
 		// only certain messages are sent for pull-based sync.
 		switch (message.type) {
 			case 'presence-update':
+				return this.throttledPresenceUpdate(message);
 			case 'sync':
 			case 'heartbeat':
 				return this.sendRequest([message]);
