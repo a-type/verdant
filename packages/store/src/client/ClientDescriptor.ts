@@ -12,10 +12,7 @@ import {
 	openMetadataDatabase,
 	openWIPMetadataDatabase,
 } from '../metadata/openMetadataDatabase.js';
-import {
-	openDocumentDatabase,
-	openWIPDocumentDatabase,
-} from '../migration/openDatabase.js';
+import { openWIPDatabase } from '../migration/openWIPDatabase.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
@@ -26,6 +23,7 @@ import {
 } from '../idb.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
 import { METADATA_VERSION_KEY } from './constants.js';
+import { openQueryDatabase } from '../migration/openQueryDatabase.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -193,7 +191,7 @@ export class ClientDescriptor<
 			getNow: () => meta.now,
 		});
 
-		const documentDb = await openDocumentDatabase({
+		const documentDb = await openQueryDatabase({
 			context: contextWithNow,
 			version: init.schema.version,
 			meta,
@@ -261,7 +259,7 @@ export class ClientDescriptor<
 		// verify schema integrity
 		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
 
-		const documentDb = await openWIPDocumentDatabase({
+		const documentDb = await openWIPDatabase({
 			context: contextWithNow,
 			version: init.schema.version,
 			meta,

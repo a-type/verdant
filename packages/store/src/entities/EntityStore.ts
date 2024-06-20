@@ -42,12 +42,12 @@ export type EntityStoreEvents = {
 	resetAll: WeakEvent<EntityStore, void>;
 };
 
-type IncomingData = {
+export interface IncomingData {
 	operations?: Operation[];
 	baselines?: DocumentBaseline[];
 	reset?: boolean;
 	isLocal?: boolean;
-};
+}
 
 export class EntityStore extends Disposable {
 	private ctx;
@@ -135,6 +135,12 @@ export class EntityStore extends Disposable {
 		}
 
 		await this.processData(data);
+	};
+
+	empty = async () => {
+		await this.queryableStorage.reset();
+		this.events.resetAll.invoke(this);
+		this.cache.clear();
 	};
 
 	private resetData = async () => {

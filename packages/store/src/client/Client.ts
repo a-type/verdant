@@ -1,27 +1,25 @@
 import {
-	assert,
 	debounce,
 	DocumentBaseline,
 	EventSubscriber,
 	Migration,
 	Operation,
-	SchemaCollection,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { DocumentManager } from '../DocumentManager.js';
+import { EntityStore } from '../entities/EntityStore.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';
+import { ReturnedFileData } from '../files/FileStorage.js';
 import {
 	closeDatabase,
 	deleteAllDatabases,
 	getSizeOfObjectStore,
 } from '../idb.js';
 import { ExportData, Metadata } from '../metadata/Metadata.js';
-import { openDocumentDatabase } from '../migration/openDatabase.js';
-import { EntityStore } from '../entities/EntityStore.js';
-import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
+import { openQueryDatabase } from '../migration/openQueryDatabase.js';
 import { CollectionQueries } from '../queries/CollectionQueries.js';
 import { QueryCache } from '../queries/QueryCache.js';
-import { ReturnedFileData } from '../files/FileStorage.js';
+import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
@@ -382,7 +380,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		}
 		// now open the document DB empty at the specified version
 		// and initialize it from the meta DB
-		this.context.documentDb = await openDocumentDatabase({
+		this.context.documentDb = await openQueryDatabase({
 			meta: this.meta,
 			migrations: this.config.migrations,
 			context: this.context,
@@ -402,7 +400,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		this.context.log('Migrating up to latest schema...');
 		// put the schema back
 		this.context.schema = currentSchema;
-		this.context.documentDb = await openDocumentDatabase({
+		this.context.documentDb = await openQueryDatabase({
 			meta: this.meta,
 			migrations: this.config.migrations,
 			context: this.context,

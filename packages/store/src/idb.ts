@@ -1,5 +1,8 @@
 import { roughSizeOfObject } from '@verdant-web/common';
 
+export const globalIDB =
+	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
+
 export function isAbortError(err: unknown) {
 	return err instanceof Error && err.name === 'AbortError';
 }
@@ -109,7 +112,7 @@ export async function closeDatabase(db: IDBDatabase) {
 
 export async function deleteAllDatabases(
 	namespace: string,
-	indexedDB: IDBFactory = window.indexedDB,
+	indexedDB: IDBFactory = globalIDB,
 ) {
 	const req1 = indexedDB.deleteDatabase([namespace, 'meta'].join('_'));
 	const req2 = indexedDB.deleteDatabase([namespace, 'collections'].join('_'));
@@ -162,4 +165,20 @@ export function createAbortableTransaction(
 		});
 	}
 	return tx;
+}
+
+/**
+ * Empties all data in a database without changing
+ * its structure.
+ */
+export function emptyDatabase(db: IDBDatabase) {
+	const storeNames = Array.from(db.objectStoreNames);
+	const tx = db.transaction(storeNames, 'readwrite');
+	for (const storeName of storeNames) {
+		tx.objectStore(storeName).clear();
+	}
+	return new Promise<void>((resolve, reject) => {
+		tx.oncomplete = () => resolve();
+		tx.onerror = () => reject(tx.error);
+	});
 }

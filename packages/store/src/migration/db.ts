@@ -1,3 +1,6 @@
+import { closeDatabase, globalIDB, storeRequestPromise } from '../idb.js';
+import { OpenDocumentDbContext } from './types.js';
+
 export async function getDatabaseVersion(
 	indexedDB: IDBFactory,
 	namespace: string,
@@ -42,12 +45,6 @@ export async function getDatabaseVersion(
 	return currentVersion;
 }
 
-export async function closeDatabase(db: IDBDatabase) {
-	db.close();
-	// FIXME: this isn't right!!!!
-	await new Promise<void>((resolve) => resolve());
-}
-
 /**
  * Upgrades the database to the given version, using the given upgrader function.
  */
@@ -61,8 +58,11 @@ export async function upgradeDatabase(
 		event: IDBVersionChangeEvent,
 	) => void,
 	log?: (...args: any[]) => void,
-): Promise<void> {
-	function openAndUpgrade(resolve: () => void, reject: (err: Error) => void) {
+): Promise<IDBDatabase> {
+	function openAndUpgrade(
+		resolve: (db: IDBDatabase) => void,
+		reject: (err: Error) => void,
+	) {
 		const request = indexedDb.open(
 			[namespace, 'collections'].join('_'),
 			version,
@@ -74,9 +74,8 @@ export async function upgradeDatabase(
 			wasUpgraded = true;
 		};
 		request.onsuccess = (event) => {
-			request.result.close();
 			if (wasUpgraded) {
-				resolve();
+				resolve(request.result);
 			} else {
 				reject(
 					new Error(
@@ -95,7 +94,7 @@ export async function upgradeDatabase(
 			// }, 200);
 		};
 	}
-	return new Promise(openAndUpgrade);
+	return new Promise<IDBDatabase>(openAndUpgrade);
 }
 
 export async function acquireLock(
@@ -110,15 +109,20 @@ export async function acquireLock(
 	}
 }
 
-export async function openDatabase(
-	indexedDb: IDBFactory,
-	namespace: string,
-	version: number,
-	log?: (...args: any[]) => void,
-): Promise<IDBDatabase> {
-	log?.('debug', 'Opening database', namespace, 'at version', version);
+export async function openDatabase({
+	indexedDB = globalIDB,
+	namespace,
+	version,
+	context,
+}: {
+	indexedDB?: IDBFactory;
+	namespace: string;
+	version: number;
+	context: OpenDocumentDbContext;
+}): Promise<IDBDatabase> {
+	context.log('debug', 'Opening database', namespace, 'at version', version);
 	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDb.open(
+		const request = indexedDB.open(
 			[namespace, 'collections'].join('_'),
 			version,
 		);
@@ -126,7 +130,7 @@ export async function openDatabase(
 			const transaction = request.transaction!;
 			transaction.abort();
 
-			log?.(
+			context.log(
 				'error',
 				'Database upgrade needed, but not expected',
 				'Expected',
@@ -157,4 +161,42 @@ export async function openDatabase(
 	});
 
 	return db;
+}
+
+export async function copyAll(
+	sourceDatabase: IDBDatabase,
+	targetDatabase: IDBDatabase,
+) {
+	// DOMStringList... doesn't have iterable... why
+	const sourceStoreNames = new Array<string>();
+	for (let i = 0; i < sourceDatabase.objectStoreNames.length; i++) {
+		sourceStoreNames.push(sourceDatabase.objectStoreNames[i]);
+	}
+
+	const copyFromTransaction = sourceDatabase.transaction(
+		sourceStoreNames,
+		'readonly',
+	);
+	const copyFromStores = sourceStoreNames.map((name) =>
+		copyFromTransaction.objectStore(name),
+	);
+	const allObjects = await Promise.all(
+		copyFromStores.map((store) => storeRequestPromise(store.getAll())),
+	);
+
+	const copyToTransaction = targetDatabase.transaction(
+		sourceStoreNames,
+		'readwrite',
+	);
+	const copyToStores = sourceStoreNames.map((name) =>
+		copyToTransaction.objectStore(name),
+	);
+
+	for (let i = 0; i < copyToStores.length; i++) {
+		await Promise.all(
+			allObjects[i].map((obj) => {
+				return storeRequestPromise(copyToStores[i].put(obj));
+			}),
+		);
+	}
 }

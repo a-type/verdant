@@ -25,7 +25,7 @@ export class QueryableStorage extends IDBService {
 	 */
 	reset = async () => {
 		const allCollections = Object.keys(this.ctx.schema.collections);
-		const tx = this.ctx.documentDb.transaction(allCollections, 'readwrite');
+		const tx = this.createTransaction(allCollections, { mode: 'readwrite' });
 		await Promise.all(
 			allCollections.map((collection) => {
 				const store = tx.objectStore(collection);
