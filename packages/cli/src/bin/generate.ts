@@ -12,6 +12,7 @@ import {
 	bumpUserSchemaVersion,
 	compareUserSchemaToCanonical,
 	writeSchema,
+	writeSchemaVersionsIndex,
 } from '../schema.js';
 import { needsUpgrade, upgrade } from '../upgrade.js';
 import { posixRelative } from '../fs/posixRelative.js';
@@ -248,6 +249,10 @@ export async function generate({
 		);
 	}
 
+	await writeSchemaVersionsIndex({
+		output: tempOutput,
+		commonjs,
+	});
 	await generateClientCode({
 		schema,
 		output: tempOutput,

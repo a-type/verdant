@@ -260,3 +260,31 @@ export async function compareUserSchemaToCanonical({
 		canonicalIsWip: !!canonicalSchema.wip,
 	};
 }
+
+export async function writeSchemaVersionsIndex({
+	output,
+	commonjs,
+}: {
+	output: string;
+	commonjs?: boolean;
+}) {
+	const schemaVersions = await fs.readdir(`${output}/schemaVersions`);
+	const versions = schemaVersions
+		.filter((version) => version.endsWith('.js') && version !== 'index.js')
+		.map((version) => parseInt(version.replace('v', '').replace('.js', '')))
+		.sort((a, b) => a - b);
+	const index = `
+/**
+ * @generated - do not modify this file.
+ */
+${versions
+	.map(
+		(version) =>
+			`import v${version} from './v${version}${commonjs ? '' : '.js'}';`,
+	)
+	.join('\n')}
+
+export default [${versions.map((version) => `v${version}`).join(', ')}]
+	`;
+	await fs.writeFile(`${output}/schemaVersions/index.js`, index);
+}

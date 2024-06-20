@@ -31,6 +31,7 @@ export async function generateClientCode({
 		commonjs,
 		relativeMigrationsPath,
 		javascript,
+		schemaVersionsPath: './schemaVersions/index',
 	});
 
 	// the index needs to be TS for TS projects and JS for JS

@@ -17,6 +17,7 @@ export interface Context {
 	documentDb: IDBDatabase;
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
+	oldSchemas?: StorageSchema[];
 	log: (...args: any[]) => void;
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;

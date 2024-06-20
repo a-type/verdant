@@ -30,6 +30,7 @@ import { METADATA_VERSION_KEY } from './constants.js';
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
 	schema: StorageSchema<any>;
+	oldSchemas?: StorageSchema<any>[];
 	/** Migrations, in order, to upgrade to each successive version of the schema */
 	migrations: Migration<any>[];
 	/** Provide a sync config to turn on synchronization with a server */
@@ -177,6 +178,7 @@ export class ClientDescriptor<
 				}
 			},
 			migrations: init.migrations,
+			oldSchemas: init.oldSchemas,
 		};
 		const meta = new Metadata({
 			context,
@@ -245,6 +247,7 @@ export class ClientDescriptor<
 				}
 			},
 			migrations: init.migrations,
+			oldSchemas: init.oldSchemas,
 		};
 		const meta = new Metadata({
 			context,

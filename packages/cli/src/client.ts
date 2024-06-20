@@ -2,17 +2,20 @@ import path from 'path/posix';
 
 export function getClientImplementation({
 	schemaPath,
+	schemaVersionsPath,
 	commonjs,
 	relativeMigrationsPath,
 	javascript,
 }: {
 	schemaPath: string;
+	schemaVersionsPath: string;
 	commonjs?: boolean;
 	relativeMigrationsPath: string;
 	javascript?: boolean;
 }) {
 	// TODO: this is pretty messy. time for 2 generators?
 	return `import schema from '${schemaPath}${commonjs ? '' : '.js'}';
+import oldSchemas from '${schemaVersionsPath}${commonjs ? '' : '.js'}';
 import { ClientDescriptor as StorageDescriptor } from '${
 		javascript ? '@verdant-web/store' : `./client${commonjs ? '' : '.js'}`
 	}';
@@ -30,7 +33,8 @@ export class ClientDescriptor${
 	}) {
     const defaultedSchema = init.schema || schema;
 		const defaultedMigrations = init.migrations || migrations;
-    super({ ...init, schema: defaultedSchema, migrations: defaultedMigrations });
+		const defaultedOldSchemas = init.oldSchemas || oldSchemas;
+    super({ ...init, schema: defaultedSchema, migrations: defaultedMigrations, oldSchemas: defaultedOldSchemas });
   }
 };
 `;
