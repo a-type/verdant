@@ -1,5 +1,14 @@
 # @lo-fi/web
 
+## 3.8.1
+
+### Patch Changes
+
+- 274e047: Support supplying old schemas to client, and make CLI generate code to do this. This doesn't do anything yet!
+- d876471: Throttle presence updates over http sync to reduce http requests
+- Updated dependencies [d876471]
+  - @verdant-web/common@2.3.4
+
 ## 3.8.0
 
 ### Minor Changes
