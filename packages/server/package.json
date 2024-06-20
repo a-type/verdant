@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/server",
-	"version": "3.0.3",
+	"version": "3.0.4",
 	"access": "public",
 	"type": "module",
 	"bin": {

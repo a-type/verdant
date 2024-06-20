@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 3.8.0
+
+### Minor Changes
+
+- c9a0183: Putting a new document now ignores keys not included in the schema. Putting a new document also now properly validates incoming data against the schema and errors on data of the wrong type.
+
+### Patch Changes
+
+- Updated dependencies [c9a0183]
+  - @verdant-web/common@2.3.3
+
 ## 3.7.0
 
 ### Minor Changes
