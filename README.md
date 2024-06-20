@@ -1,16 +1,16 @@
 # Verdant 🌿
 
-An IndexedDB-powered database and data sync solution for sustainable, human, local-first web apps.
+A persistence, sync, and collaboration framework designed for sustainable, human, local-first web apps.
 
 ## [Read the documentation](https://verdant.dev)
 
-> ## Status: Not Production Ready 🚧
+> ## Status: Used in Production!
 >
-> While I'm using Verdant in my own apps, I've uncovered many unstable behaviors in real-world usage. I'm still actively replicating and fixing those bugs in my testing suites. Since bugs in distrubted client systems mean corrupted user data with little or no recourse for you as an app developer, I recommend not using Verdant for anything serious yet.
+> I've been using Verdant in my own apps (https://biscuits.club) for over a year now without major incident. Covered by a suite of real-world-like integration tests, including fuzz testing, I feel confident in the replication features and general stability. While I can't mathematically guarantee consistency, I welcome you to give it a shot for greenfield projects and see how it goes.
 
 ## What does it do?
 
-Verdant is an end-to-end storage and sync framework for web apps. Out of the box, it helps you manage everything you need with local data:
+Verdant is a comprehensive storage and sync framework for web apps. Out of the box, it helps you manage everything you need with local data:
 
 - 🏦 Store everything in IndexedDB across sessions
 - 🔎 Query your data using flexible indexes
@@ -165,3 +165,7 @@ There are a few edge cases. Sometimes a replica has been offline for too long, a
 There's also a case where the _server_ has lost its data and needs a client replica to help it recover. In that case the first client replica to connect will be asked for its version of the database in full, which serves as the new server copy.
 
 Also, when doing websocket-based sync, there are special cases for sending realtime operations as they happen and distributing them to peer replicas as quickly as possible.
+
+## License and Usage
+
+Since 6/19/2024, Verdant is licensed under AGPL, which means you are free to use it in open-source projects, including commercially. However, if you plan to use Verdant in a closed-source project, including SaaS, please get in touch about negotiating an alternative license.
