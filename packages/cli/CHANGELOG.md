@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.4.1
+
+### Patch Changes
+
+- 274e047: Support supplying old schemas to client, and make CLI generate code to do this. This doesn't do anything yet!
+
 ## 4.4.0
 
 ### Minor Changes

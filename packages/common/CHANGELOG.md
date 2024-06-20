@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.3.4
+
+### Patch Changes
+
+- d876471: Throttle presence updates over http sync to reduce http requests
+
 ## 2.3.3
 
 ### Patch Changes
