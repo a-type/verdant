@@ -111,3 +111,5 @@ test-files
 
 *.sqlite-journal
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal

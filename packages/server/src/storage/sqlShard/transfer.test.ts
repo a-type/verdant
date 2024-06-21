@@ -34,9 +34,14 @@ describe('sql-shard storage transfer utility', () => {
 		await mkdir(testTempDir, { recursive: true });
 	});
 	afterAll(async () => {
-		await Promise.all(databases.map((db) => db.destroy()));
-		// empty the temp dir
-		await rm(testTempDir, { recursive: true });
+		try {
+			await Promise.all(databases.map((db) => db.destroy()));
+			// empty the temp dir
+			await rm(testTempDir, { recursive: true });
+		} catch (err) {
+			// what can you do...
+			console.error(err);
+		}
 	});
 
 	it('should transfer data from unified database to shards', async () => {
@@ -56,27 +61,40 @@ describe('sql-shard storage transfer utility', () => {
 		>;
 		for (const libraryId of libraryIds) {
 			randomData[libraryId] = {
-				operations: randomOperations(libraryId),
-				baselines: randomBaselines(libraryId),
-				replicas: randomReplicaInfo(libraryId),
-				fileMetadata: randomFileMetadata(libraryId),
+				// test a lot of them - more than max sqlite var count
+				operations: randomOperations(libraryId, 20000),
+				baselines: randomBaselines(libraryId, 20000),
+				replicas: randomReplicaInfo(libraryId, 20000),
+				fileMetadata: randomFileMetadata(libraryId, 20000),
 			};
-			await unifiedDb
-				.insertInto('ReplicaInfo')
-				.values(randomData[libraryId].replicas)
-				.execute();
-			await unifiedDb
-				.insertInto('OperationHistory')
-				.values(randomData[libraryId].operations)
-				.execute();
-			await unifiedDb
-				.insertInto('DocumentBaseline')
-				.values(randomData[libraryId].baselines)
-				.execute();
-			await unifiedDb
-				.insertInto('FileMetadata')
-				.values(randomData[libraryId].fileMetadata)
-				.execute();
+
+			// have to batch these...
+			for (let i = 0; i < randomData[libraryId].operations.length; i += 1000) {
+				const toInsert = randomData[libraryId].operations.slice(i, i + 1000);
+				await unifiedDb
+					.insertInto('OperationHistory')
+					.values(toInsert)
+					.execute();
+			}
+			for (let i = 0; i < randomData[libraryId].baselines.length; i += 1000) {
+				const toInsert = randomData[libraryId].baselines.slice(i, i + 1000);
+				await unifiedDb
+					.insertInto('DocumentBaseline')
+					.values(toInsert)
+					.execute();
+			}
+			for (
+				let i = 0;
+				i < randomData[libraryId].fileMetadata.length;
+				i += 1000
+			) {
+				const toInsert = randomData[libraryId].fileMetadata.slice(i, i + 1000);
+				await unifiedDb.insertInto('FileMetadata').values(toInsert).execute();
+			}
+			for (let i = 0; i < randomData[libraryId].replicas.length; i += 1000) {
+				const toInsert = randomData[libraryId].replicas.slice(i, i + 1000);
+				await unifiedDb.insertInto('ReplicaInfo').values(toInsert).execute();
+			}
 		}
 
 		const shards = await transferToShards({

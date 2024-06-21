@@ -1,16 +1,9 @@
-import {
-	OperationHistoryRow,
-	DocumentBaselineRow,
-	FileMetadataRow,
-	ReplicaInfoRow,
-} from '../../sql/tables.js';
-
 function random() {
 	return Math.random().toString(36).substring(7);
 }
 
-export function randomOperations(libraryId: string) {
-	return Array.from({ length: 10 }, (_, i) => ({
+export function randomOperations(libraryId: string, count = 10) {
+	return Array.from({ length: count }, (_, i) => ({
 		oid: `oid-${i}-${random()}`,
 		timestamp: `timestamp-${i}-${random()}`,
 		data: `data-${i}-${random()}`,
@@ -20,8 +13,8 @@ export function randomOperations(libraryId: string) {
 	}));
 }
 
-export function randomBaselines(libraryId: string) {
-	return Array.from({ length: 10 }, (_, i) => ({
+export function randomBaselines(libraryId: string, count = 10) {
+	return Array.from({ length: count }, (_, i) => ({
 		oid: `oid-${i}-${random()}`,
 		snapshot: `snapshot-${i}-${random()}`,
 		timestamp: `timestamp-${i}-${random()}`,
@@ -29,8 +22,8 @@ export function randomBaselines(libraryId: string) {
 	}));
 }
 
-export function randomFileMetadata(libraryId: string) {
-	return Array.from({ length: 10 }, (_, i) => ({
+export function randomFileMetadata(libraryId: string, count = 10) {
+	return Array.from({ length: count }, (_, i) => ({
 		libraryId,
 		fileId: `fileId-${i}-${random()}`,
 		name: `name-${i}-${random()}`,
@@ -39,8 +32,8 @@ export function randomFileMetadata(libraryId: string) {
 	}));
 }
 
-export function randomReplicaInfo(libraryId: string) {
-	return Array.from({ length: 10 }, (_, i) => ({
+export function randomReplicaInfo(libraryId: string, count = 10) {
+	return Array.from({ length: count }, (_, i) => ({
 		libraryId,
 		id: `replicaId-${i}`,
 		clientId: `clientId-${i}-${random()}`,

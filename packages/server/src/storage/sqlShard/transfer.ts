@@ -84,23 +84,34 @@ async function copyLibrary(
 
 	await dest.transaction().execute(async (trx) => {
 		const actions: Promise<any>[] = [];
+		// batch insert data to avoid maximum vars limits
 		if (operations.length) {
-			actions.push(
-				trx.insertInto('OperationHistory').values(operations).execute(),
-			);
+			for (let i = 0; i < operations.length; i += 1000) {
+				const toInsert = operations.slice(i, i + 1000);
+				actions.push(
+					trx.insertInto('OperationHistory').values(toInsert).execute(),
+				);
+			}
 		}
 		if (baselines.length) {
-			actions.push(
-				trx.insertInto('DocumentBaseline').values(baselines).execute(),
-			);
+			for (let i = 0; i < baselines.length; i += 1000) {
+				const toInsert = baselines.slice(i, i + 1000);
+				actions.push(
+					trx.insertInto('DocumentBaseline').values(toInsert).execute(),
+				);
+			}
 		}
 		if (replicas.length) {
-			actions.push(trx.insertInto('ReplicaInfo').values(replicas).execute());
+			for (let i = 0; i < replicas.length; i += 1000) {
+				const toInsert = replicas.slice(i, i + 1000);
+				actions.push(trx.insertInto('ReplicaInfo').values(toInsert).execute());
+			}
 		}
 		if (fileMetadata.length) {
-			actions.push(
-				trx.insertInto('FileMetadata').values(fileMetadata).execute(),
-			);
+			for (let i = 0; i < fileMetadata.length; i += 1000) {
+				const toInsert = fileMetadata.slice(i, i + 1000);
+				actions.push(trx.insertInto('FileMetadata').values(toInsert).execute());
+			}
 		}
 		await Promise.all(actions);
 	});
