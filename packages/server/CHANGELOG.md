@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.1.1
+
+### Patch Changes
+
+- 1e82d62: Fix shard conversion for large databases
+
 ## 3.1.0
 
 ### Minor Changes
