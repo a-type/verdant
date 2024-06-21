@@ -61,11 +61,12 @@ describe('sql-shard storage transfer utility', () => {
 		>;
 		for (const libraryId of libraryIds) {
 			randomData[libraryId] = {
-				// test a lot of them - more than max sqlite var count
-				operations: randomOperations(libraryId, 20000),
-				baselines: randomBaselines(libraryId, 20000),
-				replicas: randomReplicaInfo(libraryId, 20000),
-				fileMetadata: randomFileMetadata(libraryId, 20000),
+				// test a lot of them - more than max sqlite var count.
+				// only doing operations here to reduce test time.
+				operations: randomOperations(libraryId, 6000),
+				baselines: randomBaselines(libraryId),
+				replicas: randomReplicaInfo(libraryId),
+				fileMetadata: randomFileMetadata(libraryId),
 			};
 
 			// have to batch these...

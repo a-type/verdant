@@ -4,12 +4,16 @@ import { Database as UnifiedDatabase } from '../sql/tables.js';
 import { Database } from './tables.js';
 import { openDatabase } from './database.js';
 
+const DEFAULT_BATCH_SIZE = 1000;
+
 export async function transferToShards({
 	file,
 	directory,
+	batchSize = DEFAULT_BATCH_SIZE,
 }: {
 	file: string;
 	directory: string;
+	batchSize?: number;
 }) {
 	console.info(
 		`Transferring from unified database (${file}) to shards (${directory})...`,
@@ -25,7 +29,7 @@ export async function transferToShards({
 	const dbs = await Promise.all(
 		libraries.map(async ({ libraryId }) => {
 			const db = await openDatabase(directory, libraryId);
-			await copyLibrary(libraryId, unifiedDb, db);
+			await copyLibrary(libraryId, unifiedDb, db, batchSize);
 			return db;
 		}),
 	);
@@ -43,6 +47,7 @@ async function copyLibrary(
 	libraryId: string,
 	source: Kysely<UnifiedDatabase>,
 	dest: Kysely<Database>,
+	batchSize: number,
 ) {
 	const operations = await source
 		.selectFrom('OperationHistory')
@@ -86,30 +91,30 @@ async function copyLibrary(
 		const actions: Promise<any>[] = [];
 		// batch insert data to avoid maximum vars limits
 		if (operations.length) {
-			for (let i = 0; i < operations.length; i += 1000) {
-				const toInsert = operations.slice(i, i + 1000);
+			for (let i = 0; i < operations.length; i += batchSize) {
+				const toInsert = operations.slice(i, i + batchSize);
 				actions.push(
 					trx.insertInto('OperationHistory').values(toInsert).execute(),
 				);
 			}
 		}
 		if (baselines.length) {
-			for (let i = 0; i < baselines.length; i += 1000) {
-				const toInsert = baselines.slice(i, i + 1000);
+			for (let i = 0; i < baselines.length; i += batchSize) {
+				const toInsert = baselines.slice(i, i + batchSize);
 				actions.push(
 					trx.insertInto('DocumentBaseline').values(toInsert).execute(),
 				);
 			}
 		}
 		if (replicas.length) {
-			for (let i = 0; i < replicas.length; i += 1000) {
-				const toInsert = replicas.slice(i, i + 1000);
+			for (let i = 0; i < replicas.length; i += batchSize) {
+				const toInsert = replicas.slice(i, i + batchSize);
 				actions.push(trx.insertInto('ReplicaInfo').values(toInsert).execute());
 			}
 		}
 		if (fileMetadata.length) {
-			for (let i = 0; i < fileMetadata.length; i += 1000) {
-				const toInsert = fileMetadata.slice(i, i + 1000);
+			for (let i = 0; i < fileMetadata.length; i += batchSize) {
+				const toInsert = fileMetadata.slice(i, i + batchSize);
 				actions.push(trx.insertInto('FileMetadata').values(toInsert).execute());
 			}
 		}
