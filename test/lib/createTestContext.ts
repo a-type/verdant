@@ -9,11 +9,13 @@ export function createTestContext({
 	keepDb,
 	testLog,
 	disableRebasing,
+	disableSharding,
 }: {
 	serverLog?: boolean;
 	keepDb?: boolean;
 	testLog?: boolean;
 	disableRebasing?: boolean;
+	disableSharding?: boolean;
 } = {}) {
 	const idbMap = new Map<string, IDBFactory>();
 	const context = {
@@ -47,6 +49,7 @@ export function createTestContext({
 			log: serverLog,
 			keepDb,
 			disableRebasing,
+			disableSharding,
 		});
 		context.createTestClient = async (
 			config: Parameters<typeof createTestClient>[0],

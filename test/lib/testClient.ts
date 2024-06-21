@@ -4,6 +4,7 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 } from '../client/index.js';
+import { Operation } from '@verdant-web/common';
 // import { IDBFactory } from 'fake-indexeddb';
 
 export async function createTestClient({
@@ -20,6 +21,7 @@ export async function createTestClient({
 	schema,
 	autoTransport = false,
 	log,
+	onOperation,
 }: {
 	server?: { port: number };
 	library: string;
@@ -34,11 +36,13 @@ export async function createTestClient({
 	log?: (...args: any[]) => void;
 	schema?: any;
 	autoTransport?: boolean;
+	onOperation?: (operation: Operation) => void;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
 		namespace: `${library}_${user}`,
 		indexedDb,
+		onOperation,
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,

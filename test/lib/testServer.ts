@@ -3,7 +3,7 @@ import express from 'express';
 import { createServer } from 'http';
 import * as fs from 'fs/promises';
 import { LocalFileStorage } from '@verdant-web/server';
-import { sqlStorage } from '@verdant-web/server/storage';
+import { sqlShardStorage, sqlStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';
 
 const SECRET = 'notsecret';
@@ -12,25 +12,24 @@ export async function startTestServer({
 	log = false,
 	disableRebasing = false,
 	keepDb = false,
+	disableSharding,
 }: {
 	log?: boolean;
 	disableRebasing?: boolean;
 	keepDb?: boolean;
+	disableSharding?: boolean;
 } = {}) {
 	const port = await getPort();
 	const app = express();
 	const httpServer = createServer(app);
 
-	const dbFileName = keepDb
-		? `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
-		: ':memory:';
-	console.log(`Using database file ${dbFileName}`);
+	const storage = disableSharding
+		? unifiedStorage(keepDb)
+		: shardedStorage(keepDb);
 
 	const server = new Server({
 		disableRebasing,
-		storage: sqlStorage({
-			databaseFile: dbFileName,
-		}),
+		storage,
 		tokenSecret: SECRET,
 		profiles: {
 			get: async (userId: string) => {
@@ -89,7 +88,6 @@ export async function startTestServer({
 	return {
 		port,
 		server,
-		dbFileName,
 		cleanup: async () => {
 			try {
 				await server.close();
@@ -98,4 +96,25 @@ export async function startTestServer({
 			}
 		},
 	};
+}
+
+function unifiedStorage(keepDb: boolean) {
+	const dbFileName = keepDb
+		? `./.databases/test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
+		: ':memory:';
+	if (keepDb) console.log(`Using database file ${dbFileName}`);
+	return sqlStorage({
+		databaseFile: dbFileName,
+	});
+}
+
+function shardedStorage(keepDb: boolean) {
+	const databasesDirectory = keepDb
+		? `./.databases/test-${Math.random().toString(36).slice(2, 9)}`
+		: ':memory:';
+	if (keepDb) console.log(`Using databases directory ${databasesDirectory}`);
+	return sqlShardStorage({
+		databasesDirectory,
+		transferFromUnifiedDatabaseFile: keepDb ? undefined : ':memory:',
+	});
 }

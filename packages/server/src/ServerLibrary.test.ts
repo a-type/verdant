@@ -143,6 +143,16 @@ describe('ServerLibrary', () => {
 				'library-1',
 				{
 					type: 'op-re',
+					baselines: [
+						{
+							oid: 'notes/1',
+							timestamp: `faketime-0`,
+							snapshot: {
+								title: 'My Note',
+								content: 'This is my note.',
+							},
+						},
+					],
 					operations: [
 						{
 							oid: 'notes/1',

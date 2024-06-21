@@ -14,7 +14,6 @@ export interface OperationHistoryTable {
 	data: string;
 	serverOrder: number;
 	replicaId: string;
-	libraryId: string;
 }
 export type OperationHistoryRow = Selectable<OperationHistoryTable>;
 
@@ -22,13 +21,11 @@ export interface DocumentBaselineTable {
 	oid: string;
 	snapshot: string;
 	timestamp: string;
-	libraryId: string;
 }
 export type DocumentBaselineRow = Selectable<DocumentBaselineTable>;
 
 export interface ReplicaInfoTable {
 	id: string;
-	libraryId: string;
 	clientId: string;
 	lastSeenWallClockTime: number | null;
 	ackedLogicalTime: string | null;
@@ -39,7 +36,6 @@ export interface ReplicaInfoTable {
 export type ReplicaInfoRow = Selectable<ReplicaInfoTable>;
 
 export interface FileMetadataTable {
-	libraryId: string;
 	fileId: string;
 	name: string;
 	type: string;

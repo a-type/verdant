@@ -9,10 +9,21 @@ const context = createTestContext({
 it('can use syncOnce to manually sync an offline client', async () => {
 	const { server, createTestClient, log } = context;
 
+	let resolveSyncResponse: () => void = () => {};
+	const syncResponsePromise = new Promise<void>((resolve) => {
+		resolveSyncResponse = resolve;
+	});
+	const onLog = (messages: string) => {
+		if (messages.includes('sync-resp')) {
+			resolveSyncResponse();
+		}
+	};
+
 	const onlineClient = await createTestClient({
 		server,
 		library: 'syncOnce-1',
 		user: 'A',
+		onLog,
 	});
 	const offlineClient = await createTestClient({
 		server,
@@ -40,7 +51,7 @@ it('can use syncOnce to manually sync an offline client', async () => {
 
 	// TODO: is there a better way to ensure the online
 	// changes reached the server?
-	await waitForTime(500);
+	await syncResponsePromise;
 
 	log('Ready to test syncOnce');
 

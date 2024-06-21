@@ -40,6 +40,7 @@
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
 		"test": "vitest",
+		"ci:test:unit": "vitest run",
 		"perf": "pnpm run build && cross-env VERDANT_LOG=false node ./perf/perf.mjs"
 	},
 	"dependencies": {

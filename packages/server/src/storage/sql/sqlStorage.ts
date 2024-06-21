@@ -8,6 +8,7 @@ import { Database as DatabaseTypes } from './tables.js';
 import { SqlFileMetadata } from './SqlFileMetadata.js';
 import { migrateToLatest } from '@a-type/kysely';
 import migrations from './migrations.js';
+import { openDatabase } from './database.js';
 
 export const sqlStorage = ({
 	databaseFile: dbFile,
@@ -16,15 +17,7 @@ export const sqlStorage = ({
 	databaseFile: string;
 	skipMigrations?: boolean;
 }): StorageFactory => {
-	const db = new Kysely<DatabaseTypes>({
-		dialect: new SqliteDialect({
-			database: new Database(dbFile),
-		}),
-	});
-	let ready = Promise.resolve<void>(undefined);
-	if (!skipMigrations) {
-		ready = migrateToLatest(db, migrations);
-	}
+	const { db, ready } = openDatabase(dbFile, skipMigrations);
 	return (options) => {
 		const baselines = new SqlBaselines(db, 'sqlite');
 		const operations = new SqlOperations(db, 'sqlite');
