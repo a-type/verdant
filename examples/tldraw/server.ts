@@ -1,10 +1,15 @@
 import express from 'express';
-import { ReplicaType, Server, TokenProvider } from '@verdant-web/server';
+import {
+	ReplicaType,
+	Server,
+	TokenProvider,
+	LocalFileStorage,
+} from '@verdant-web/server';
 import { createServer } from 'http';
 import * as path from 'path';
 // @ts-ignore
 import nonce from 'gfynonce';
-import { LocalFileStorage } from '@verdant-web/server/src/files/FileStorage.js';
+import { sqlStorage } from '@verdant-web/server/storage';
 
 const PORT = 5050;
 
@@ -35,7 +40,9 @@ const lofiSecret = 'notsecret';
 const users = {} as Record<string, { name: string }>;
 
 const server = new Server({
-	databaseFile: dbFileName,
+	storage: sqlStorage({
+		databaseFile: ':memory:',
+	}),
 	tokenSecret: lofiSecret,
 	// log: console.log,
 	fileStorage: new LocalFileStorage({

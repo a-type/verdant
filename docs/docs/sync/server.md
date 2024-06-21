@@ -18,9 +18,10 @@ Create a server like this:
 
 ```ts
 import { Server } from '@verdant-web/server';
+import { sqlStorage } from '@verdant-web/server/storage';
 
 const server = new Server({
-	databaseFile: 'path/to/db.sqlite',
+	storage: sqlStorage({ databaseFile: 'verdant.sqlite' }),
 	tokenSecret: process.env.LOFI_SECRET,
 	// below fields are optional
 	profiles: {
