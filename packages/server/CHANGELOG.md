@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.1.0
+
+### Minor Changes
+
+- 27e7587: New storage options: You can now configure Verdant with `sqlShardStorage`, which stores each library in a different database file. This is swappable with `sqlStorage` using configuration which automatically copies data from the old single database into sharded ones. Additionally, WAL mode is now enabled by default on all SQLite-backed storage options.
+
 ## 3.0.5
 
 ### Patch Changes
