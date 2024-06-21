@@ -11,6 +11,9 @@ export async function transferToShards({
 	file: string;
 	directory: string;
 }) {
+	console.info(
+		`Transferring from unified database (${file}) to shards (${directory})...`,
+	);
 	const { db: unifiedDb, ready } = openUnifiedDatabase(file);
 	await ready;
 	const libraries = await unifiedDb
@@ -80,11 +83,25 @@ async function copyLibrary(
 	}
 
 	await dest.transaction().execute(async (trx) => {
-		await Promise.all([
-			trx.insertInto('OperationHistory').values(operations).execute(),
-			trx.insertInto('DocumentBaseline').values(baselines).execute(),
-			trx.insertInto('ReplicaInfo').values(replicas).execute(),
-			trx.insertInto('FileMetadata').values(fileMetadata).execute(),
-		]);
+		const actions: Promise<any>[] = [];
+		if (operations.length) {
+			actions.push(
+				trx.insertInto('OperationHistory').values(operations).execute(),
+			);
+		}
+		if (baselines.length) {
+			actions.push(
+				trx.insertInto('DocumentBaseline').values(baselines).execute(),
+			);
+		}
+		if (replicas.length) {
+			actions.push(trx.insertInto('ReplicaInfo').values(replicas).execute());
+		}
+		if (fileMetadata.length) {
+			actions.push(
+				trx.insertInto('FileMetadata').values(fileMetadata).execute(),
+			);
+		}
+		await Promise.all(actions);
 	});
 }

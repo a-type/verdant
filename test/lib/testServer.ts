@@ -13,19 +13,21 @@ export async function startTestServer({
 	disableRebasing = false,
 	keepDb = false,
 	disableSharding,
+	importShardsFrom,
 }: {
 	log?: boolean;
 	disableRebasing?: boolean;
 	keepDb?: boolean;
 	disableSharding?: boolean;
+	importShardsFrom?: string;
 } = {}) {
 	const port = await getPort();
 	const app = express();
 	const httpServer = createServer(app);
 
-	const storage = disableSharding
+	const { storage, databaseLocation } = disableSharding
 		? unifiedStorage(keepDb)
-		: shardedStorage(keepDb);
+		: shardedStorage(keepDb, importShardsFrom);
 
 	const server = new Server({
 		disableRebasing,
@@ -88,6 +90,7 @@ export async function startTestServer({
 	return {
 		port,
 		server,
+		databaseLocation,
 		cleanup: async () => {
 			try {
 				await server.close();
@@ -103,18 +106,24 @@ function unifiedStorage(keepDb: boolean) {
 		? `./.databases/test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
 		: ':memory:';
 	if (keepDb) console.log(`Using database file ${dbFileName}`);
-	return sqlStorage({
-		databaseFile: dbFileName,
-	});
+	return {
+		storage: sqlStorage({
+			databaseFile: dbFileName,
+		}),
+		databaseLocation: dbFileName,
+	};
 }
 
-function shardedStorage(keepDb: boolean) {
+function shardedStorage(keepDb: boolean, importShardsFrom?: string) {
 	const databasesDirectory = keepDb
 		? `./.databases/test-${Math.random().toString(36).slice(2, 9)}`
 		: ':memory:';
 	if (keepDb) console.log(`Using databases directory ${databasesDirectory}`);
-	return sqlShardStorage({
-		databasesDirectory,
-		transferFromUnifiedDatabaseFile: keepDb ? undefined : ':memory:',
-	});
+	return {
+		storage: sqlShardStorage({
+			databasesDirectory,
+			transferFromUnifiedDatabaseFile: importShardsFrom,
+		}),
+		databaseLocation: databasesDirectory,
+	};
 }

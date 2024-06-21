@@ -10,7 +10,7 @@ import { migrateToLatest } from '@a-type/kysely';
 import migrations from './migrations.js';
 import { Databases } from './Databases.js';
 import { transferToShards } from './transfer.js';
-import { readdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync } from 'fs';
 
 export const sqlShardStorage = ({
 	databasesDirectory,
@@ -24,6 +24,10 @@ export const sqlShardStorage = ({
 	closeTimeout?: number;
 }): StorageFactory => {
 	let ready = Promise.resolve<void>(undefined);
+	if (!existsSync(databasesDirectory)) {
+		mkdirSync(databasesDirectory);
+		console.info(`Created databases directory: ${databasesDirectory}`);
+	}
 	if (transferFromUnifiedDatabaseFile) {
 		// check if directory is empty
 		const files =
