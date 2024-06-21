@@ -25,7 +25,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 		// this behavior only seems to happen with pull sync
 		transport: 'pull',
 		onLog: logWatcher,
-		// logId: 'A',
+		logId: 'A',
 	});
 	const clientB = await context.createTestClient({
 		library: 'push-test',
@@ -117,6 +117,9 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	clientB.sync.start();
 	await waitForOnline(clientB);
 
+	// this seems to time out sometimes?
 	await waitForQueryResult(client.items.get(pears.get('id')));
 	context.log('Client 1 received pears');
+	client.close();
+	clientB.close();
 });

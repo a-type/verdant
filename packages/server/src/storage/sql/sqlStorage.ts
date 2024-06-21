@@ -13,11 +13,16 @@ import { openDatabase } from './database.js';
 export const sqlStorage = ({
 	databaseFile: dbFile,
 	skipMigrations,
+	disableWal,
 }: {
 	databaseFile: string;
 	skipMigrations?: boolean;
+	disableWal?: boolean;
 }): StorageFactory => {
-	const { db, ready } = openDatabase(dbFile, skipMigrations);
+	const { db, ready } = openDatabase(dbFile, {
+		skipMigrations,
+		disableWal,
+	});
 	return (options) => {
 		const baselines = new SqlBaselines(db, 'sqlite');
 		const operations = new SqlOperations(db, 'sqlite');

@@ -15,9 +15,13 @@ import { readdirSync } from 'fs';
 export const sqlShardStorage = ({
 	databasesDirectory,
 	transferFromUnifiedDatabaseFile,
+	disableWal,
+	closeTimeout,
 }: {
 	databasesDirectory: string;
 	transferFromUnifiedDatabaseFile?: string;
+	disableWal?: boolean;
+	closeTimeout?: number;
 }): StorageFactory => {
 	let ready = Promise.resolve<void>(undefined);
 	if (transferFromUnifiedDatabaseFile) {
@@ -37,6 +41,8 @@ export const sqlShardStorage = ({
 	}
 	const dbs = new Databases({
 		directory: databasesDirectory,
+		disableWal,
+		closeTimeout,
 	});
 	return (options) => {
 		const baselines = new SqlBaselines(dbs, 'sqlite');

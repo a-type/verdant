@@ -8,20 +8,30 @@ import migrations from './migrations.js';
 export async function openDatabase(
 	directory: string,
 	libraryId: string,
-	skipMigrations?: boolean,
+	options: {
+		skipMigrations?: boolean;
+		disableWal?: boolean;
+	} = {},
 ) {
+	const label = `openDatabase ${libraryId}`;
+	console.time(label);
 	const filePath =
 		directory === ':memory:'
 			? ':memory:'
 			: join(directory, `${libraryId}.sqlite`);
+	const internalDb = new Database(filePath);
+	if (!options.disableWal) {
+		internalDb.pragma('journal_mode = WAL');
+	}
 	const db = new Kysely<DatabaseTypes>({
 		dialect: new SqliteDialect({
-			database: new Database(filePath),
+			database: internalDb,
 		}),
 	});
 	// only migrate on first open
-	if (!skipMigrations) {
+	if (!options.skipMigrations) {
 		await migrateToLatest(db, migrations);
 	}
+	console.timeEnd(label);
 	return db;
 }

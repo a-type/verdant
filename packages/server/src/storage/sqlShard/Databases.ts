@@ -9,10 +9,16 @@ export class Databases {
 	private openedPreviously: Record<string, boolean> = {};
 	private directory;
 	private closeTimeout;
+	private disableWal = false;
 
-	constructor(config: { directory: string; closeTimeout?: number }) {
+	constructor(config: {
+		directory: string;
+		closeTimeout?: number;
+		disableWal?: boolean;
+	}) {
 		this.directory = config.directory;
-		this.closeTimeout = config.closeTimeout ?? 1000 * 60 * 10;
+		this.closeTimeout = config.closeTimeout ?? 1000 * 60 * 60;
+		this.disableWal = config.disableWal ?? false;
 	}
 
 	get = async (libraryId: string): Promise<Kysely<DatabaseTypes>> => {
@@ -20,11 +26,10 @@ export class Databases {
 			this.enqueueClose(libraryId);
 			return this.cache[libraryId];
 		}
-		const db = await openDatabase(
-			this.directory,
-			libraryId,
-			this.openedPreviously[libraryId],
-		);
+		const db = await openDatabase(this.directory, libraryId, {
+			skipMigrations: this.openedPreviously[libraryId],
+			disableWal: this.disableWal,
+		});
 		this.openedPreviously[libraryId] = true;
 		this.cache[libraryId] = db;
 		this.enqueueClose(libraryId);

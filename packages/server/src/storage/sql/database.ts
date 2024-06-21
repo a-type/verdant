@@ -4,14 +4,24 @@ import Database from 'better-sqlite3';
 import { migrateToLatest } from '@a-type/kysely';
 import migrations from './migrations.js';
 
-export function openDatabase(file: string, skipMigrations?: boolean) {
+export function openDatabase(
+	file: string,
+	options: {
+		skipMigrations?: boolean;
+		disableWal?: boolean;
+	} = {},
+) {
+	const internalDb = new Database(file);
+	if (!options.disableWal) {
+		internalDb.pragma('journal_mode = WAL');
+	}
 	const db = new Kysely<DatabaseTypes>({
 		dialect: new SqliteDialect({
-			database: new Database(file),
+			database: internalDb,
 		}),
 	});
 	let ready = Promise.resolve<void>(undefined);
-	if (!skipMigrations) {
+	if (!options.skipMigrations) {
 		ready = migrateToLatest(db, migrations);
 	}
 
