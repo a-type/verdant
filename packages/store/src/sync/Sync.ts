@@ -21,6 +21,8 @@ import { Context } from '../context.js';
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
 	syncingChange: (syncing: boolean) => void;
+	/** When the server has lost data and re-requests data from the past */
+	serverReset: (since: string | null) => void;
 };
 
 export type SyncTransportEvents = SyncEvents & {
@@ -394,6 +396,7 @@ export class ServerSync<Presence = any, Profile = any>
 				this.emit('syncingChange', false);
 				break;
 			case 'need-since':
+				this.emit('serverReset', message.since);
 				this.activeSync.send(
 					await this.meta.messageCreator.createSyncStep1(message.since),
 				);

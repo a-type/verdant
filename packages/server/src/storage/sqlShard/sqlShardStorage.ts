@@ -24,7 +24,7 @@ export const sqlShardStorage = ({
 	closeTimeout?: number;
 }): StorageFactory => {
 	let ready = Promise.resolve<void>(undefined);
-	if (!existsSync(databasesDirectory)) {
+	if (databasesDirectory !== ':memory:' && !existsSync(databasesDirectory)) {
 		mkdirSync(databasesDirectory);
 		console.info(`Created databases directory: ${databasesDirectory}`);
 	}

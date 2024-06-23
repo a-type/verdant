@@ -463,7 +463,7 @@ export class Server extends EventEmitter implements MessageSender {
 				res.write(JSON.stringify({ success: true }));
 				res.end();
 			} else if (req.method === 'GET') {
-				const data = await this.getFileData(info, id);
+				const data = await this.getFileData(info.libraryId, id);
 				res.writeHead(200, {
 					'Content-Type': 'application/json',
 				});
@@ -524,7 +524,7 @@ export class Server extends EventEmitter implements MessageSender {
 					},
 				});
 			} else if (req.method === 'GET') {
-				const data = await this.getFileData(info, id);
+				const data = await this.getFileData(info.libraryId, id);
 				return new Response(JSON.stringify(data), {
 					status: 200,
 					headers: {
@@ -606,26 +606,23 @@ export class Server extends EventEmitter implements MessageSender {
 		});
 	};
 
-	private getFileData = async (
-		info: TokenInfo,
-		id: string,
-	): Promise<FileData> => {
+	getFileData = async (library: string, fileId: string): Promise<FileData> => {
 		const fs = this.getFileStorageOrThrow();
 
 		await this.storage.ready;
-		const fileInfo = await this.storage.fileMetadata.get(info.libraryId, id);
+		const fileInfo = await this.storage.fileMetadata.get(library, fileId);
 		if (!fileInfo) {
 			throw new VerdantError(
 				VerdantError.Code.NotFound,
 				undefined,
-				`File ${id} not found`,
+				`File ${fileId} not found`,
 			);
 		}
 
 		const url = await fs.getUrl({
 			fileName: fileInfo.name,
 			id: fileInfo.fileId,
-			libraryId: info.libraryId,
+			libraryId: library,
 			type: fileInfo.type,
 		});
 
@@ -739,10 +736,10 @@ export class Server extends EventEmitter implements MessageSender {
 	 * any replica connects, it will repopulate the library. But
 	 * you should still be careful.
 	 */
-	evictLibrary = (libraryId: string) => {
+	evictLibrary = async (libraryId: string) => {
 		// disconnect all clients
 		this.clientConnections.disconnectAll(libraryId);
-		this.library.destroy(libraryId);
+		await this.library.destroy(libraryId);
 		this.log('info', 'Evicted library', libraryId);
 	};
 

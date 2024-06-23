@@ -2,7 +2,12 @@ import { FileData, FileRef } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
-import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
+import {
+	EntityFile,
+	MARK_FAILED,
+	MARK_UPLOADED,
+	UPDATE,
+} from './EntityFile.js';
 import {
 	FileStorage,
 	ReturnedFileData,
@@ -62,6 +67,7 @@ export class FileManager {
 
 		this.sync.subscribe('onlineChange', this.onOnlineChange);
 		this.meta.subscribe('filesDeleted', this.handleFileRefsDeleted);
+		this.sync.subscribe('serverReset', this.storage.resetSyncedStatusSince);
 		// check on startup to see if files can be cleaned up
 		this.tryCleanupDeletedFiles();
 	}
@@ -89,6 +95,10 @@ export class FileManager {
 		const result = await this.sync.uploadFile(file);
 		if (result.success) {
 			await this.storage.markUploaded(file.id);
+			const cached = this.files.get(file.id);
+			if (cached) {
+				cached[MARK_UPLOADED]();
+			}
 		} else {
 			if (result.retry && retries < 5) {
 				this.context.log('error', 'Error uploading file, retrying...');

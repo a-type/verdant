@@ -1,6 +1,6 @@
 import { expect, Mock } from 'vitest';
 import { AnyEntity, Client, Query } from '../client/index.js';
-import { ClientWithCollections } from '@verdant-web/store';
+import { ClientWithCollections, EntityFile } from '@verdant-web/store';
 import { stableStringify } from '@verdant-web/common';
 
 export async function waitForMockCall(mock: Mock, calls = 1) {
@@ -172,6 +172,25 @@ export async function waitForEntityCondition<
 		} else {
 			entity.subscribe('changeDeep', () => {
 				if (condition(entity)) {
+					resolve();
+				}
+			});
+		}
+	});
+}
+
+export async function waitForFileUpload(file: EntityFile, timeout = 5000) {
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(() => {
+			reject(new Error('Timed out waiting for file upload'));
+		}, timeout);
+		if (file.isUploaded) {
+			clearTimeout(timer);
+			resolve();
+		} else {
+			file.subscribe('change', () => {
+				if (file.isUploaded) {
+					clearTimeout(timer);
 					resolve();
 				}
 			});

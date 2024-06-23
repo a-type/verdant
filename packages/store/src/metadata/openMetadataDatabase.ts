@@ -1,7 +1,7 @@
 import { replaceLegacyOidsInObject } from '@verdant-web/common';
 import { closeDatabase, storeRequestPromise } from '../idb.js';
 
-const migrations = [version1, version2, version3, version4, version5];
+const migrations = [version1, version2, version3, version4, version5, version6];
 
 export function openMetadataDatabase({
 	indexedDB = window.indexedDB,
@@ -257,4 +257,10 @@ async function version5(db: IDBDatabase, tx: IDBTransaction) {
 			reject(cursorReq.error);
 		};
 	});
+}
+
+// version 5->6: add timestamp to file metadata
+async function version6(db: IDBDatabase, tx: IDBTransaction) {
+	const files = tx.objectStore('files');
+	files.createIndex('timestamp', 'timestamp');
 }

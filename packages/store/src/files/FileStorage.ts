@@ -12,6 +12,7 @@ export interface StoredFileData extends Omit<FileData, 'remote' | 'file'> {
 	remote: 'true' | 'false';
 	buffer?: ArrayBuffer;
 	deletedAt: number | null;
+	timestamp?: string;
 }
 
 export interface ReturnedFileData extends FileData {
@@ -162,6 +163,36 @@ export class FileStorage extends IDBService {
 			{ mode: 'readonly' },
 		);
 		return raw.map(this.hydrateFileData);
+	};
+
+	resetSyncedStatusSince = async (since: string | null) => {
+		const tx = this.createTransaction(['files'], { mode: 'readwrite' });
+		const raw = await this.run<StoredFileData[]>(
+			'files',
+			(store) => {
+				return store.index('remote').getAll('true');
+			},
+			{ transaction: tx },
+		);
+
+		const filtered = raw.filter(
+			(file) => !file.timestamp || !since || file.timestamp > since,
+		);
+
+		await Promise.all(
+			filtered.map((file) => {
+				return this.run(
+					'files',
+					(store) => {
+						return store.put({
+							...file,
+							remote: 'false',
+						} as StoredFileData);
+					},
+					{ transaction: tx },
+				);
+			}),
+		);
 	};
 
 	iterateOverPendingDelete = (

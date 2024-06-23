@@ -6,6 +6,7 @@ export type EntityFileEvents = {
 
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
+export const MARK_UPLOADED = Symbol('entity-file-mark-uploaded');
 
 export type EntityFileSnapshot = {
 	id: string;
@@ -42,6 +43,9 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	get isFile() {
 		return true;
 	}
+	get isUploaded() {
+		return this._fileData?.remote ?? false;
+	}
 
 	[UPDATE] = (fileData: FileData) => {
 		this._loading = false;
@@ -59,6 +63,12 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	[MARK_FAILED] = () => {
 		this._failed = true;
 		this._loading = false;
+		this.emit('change');
+	};
+
+	[MARK_UPLOADED] = () => {
+		if (!this._fileData) return;
+		this._fileData!.remote = true;
 		this.emit('change');
 	};
 
