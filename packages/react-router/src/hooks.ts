@@ -190,13 +190,22 @@ export function useNavigate() {
 				skipTransition,
 				state = null,
 				preserveScroll,
+				preserveQuery,
 			}: {
 				replace?: boolean;
 				skipTransition?: boolean;
 				state?: any;
 				preserveScroll?: boolean;
+				preserveQuery?: boolean;
 			} = {},
 		) => {
+			if (preserveQuery) {
+				const toUrl = new URL(to, location.href);
+				for (const [key, value] of new URLSearchParams(location.search)) {
+					toUrl.searchParams.append(key, value);
+				}
+				to = toUrl.pathname + toUrl.search + toUrl.hash;
+			}
 			events.dispatchEvent(new WillNavigateEvent());
 			// if paths are equal for this navigation, preserve current
 			// route id
