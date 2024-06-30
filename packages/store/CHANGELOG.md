@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.8.2
+
+### Patch Changes
+
+- d11e3ab: Subscribe to individual fields on entities
+
 ## 3.8.1
 
 ### Patch Changes

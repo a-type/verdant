@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.6.3
+
+### Patch Changes
+
+- 8ac7517: Add preserveQuery option to useNavigate, like Link
+
 ## 0.6.2
 
 ### Patch Changes
