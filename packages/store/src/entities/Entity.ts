@@ -45,6 +45,7 @@ import {
 	ObjectEntity,
 } from './types.js';
 import { EntityStoreEventData, EntityStoreEvents } from './EntityStore.js';
+import { entityFieldSubscriber } from './entityFieldSubscriber.js';
 
 export interface EntityInit {
 	oid: ObjectIdentifier;
@@ -57,7 +58,7 @@ export interface EntityInit {
 	readonlyKeys?: string[];
 	fieldPath?: (string | number)[];
 	patchCreator: PatchCreator;
-	events: EntityStoreEvents;
+	storeEvents: EntityStoreEvents;
 	deleteSelf: () => void;
 }
 
@@ -83,7 +84,7 @@ export class Entity<
 	private ctx;
 	private files;
 	private patchCreator;
-	private events;
+	private storeEvents;
 
 	// an internal representation of this Entity.
 	// if present, this is the cached, known value. If null,
@@ -109,7 +110,7 @@ export class Entity<
 		readonlyKeys,
 		files,
 		patchCreator,
-		events,
+		storeEvents,
 		deleteSelf,
 	}: EntityInit) {
 		super();
@@ -128,15 +129,15 @@ export class Entity<
 			});
 		this.patchCreator = patchCreator;
 		this.metadataFamily = metadataFamily;
-		this.events = events;
+		this.storeEvents = storeEvents;
 		this.parent = parent;
 		this._deleteSelf = deleteSelf;
 
 		// TODO: should any but the root entity be listening to these?
 		if (!this.parent) {
-			events.add.attach(this.onAdd);
-			events.replace.attach(this.onReplace);
-			events.resetAll.attach(this.onResetAll);
+			storeEvents.add.attach(this.onAdd);
+			storeEvents.replace.attach(this.onReplace);
+			storeEvents.resetAll.attach(this.onResetAll);
 		}
 	}
 
@@ -563,9 +564,20 @@ export class Entity<
 			files: this.files,
 			fieldPath: [...this.fieldPath, key],
 			patchCreator: this.patchCreator,
-			events: this.events,
+			storeEvents: this.storeEvents,
 			deleteSelf: this.delete.bind(this, key),
 		});
+	};
+
+	subscribeToField = <K extends keyof KeyValue>(
+		key: K,
+		event: 'change', // here to keep future api changes stable
+		callback: (
+			value: KeyValue[K],
+			info: { previousValue: KeyValue[K]; isLocal?: boolean },
+		) => void,
+	) => {
+		return entityFieldSubscriber<KeyValue[K]>(this, key, callback);
 	};
 
 	// generic entity methods

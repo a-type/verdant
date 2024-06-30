@@ -19,6 +19,7 @@ export type EntityMetadataView = {
 	deleted: boolean;
 	empty: boolean;
 	updatedAt: number;
+	latestTimestamp: string | null;
 };
 
 export class EntityMetadata {
@@ -136,6 +137,7 @@ export class EntityMetadata {
 			empty,
 			fromOlderVersion,
 			updatedAt,
+			latestTimestamp: updatedAtTimestamp,
 		};
 	};
 

@@ -20,7 +20,7 @@ async function waitForStoragePropagation(mock: MockedFunction<any>) {
 	});
 }
 
-describe('storage documents', () => {
+describe('entities', () => {
 	it('should fill in default values', async () => {
 		const storage = await createTestStorage();
 
@@ -64,6 +64,7 @@ describe('storage documents', () => {
 		const singleItemResult = await singleItemQuery.resolved;
 		expect(singleItemResult).toBeTruthy();
 		assert(!!singleItemResult);
+		expect(singleItemResult).toBe(item1);
 		singleItemResult.subscribe('change', vi.fn());
 
 		const allItemsQuery = storage.todos.findAll();
@@ -637,6 +638,47 @@ describe('storage documents', () => {
 			storage.todos.put({
 				content: { invalid: 'value' },
 			});
-		}).toThrowErrorMatchingInlineSnapshot(`[Error: Validation error: Expected string  for field content, got [object Object]]`);
+		}).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Validation error: Expected string  for field content, got [object Object]]`,
+		);
+	});
+
+	it('should allow subscribing to one field', async () => {
+		const storage = await createTestStorage();
+		const item = await storage.todos.put({
+			content: 'item',
+		});
+		const queriedItem = await storage.todos.get(item.get('id')).resolved;
+
+		const callback = vi.fn();
+		queriedItem.subscribeToField('content', 'change', callback);
+
+		queriedItem.set('content', 'updated');
+
+		await waitForStoragePropagation(callback);
+
+		expect(callback).toBeCalledTimes(1);
+	});
+
+	it('should allow subscribing to one field and not break on deletion', async () => {
+		const storage = await createTestStorage({
+			log: console.log,
+		});
+		const item = await storage.todos.put({
+			content: 'item',
+		});
+
+		const callback = vi.fn(console.log);
+		item.subscribeToField('content', 'change', callback);
+
+		item.set('content', 'updated');
+
+		await waitForStoragePropagation(callback);
+
+		expect(callback).toBeCalledTimes(1);
+
+		await storage.todos.delete(item.get('id'));
+
+		expect(item.deleted).toBe(true);
 	});
 });

@@ -69,7 +69,7 @@ describe('Entity', () => {
 			oid: 'test/1',
 			schema,
 			ctx: mockContext,
-			events,
+			storeEvents: events,
 			metadataFamily: new EntityFamilyMetadata({
 				ctx: mockContext,
 				onPendingOperations,

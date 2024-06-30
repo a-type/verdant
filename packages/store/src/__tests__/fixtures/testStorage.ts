@@ -24,7 +24,9 @@ export const todoCollection = schema.collection({
 		tags: schema.fields.array({
 			items: schema.fields.string(),
 		}),
-		category: schema.fields.string(),
+		category: schema.fields.string({
+			nullable: true,
+		}),
 		attachments: schema.fields.array({
 			items: schema.fields.object({
 				properties: {
