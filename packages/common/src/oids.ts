@@ -32,7 +32,7 @@ export type ObjectIdentifier = string;
 export const LEGACY_OID_KEY = '__@@oid_do_not_use';
 export const OID_KEY = '@@id';
 
-const COLLECTION_SEPARATOR = '/';
+const SEGMENT_SEPARATOR = '/';
 const RANDOM_SEPARATOR = ':';
 
 /**
@@ -148,7 +148,7 @@ export function createOid(
 ) {
 	let oid =
 		sanitizeFragment(collection) +
-		COLLECTION_SEPARATOR +
+		SEGMENT_SEPARATOR +
 		sanitizeFragment(documentId);
 	if (subId) {
 		oid += RANDOM_SEPARATOR + subId;
@@ -230,15 +230,6 @@ export function assignOidsToAllSubObjects(
 	}
 }
 
-export function assignOidProperty(obj: any, oid: ObjectIdentifier) {
-	assert(
-		isObject(obj),
-		`Only objects can be assigned OIDs, received ${JSON.stringify(obj)}`,
-	);
-	obj[OID_KEY] = oid;
-	return obj;
-}
-
 export function maybeGetOidProperty(obj: any) {
 	if (!isObject(obj)) {
 		return undefined;
@@ -253,31 +244,6 @@ function removeOidProperty(obj: any) {
 	delete obj[LEGACY_OID_KEY];
 	delete obj[OID_KEY];
 	return obj;
-}
-
-function transferOidFromSystemToProperty(obj: any) {
-	const oid = maybeGetOid(obj);
-	if (oid) {
-		assignOidProperty(obj, oid);
-	}
-}
-
-/**
- * Assigns a special property to all objects in the given object
- * which have an OID
- */
-export function assignOidPropertiesToAllSubObjects(obj: any) {
-	transferOidFromSystemToProperty(obj);
-
-	if (Array.isArray(obj)) {
-		for (let i = 0; i < obj.length; i++) {
-			assignOidPropertiesToAllSubObjects(obj[i]);
-		}
-	} else if (isObject(obj)) {
-		for (const key of Object.keys(obj)) {
-			assignOidPropertiesToAllSubObjects(obj[key]);
-		}
-	}
 }
 
 function copyOidFromPropertyToSystem(obj: any) {
