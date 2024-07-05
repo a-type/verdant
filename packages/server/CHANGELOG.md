@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.1.2
+
+### Patch Changes
+
+- 2ec1a25: Restore binary demo server which got deleted for some reason
+
 ## 3.1.1
 
 ### Patch Changes
