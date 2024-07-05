@@ -64,6 +64,14 @@ export interface BaseEntity<
 		event: EventName,
 		callback: EntityEvents[EventName],
 	): () => void;
+	subscribeToField<FieldName extends keyof Value>(
+		field: FieldName,
+		event: 'change',
+		callback: (
+			value: Value[FieldName],
+			info: EntityChangeInfo & { previousValue: Value[FieldName] },
+		) => void,
+	): () => void;
 	get<Key extends keyof Value>(key: Key): Value[Key];
 	getAll(): Value;
 	getSnapshot(): Snapshot;
