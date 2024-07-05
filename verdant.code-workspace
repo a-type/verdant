@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"name": "🌿 Store",
+			"path": "packages/store"
+		},
+		{
+			"name": "💽 Server",
+			"path": "packages/server"
+		},
+		{
+			"name": "🪢 Common",
+			"path": "packages/common"
+		},
+		{
+			"name": "🧑‍💻 CLI",
+			"path": "packages/cli"
+		},
+		{
+			"name": "⚛️ React",
+			"path": "packages/react"
+		},
+		{
+			"name": "🔗 Router",
+			"path": "packages/react-router"
+		},
+		{
+			"name": "📦 Create App",
+			"path": "packages/create-app"
+		},
+		{
+			"name": "🗄️ S3 Files",
+			"path": "packages/file-storage-s3"
+		}
+	]
+}
