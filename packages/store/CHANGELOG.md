@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.8.3
+
+### Patch Changes
+
+- dbb5925: Add types for subscribeToField
+
 ## 3.8.2
 
 ### Patch Changes
