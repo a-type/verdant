@@ -1,4 +1,4 @@
-import { LEGACY_OID_KEY, OID_KEY } from '../oids.js';
+import { LEGACY_OID_KEY, OID_KEY } from '../oidsLegacy.js';
 import { isObject } from '../utils.js';
 import type {
 	StorageFieldSchema,

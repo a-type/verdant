@@ -6,4 +6,6 @@ export type DocumentBaseline<T extends any = any> = {
 	// a document which was snapshotted in a deleted state, vs
 	// one without a base state at all? what happens if you apply
 	// ops onto an undefined snapshot (which aren't initialize)?
+
+	authz?: string;
 };

@@ -20,6 +20,7 @@ export type EntityMetadataView = {
 	empty: boolean;
 	updatedAt: number;
 	latestTimestamp: string | null;
+	authz?: string;
 };
 
 export class EntityMetadata {
@@ -63,6 +64,11 @@ export class EntityMetadata {
 	computeView = (omitPending = false): EntityMetadataView => {
 		const base = cloneDeep(this.baseline?.snapshot ?? undefined);
 		const baselineTimestamp = this.baseline?.timestamp ?? null;
+
+		// start with the baseline authz, if any. further init ops
+		// may overwrite this.
+		let authz = this.baseline?.authz;
+
 		const confirmedResult = this.applyOperations(
 			// apply ops to baseline
 			base,
@@ -79,6 +85,10 @@ export class EntityMetadata {
 		if (confirmedResult.futureSeen) {
 			this.ctx.globalEvents.emit('futureSeen', confirmedResult.futureSeen);
 		}
+		if (confirmedResult.authz) {
+			authz = confirmedResult.authz;
+		}
+
 		const pendingResult = omitPending
 			? confirmedResult
 			: this.applyOperations(
@@ -92,6 +102,10 @@ export class EntityMetadata {
 					// logically in the future
 					null,
 			  );
+		if (pendingResult.authz) {
+			authz = pendingResult.authz;
+		}
+
 		// before letting this data out into the wild, we need
 		// to associate its oid
 		if (pendingResult.view) {
@@ -138,6 +152,7 @@ export class EntityMetadata {
 			fromOlderVersion,
 			updatedAt,
 			latestTimestamp: updatedAtTimestamp,
+			authz,
 		};
 	};
 
@@ -207,8 +222,11 @@ export class EntityMetadata {
 		latestTimestamp: string | null;
 		deleted: boolean;
 		futureSeen: string | undefined;
+		authz?: string;
 	} => {
 		let futureSeen: string | undefined = undefined;
+		let authz: string | undefined = undefined;
+
 		const now = this.ctx.getNow();
 		for (const op of operations) {
 			// ignore ops before our after cutoff
@@ -229,6 +247,9 @@ export class EntityMetadata {
 				base = applyPatch(base, op.data);
 				if (op.data.op === 'initialize') {
 					deleted = false;
+					if (op.authz) {
+						authz = op.authz;
+					}
 				}
 			}
 
@@ -242,6 +263,7 @@ export class EntityMetadata {
 			latestTimestamp: latestTimestamp ?? null,
 			deleted,
 			futureSeen,
+			authz,
 		};
 	};
 }

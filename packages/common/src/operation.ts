@@ -9,12 +9,12 @@ import {
 	ensureOid,
 	getOid,
 	getOidRoot,
-	isOidKey,
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
 	removeOid,
 } from './oids.js';
+import { isOidKey } from './oidsLegacy.js';
 import { compareRefs, isRef } from './refs.js';
 import { assert, cloneDeep, findLastIndex, isObject } from './utils.js';
 
@@ -156,6 +156,7 @@ export type Operation = {
 	oid: ObjectIdentifier;
 	timestamp: string;
 	data: OperationPatch;
+	authz?: string;
 };
 
 function isDiffableObject(val: any) {
@@ -840,4 +841,18 @@ export function isSuperseded(
 	}
 
 	return false;
+}
+
+/**
+ * Allocates a copy with only valid keys for transmitting over
+ * the protocol. TODO: make this unnecessary or evaluate if it's
+ * worth it to do.
+ */
+export function pickValidOperationKeys(operation: Operation): Operation {
+	return {
+		oid: operation.oid,
+		timestamp: operation.timestamp,
+		data: operation.data,
+		authz: operation.authz,
+	};
 }

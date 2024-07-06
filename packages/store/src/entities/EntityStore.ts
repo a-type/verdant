@@ -49,6 +49,11 @@ export interface IncomingData {
 	isLocal?: boolean;
 }
 
+export interface EntityCreateOptions {
+	undoable?: boolean;
+	access?: string;
+}
+
 export class EntityStore extends Disposable {
 	private ctx;
 	private meta;
@@ -319,7 +324,7 @@ export class EntityStore extends Disposable {
 	create = async (
 		initial: any,
 		oid: ObjectIdentifier,
-		{ undoable = true }: { undoable?: boolean } = {},
+		{ undoable = true, access }: EntityCreateOptions = {},
 	) => {
 		this.ctx.log('debug', 'Creating new entity', oid);
 		const { collection } = decomposeOid(oid);
@@ -339,17 +344,23 @@ export class EntityStore extends Disposable {
 		}
 
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
+		if (access) {
+			operations.forEach((op) => {
+				op.authz = access;
+			});
+		}
 		await this.batcher.commitOperations(operations, {
 			undoable: !!undoable,
 			source: entity,
 		});
 
-		// TODO: what happens if you create an entity with an OID that already
+		// TODONE: what happens if you create an entity with an OID that already
 		// exists?
+		// A: it will overwrite the existing entity
 
 		// we still need to synchronously add the initial operations to the Entity
 		// even though they are flowing through the system
-		// TODO: this could be better aligned to avoid grouping here
+		// FIXME: this could be better aligned to avoid grouping here
 		const operationsGroupedByOid = groupPatchesByOid(operations);
 		this.events.add.invoke(this, {
 			operations: operationsGroupedByOid,

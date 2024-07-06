@@ -29,9 +29,6 @@ import { isObject, assert } from './utils.js';
 
 export type ObjectIdentifier = string;
 
-export const LEGACY_OID_KEY = '__@@oid_do_not_use';
-export const OID_KEY = '@@id';
-
 const SEGMENT_SEPARATOR = '/';
 const RANDOM_SEPARATOR = ':';
 
@@ -54,7 +51,7 @@ export function maybeGetOid(obj: any): ObjectIdentifier | undefined {
 	if (!isObject(obj)) {
 		return undefined;
 	}
-	return oidMap.get(obj) ?? obj[OID_KEY] ?? obj[LEGACY_OID_KEY];
+	return oidMap.get(obj);
 }
 
 export function assignOid(obj: any, oid: ObjectIdentifier) {
@@ -76,10 +73,6 @@ export function hasOid(obj: any) {
 export function removeOid(obj: any) {
 	oidMap.delete(obj);
 	return obj;
-}
-
-export function isOidKey(key: string) {
-	return key === OID_KEY || key === LEGACY_OID_KEY;
 }
 
 /**
@@ -141,6 +134,11 @@ function unsanitizeFragment(id: string) {
 		.replace(/&dot;/g, '.');
 }
 
+/**
+ * Creates an OID for the document with a particular ID.
+ * To create a sub-object OID, use createSubOid and pass
+ * the root OID.
+ */
 export function createOid(
 	collection: string,
 	documentId: string,
@@ -169,18 +167,26 @@ export function decomposeOid(oid: ObjectIdentifier): {
 	id: string;
 	subId?: string;
 } {
-	const [core, random] = oid.split(RANDOM_SEPARATOR);
-	let [collection, idOrLegacyPathId, ...others] = core.split('/');
-	// if there's more than one slash... something went wrong, but we can just bolt the rest on.
+	let [collection, coreId, ...others] = oid.split('/');
+	// if 'others' exists, something's off, but maybe we can recover...
+	// by assuming the last segment is the authz and bolting the rest onto coreId
 	if (others.length) {
-		idOrLegacyPathId += '/' + others.join('/');
+		console.error(
+			`OID ${oid} has more than 3 segments. Attempting to parse it anyway.`,
+		);
+		coreId += '/' + others.join('/');
 	}
+
+	const [idOrLegacyPathId, random] = coreId.split(RANDOM_SEPARATOR);
+
 	let id;
+	// legacy path handling. shouldn't be necessary anymore.
 	if (idOrLegacyPathId.includes('.')) {
 		id = idOrLegacyPathId.slice(0, idOrLegacyPathId.indexOf('.'));
 	} else {
 		id = idOrLegacyPathId;
 	}
+
 	return {
 		collection: unsanitizeFragment(collection),
 		id: unsanitizeFragment(id),
@@ -226,50 +232,6 @@ export function assignOidsToAllSubObjects(
 				ensureCompatibleOid(obj[key], rootOid, createSubId);
 				assignOidsToAllSubObjects(obj[key], createSubId);
 			}
-		}
-	}
-}
-
-export function maybeGetOidProperty(obj: any) {
-	if (!isObject(obj)) {
-		return undefined;
-	}
-	return obj[OID_KEY] || obj[LEGACY_OID_KEY];
-}
-
-function removeOidProperty(obj: any) {
-	if (!isObject(obj)) {
-		return obj;
-	}
-	delete obj[LEGACY_OID_KEY];
-	delete obj[OID_KEY];
-	return obj;
-}
-
-function copyOidFromPropertyToSystem(obj: any) {
-	const oid = maybeGetOidProperty(obj);
-	if (oid) {
-		assignOid(obj, oid);
-	}
-}
-
-/**
- *
- * Removes the special property from all objects in the given object
- * which have an OID, transferring the OID from the property to the OID
- * system in-memory.
- */
-export function removeOidPropertiesFromAllSubObjects(obj: any) {
-	copyOidFromPropertyToSystem(obj);
-	removeOidProperty(obj);
-
-	if (Array.isArray(obj)) {
-		for (let i = 0; i < obj.length; i++) {
-			removeOidPropertiesFromAllSubObjects(obj[i]);
-		}
-	} else if (isObject(obj)) {
-		for (const key of Object.keys(obj)) {
-			removeOidPropertiesFromAllSubObjects(obj[key]);
 		}
 	}
 }
@@ -408,10 +370,6 @@ export function getOidSubIdRange(oid: ObjectIdentifier) {
 	const lastSubId = createSubOid(root, () => '\uffff');
 	return [`${root}${RANDOM_SEPARATOR}`, lastSubId];
 }
-export function getLegacyDotOidSubIdRange(oid: ObjectIdentifier) {
-	const root = getOidRoot(oid);
-	return [`${root}.`, `${root}.\uffff`];
-}
 
 export function getRoots(oids: ObjectIdentifier[]) {
 	const set = new Set<ObjectIdentifier>();
@@ -423,6 +381,10 @@ export function getRoots(oids: ObjectIdentifier[]) {
 
 export function areOidsRelated(oidA: ObjectIdentifier, oidB: ObjectIdentifier) {
 	return getOidRoot(oidA) === getOidRoot(oidB);
+}
+
+export function isRootOid(oid: ObjectIdentifier) {
+	return !oid.includes(RANDOM_SEPARATOR);
 }
 
 /**
@@ -458,30 +420,4 @@ function migrateForeignOid(parentOid: ObjectIdentifier, child: any) {
 			createSubOid(parentOid, () => subId || id),
 		);
 	}
-}
-
-export function isLegacyDotOid(oid: ObjectIdentifier) {
-	const partBeforeRandomSep = oid.split(RANDOM_SEPARATOR)[0];
-	return partBeforeRandomSep.includes('.');
-}
-
-export function convertLegacyOid(oid: ObjectIdentifier) {
-	const { collection, id, subId } = decomposeOid(oid);
-	return createOid(collection, id, subId);
-}
-
-export const MATCH_LEGACY_OID_JSON_STRING = /"\w+\/[^"]+?(\.[^"]+)+\:[\S]+?"/g;
-export function replaceLegacyOidsInJsonString(string: string) {
-	// replace every match of a legacy OID, converting to a new OID
-	return string.replaceAll(MATCH_LEGACY_OID_JSON_STRING, (match) => {
-		const legacyOid = match.slice(1, match.length - 1);
-		return `"${convertLegacyOid(legacyOid)}"`;
-	});
-}
-export function replaceLegacyOidsInObject(obj: any) {
-	return JSON.parse(replaceLegacyOidsInJsonString(JSON.stringify(obj)));
-}
-
-export function isRootOid(oid: ObjectIdentifier) {
-	return !oid.includes(RANDOM_SEPARATOR);
 }

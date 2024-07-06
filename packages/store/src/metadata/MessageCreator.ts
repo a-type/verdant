@@ -6,6 +6,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	OperationMessage,
+	pickValidOperationKeys,
 	PresenceUpdateMessage,
 	SyncAckMessage,
 	SyncMessage,
@@ -26,11 +27,7 @@ export class MessageCreator {
 			type: 'op',
 			timestamp: this.meta.now,
 			replicaId: localInfo.id,
-			operations: init.operations.map((op) => ({
-				data: op.data,
-				oid: op.oid,
-				timestamp: op.timestamp,
-			})),
+			operations: init.operations.map(pickValidOperationKeys),
 		};
 	};
 
@@ -73,11 +70,7 @@ export class MessageCreator {
 		if (provideChangesSince) {
 			await this.meta.operations.iterateOverAllLocalOperations(
 				(patch) => {
-					operations.push({
-						data: patch.data,
-						oid: patch.oid,
-						timestamp: patch.timestamp,
-					});
+					operations.push(pickValidOperationKeys(patch));
 					affectedDocs.add(getOidRoot(patch.oid));
 				},
 				{
@@ -91,11 +84,7 @@ export class MessageCreator {
 			// operations
 			await this.meta.operations.iterateOverAllOperations(
 				(patch) => {
-					operations.push({
-						data: patch.data,
-						oid: patch.oid,
-						timestamp: patch.timestamp,
-					});
+					operations.push(pickValidOperationKeys(patch));
 					affectedDocs.add(getOidRoot(patch.oid));
 				},
 				{

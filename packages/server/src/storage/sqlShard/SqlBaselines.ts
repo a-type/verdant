@@ -65,11 +65,13 @@ export class SqlBaselines implements BaselineStorage {
 				oid: baseline.oid,
 				snapshot: JSON.stringify(baseline.snapshot),
 				timestamp: baseline.timestamp,
+				authz: baseline.authz,
 			})
 			.onConflict((cb) =>
 				cb.doUpdateSet({
 					snapshot: JSON.stringify(baseline.snapshot),
 					timestamp: baseline.timestamp,
+					authz: baseline.authz,
 				}),
 			)
 			.execute();
@@ -107,6 +109,7 @@ export class SqlBaselines implements BaselineStorage {
 					snapshot: {},
 					timestamp: operations[0].timestamp,
 					libraryId,
+					authz: operations[0].authz,
 				};
 			}
 			for (const operation of operations) {
@@ -115,6 +118,9 @@ export class SqlBaselines implements BaselineStorage {
 					operation.data,
 					deletedRefs,
 				);
+				if (operation.data.op === 'initialize') {
+					baseline.authz = operation.authz;
+				}
 			}
 			baseline.timestamp = operations[operations.length - 1].timestamp;
 			await this.set(libraryId, baseline, { tx });

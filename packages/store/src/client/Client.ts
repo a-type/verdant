@@ -6,7 +6,7 @@ import {
 	Operation,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
-import { DocumentManager } from '../DocumentManager.js';
+import { DocumentManager } from '../entities/DocumentManager.js';
 import { EntityStore } from '../entities/EntityStore.js';
 import { FileManager, FileManagerConfig } from '../files/FileManager.js';
 import { ReturnedFileData } from '../files/FileStorage.js';
@@ -107,9 +107,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			context,
 		});
 		this._documentManager = new DocumentManager(
+			this.context,
 			this.meta,
 			this.schema,
 			this._entities,
+			this.sync,
 		);
 
 		const notifyFutureSeen = debounce(() => {

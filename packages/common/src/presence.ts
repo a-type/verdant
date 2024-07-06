@@ -1,7 +1,5 @@
 export interface UserInfo<Profile, Presence> {
 	/**
-	 * @deprecated - include the ID in your Profile data instead.
-	 *
 	 * This is the ID representing the user who is utilizing a
 	 * replica client to connect to the storage network.
 	 * One user may have multiple replica clients active at once,

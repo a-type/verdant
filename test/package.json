@@ -17,7 +17,7 @@
 		"get-port": "^7.0.0",
 		"itty-router": "^4.0.27",
 		"jsdom": "^20.0.0",
-		"tsx": "^4.0.0",
+		"tsx": "^4.16.2",
 		"typescript": "^5.4.2",
 		"vitest": "^1.1.0",
 		"ws": "^8.9.0"
@@ -29,9 +29,6 @@
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
 		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts",
 		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"tsx": "^4.6.2"
 	},
 	"volta": {
 		"node": "18.13.0"

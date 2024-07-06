@@ -1,4 +1,4 @@
-import { OID_KEY } from '../oids.js';
+import { OID_KEY } from '../oidsLegacy.js';
 import { isObject } from '../utils.js';
 import { getFieldDefault, hasDefault, isNullable } from './fields.js';
 import { StorageFieldSchema, StorageFieldsSchema } from './types.js';

@@ -78,6 +78,7 @@ export interface BaseEntity<
 	readonly deleted: boolean;
 	readonly updatedAt: number;
 	readonly uid: string;
+	readonly isAuthorized: boolean;
 }
 
 export type DeepPartial<T> = T extends object

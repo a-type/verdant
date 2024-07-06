@@ -7,7 +7,10 @@ import { FindOneQuery } from './FindOneQuery.js';
 import { FindPageQuery } from './FindPageQuery.js';
 import { FindInfiniteQuery } from './FindInfiniteQuery.js';
 import { FindAllQuery } from './FindAllQuery.js';
-import { DocumentManager } from '../DocumentManager.js';
+import {
+	DocumentAccess,
+	DocumentManager,
+} from '../entities/DocumentManager.js';
 import { ObjectEntity } from '../index.js';
 import { UPDATE } from './BaseQuery.js';
 
@@ -22,7 +25,10 @@ export class CollectionQueries<
 	private context;
 	private documentManager;
 
-	put: (init: Init, options?: { undoable?: boolean }) => Promise<T>;
+	put: (
+		init: Init,
+		options?: { undoable?: boolean; access?: DocumentAccess },
+	) => Promise<T>;
 	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
 	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
 

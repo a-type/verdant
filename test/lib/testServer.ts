@@ -40,10 +40,7 @@ export async function startTestServer({
 		},
 		log: log
 			? (...args: any[]) =>
-					console.log(
-						'[SERVER]',
-						...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
-					)
+					console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
 			: undefined,
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',

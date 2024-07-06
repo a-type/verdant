@@ -115,6 +115,7 @@ export class SqlOperations implements OperationStorage {
 						timestamp: item.timestamp,
 						replicaId,
 						serverOrder: ++currentServerOrder,
+						authz: item.authz,
 					})
 					.onConflict((cb) =>
 						cb

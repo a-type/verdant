@@ -383,6 +383,19 @@ export class Entity<
 	}
 
 	/**
+	 * The authz string signifying the permissions this entity has.
+	 * On the client (where we are) it's only ever possible to see
+	 * an entity with either full access or access for the current
+	 * user.
+	 */
+	private get access() {
+		return this.viewData.authz;
+	}
+	get isAuthorized() {
+		return !!this.access;
+	}
+
+	/**
 	 * Pruning - when entities have invalid children, we 'prune' that
 	 * data up to the nearest prunable point - a nullable field,
 	 * or a list.
@@ -443,6 +456,14 @@ export class Entity<
 	// change management methods (internal use only)
 	private addPendingOperations = (operations: Operation[]) => {
 		this.ctx.log('debug', 'Entity: adding pending operations', this.oid);
+
+		// apply authz to all operations
+		if (this.access) {
+			for (const op of operations) {
+				op.authz = this.access;
+			}
+		}
+
 		const changes = this.metadataFamily.addPendingData(operations);
 		for (const change of changes) {
 			this.change(change);

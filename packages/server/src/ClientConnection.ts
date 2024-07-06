@@ -1,12 +1,48 @@
-import { ServerMessage } from '@verdant-web/common';
+import { authz, Operation, ServerMessage } from '@verdant-web/common';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WebSocket } from 'ws';
 import { TokenInfo } from './TokenVerifier.js';
 
 abstract class ClientConnection {
-	constructor(readonly key: string) {}
+	constructor(
+		readonly key: string,
+		protected readonly info: TokenInfo,
+	) {}
 
-	abstract respond(message: ServerMessage): void;
+	abstract handleMessage(message: ServerMessage): void;
+	respond = (message: ServerMessage) => {
+		this.handleMessage(this.processMessage(message));
+	};
+
+	private processMessage = (message: ServerMessage): ServerMessage => {
+		switch (message.type) {
+			case 'op-re': {
+				return {
+					...message,
+					operations: message.operations.filter(this.filterAuthorizedData),
+					baselines: message.baselines?.filter(this.filterAuthorizedData),
+				};
+			}
+			case 'sync-resp': {
+				return {
+					...message,
+					operations: message.operations.filter(this.filterAuthorizedData),
+					baselines: message.baselines.filter(this.filterAuthorizedData),
+				};
+			}
+			default:
+				return message;
+		}
+	};
+
+	private filterAuthorizedData = (operation: { authz?: string }) => {
+		if (operation.authz) {
+			const decoded = authz.decode(operation.authz);
+			// TODO: support more authz operations and types
+			return decoded.subject === this.info.userId;
+		}
+		return true;
+	};
 }
 
 class RequestClientConnection extends ClientConnection {
@@ -18,12 +54,12 @@ class RequestClientConnection extends ClientConnection {
 		key: string,
 		private readonly req: IncomingMessage,
 		private readonly res: ServerResponse,
-		readonly info: TokenInfo,
+		info: TokenInfo,
 	) {
-		super(key);
+		super(key, info);
 	}
 
-	respond = (message: ServerMessage) => {
+	handleMessage = (message: ServerMessage) => {
 		this.responses.push(message);
 	};
 
@@ -49,12 +85,12 @@ class FetchClientConnection extends ClientConnection {
 	constructor(
 		key: string,
 		private readonly req: Request,
-		private readonly info: TokenInfo,
+		info: TokenInfo,
 	) {
-		super(key);
+		super(key, info);
 	}
 
-	respond = (message: ServerMessage) => {
+	handleMessage = (message: ServerMessage) => {
 		this.responses.push(message);
 	};
 
@@ -79,12 +115,12 @@ class WebSocketClientConnection extends ClientConnection {
 	constructor(
 		key: string,
 		readonly ws: WebSocket,
-		readonly info: TokenInfo,
+		info: TokenInfo,
 	) {
-		super(key);
+		super(key, info);
 	}
 
-	respond = (message: ServerMessage) => {
+	handleMessage = (message: ServerMessage) => {
 		this.ws.send(JSON.stringify(message));
 	};
 }
