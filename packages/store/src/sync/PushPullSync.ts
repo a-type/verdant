@@ -68,6 +68,10 @@ export class PushPullSync
 		return this.heartbeat.interval;
 	}
 
+	get hasSynced() {
+		return this._hasSynced;
+	}
+
 	private sendRequest = async (messages: ClientMessage[]) => {
 		this.log('Sending sync request', messages);
 		try {
@@ -169,13 +173,14 @@ export class PushPullSync
 		}
 	};
 
-	start(): void {
+	start = async () => {
 		if (this.status === 'active') {
 			return;
 		}
+		await this.endpointProvider.getEndpoints();
 		this.heartbeat.start(true);
 		this._status = 'active';
-	}
+	};
 	stop(): void {
 		this.heartbeat.stop();
 		this._status = 'paused';

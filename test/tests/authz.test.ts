@@ -4,7 +4,7 @@ import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
 import { IDBFactory } from 'fake-indexeddb';
 
 const ctx = createTestContext({
-	serverLog: true,
+	// serverLog: true,
 });
 
 it('doesnt sync authorized docs to other users', async () => {
@@ -65,4 +65,24 @@ it('doesnt sync authorized docs to other users', async () => {
 	);
 
 	expect(await userB.items.get(privateItem.get('id')).resolved).toBeNull();
+
+	// join a new related replica and unrelated replica to ensure
+	// that new replicas don't get anythign they shouldn't
+	const userA3 = await ctx.createTestClient({
+		user: 'A',
+		library: 'authz',
+		indexedDb: new IDBFactory(),
+	});
+	userA3.sync.start();
+
+	const userC = await ctx.createTestClient({
+		user: 'C',
+		library: 'authz',
+	});
+	userC.sync.start();
+
+	await waitForQueryResult(userA3.items.get(privateItem.get('id')));
+	await waitForQueryResult(userC.items.get(publicItem.get('id')));
+
+	expect(await userC.items.get(privateItem.get('id')).resolved).toBeNull();
 });

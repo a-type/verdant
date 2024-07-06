@@ -16,7 +16,7 @@ import {
 } from '../lib/waits.js';
 
 const ctx = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {

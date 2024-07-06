@@ -25,7 +25,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 		// this behavior only seems to happen with pull sync
 		transport: 'pull',
 		onLog: logWatcher,
-		logId: 'A',
+		// logId: 'A',
 	});
 	const clientB = await context.createTestClient({
 		library: 'push-test',

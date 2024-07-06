@@ -34,23 +34,27 @@ export const ORIGINATOR_SUBJECT = '$$_originator_$$';
  * Used to initialize a library from a local-only replica
  */
 export function rewriteAuthzOriginator(
-	data: { operations: Operation[]; baselines: DocumentBaseline[] },
+	data: { operations?: Operation[]; baselines?: DocumentBaseline[] },
 	newSubject: string,
 ) {
 	const { operations, baselines } = data;
-	for (const op of operations) {
-		if (op.authz) {
-			const decoded = authz.decode(op.authz);
-			if (decoded.subject === ORIGINATOR_SUBJECT) {
-				op.authz = authz.onlyUser(newSubject);
+	if (operations) {
+		for (const op of operations) {
+			if (op.authz) {
+				const decoded = authz.decode(op.authz);
+				if (decoded.subject === ORIGINATOR_SUBJECT) {
+					op.authz = authz.onlyUser(newSubject);
+				}
 			}
 		}
 	}
-	for (const baseline of baselines) {
-		if (baseline.authz) {
-			const decoded = authz.decode(baseline.authz);
-			if (decoded.subject === ORIGINATOR_SUBJECT) {
-				baseline.authz = authz.onlyUser(newSubject);
+	if (baselines) {
+		for (const baseline of baselines) {
+			if (baseline.authz) {
+				const decoded = authz.decode(baseline.authz);
+				if (decoded.subject === ORIGINATOR_SUBJECT) {
+					baseline.authz = authz.onlyUser(newSubject);
+				}
 			}
 		}
 	}

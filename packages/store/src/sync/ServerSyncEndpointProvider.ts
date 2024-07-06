@@ -22,6 +22,15 @@ export interface ServerSyncEndpointProviderConfig {
 	fetch?: typeof fetch;
 }
 
+export interface SyncTokenInfo {
+	url: string;
+	fileUrl: string;
+	type: ReplicaType;
+	userId: string;
+	libraryId: string;
+	role?: string;
+}
+
 export class ServerSyncEndpointProvider {
 	private cached = null as {
 		http: string;
@@ -29,7 +38,11 @@ export class ServerSyncEndpointProvider {
 		files: string;
 		token: string;
 	} | null;
-	type: ReplicaType = ReplicaType.Realtime;
+	tokenInfo: SyncTokenInfo | null = null;
+
+	get type() {
+		return this.tokenInfo?.type ?? ReplicaType.Realtime;
+	}
 
 	constructor(private config: ServerSyncEndpointProviderConfig) {
 		if (!config.authEndpoint && !config.fetchAuth) {
@@ -68,7 +81,14 @@ export class ServerSyncEndpointProvider {
 			decoded.type !== undefined,
 			'No replica type provided from auth endpoint',
 		);
-		this.type = parseInt(decoded.type + '');
+		this.tokenInfo = {
+			userId: decoded.sub,
+			libraryId: decoded.lib,
+			url: decoded.url,
+			fileUrl: decoded.file,
+			role: decoded.role,
+			type: parseInt(decoded.type + '') as ReplicaType,
+		};
 		const url = new URL(decoded.url);
 		url.protocol = url.protocol.replace('ws', 'http');
 		const httpEndpoint = url.toString();

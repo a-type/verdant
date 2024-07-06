@@ -5,7 +5,9 @@ import {
 	FileData,
 	Operation,
 	ReplicaType,
+	rewriteAuthzOriginator,
 	ServerMessage,
+	VerdantError,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
@@ -33,10 +35,11 @@ export interface SyncTransport extends EventSubscriber<SyncTransportEvents> {
 	readonly presence: PresenceManager;
 
 	readonly mode: SyncTransportMode;
+	readonly hasSynced: boolean;
 
 	send(message: ClientMessage): void;
 
-	start(): void;
+	start(): Promise<void>;
 	ignoreIncoming(): void;
 	stop(): void;
 
@@ -57,7 +60,7 @@ export interface Sync<Presence = any, Profile = any>
 	getFile(fileId: string): Promise<FilePullResult>;
 	readonly presence: PresenceManager<Profile, Presence>;
 	send(message: ClientMessage): void;
-	start(): void;
+	start(): Promise<void>;
 	stop(): void;
 	ignoreIncoming(): void;
 	destroy(): void;
@@ -76,7 +79,7 @@ export class NoSync<Presence = any, Profile = any>
 
 	public send(): void {}
 
-	public start(): void {}
+	public async start(): Promise<void> {}
 
 	public stop(): void {}
 
@@ -458,6 +461,24 @@ export class ServerSync<Presence = any, Profile = any>
 
 	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
+			if (!this.activeSync.hasSynced) {
+				// before first sync, replace 'originator' authz subjects
+				// with token userId. This replica may not have been assigned
+				// a userId while creating data, and before we send the library
+				// to the server we must first replace the placeholder "originator"
+				// authz subject with our own ID
+				const userId = this.endpointProvider.tokenInfo?.userId;
+				if (!userId) {
+					throw new VerdantError(
+						VerdantError.Code.Unexpected,
+						undefined,
+						'Active sync has invalid token info',
+					);
+				}
+				if (message.type === 'sync' || message.type === 'op') {
+					rewriteAuthzOriginator(message, userId);
+				}
+			}
 			await this.activeSync.send(message);
 			this.onOutgoingMessage?.(message);
 		}
