@@ -35,6 +35,9 @@
 		{
 			"name": "🧪 Test",
 			"path": "test"
+		},
+		{
+			"path": "docs"
 		}
 	]
 }

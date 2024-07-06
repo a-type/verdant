@@ -39,7 +39,7 @@ export class Authorizer {
 		return ORIGINATOR_SUBJECT;
 	};
 
-	public = () => undefined;
+	shared = () => undefined;
 
 	private = async () => {
 		const userId = await this.getUserId();

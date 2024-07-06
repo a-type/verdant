@@ -65,7 +65,11 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 	create = async (
 		collection: string,
 		init: any,
-		options: { undoable?: boolean; access?: DocumentAccess } = {},
+		options: {
+			undoable?: boolean;
+			access?: DocumentAccess;
+			silenceAccessControlWithPrimaryKeyWarning?: boolean;
+		} = {},
 	) => {
 		const widenedOptions = options as EntityCreateOptions;
 		const defaulted = this.addDefaults(collection, init);
@@ -73,6 +77,19 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		const oid = this.getOid(collection, validated);
 
 		if (options.access) {
+			const collectionSchema = this.schema.collections[collection];
+			if (
+				options.access !== 'shared' &&
+				init[collectionSchema.primaryKey] &&
+				!options.silenceAccessControlWithPrimaryKeyWarning
+			) {
+				// using a custom primary key with access control is not supported.
+				// resulting docs could collide with existing docs with different permissions,
+				// leading to confusing results. this logs a warning.
+				console.warn(
+					`Using a custom primary key with access control is not supported. This may result in corrupted documents. Read more about why: https://verdant.dev/docs/sync/access#a-warning-about-custom-primaryKey`,
+				);
+			}
 			// process access request into authz string
 			widenedOptions.access = await this.authorizer[options.access]();
 		}
@@ -112,4 +129,4 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 	};
 }
 
-export type DocumentAccess = 'public' | 'private';
+export type DocumentAccess = 'shared' | 'private';
