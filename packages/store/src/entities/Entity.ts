@@ -729,7 +729,9 @@ export class Entity<
 			if (validationError) {
 				// TODO: is it a good idea to throw an error here? a runtime error won't be that helpful,
 				// but also we don't really want invalid data supplied.
-				throw new Error(validationError.message);
+				throw new Error(`Validation error: ${validationError.message}`, {
+					cause: validationError,
+				});
 			}
 		}
 		return processValueFiles(value, this.files.add);

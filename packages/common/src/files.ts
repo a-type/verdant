@@ -32,3 +32,13 @@ export function getAllFileFields(snapshot: any): [string, FileRef][] {
 		FileRef,
 	][];
 }
+
+export function isFile(value: any) {
+	if (typeof File !== 'undefined' && value instanceof File) {
+		return true;
+	}
+	if (typeof Blob !== 'undefined' && value instanceof Blob) {
+		return true;
+	}
+	return false;
+}

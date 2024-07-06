@@ -634,12 +634,23 @@ describe('entities', () => {
 
 	it('should error on invalid values passed to initialization', async () => {
 		const storage = await createTestStorage();
-		expect(() => {
-			storage.todos.put({
+		expect(async () => {
+			await storage.todos.put({
 				content: { invalid: 'value' },
 			});
+		}).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Validation error: Expected string for field content, got [object Object]]`,
+		);
+	});
+
+	it('should only allow valid values for file fields', async () => {
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+
+		expect(() => {
+			weird.set('file', { invalid: 'value' });
 		}).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Validation error: Expected string  for field content, got [object Object]]`,
+			`[Error: Validation error: Expected file or null for field file, got [object Object]]`,
 		);
 	});
 

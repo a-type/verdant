@@ -83,6 +83,9 @@ export const weirdCollection = schema.collection({
 				items: schema.fields.string(),
 			}),
 		}),
+		file: schema.fields.file({
+			nullable: true,
+		}),
 	},
 });
 
