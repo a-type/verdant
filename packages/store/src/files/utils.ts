@@ -1,4 +1,9 @@
-import { createFileRef, FileData } from '@verdant-web/common';
+import {
+	createFileRef,
+	FileData,
+	isFile,
+	isFileData,
+} from '@verdant-web/common';
 import cuid from 'cuid';
 
 export function createFileData(file: File): FileData {
@@ -10,13 +15,6 @@ export function createFileData(file: File): FileData {
 		name: file.name,
 		type: file.type,
 	};
-}
-
-export function isFile(value: any): value is File {
-	return (
-		value instanceof File ||
-		(typeof Blob !== 'undefined' && value instanceof Blob)
-	);
 }
 
 /**
@@ -32,6 +30,13 @@ export function processValueFiles(
 		const data = createFileData(value);
 		onFileIdentified(data);
 		return createFileRef(data.id);
+	}
+
+	if (isFileData(value)) {
+		// create a new ID for the file
+		const cloned = { ...value, id: cuid() };
+		onFileIdentified(cloned);
+		return createFileRef(cloned.id);
 	}
 
 	if (Array.isArray(value)) {
@@ -52,6 +57,10 @@ export function processValueFiles(
 }
 
 export function fileToArrayBuffer(file: File | Blob) {
+	// special case for testing...
+	if ('__testReadBuffer' in file) {
+		return file.__testReadBuffer;
+	}
 	return new Promise<ArrayBuffer>((resolve, reject) => {
 		const reader = new FileReader();
 		reader.onload = () => {

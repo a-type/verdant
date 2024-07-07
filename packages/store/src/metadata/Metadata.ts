@@ -583,6 +583,19 @@ export class Metadata extends EventSubscriber<{
 		}
 	};
 
+	/**
+	 * Manually triggers a storage rebase.
+	 * Rebases happen automatically as needed, so
+	 * you probably don't need this.
+	 */
+	manualRebase = async () => {
+		if (this._closing || this.disableRebasing) return;
+		const ackInfo = await this.ackInfo.getAckInfo();
+		if (ackInfo.globalAckTimestamp) {
+			this.runRebase(ackInfo.globalAckTimestamp);
+		}
+	};
+
 	export = async (): Promise<ExportData> => {
 		const db = this.db;
 		const [baselines, operations] = await getAllFromObjectStores(db, [

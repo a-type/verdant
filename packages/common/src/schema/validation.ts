@@ -1,4 +1,4 @@
-import { isFile } from '../files.js';
+import { isFile, isFileData } from '../files.js';
 import { OID_KEY } from '../oidsLegacy.js';
 import { isObject } from '../utils.js';
 import { getFieldDefault, hasDefault, isNullable } from './fields.js';
@@ -180,7 +180,7 @@ export function validateEntityField({
 			};
 		}
 	} else if (field.type === 'file') {
-		if (!isFile(value)) {
+		if (!isFile(value) && !isFileData(value)) {
 			return {
 				type: 'invalid-type',
 				fieldPath,

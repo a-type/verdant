@@ -4,6 +4,7 @@ import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 export interface FileUploadResult {
 	success: boolean;
 	retry: boolean;
+	error?: string;
 }
 
 export type FilePullResult =
@@ -43,7 +44,7 @@ export class FileSync {
 		const { files: fileEndpoint, token } =
 			await this.endpointProvider.getEndpoints();
 
-		const formData = new window.FormData();
+		const formData = new FormData();
 		formData.append('file', file);
 
 		try {
@@ -63,15 +64,12 @@ export class FileSync {
 					retry: false,
 				};
 			} else {
-				this.log(
-					'error',
-					'File upload failed',
-					response.status,
-					await response.text(),
-				);
+				const responseText = await response.text();
+				this.log('error', 'File upload failed', response.status, responseText);
 				return {
 					success: false,
 					retry: response.status >= 500,
+					error: `Failed to upload file: ${response.status} ${responseText}`,
 				};
 			}
 		} catch (e) {
@@ -79,6 +77,7 @@ export class FileSync {
 			return {
 				success: false,
 				retry: true,
+				error: (e as Error).message,
 			};
 		}
 	};

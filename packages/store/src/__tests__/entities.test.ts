@@ -492,8 +492,7 @@ describe('entities', () => {
 			],
 		});
 
-		const { id, ...snapshot } = item1.getSnapshot();
-		const item2 = await storage.todos.put(snapshot);
+		const item2 = await storage.todos.clone(item1);
 
 		expect(item2.get('tags').length).toBe(1);
 		expect(item2.get('attachments').length).toBe(1);
@@ -501,6 +500,7 @@ describe('entities', () => {
 		item2.get('attachments').get(0).set('name', 'attachment 2');
 
 		expect(item1.get('attachments').get(0).get('name')).toBe('attachment 1');
+		expect(item1.uid).not.toBe(item2.uid);
 	});
 
 	it('should not allow modifying the primary key', async () => {
@@ -652,6 +652,19 @@ describe('entities', () => {
 		}).toThrowErrorMatchingInlineSnapshot(
 			`[Error: Validation error: Expected file or null for field file, got [object Object]]`,
 		);
+
+		// valid options
+		weird.set(
+			'file',
+			new window.File(['d(⌐□_□)b'], 'test.txt', { type: 'text/plain' }),
+		);
+		weird.set('file', {
+			id: 'abc',
+			type: 'text/plain',
+			name: 'foo.txt',
+			url: 'http://example.com/foo.txt',
+			remote: true,
+		});
 	});
 
 	it('should allow subscribing to one field', async () => {

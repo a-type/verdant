@@ -1,7 +1,7 @@
 import { FileData } from '@verdant-web/common';
 import { IDBService } from '../IDBService.js';
 import { fileToArrayBuffer } from './utils.js';
-import { getAllFromObjectStores } from '../idb.js';
+import { getAllFromObjectStores, getSizeOfObjectStore } from '../idb.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
@@ -216,6 +216,12 @@ export class FileStorage extends IDBService {
 	getAll = async () => {
 		const [files] = await getAllFromObjectStores(this.db, ['files']);
 		return files.map(this.hydrateFileData);
+	};
+
+	stats = async () => {
+		return {
+			size: await getSizeOfObjectStore(this.db, 'files'),
+		};
 	};
 }
 

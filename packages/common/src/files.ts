@@ -1,3 +1,5 @@
+import { isObject } from './utils.js';
+
 export type FileRef = {
 	'@@type': 'file';
 	id: string;
@@ -22,7 +24,9 @@ export type FileData = {
 	remote: boolean;
 	name: string;
 	type: string;
+	/** A local File instance, if available. */
 	file?: Blob;
+	/** The server URL of this file. */
 	url?: string;
 };
 
@@ -41,4 +45,15 @@ export function isFile(value: any) {
 		return true;
 	}
 	return false;
+}
+
+export function isFileData(value: any): value is FileData {
+	return (
+		value &&
+		isObject(value) &&
+		typeof value.id === 'string' &&
+		typeof value.remote === 'boolean' &&
+		typeof value.name === 'string' &&
+		typeof value.type === 'string'
+	);
 }

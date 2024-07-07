@@ -7,12 +7,14 @@ import {
 	StorageCollectionSchema,
 	StorageDocument,
 	StorageSchema,
+	isRootOid,
 } from '@verdant-web/common';
 import { EntityCreateOptions, EntityStore } from '../entities/EntityStore.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
 import { Authorizer } from './Authorizer.js';
 import { Context } from '../context.js';
+import { Entity, ObjectEntity } from '../index.js';
 
 /**
  * Exposes functionality for creating documents,
@@ -126,6 +128,36 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 			ids.map((primaryKey) => createOid(collection, primaryKey)),
 			options,
 		);
+	};
+
+	clone = async (
+		collection: string,
+		entity: ObjectEntity<any, any>,
+		options: {
+			undoable?: boolean;
+			access?: DocumentAccess;
+			primaryKey?: string;
+		} = {},
+	) => {
+		if (!isRootOid(entity.uid)) {
+			throw new Error('Cannot clone non-root documents');
+		}
+		// take the entity snapshot
+		const snapshot = entity.getSnapshot();
+		// remove the primary key
+		const collectionSchema = this.schema.collections[collection];
+		delete snapshot[collectionSchema.primaryKey];
+		// if collection schema's primary key doesn't have a default value,
+		// a user-supplied value is required
+		if (!collectionSchema.fields[collectionSchema.primaryKey].default) {
+			if (!options.primaryKey) {
+				throw new Error(
+					`Error cloning document from collection ${collection}: collection does not have a default on primary key. You must supply a value to options.primaryKey for the clone.`,
+				);
+			}
+			snapshot[collectionSchema.primaryKey] = options.primaryKey;
+		}
+		return this.create(collection, snapshot, options);
 	};
 }
 

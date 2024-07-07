@@ -57,11 +57,11 @@
 	"devDependencies": {
 		"@types/node": "20.10.5",
 		"esbuild": "^0.18.15",
-		"fake-indexeddb": "^5.0.1",
-		"jsdom": "^20.0.0",
+		"fake-indexeddb": "^6.0.0",
+		"jsdom": "^24.1.0",
 		"open-cli": "^7.2.0",
-		"puppeteer": "^21.5.1",
+		"puppeteer": "^22.12.1",
 		"typescript": "^5.4.2",
-		"vitest": "^1.4.0"
+		"vitest": "^1.6.0"
 	}
 }

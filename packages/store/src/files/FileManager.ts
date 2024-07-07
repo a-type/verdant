@@ -43,6 +43,9 @@ export class FileManager {
 	private config: Required<FileManagerConfig>;
 	private meta: Metadata;
 
+	private maxUploadRetries = 3;
+	private maxDownloadRetries = 3;
+
 	constructor({
 		db,
 		sync,
@@ -72,8 +75,20 @@ export class FileManager {
 		this.tryCleanupDeletedFiles();
 	}
 
-	add = async (fileInput: Omit<FileData, 'remote'>) => {
-		const file = fileInput as unknown as FileData;
+	add = async (file: FileData) => {
+		// this method accepts a FileData which refers to a remote
+		// file, as well as local files. in the case of a remote file,
+		// we actually re-download and upload the file again. this powers
+		// the cloning of documents with files; we clone their filedata
+		// and re-upload to a new file ID. otherwise, when the cloned
+		// filedata was marked deleted, the original file would be deleted
+		// and the clone would refer to a missing file.
+		if (file.url && !file.file) {
+			const blob = await this.downloadRemoteFile(file.url);
+			// convert blob to file with name and type
+			file.file = new File([blob], file.name, { type: file.type });
+		}
+
 		file.remote = false;
 		// immediately cache the file
 		if (!this.files.has(file.id)) {
@@ -86,8 +101,8 @@ export class FileManager {
 		// write to local storage and send to sync immediately
 		await this.storage.addFile(file);
 		// send to sync
-		if (file.file) {
-			await this.uploadFile(file, 1);
+		if (file.file && this.sync.status === 'active') {
+			await this.uploadFile(file);
 		}
 	};
 
@@ -99,18 +114,47 @@ export class FileManager {
 			if (cached) {
 				cached[MARK_UPLOADED]();
 			}
+			this.context.log('info', 'File uploaded', file.id);
 		} else {
-			if (result.retry && retries < 5) {
-				this.context.log('error', 'Error uploading file, retrying...');
+			if (result.retry && retries < this.maxUploadRetries) {
+				this.context.log(
+					'error',
+					`Error uploading file ${file.id}, retrying...`,
+					result.error,
+				);
 				// schedule a retry
 				setTimeout(this.uploadFile, 1000, file, retries + 1);
 			} else {
 				this.context.log(
 					'error',
-					'Failed to upload file. Not retrying until next sync.',
+					`Failed to upload file ${file.id}. Not retrying until next sync.`,
+					result.error,
 				);
 			}
 		}
+	};
+
+	private downloadRemoteFile = async (
+		url: string,
+		retries = 0,
+	): Promise<Blob> => {
+		const resp = await fetch(url, {
+			method: 'GET',
+			credentials: 'include',
+		});
+		if (!resp.ok) {
+			if (retries < this.maxDownloadRetries) {
+				return new Promise((resolve, reject) => {
+					setTimeout(() => {
+						this.downloadRemoteFile(url, retries + 1).then(resolve, reject);
+					}, 1000);
+				});
+			} else {
+				throw new Error(`Failed to download file: ${resp.status}`);
+			}
+		}
+		const blob = await resp.blob();
+		return blob;
 	};
 
 	/**
@@ -128,7 +172,7 @@ export class FileManager {
 	};
 
 	private load = async (file: EntityFile, retries = 0) => {
-		if (retries > 5) {
+		if (retries > this.maxDownloadRetries) {
 			this.context.log('error', 'Failed to load file after 5 retries');
 			file[MARK_FAILED]();
 			return;
@@ -205,7 +249,7 @@ export class FileManager {
 		}
 	};
 
-	private tryCleanupDeletedFiles = async () => {
+	tryCleanupDeletedFiles = async () => {
 		let count = 0;
 		let skipCount = 0;
 		await this.storage.iterateOverPendingDelete((fileData, store) => {
@@ -242,5 +286,9 @@ export class FileManager {
 
 	close = () => {
 		this.storage.dispose();
+	};
+
+	stats = () => {
+		return this.storage.stats();
 	};
 }

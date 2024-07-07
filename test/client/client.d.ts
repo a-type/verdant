@@ -29,10 +29,36 @@ export class Client<Presence = any, Profile = any> {
   import: BaseClient<Presence, Profile>["import"];
   subscribe: BaseClient<Presence, Profile>["subscribe"];
   stats: BaseClient<Presence, Profile>["stats"];
+
+  /**
+   * Deletes all local data. If the client is connected to sync,
+   * this will cause the client to re-sync all data from the server.
+   * Use this very carefully, and only as a last resort.
+   */
   __dangerous__resetLocal: BaseClient<
     Presence,
     Profile
   >["__dangerous__resetLocal"];
+
+  /**
+   * Export all data, then re-import it. This might resolve
+   * some issues with the local database, but it should
+   * only be done as a second-to-last resort. The last resort
+   * would be __dangerous__resetLocal on ClientDescriptor, which
+   * clears all local data.
+   *
+   * Unlike __dangerous__resetLocal, this method allows local-only
+   * clients to recover data, whereas __dangerous__resetLocal only
+   * lets networked clients recover from the server.
+   */
+  __dangerous__hardReset: () => Promise<void>;
+
+  /**
+   * Manually triggers storage rebasing. Follows normal
+   * rebasing rules. Rebases already happen automatically
+   * during normal operation, so you probably don't need this.
+   */
+  __manualRebase: () => Promise<void>;
 }
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any>

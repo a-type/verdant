@@ -260,19 +260,19 @@ export class ServerSync<Presence = any, Profile = any>
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
-			log: this.log,
+			log: ctx.log,
 		});
 		this.pushPullSync = new PushPullSync({
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
-			log: this.log,
+			log: ctx.log,
 			interval: pullInterval,
 			fetch,
 		});
 		this.fileSync = new FileSync({
 			endpointProvider: this.endpointProvider,
-			log: this.log,
+			log: ctx.log,
 		});
 		if (useBroadcastChannel && 'BroadcastChannel' in window) {
 			this.broadcastChannel = new BroadcastChannel(`verdant-${ctx.namespace}`);
@@ -489,6 +489,7 @@ export class ServerSync<Presence = any, Profile = any>
 			name: info.name,
 			type: info.type,
 			id: info.id,
+			size: info.file?.size,
 		});
 		if (this.activeSync.status === 'active') {
 			return this.fileSync.uploadFile(info);
@@ -496,6 +497,7 @@ export class ServerSync<Presence = any, Profile = any>
 			return {
 				success: false,
 				retry: false,
+				error: 'Sync is not active',
 			};
 		}
 	};

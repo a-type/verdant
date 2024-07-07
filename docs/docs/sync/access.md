@@ -25,16 +25,18 @@ Currently only `private` and `shared` are supported. `shared` does nothing, real
 Because access control is embedded into document operations, and Verdant history is immutable, document access is also immutable. Right now the only way to 'change' access is to create a copy of the document. You can do this like so:
 
 ```ts
-// leaving out the primary key field so the new doc gets a new one
-const { id, ...snapshot } = privateRecipe.getSnapshot();
-client.recipes.put(snapshot);
+const publicRecipe = await client.recipes.clone(privateRecipe, {
+	access: 'shared',
+});
 ```
 
-This isn't the final vision for this use case. I'll be experimenting with better ways to accomplish this as the feature matures.
+This creates a new document. If you want to 'move' a document from public to private or vice versa, you should delete the old one.
+
+This is not the most convenient thing in the world, sure, but anything else would create unexpected behavior. For example, changing a document's access partway through its history, even with a full re-initialization, would create inconsistent document history across replicas. If you doubt the importance of this, consider what would happen if you took a public document and made it private from the perspective of a replica which was not part of the private access group. The replica would have no indication the document was altered and continue using it as before -- and those public changes would also get mashed together with changes on the now-private document. Maybe I haven't explained this well, but just trust me: convenient or no, it's best to keep access immutable and make a new document.
 
 ## A warning about custom `primaryKey` ⚠️⚠️⚠️
 
-Using a specific 'well known' value for a document's primary key can have benefits, using a primary key value which can collide with another document's primary key is NOT SUPPORTED for documents with access control. Two separate documents, authorized to different users, which have the same primary key, will essentially share a history, which will produce confusing results.
+Using a specific 'well known' value for a document's primary key can have benefits, using a primary key value which can collide with another document's primary key is NOT SUPPORTED for documents with access control. Two separate documents, authorized to different users, which have the same primary key, will essentially share a history, which will produce confusing results (similar to the problems with mutable access above).
 
 Using a non-random primary key is only really useful to ensure 'canonical' status of a document in synchronized scenarios. Given that authorized documents aren't synced to all replicas, this canonicity doesn't make as much sense. If you need to be able to look up an access-controlled document by a 'well known' identifier, please use a custom index and `findOne` instead. This won't guarantee uniqueness of that identifier, but it will at least work in a sane way.
 

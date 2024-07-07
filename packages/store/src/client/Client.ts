@@ -224,6 +224,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				? await navigator.storage.estimate()
 				: undefined;
 
+		const files = await this._fileManager.stats();
+
 		// determine data:metadata ratio for total size of all collections vs metadata
 		const totalCollectionsSize = Object.values(collections).reduce(
 			(acc, { size }) => acc + size,
@@ -239,6 +241,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			totalMetaSize,
 			totalCollectionsSize,
 			metaToDataRatio,
+			files,
 			quotaUsage:
 				storage?.usage && storage?.quota
 					? storage.usage / storage.quota
@@ -426,6 +429,26 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		const exportData = await this.export();
 		await this.import(exportData);
 	};
+
+	/**
+	 * Immediately runs the file deletion process. This is useful
+	 * for testing, mostly. Or if your client is long-lived, since
+	 * normally this cleanup only runs on startup.
+	 *
+	 * Note this still follows the file deletion heuristic configured
+	 * on the client. So if you clean up files 3 days after delete,
+	 * invoking this manually will not skip that 3 day waiting period.
+	 */
+	__cleanupFilesImmediately = () => {
+		return this._fileManager.tryCleanupDeletedFiles();
+	};
+
+	/**
+	 * Manually triggers storage rebasing. Follows normal
+	 * rebasing rules. Rebases already happen automatically
+	 * during normal operation, so you probably don't need this.
+	 */
+	__manualRebase = () => this.meta.manualRebase();
 }
 
 export interface ClientStats {
@@ -433,6 +456,9 @@ export interface ClientStats {
 	meta: {
 		baselinesSize: { count: number; size: number };
 		operationsSize: { count: number; size: number };
+	};
+	files: {
+		size: { count: number; size: number };
 	};
 	storage: StorageEstimate | undefined;
 	totalMetaSize: number;

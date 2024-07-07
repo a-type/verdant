@@ -11,7 +11,7 @@ import {
 	DocumentAccess,
 	DocumentManager,
 } from '../entities/DocumentManager.js';
-import { ObjectEntity } from '../index.js';
+import { Entity, ObjectEntity } from '../index.js';
 import { UPDATE } from './BaseQuery.js';
 
 export class CollectionQueries<
@@ -31,6 +31,14 @@ export class CollectionQueries<
 	) => Promise<T>;
 	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
 	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
+	clone: (
+		entity: ObjectEntity<any, any>,
+		options?: {
+			undoable?: boolean;
+			access?: DocumentAccess;
+			primaryKey?: string;
+		},
+	) => Promise<T>;
 
 	constructor({
 		collection,
@@ -60,6 +68,10 @@ export class CollectionQueries<
 			this.collection,
 		);
 		this.deleteAll = this.documentManager.deleteAllFromCollection.bind(
+			this.documentManager,
+			this.collection,
+		);
+		this.clone = this.documentManager.clone.bind(
 			this.documentManager,
 			this.collection,
 		);
