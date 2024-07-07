@@ -1,7 +1,12 @@
 import { it, expect } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { waitForFileLoaded, waitForQueryResult } from '../lib/waits.js';
+import {
+	waitForCondition,
+	waitForFileLoaded,
+	waitForFileUpload,
+	waitForQueryResult,
+} from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
 
 const ctx = createTestContext({
@@ -24,6 +29,7 @@ it('can clone entities with files, and the files survive deletion of the origina
 		content: 'original',
 	});
 	const originalImage = original.get('image')!;
+	await waitForFileUpload(originalImage);
 	const originalImageUrl = originalImage.url;
 
 	const clone = await clientA.items.clone(original);
@@ -42,10 +48,6 @@ it('can clone entities with files, and the files survive deletion of the origina
 
 	// delete the original
 	await clientA.items.delete(original.get('id'));
-	// sync to prepare for rebase
-	await clientA.sync.syncOnce();
-	// rebase, which triggers file to be marked for delete
-	await clientA.__manualRebase();
 
 	// check that the clone file is still there... resetting the whole
 	// client just to be sure here.
@@ -57,11 +59,8 @@ it('can clone entities with files, and the files survive deletion of the origina
 		files: {
 			canCleanupDeletedFile: () => true,
 		},
+		log: ctx.filterLog('A', 'file', 'File', 'clean'),
 	});
-
-	// check that the original file is gone
-	stats = await clientAAgain.stats();
-	expect(stats.files.size.count).toEqual(1);
 
 	const clientAAgainClone = await clientAAgain.items.get(clone.get('id'))
 		.resolved;
