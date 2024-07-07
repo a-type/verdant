@@ -267,11 +267,11 @@ export class OperationsStore extends IDBService {
 
 				const range =
 					start && end
-						? window.IDBKeyRange.bound(start, end, false, true)
+						? IDBKeyRange.bound(start, end, false, true)
 						: start
-						? window.IDBKeyRange.lowerBound(start, false)
+						? IDBKeyRange.lowerBound(start, false)
 						: end
-						? window.IDBKeyRange.upperBound(end, true)
+						? IDBKeyRange.upperBound(end, true)
 						: undefined;
 				const index = store.index('timestamp');
 				return index.openCursor(range, 'next');
