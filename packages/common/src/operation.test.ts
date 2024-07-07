@@ -5,7 +5,6 @@ import {
 	assignOidsToAllSubObjects,
 	createRef,
 	getOid,
-	OID_KEY,
 } from './oids.js';
 import {
 	applyPatch,
