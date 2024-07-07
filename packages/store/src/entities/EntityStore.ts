@@ -13,6 +13,7 @@ import {
 	groupPatchesByRootOid,
 	isRootOid,
 	removeOidsFromAllSubObjects,
+	AuthorizationKey,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
@@ -51,7 +52,7 @@ export interface IncomingData {
 
 export interface EntityCreateOptions {
 	undoable?: boolean;
-	access?: string;
+	access?: AuthorizationKey;
 }
 
 export class EntityStore extends Disposable {
@@ -382,12 +383,7 @@ export class EntityStore extends Disposable {
 			'Only root documents may be deleted via client methods',
 		);
 
-		const allOids = await Promise.all(
-			oids.flatMap(async (oid) => {
-				const entity = await this.hydrate(oid);
-				return entity?.__getFamilyOids__() ?? [];
-			}),
-		);
+		const entities = await Promise.all(oids.map((oid) => this.hydrate(oid)));
 
 		// remove the entities from cache
 		oids.forEach((oid) => {
@@ -395,8 +391,18 @@ export class EntityStore extends Disposable {
 			this.ctx.log('debug', 'Deleted document from cache', oid);
 		});
 
-		// create the delete patches and wait for them to be applied
-		const operations = this.meta.patchCreator.createDeleteAll(allOids.flat());
+		const operations: Operation[] = [];
+		for (const entity of entities) {
+			if (entity) {
+				const oids = entity.__getFamilyOids__();
+				const deletes = this.meta.patchCreator.createDeleteAll(oids);
+				for (const op of deletes) {
+					op.authz = entity.access;
+				}
+				operations.push(...deletes);
+			}
+		}
+
 		await this.batcher.commitOperations(operations, {
 			undoable: options?.undoable === undefined ? true : options.undoable,
 		});

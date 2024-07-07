@@ -262,6 +262,25 @@ export class Metadata extends EventSubscriber<{
 		};
 	};
 
+	getDocumentAuthz = async (oid: ObjectIdentifier) => {
+		const baseline = await this.baselines.get(oid);
+		if (baseline) {
+			return baseline.authz;
+		}
+		let authz;
+		await this.operations.iterateOverAllOperationsForEntity(
+			oid,
+			(op) => {
+				if (op.data.op === 'initialize') {
+					authz = op.authz;
+					return true;
+				}
+			},
+			{},
+		);
+		return authz;
+	};
+
 	/**
 	 * Methods for writing data
 	 */
@@ -487,6 +506,7 @@ export class Metadata extends EventSubscriber<{
 		const baseline = await this.baselines.get(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;
+		let authz = baseline?.authz;
 		const deletedRefs: Ref[] = [];
 		await this.operations.iterateOverAllOperationsForEntity(
 			oid,
@@ -495,6 +515,9 @@ export class Metadata extends EventSubscriber<{
 				// but it's here as a safety measure...
 				if (!baseline || patch.timestamp > baseline.timestamp) {
 					current = applyPatch(current, patch.data, deletedRefs);
+					if (patch.data.op === 'initialize') {
+						authz = patch.authz;
+					}
 				}
 				// delete all prior operations to the baseline
 				operationsApplied++;
@@ -512,6 +535,7 @@ export class Metadata extends EventSubscriber<{
 			oid,
 			snapshot: current,
 			timestamp: upTo,
+			authz,
 		};
 		if (newBaseline.snapshot) {
 			await this.baselines.set(newBaseline, { transaction });

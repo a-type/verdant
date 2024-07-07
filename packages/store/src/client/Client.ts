@@ -106,13 +106,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		this._queryCache = new QueryCache({
 			context,
 		});
-		this._documentManager = new DocumentManager(
-			this.context,
-			this.meta,
-			this.schema,
-			this._entities,
-			this.sync,
-		);
+		this._documentManager = new DocumentManager(this.schema, this._entities);
 
 		const notifyFutureSeen = debounce(() => {
 			this.emit('futureSeen');

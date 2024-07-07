@@ -175,7 +175,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	getNow: () => string,
 	createSubId?: () => string,
 	patches: Operation[] = [],
-	options: {
+	options?: {
 		/**
 		 * If an object is merged with another and the new one does not
 		 * have an OID assigned, assume it is the same identity as previous
@@ -186,10 +186,16 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		 * If false, undefined properties will erase the previous value.
 		 */
 		defaultUndefined?: boolean;
-	} = {},
+		/**
+		 * Authorization to apply to all created operations
+		 */
+		authz?: string;
+	},
 ): Operation[] {
+	const authz = options?.authz;
 	const oid = getOid(from);
 
+	// FIXME: allocating this function inline seems wasteful.
 	function diffItems(
 		key: string | number,
 		value: any,
@@ -209,6 +215,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 							index: key as number,
 							value,
 						},
+						authz,
 					});
 				} else {
 					patches.push({
@@ -219,6 +226,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 							name: key,
 							value,
 						},
+						authz,
 					});
 				}
 			}
@@ -232,7 +240,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				value = cloneDeep(value, false);
 				valueOid = createSubOid(oid, createSubId);
 				assignOid(value, valueOid);
-			} else if (!options.mergeUnknownObjects) {
+			} else if (!options?.mergeUnknownObjects) {
 				valueOid = ensureOid(value, oid, createSubId);
 			} else {
 				// if merge unknown objects is requested, we copy the previous value's oid
@@ -267,6 +275,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 						name: key,
 						value: createRef(valueOid),
 					},
+					authz,
 				});
 				// if there was an old value, we need to delete it altogether.
 				if (oldValueOid !== undefined) {
@@ -276,6 +285,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 						data: {
 							op: 'delete',
 						},
+						authz,
 					});
 				}
 			} else {
@@ -309,6 +319,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 						data: {
 							op: 'delete',
 						},
+						authz,
 					});
 				}
 			}
@@ -321,6 +332,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 					index: to.length,
 					count: deletedItemsAtEnd,
 				},
+				authz,
 			});
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
@@ -328,7 +340,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
-			if (value === undefined && options.defaultUndefined) continue;
+			if (value === undefined && options?.defaultUndefined) continue;
 
 			oldKeys.delete(key);
 
@@ -340,7 +352,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		}
 
 		// this set now only contains keys which were not in the new object
-		if (!options.defaultUndefined) {
+		if (!options?.defaultUndefined) {
 			for (const key of oldKeys) {
 				if (isOidKey(key)) continue;
 				// push the delete for the property
@@ -351,6 +363,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 						op: 'remove',
 						name: key,
 					},
+					authz,
 				});
 			}
 		}
@@ -364,8 +377,10 @@ export function shallowDiffToPatches(
 	to: any,
 	getNow: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
 	const oid = getOid(from);
+	const authz = options?.authz;
 
 	function diffItems(
 		key: string | number,
@@ -386,6 +401,7 @@ export function shallowDiffToPatches(
 							index: key as number,
 							value,
 						},
+						authz,
 					});
 				} else {
 					patches.push({
@@ -396,6 +412,7 @@ export function shallowDiffToPatches(
 							name: key,
 							value,
 						},
+						authz,
 					});
 				}
 			}
@@ -427,6 +444,7 @@ export function shallowDiffToPatches(
 					index: to.length,
 					count: deletedItemsAtEnd,
 				},
+				authz,
 			});
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
@@ -454,6 +472,7 @@ export function shallowDiffToPatches(
 					op: 'remove',
 					name: key,
 				},
+				authz,
 			});
 		}
 	}
@@ -471,6 +490,7 @@ export function initialToPatches(
 	getNow: () => string,
 	createSubId?: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
 	assignOid(initial, rootOid);
 	assignOidsToAllSubObjects(initial, createSubId);
@@ -484,6 +504,7 @@ export function initialToPatches(
 				op: 'initialize',
 				value: removeOid(value),
 			},
+			authz: options?.authz,
 		});
 	}
 	return patches;
@@ -494,6 +515,7 @@ export function shallowInitialToPatches(
 	rootOid: ObjectIdentifier,
 	getNow: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
 	patches.push({
 		oid: rootOid,
@@ -502,6 +524,7 @@ export function shallowInitialToPatches(
 			op: 'initialize',
 			value: initial,
 		},
+		authz: options?.authz,
 	});
 	return patches;
 }
@@ -720,10 +743,18 @@ export function applyOperations<T extends NormalizedObject>(
 	base: T | undefined,
 	operations: Operation[],
 	deletedRefs?: (ObjectRef | FileRef)[],
+	/**
+	 * Provide and it will be assigned any authz info assigned
+	 * in applied operations
+	 */
+	authzRef?: { authz?: string },
 ): T | undefined {
 	let cur = base as T | undefined;
 	for (const op of operations) {
 		cur = applyPatch(cur, op.data, deletedRefs);
+		if (authzRef && op.data.op === 'initialize' && op.authz) {
+			authzRef.authz = op.authz;
+		}
 	}
 	return cur;
 }

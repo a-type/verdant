@@ -461,23 +461,21 @@ export class ServerSync<Presence = any, Profile = any>
 
 	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
-			if (!this.activeSync.hasSynced) {
-				// before first sync, replace 'originator' authz subjects
-				// with token userId. This replica may not have been assigned
-				// a userId while creating data, and before we send the library
-				// to the server we must first replace the placeholder "originator"
-				// authz subject with our own ID
-				const userId = this.endpointProvider.tokenInfo?.userId;
-				if (!userId) {
-					throw new VerdantError(
-						VerdantError.Code.Unexpected,
-						undefined,
-						'Active sync has invalid token info',
-					);
-				}
-				if (message.type === 'sync' || message.type === 'op') {
-					rewriteAuthzOriginator(message, userId);
-				}
+			// before sync, replace 'originator' authz subjects
+			// with token userId. This is the easiest place to
+			// do this and allows the rest of the system to be
+			// ambivalent about user identity when assigning
+			// authorization for the current user.
+			const userId = this.endpointProvider.tokenInfo?.userId;
+			if (!userId) {
+				throw new VerdantError(
+					VerdantError.Code.Unexpected,
+					undefined,
+					'Active sync has invalid token info',
+				);
+			}
+			if (message.type === 'sync' || message.type === 'op') {
+				rewriteAuthzOriginator(message, userId);
 			}
 			await this.activeSync.send(message);
 			this.onOutgoingMessage?.(message);

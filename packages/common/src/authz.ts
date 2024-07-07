@@ -1,16 +1,22 @@
 import { DocumentBaseline } from './baseline.js';
 import { Operation } from './operation.js';
 
-function encode(str: string): string {
-	return Buffer.from(str).toString('base64');
+function encode(str: string): AuthorizationKey {
+	const val = Buffer.from(str).toString('base64');
+	return val as AuthorizationKey;
 }
 
 function decode(str: string): string {
 	return Buffer.from(str, 'base64').toString();
 }
 
+export type AuthorizationKey = string & {
+	'@@type': 'authz';
+};
+
 export const authz = {
-	onlyUser: (userId: string) => encode(`u:${userId}:*`),
+	onlyUser: (userId: string): AuthorizationKey => encode(`u:${userId}:*`),
+	onlyMe: (): AuthorizationKey => authz.onlyUser(ORIGINATOR_SUBJECT),
 	decode: (encoded: string) => {
 		const decoded = decode(encoded);
 		const parts = decoded.split(':');

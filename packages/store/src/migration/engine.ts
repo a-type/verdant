@@ -12,6 +12,7 @@ import {
 	getOid,
 	initialToPatches,
 	removeOidPropertiesFromAllSubObjects,
+	AuthorizationKey,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
@@ -31,26 +32,31 @@ function getMigrationMutations({
 }) {
 	return migration.allCollections.reduce((acc, collectionName) => {
 		acc[collectionName] = {
-			put: async (doc: any) => {
+			put: async (doc: any, options?: { access?: AuthorizationKey }) => {
 				// add defaults
 				addFieldDefaults(migration.newSchema.collections[collectionName], doc);
 				const primaryKey =
 					doc[migration.newSchema.collections[collectionName].primaryKey];
 				const oid = createOid(collectionName, primaryKey);
 				newOids.push(oid);
+
 				await meta.insertLocalOperations(
-					initialToPatches(doc, oid, getMigrationNow),
+					initialToPatches(doc, oid, getMigrationNow, undefined, undefined, {
+						authz: options?.access,
+					}),
 				);
 				return doc;
 			},
 			delete: async (id: string) => {
 				const rootOid = createOid(collectionName, id);
+				const authz = await meta.getDocumentAuthz(rootOid);
 				const allOids = await meta.getAllDocumentRelatedOids(rootOid);
 				return meta.insertLocalOperations(
 					allOids.map((oid) => ({
 						oid,
 						timestamp: getMigrationNow(),
 						data: { op: 'delete' },
+						authz,
 					})),
 				);
 			},
@@ -164,6 +170,11 @@ export function getMigrationEngine({
 						!!rootOid,
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
+					// FIXME: this could be optimized (making n queries for authz
+					// when the snapshots themselves are derived from the same data...)
+					// maybe don't use the findAll query, and instead go a level
+					// lower to retain access to lower level data here?
+					const authz = await meta.getDocumentAuthz(rootOid);
 					const original = cloneDeep(doc);
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
@@ -182,6 +193,7 @@ export function getMigrationEngine({
 							[],
 							{
 								mergeUnknownObjects: true,
+								authz,
 							},
 						);
 						if (patches.length > 0) {

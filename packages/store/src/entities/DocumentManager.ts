@@ -8,13 +8,13 @@ import {
 	StorageDocument,
 	StorageSchema,
 	isRootOid,
+	AuthorizationKey,
 } from '@verdant-web/common';
 import { EntityCreateOptions, EntityStore } from '../entities/EntityStore.js';
 import { Metadata } from '../metadata/Metadata.js';
 import { Sync } from '../sync/Sync.js';
-import { Authorizer } from './Authorizer.js';
 import { Context } from '../context.js';
-import { Entity, ObjectEntity } from '../index.js';
+import { ObjectEntity } from '../index.js';
 
 /**
  * Exposes functionality for creating documents,
@@ -22,17 +22,10 @@ import { Entity, ObjectEntity } from '../index.js';
  * point in the storage system.
  */
 export class DocumentManager<Schema extends StorageSchema<any>> {
-	private authorizer: Authorizer;
-
 	constructor(
-		private ctx: Context,
-		private meta: Metadata,
 		private schema: Schema,
 		private entities: EntityStore,
-		sync: Sync,
-	) {
-		this.authorizer = new Authorizer(ctx, meta, sync);
-	}
+	) {}
 
 	private getOid = (collection: string, init: any) => {
 		const primaryKeyName = this.schema.collections[collection]
@@ -69,7 +62,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		init: any,
 		options: {
 			undoable?: boolean;
-			access?: DocumentAccess;
+			access?: AuthorizationKey;
 			silenceAccessControlWithPrimaryKeyWarning?: boolean;
 		} = {},
 	) => {
@@ -92,8 +85,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 					`Using a custom primary key with access control is not supported. This may result in corrupted documents. Read more about why: https://verdant.dev/docs/sync/access#a-warning-about-custom-primaryKey`,
 				);
 			}
-			// process access request into authz string
-			widenedOptions.access = await this.authorizer[options.access]();
+			widenedOptions.access = options.access;
 		}
 
 		// documents are always objects at the root
@@ -135,7 +127,7 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		entity: ObjectEntity<any, any>,
 		options: {
 			undoable?: boolean;
-			access?: DocumentAccess;
+			access?: AuthorizationKey;
 			primaryKey?: string;
 		} = {},
 	) => {
@@ -160,5 +152,3 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		return this.create(collection, snapshot, options);
 	};
 }
-
-export type DocumentAccess = 'shared' | 'private';

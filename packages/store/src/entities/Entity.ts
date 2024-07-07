@@ -389,7 +389,7 @@ export class Entity<
 	 * an entity with either full access or access for the current
 	 * user.
 	 */
-	private get access() {
+	get access() {
 		return this.viewData.authz;
 	}
 	get isAuthorized() {

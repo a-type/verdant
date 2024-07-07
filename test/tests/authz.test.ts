@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
 import { IDBFactory } from 'fake-indexeddb';
+import { authorization } from '@verdant-web/store';
 
 const ctx = createTestContext({
 	// serverLog: true,
@@ -30,7 +31,7 @@ it('doesnt sync authorized docs to other users', async () => {
 			content: 'private item',
 		},
 		{
-			access: 'private',
+			access: authorization.private,
 		},
 	);
 	expect(privateItem.isAuthorized).toBe(true);
