@@ -88,17 +88,6 @@ export class SqlReplicas implements ReplicaStorage {
 			);
 		}
 
-		console.log(
-			'last seen',
-			existing.lastSeenWallClockTime,
-			'truant cutoff',
-			this.truantCutoff,
-			'now',
-			Date.now(),
-			'diff',
-			Date.now() - (existing.lastSeenWallClockTime ?? 0),
-		);
-
 		if (
 			existing.lastSeenWallClockTime !== null &&
 			existing.lastSeenWallClockTime < this.truantCutoff
@@ -130,7 +119,6 @@ export class SqlReplicas implements ReplicaStorage {
 		replicaId: string,
 	): Promise<void> => {
 		const clockTime = Date.now();
-		console.log('updating last seen', libraryId, replicaId, clockTime);
 		const db = await this.dbs.get(libraryId);
 		await db
 			.updateTable('ReplicaInfo')
