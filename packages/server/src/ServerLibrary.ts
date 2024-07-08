@@ -132,10 +132,16 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				this.log('Unknown message type', (message as any).type);
 				break;
 		}
-		await this.storage.replicas.updateLastSeen(
-			info.libraryId,
-			message.replicaId,
-		);
+		// a bit fragile - skipping presence-update since currently
+		// it's delivered before sync. in which case, sync always
+		// sees a recent last seen for the replica even if it was
+		// truant before the presence-update.
+		if (message.type !== 'presence-update') {
+			await this.storage.replicas.updateLastSeen(
+				info.libraryId,
+				message.replicaId,
+			);
+		}
 	};
 
 	remove = (libraryId: string, replicaId: string) => {

@@ -10,12 +10,14 @@ export function createTestContext({
 	testLog,
 	disableRebasing,
 	disableSharding,
+	truancyMinutes,
 }: {
 	serverLog?: boolean;
 	keepDb?: boolean;
 	testLog?: boolean;
 	disableRebasing?: boolean;
 	disableSharding?: boolean;
+	truancyMinutes?: number;
 } = {}) {
 	const idbMap = new Map<string, IDBFactory>();
 	const context = {
@@ -50,6 +52,7 @@ export function createTestContext({
 			keepDb,
 			disableRebasing,
 			disableSharding,
+			truancyMinutes,
 		});
 		context.createTestClient = async (
 			config: Parameters<typeof createTestClient>[0],

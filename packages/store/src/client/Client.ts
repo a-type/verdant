@@ -44,6 +44,12 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * This event may be called multiple times.
 	 */
 	futureSeen: () => void;
+	/**
+	 * The server requested this replica reset its state
+	 * completely. This can happen when the replica has
+	 * been offline for too long and reconnects.
+	 */
+	resetToServer: () => void;
 }> {
 	readonly meta: Metadata;
 	private _entities: EntityStore;
@@ -112,6 +118,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			this.emit('futureSeen');
 		}, 300);
 		this.context.globalEvents.subscribe('futureSeen', notifyFutureSeen);
+		this.context.globalEvents.subscribe('resetToServer', () => {
+			this.emit('resetToServer');
+		});
 
 		this.documentDb.addEventListener('versionchange', () => {
 			this.context.log?.(

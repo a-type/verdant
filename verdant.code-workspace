@@ -33,10 +33,11 @@
 			"path": "packages/file-storage-s3"
 		},
 		{
-			"name": "🧪 Test",
+			"name": "🧪 Tests",
 			"path": "test"
 		},
 		{
+      "name": "📃 Docs",
 			"path": "docs"
 		}
 	]

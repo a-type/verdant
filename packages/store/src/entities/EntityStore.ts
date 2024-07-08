@@ -129,6 +129,7 @@ export class EntityStore extends Disposable {
 			this.abortDataQueueController = new AbortController();
 			this.ongoingResetPromise = this.resetData().finally(() => {
 				this.ongoingResetPromise = null;
+				this.ctx.globalEvents.emit('resetToServer');
 			});
 		}
 
