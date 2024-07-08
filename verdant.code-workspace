@@ -31,6 +31,10 @@
 		{
 			"name": "🗄️ S3 Files",
 			"path": "packages/file-storage-s3"
+		},
+		{
+			"name": "🧪 Tests",
+			"path": "test"
 		}
 	]
 }

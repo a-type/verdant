@@ -14,12 +14,14 @@ export async function startTestServer({
 	keepDb = false,
 	disableSharding,
 	importShardsFrom,
+	truancyMinutes,
 }: {
 	log?: boolean;
 	disableRebasing?: boolean;
 	keepDb?: boolean;
 	disableSharding?: boolean;
 	importShardsFrom?: string;
+	truancyMinutes?: number;
 } = {}) {
 	const port = await getPort();
 	const app = express();
@@ -49,6 +51,7 @@ export async function startTestServer({
 			rootDirectory: './test-files',
 			host: `http://localhost:${port}/files`,
 		}),
+		replicaTruancyMinutes: truancyMinutes,
 	});
 	server.attach(httpServer, { httpPath: false });
 

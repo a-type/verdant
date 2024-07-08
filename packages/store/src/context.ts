@@ -36,6 +36,12 @@ export interface Context {
 		 * The parameter is the timestamp of the future change.
 		 */
 		futureSeen: (timestamp: string) => void;
+		/**
+		 * The server requested this replica reset its state
+		 * completely. This can happen when the replica has
+		 * been offline for too long and reconnects.
+		 */
+		resetToServer: () => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
