@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.1.3
+
+### Patch Changes
+
+- d0c8fd5e: Fix a bug which made replicas which have been offline for a long time fail to sync back up
+
 ## 3.1.2
 
 ### Patch Changes

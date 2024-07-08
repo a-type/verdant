@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.8.4
+
+### Patch Changes
+
+- d0c8fd5e: Fix a bug which made replicas which have been offline for a long time fail to sync back up
+
 ## 3.8.3
 
 ### Patch Changes
