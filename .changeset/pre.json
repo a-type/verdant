@@ -11,5 +11,7 @@
     "@verdant-web/server": "3.1.2",
     "@verdant-web/store": "3.8.3"
   },
-  "changesets": []
+  "changesets": [
+    "weak-steaks-dream"
+  ]
 }
