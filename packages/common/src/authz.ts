@@ -2,12 +2,19 @@ import { DocumentBaseline } from './baseline.js';
 import { Operation } from './operation.js';
 
 function encode(str: string): AuthorizationKey {
-	const val = Buffer.from(str).toString('base64');
+	if (typeof Buffer !== 'undefined') {
+		const val = Buffer.from(str).toString('base64');
+		return val as AuthorizationKey;
+	}
+	const val = btoa(str);
 	return val as AuthorizationKey;
 }
 
 function decode(str: string): string {
-	return Buffer.from(str, 'base64').toString();
+	if (typeof Buffer !== 'undefined') {
+		return Buffer.from(str, 'base64').toString();
+	}
+	return atob(str);
 }
 
 export type AuthorizationKey = string & {
