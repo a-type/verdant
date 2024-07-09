@@ -10,6 +10,7 @@ export function randomOperations(libraryId: string, count = 10) {
 		serverOrder: i,
 		replicaId: `replicaId-${i}`,
 		libraryId,
+		authz: null,
 	}));
 }
 
@@ -19,6 +20,7 @@ export function randomBaselines(libraryId: string, count = 10) {
 		snapshot: `snapshot-${i}-${random()}`,
 		timestamp: `timestamp-${i}-${random()}`,
 		libraryId,
+		authz: null,
 	}));
 }
 
