@@ -12,6 +12,7 @@
     "@verdant-web/store": "3.8.3"
   },
   "changesets": [
+    "famous-icons-study",
     "weak-steaks-dream"
   ]
 }

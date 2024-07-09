@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.4.0-next.1
+
+### Patch Changes
+
+- 91ab8cd7: isomorphic base64 encoding
+
 ## 2.4.0-next.0
 
 ### Minor Changes
