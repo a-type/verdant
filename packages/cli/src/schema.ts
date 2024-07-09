@@ -287,4 +287,12 @@ ${versions
 export default [${versions.map((version) => `v${version}`).join(', ')}]
 	`;
 	await fs.writeFile(`${output}/schemaVersions/index.js`, index);
+	await fs.writeFile(
+		`${output}/schemaVersions/index.d.ts`,
+		`
+	import { StorageSchema } from '@verdant-web/common';
+	declare const versions: StorageSchema[];
+	export default versions;
+	`,
+	);
 }

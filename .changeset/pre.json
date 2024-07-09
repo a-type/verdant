@@ -1,0 +1,15 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@verdant-web/cli": "4.4.1",
+    "@verdant-web/common": "2.3.4",
+    "@verdant-web/create-app": "0.6.0",
+    "@verdant-web/s3-file-storage": "1.0.24",
+    "@verdant-web/react": "34.0.1",
+    "@verdant-web/react-router": "0.6.3",
+    "@verdant-web/server": "3.1.2",
+    "@verdant-web/store": "3.8.3"
+  },
+  "changesets": []
+}

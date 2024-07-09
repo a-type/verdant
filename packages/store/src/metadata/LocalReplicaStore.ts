@@ -4,6 +4,7 @@ import { IDBService } from '../IDBService.js';
 export type LocalReplicaInfo = {
 	type: 'localReplicaInfo';
 	id: string;
+	userId: string | undefined;
 	ackedLogicalTime: string | null;
 	lastSyncedLogicalTime: string | null;
 };
@@ -36,6 +37,7 @@ export class LocalReplicaStore extends IDBService {
 					const replicaInfo: LocalReplicaInfo = {
 						type: 'localReplicaInfo',
 						id: replicaId,
+						userId: undefined,
 						ackedLogicalTime: null,
 						lastSyncedLogicalTime: null,
 					};

@@ -9,7 +9,7 @@ export type ItemSnapshot = {
   purchased: boolean;
   categoryId: string | null;
   comments: ItemCommentsSnapshot;
-  image: string | null;
+  image: EntityFileSnapshot | null;
 };
 
 export type ItemTagsSnapshot = ("a" | "b" | "c")[];

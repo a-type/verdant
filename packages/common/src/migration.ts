@@ -13,6 +13,7 @@ import {
 	getOid,
 	hasDefault,
 	validateEntity,
+	AuthorizationKey,
 } from './index.js';
 
 /**@deprecated */
@@ -473,7 +474,10 @@ type MigrationQueries<Old extends SchemaDocuments> = {
 };
 type MigrationMutations<New extends SchemaDocuments> = {
 	[Key in keyof New]: {
-		put(document: New[Key]['init']): Promise<New[Key]['snapshot']>;
+		put(
+			document: New[Key]['init'],
+			options?: { access?: AuthorizationKey },
+		): Promise<New[Key]['snapshot']>;
 		delete(primaryKey: string): Promise<void>;
 	};
 };

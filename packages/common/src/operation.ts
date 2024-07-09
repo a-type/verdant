@@ -9,12 +9,12 @@ import {
 	ensureOid,
 	getOid,
 	getOidRoot,
-	isOidKey,
 	maybeGetOid,
 	normalize,
 	ObjectIdentifier,
 	removeOid,
 } from './oids.js';
+import { isOidKey } from './oidsLegacy.js';
 import { compareRefs, isRef } from './refs.js';
 import { assert, cloneDeep, findLastIndex, isObject } from './utils.js';
 
@@ -156,6 +156,7 @@ export type Operation = {
 	oid: ObjectIdentifier;
 	timestamp: string;
 	data: OperationPatch;
+	authz?: string;
 };
 
 function isDiffableObject(val: any) {
@@ -174,7 +175,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 	getNow: () => string,
 	createSubId?: () => string,
 	patches: Operation[] = [],
-	options: {
+	options?: {
 		/**
 		 * If an object is merged with another and the new one does not
 		 * have an OID assigned, assume it is the same identity as previous
@@ -185,10 +186,16 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		 * If false, undefined properties will erase the previous value.
 		 */
 		defaultUndefined?: boolean;
-	} = {},
+		/**
+		 * Authorization to apply to all created operations
+		 */
+		authz?: string;
+	},
 ): Operation[] {
+	const authz = options?.authz;
 	const oid = getOid(from);
 
+	// FIXME: allocating this function inline seems wasteful.
 	function diffItems(
 		key: string | number,
 		value: any,
@@ -200,25 +207,35 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 			// do not need to recurse, of course
 			if (!compareNonDiffable(value, oldValue)) {
 				if (isList) {
-					patches.push({
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-set',
-							index: key as number,
-							value,
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid,
+								timestamp: getNow(),
+								data: {
+									op: 'list-set',
+									index: key as number,
+									value,
+								},
+							},
+							authz,
+						),
+					);
 				} else {
-					patches.push({
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'set',
-							name: key,
-							value,
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid,
+								timestamp: getNow(),
+								data: {
+									op: 'set',
+									name: key,
+									value,
+								},
+							},
+							authz,
+						),
+					);
 				}
 			}
 		} else {
@@ -231,7 +248,7 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				value = cloneDeep(value, false);
 				valueOid = createSubOid(oid, createSubId);
 				assignOid(value, valueOid);
-			} else if (!options.mergeUnknownObjects) {
+			} else if (!options?.mergeUnknownObjects) {
 				valueOid = ensureOid(value, oid, createSubId);
 			} else {
 				// if merge unknown objects is requested, we copy the previous value's oid
@@ -258,24 +275,34 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				// we add the whole new object and also update the reference on this
 				// key of the parent to point to the new object
 				initialToPatches(value, valueOid, getNow, createSubId, patches);
-				patches.push({
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'set',
-						name: key,
-						value: createRef(valueOid),
-					},
-				});
+				patches.push(
+					addAuthzToOp(
+						{
+							oid,
+							timestamp: getNow(),
+							data: {
+								op: 'set',
+								name: key,
+								value: createRef(valueOid),
+							},
+						},
+						authz,
+					),
+				);
 				// if there was an old value, we need to delete it altogether.
 				if (oldValueOid !== undefined) {
-					patches.push({
-						oid: oldValueOid,
-						timestamp: getNow(),
-						data: {
-							op: 'delete',
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid: oldValueOid,
+								timestamp: getNow(),
+								data: {
+									op: 'delete',
+								},
+							},
+							authz,
+						),
+					);
 				}
 			} else {
 				// third case: OIDs are the same, meaning the identity is the same,
@@ -302,32 +329,42 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 				const value = from[i];
 				const valueOid = maybeGetOid(value);
 				if (valueOid) {
-					patches.push({
-						oid: valueOid,
-						timestamp: getNow(),
-						data: {
-							op: 'delete',
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid: valueOid,
+								timestamp: getNow(),
+								data: {
+									op: 'delete',
+								},
+							},
+							authz,
+						),
+					);
 				}
 			}
 			// push the list-delete for the deleted items
-			patches.push({
-				oid,
-				timestamp: getNow(),
-				data: {
-					op: 'list-delete',
-					index: to.length,
-					count: deletedItemsAtEnd,
-				},
-			});
+			patches.push(
+				addAuthzToOp(
+					{
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'list-delete',
+							index: to.length,
+							count: deletedItemsAtEnd,
+						},
+					},
+					authz,
+				),
+			);
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
 	} else if (isDiffableObject(from) && isDiffableObject(to)) {
 		const oldKeys = new Set(Object.keys(from));
 		for (const [key, value] of Object.entries(to)) {
-			if (value === undefined && options.defaultUndefined) continue;
+			if (value === undefined && options?.defaultUndefined) continue;
 
 			oldKeys.delete(key);
 
@@ -339,18 +376,23 @@ export function diffToPatches<T extends { [key: string]: any } | any[]>(
 		}
 
 		// this set now only contains keys which were not in the new object
-		if (!options.defaultUndefined) {
+		if (!options?.defaultUndefined) {
 			for (const key of oldKeys) {
 				if (isOidKey(key)) continue;
 				// push the delete for the property
-				patches.push({
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'remove',
-						name: key,
-					},
-				});
+				patches.push(
+					addAuthzToOp(
+						{
+							oid,
+							timestamp: getNow(),
+							data: {
+								op: 'remove',
+								name: key,
+							},
+						},
+						authz,
+					),
+				);
 			}
 		}
 	}
@@ -363,8 +405,10 @@ export function shallowDiffToPatches(
 	to: any,
 	getNow: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
 	const oid = getOid(from);
+	const authz = options?.authz;
 
 	function diffItems(
 		key: string | number,
@@ -377,25 +421,35 @@ export function shallowDiffToPatches(
 			// do not need to recurse, of course
 			if (!compareNonDiffable(value, oldValue)) {
 				if (isList) {
-					patches.push({
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-set',
-							index: key as number,
-							value,
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid,
+								timestamp: getNow(),
+								data: {
+									op: 'list-set',
+									index: key as number,
+									value,
+								},
+							},
+							authz,
+						),
+					);
 				} else {
-					patches.push({
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'set',
-							name: key,
-							value,
-						},
-					});
+					patches.push(
+						addAuthzToOp(
+							{
+								oid,
+								timestamp: getNow(),
+								data: {
+									op: 'set',
+									name: key,
+									value,
+								},
+							},
+							authz,
+						),
+					);
 				}
 			}
 		} else {
@@ -418,15 +472,20 @@ export function shallowDiffToPatches(
 		const deletedItemsAtEnd = from.length - to.length;
 		if (deletedItemsAtEnd > 0) {
 			// push the list-delete for the deleted items
-			patches.push({
-				oid,
-				timestamp: getNow(),
-				data: {
-					op: 'list-delete',
-					index: to.length,
-					count: deletedItemsAtEnd,
-				},
-			});
+			patches.push(
+				addAuthzToOp(
+					{
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'list-delete',
+							index: to.length,
+							count: deletedItemsAtEnd,
+						},
+					},
+					authz,
+				),
+			);
 		}
 	} else if (Array.isArray(from) || Array.isArray(to)) {
 		throw new Error('Cannot diff an array with an object');
@@ -446,14 +505,19 @@ export function shallowDiffToPatches(
 		for (const key of oldKeys) {
 			if (isOidKey(key)) continue;
 			// push the delete for the property
-			patches.push({
-				oid,
-				timestamp: getNow(),
-				data: {
-					op: 'remove',
-					name: key,
-				},
-			});
+			patches.push(
+				addAuthzToOp(
+					{
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'remove',
+							name: key,
+						},
+					},
+					authz,
+				),
+			);
 		}
 	}
 
@@ -470,20 +534,22 @@ export function initialToPatches(
 	getNow: () => string,
 	createSubId?: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
 	assignOid(initial, rootOid);
 	assignOidsToAllSubObjects(initial, createSubId);
 	const normalized = normalize(initial);
 	for (const key of normalized.keys()) {
 		const value = normalized.get(key);
-		patches.push({
+		const op: Operation = {
 			oid: key,
 			timestamp: getNow(),
 			data: {
 				op: 'initialize',
 				value: removeOid(value),
 			},
-		});
+		};
+		patches.push(addAuthzToOp(op, options?.authz));
 	}
 	return patches;
 }
@@ -493,16 +559,27 @@ export function shallowInitialToPatches(
 	rootOid: ObjectIdentifier,
 	getNow: () => string,
 	patches: Operation[] = [],
+	options?: { authz?: string },
 ) {
-	patches.push({
+	const op: Operation = {
 		oid: rootOid,
 		timestamp: getNow(),
 		data: {
 			op: 'initialize',
 			value: initial,
 		},
-	});
+	};
+	patches.push(addAuthzToOp(op, options?.authz));
 	return patches;
+}
+
+// saves a bit of network traffic by not attaching authz
+// key at all if not present
+function addAuthzToOp(op: Operation, authz?: string) {
+	if (authz) {
+		op.authz = authz;
+	}
+	return op;
 }
 
 export function groupPatchesByOid(patches: Operation[]) {
@@ -719,10 +796,18 @@ export function applyOperations<T extends NormalizedObject>(
 	base: T | undefined,
 	operations: Operation[],
 	deletedRefs?: (ObjectRef | FileRef)[],
+	/**
+	 * Provide and it will be assigned any authz info assigned
+	 * in applied operations
+	 */
+	authzRef?: { authz?: string },
 ): T | undefined {
 	let cur = base as T | undefined;
 	for (const op of operations) {
 		cur = applyPatch(cur, op.data, deletedRefs);
+		if (authzRef && op.data.op === 'initialize' && op.authz) {
+			authzRef.authz = op.authz;
+		}
 	}
 	return cur;
 }
@@ -840,4 +925,18 @@ export function isSuperseded(
 	}
 
 	return false;
+}
+
+/**
+ * Allocates a copy with only valid keys for transmitting over
+ * the protocol. TODO: make this unnecessary or evaluate if it's
+ * worth it to do.
+ */
+export function pickValidOperationKeys(operation: Operation): Operation {
+	return {
+		oid: operation.oid,
+		timestamp: operation.timestamp,
+		data: operation.data,
+		authz: operation.authz,
+	};
 }

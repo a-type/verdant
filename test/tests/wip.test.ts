@@ -97,7 +97,6 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		wip: true,
 	});
 
-	console.info('🚩 Opening WIP client');
 	const wipClient = await createTestClient({
 		...baseClientOptions,
 		schema: wipSchema,
@@ -127,8 +126,6 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	});
 
 	await wipClient.close();
-
-	console.info('🚩 WIP client work complete');
 
 	// what happens when we open v1 again?
 	const client1Again = await createTestClient(baseClientOptions);

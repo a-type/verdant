@@ -29,10 +29,36 @@ export class Client<Presence = any, Profile = any> {
   import: BaseClient<Presence, Profile>["import"];
   subscribe: BaseClient<Presence, Profile>["subscribe"];
   stats: BaseClient<Presence, Profile>["stats"];
+
+  /**
+   * Deletes all local data. If the client is connected to sync,
+   * this will cause the client to re-sync all data from the server.
+   * Use this very carefully, and only as a last resort.
+   */
   __dangerous__resetLocal: BaseClient<
     Presence,
     Profile
   >["__dangerous__resetLocal"];
+
+  /**
+   * Export all data, then re-import it. This might resolve
+   * some issues with the local database, but it should
+   * only be done as a second-to-last resort. The last resort
+   * would be __dangerous__resetLocal on ClientDescriptor, which
+   * clears all local data.
+   *
+   * Unlike __dangerous__resetLocal, this method allows local-only
+   * clients to recover data, whereas __dangerous__resetLocal only
+   * lets networked clients recover from the server.
+   */
+  __dangerous__hardReset: () => Promise<void>;
+
+  /**
+   * Manually triggers storage rebasing. Follows normal
+   * rebasing rules. Rebases already happen automatically
+   * during normal operation, so you probably don't need this.
+   */
+  __manualRebase: () => Promise<void>;
 }
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any>
@@ -54,9 +80,21 @@ export class ClientDescriptor<Presence = any, Profile = any> {
   readonly readyPromise: Promise<Client<Presence, Profile>>;
   readonly schema: StorageSchema;
   readonly namespace: string;
+  /**
+   * Resets all local data for this client, including the schema and migrations.
+   * If the client is not connected to sync, this causes the irretrievable loss of all data.
+   * If the client is connected to sync, this will cause the client to re-sync all data from the server.
+   * Use this very carefully, and only as a last resort.
+   */
+  __dangerous__resetLocal: () => Promise<void>;
 }
 
-import { ObjectEntity, ListEntity, EntityFile } from "@verdant-web/store";
+import {
+  ObjectEntity,
+  ListEntity,
+  EntityFile,
+  EntityFileSnapshot,
+} from "@verdant-web/store";
 
 /** Generated types for Item */
 
@@ -126,7 +164,7 @@ export type ItemSnapshot = {
   purchased: boolean;
   categoryId: string | null;
   comments: ItemCommentsSnapshot;
-  image: string | null;
+  image: EntityFileSnapshot | null;
 };
 
 export type ItemTagsSnapshot = ("a" | "b" | "c")[];
@@ -139,6 +177,10 @@ export type ItemCommentsSnapshot = ItemCommentsItemSnapshot[];
 
 /** Index filters for Item **/
 
+export interface ItemCategoryIdSortFilter {
+  where: "categoryId";
+  order: "asc" | "desc";
+}
 export interface ItemCategoryIdMatchFilter {
   where: "categoryId";
   equals: string;
@@ -156,6 +198,10 @@ export interface ItemCategoryIdStartsWithFilter {
   where: "categoryId";
   startsWith: string;
   order?: "asc" | "desc";
+}
+export interface ItemPurchasedYesNoSortFilter {
+  where: "purchasedYesNo";
+  order: "asc" | "desc";
 }
 export interface ItemPurchasedYesNoMatchFilter {
   where: "purchasedYesNo";
@@ -175,34 +221,15 @@ export interface ItemPurchasedYesNoStartsWithFilter {
   startsWith: string;
   order?: "asc" | "desc";
 }
-export interface ItemCategoryIdMatchFilter {
-  where: "categoryId";
-  equals: string;
-  order?: "asc" | "desc";
-}
-export interface ItemCategoryIdRangeFilter {
-  where: "categoryId";
-  gte?: string;
-  gt?: string;
-  lte?: string;
-  lt?: string;
-  order?: "asc" | "desc";
-}
-export interface ItemCategoryIdStartsWithFilter {
-  where: "categoryId";
-  startsWith: string;
-  order?: "asc" | "desc";
-}
 export type ItemFilter =
+  | ItemCategoryIdSortFilter
   | ItemCategoryIdMatchFilter
   | ItemCategoryIdRangeFilter
   | ItemCategoryIdStartsWithFilter
+  | ItemPurchasedYesNoSortFilter
   | ItemPurchasedYesNoMatchFilter
   | ItemPurchasedYesNoRangeFilter
-  | ItemPurchasedYesNoStartsWithFilter
-  | ItemCategoryIdMatchFilter
-  | ItemCategoryIdRangeFilter
-  | ItemCategoryIdStartsWithFilter;
+  | ItemPurchasedYesNoStartsWithFilter;
 
 /** Generated types for Category */
 
@@ -243,23 +270,9 @@ export type CategoryMetadataSnapshot = { color: string } | null;
 
 /** Index filters for Category **/
 
-export interface CategoryNameMatchFilter {
+export interface CategoryNameSortFilter {
   where: "name";
-  equals: string;
-  order?: "asc" | "desc";
-}
-export interface CategoryNameRangeFilter {
-  where: "name";
-  gte?: string;
-  gt?: string;
-  lte?: string;
-  lt?: string;
-  order?: "asc" | "desc";
-}
-export interface CategoryNameStartsWithFilter {
-  where: "name";
-  startsWith: string;
-  order?: "asc" | "desc";
+  order: "asc" | "desc";
 }
 export interface CategoryNameMatchFilter {
   where: "name";
@@ -280,9 +293,7 @@ export interface CategoryNameStartsWithFilter {
   order?: "asc" | "desc";
 }
 export type CategoryFilter =
-  | CategoryNameMatchFilter
-  | CategoryNameRangeFilter
-  | CategoryNameStartsWithFilter
+  | CategoryNameSortFilter
   | CategoryNameMatchFilter
   | CategoryNameRangeFilter
   | CategoryNameStartsWithFilter;

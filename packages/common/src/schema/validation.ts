@@ -1,4 +1,5 @@
-import { OID_KEY } from '../oids.js';
+import { isFile, isFileData } from '../files.js';
+import { OID_KEY } from '../oidsLegacy.js';
 import { isObject } from '../utils.js';
 import { getFieldDefault, hasDefault, isNullable } from './fields.js';
 import { StorageFieldSchema, StorageFieldsSchema } from './types.js';
@@ -71,9 +72,9 @@ export function validateEntityField({
 			return {
 				type: 'invalid-type',
 				fieldPath,
-				message: `Expected object${
-					field.nullable ? ' or null' : ''
-				} for field ${formatField(fieldPath)}, got ${value}`,
+				message: `Expected object ${
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
 			};
 		}
 		for (const [key, subField] of Object.entries(
@@ -108,9 +109,9 @@ export function validateEntityField({
 			return {
 				type: 'invalid-value',
 				fieldPath,
-				message: `Expected array${
-					field.nullable ? ' or null' : ''
-				} for field ${formatField(fieldPath)}, got ${value}`,
+				message: `Expected array ${
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
 			};
 		}
 		for (const item of value) {
@@ -145,8 +146,8 @@ export function validateEntityField({
 				type: 'invalid-type',
 				fieldPath,
 				message: `Expected string ${
-					field.nullable ? ' or null' : ''
-				} for field ${formatField(fieldPath)}, got ${value}`,
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
 			};
 		}
 		if (field.options && !field.options.includes(value)) {
@@ -164,8 +165,8 @@ export function validateEntityField({
 				type: 'invalid-type',
 				fieldPath,
 				message: `Expected boolean ${
-					field.nullable ? ' or null' : ''
-				} for field ${formatField(fieldPath)}, got ${value}`,
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
 			};
 		}
 	} else if (field.type === 'number') {
@@ -174,12 +175,20 @@ export function validateEntityField({
 				type: 'invalid-type',
 				fieldPath,
 				message: `Expected number ${
-					field.nullable ? ' or null' : ''
-				} for field ${formatField(fieldPath)}, got ${value}`,
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
 			};
 		}
 	} else if (field.type === 'file') {
-		// TODO: how?
+		if (!isFile(value) && !isFileData(value)) {
+			return {
+				type: 'invalid-type',
+				fieldPath,
+				message: `Expected file ${
+					field.nullable ? 'or null ' : ''
+				}for field ${formatField(fieldPath)}, got ${value}`,
+			};
+		}
 	}
 }
 

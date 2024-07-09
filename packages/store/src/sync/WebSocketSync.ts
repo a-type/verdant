@@ -59,6 +59,10 @@ export class WebSocketSync
 		this.heartbeat.subscribe('beat', this.sendHeartbeat);
 	}
 
+	get hasSynced() {
+		return this.synced;
+	}
+
 	private onOpen = () => {
 		if (!this.socket) {
 			throw new Error('Invalid sync state: online but socket is null');
@@ -251,11 +255,11 @@ export class WebSocketSync
 		this.stop();
 	};
 
-	start = () => {
+	start = async () => {
 		if (this.socket) {
 			return;
 		}
-		this.initializeSocket();
+		await this.initializeSocket();
 		this._status = 'active';
 	};
 

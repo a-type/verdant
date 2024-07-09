@@ -1,27 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createFileRef } from './files.js';
 import {
-	areOidsRelated,
 	assignOid,
-	assignOidPropertiesToAllSubObjects,
-	assignOidProperty,
 	assignOidsToAllSubObjects,
 	createOid,
-	createSubOid,
 	decomposeOid,
-	getOid,
 	getOidSubIdRange,
-	getOidRoot,
 	hasOid,
-	maybeGetOidProperty,
 	normalize,
 	normalizeFirstLevel,
 	ObjectIdentifier,
-	removeOidPropertiesFromAllSubObjects,
-	getLegacyDotOidSubIdRange,
-	replaceLegacyOidsInJsonString,
-	MATCH_LEGACY_OID_JSON_STRING,
-	replaceLegacyOidsInObject,
 } from './oids.js';
 
 describe('normalizing an object', () => {
@@ -280,127 +268,6 @@ describe('computing a range of oids for a whole object set', () => {
 		expect(isWithin('test/a1', start, end)).toBe(false);
 		expect(isWithin('test/a1:3', start, end)).toBe(false);
 	});
-	it('should accommodate legacy dot style oids', () => {
-		const [start, end] = getLegacyDotOidSubIdRange('test/a.foo:barrrr');
-		expect(start).toEqual('test/a.');
-		expect(end).toEqual('test/a.\uffff');
-		expect(start < end).toBe(true);
-		expect(isWithin('test/a.foo:0', start, end)).toBe(true);
-		expect(isWithin('test/a.foo:1', start, end)).toBe(true);
-		expect(isWithin('test/a.bar:zzzzzzzzzzzzzzzzzzzzzzz', start, end)).toBe(
-			true,
-		);
-		expect(isWithin('test/a.aff:\uffff', start, end)).toBe(true);
-		expect(isWithin('test1/a', start, end)).toBe(false);
-		expect(isWithin('test/b', start, end)).toBe(false);
-		expect(isWithin('test/ ', start, end)).toBe(false);
-		expect(isWithin('test/a1', start, end)).toBe(false);
-		expect(isWithin('test/a1:3', start, end)).toBe(false);
-		expect(isWithin('test/a.foo:barrrr', start, end)).toBe(true);
-	});
-});
-
-describe('assigning OIDs as properties', () => {
-	it('should assign to all sub-objects', () => {
-		let i = 0;
-		function createSubId() {
-			return (i++).toString();
-		}
-
-		const initial = {
-			foo: {
-				bar: 1,
-				baz: [2, 3],
-			},
-			qux: [
-				{
-					corge: true,
-				},
-				{
-					grault: {
-						garply: 4,
-					},
-				},
-			],
-		};
-		assignOid(initial, 'test/a');
-		assignOidsToAllSubObjects(initial, createSubId);
-		assignOidPropertiesToAllSubObjects(initial);
-
-		expect(initial).toMatchInlineSnapshot(`
-			{
-			  "@@id": "test/a",
-			  "foo": {
-			    "@@id": "test/a:0",
-			    "bar": 1,
-			    "baz": [
-			      2,
-			      3,
-			    ],
-			  },
-			  "qux": [
-			    {
-			      "@@id": "test/a:3",
-			      "corge": true,
-			    },
-			    {
-			      "@@id": "test/a:4",
-			      "grault": {
-			        "@@id": "test/a:5",
-			        "garply": 4,
-			      },
-			    },
-			  ],
-			}
-		`);
-		// extra check needed for array since it doesn't serialize in the snapshot
-		expect(maybeGetOidProperty(initial.qux)).toBe('test/a:2');
-	});
-
-	it('should transfer assigned OID properties to the memory system', () => {
-		const initial = assignOidProperty(
-			{
-				foo: assignOidProperty(
-					{
-						bar: 1,
-					},
-					'test/a:1',
-				),
-				qux: assignOidProperty(
-					[
-						assignOidProperty(
-							{
-								corge: true,
-							},
-							'test/a:2',
-						),
-						assignOidProperty(
-							{
-								grault: assignOidProperty(
-									{
-										garply: 4,
-									},
-									'test/a:3',
-								),
-							},
-							'test/a:4',
-						),
-					],
-					'test/a:2',
-				),
-			},
-			'test/a',
-		);
-
-		removeOidPropertiesFromAllSubObjects(initial);
-
-		expect(getOid(initial)).toEqual('test/a');
-		expect(getOid(initial.foo)).toEqual('test/a:1');
-		expect(getOid(initial.qux)).toEqual('test/a:2');
-		expect(getOid(initial.qux[0])).toEqual('test/a:2');
-		expect(getOid(initial.qux[1])).toEqual('test/a:4');
-		expect(getOid(initial.qux[1].grault)).toEqual('test/a:3');
-	});
 });
 
 it('should handle special characters in document id or collection', () => {
@@ -429,112 +296,4 @@ describe('assigning OIDs to sub-objects', () => {
 		expect(hasOid(obj.foo.file)).toBe(false);
 		expect(hasOid(obj.bar[0])).toBe(false);
 	});
-});
-
-describe('handling legacy OIDs', () => {
-	it('should get the root OID for a legacy OID', () => {
-		expect(getOidRoot('items/clabgyjfh00003968qycsq3ld.inputs.#')).toEqual(
-			'items/clabgyjfh00003968qycsq3ld',
-		);
-	});
-	it('should create sub-ids for legacy OIDs in new format', () => {
-		expect(
-			createSubOid(
-				'items/clabgyjfh00003968qycsq3ld.inputs.#',
-				() => 'pseudorandom',
-			),
-		).toEqual('items/clabgyjfh00003968qycsq3ld:pseudorandom');
-	});
-	it('should identify new sub-OIDs as related to the legacy root OID', () => {
-		expect(
-			areOidsRelated(
-				'items/clabgyjfh00003968qycsq3ld.inputs.#',
-				'items/clabgyjfh00003968qycsq3ld:pseudorandom',
-			),
-		).toBe(true);
-	});
-	it.each([
-		['items/clabgyjfh00003968qycsq3ld.inputs.#:baz', true],
-		// include more unicode chars
-		['items/clabgyjfh00003968qycsq3ld\ufea3.inputs\u39fc.#:baz!!!', true],
-		// not matching new oids
-		['items/clabgyjfh00003968qycsq3ld', false],
-		['items/clabgyjfh00003968qycsq3ld:baz', false],
-		['items/clabgyjfh00003968qycsq3ld:baz1111', false],
-		// not matching anything else
-		[
-			'PREPARE SOUS VIDE BATH: Fill container or pot with water. Set the temperature to 130F/54.4C – 132F/55.5C (for very moist and tender) and allow water to heat to that temperature.Tip: start with hot tap water instead of cold water to reduce heating time. Note 4 for other temperatures.',
-			false,
-		],
-	])('matches legacy oids', (oid, match) => {
-		expect(MATCH_LEGACY_OID_JSON_STRING.test('"' + oid + '"'), oid).toBe(match);
-		// regex are stateful 🙄
-		MATCH_LEGACY_OID_JSON_STRING.lastIndex = 0;
-	});
-	it.each([
-		[
-			{ op: 'delete', oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz' },
-			{ op: 'delete', oid: 'items/clabgyjfh00003968qycsq3ld:baz' },
-		],
-		[
-			{
-				op: 'list-push',
-				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
-				value: {
-					'@@type': 'ref',
-					id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
-				},
-			},
-			{
-				op: 'list-push',
-				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
-				value: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
-			},
-		],
-		[
-			{
-				op: 'list-remove',
-				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
-				value: {
-					'@@type': 'ref',
-					id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
-				},
-			},
-			{
-				op: 'list-remove',
-				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
-				value: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
-			},
-		],
-		[
-			{
-				oid: 'items/clabgyjfh00003968qycsq3ld.inputs.#:baz',
-				timestamp: '2021-03-04T21:00:00.000Z',
-				snapshot: {
-					foo: 1,
-					bar: {
-						'@@type': 'ref',
-						id: 'items/clabgyjfh00003968qycsq3ld.inputs.#:qux',
-					},
-				},
-			},
-			{
-				oid: 'items/clabgyjfh00003968qycsq3ld:baz',
-				timestamp: '2021-03-04T21:00:00.000Z',
-				snapshot: {
-					foo: 1,
-					bar: { '@@type': 'ref', id: 'items/clabgyjfh00003968qycsq3ld:qux' },
-				},
-			},
-		],
-		[
-			{ oid: 'test/what if.boo.blah so what:fajsdfj' },
-			{ oid: 'test/what if:fajsdfj' },
-		],
-	])(
-		'should replace legacy OIDs in a JSON string with new OIDs',
-		(from, to) => {
-			expect(replaceLegacyOidsInObject(from), JSON.stringify(from)).toEqual(to);
-		},
-	);
 });

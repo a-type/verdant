@@ -13,6 +13,7 @@ import {
 	groupPatchesByRootOid,
 	isRootOid,
 	removeOidsFromAllSubObjects,
+	AuthorizationKey,
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { Metadata } from '../metadata/Metadata.js';
@@ -47,6 +48,11 @@ export interface IncomingData {
 	baselines?: DocumentBaseline[];
 	reset?: boolean;
 	isLocal?: boolean;
+}
+
+export interface EntityCreateOptions {
+	undoable?: boolean;
+	access?: AuthorizationKey;
 }
 
 export class EntityStore extends Disposable {
@@ -320,7 +326,7 @@ export class EntityStore extends Disposable {
 	create = async (
 		initial: any,
 		oid: ObjectIdentifier,
-		{ undoable = true }: { undoable?: boolean } = {},
+		{ undoable = true, access }: EntityCreateOptions = {},
 	) => {
 		this.ctx.log('debug', 'Creating new entity', oid);
 		const { collection } = decomposeOid(oid);
@@ -340,17 +346,23 @@ export class EntityStore extends Disposable {
 		}
 
 		const operations = this.meta.patchCreator.createInitialize(processed, oid);
+		if (access) {
+			operations.forEach((op) => {
+				op.authz = access;
+			});
+		}
 		await this.batcher.commitOperations(operations, {
 			undoable: !!undoable,
 			source: entity,
 		});
 
-		// TODO: what happens if you create an entity with an OID that already
+		// TODONE: what happens if you create an entity with an OID that already
 		// exists?
+		// A: it will overwrite the existing entity
 
 		// we still need to synchronously add the initial operations to the Entity
 		// even though they are flowing through the system
-		// TODO: this could be better aligned to avoid grouping here
+		// FIXME: this could be better aligned to avoid grouping here
 		const operationsGroupedByOid = groupPatchesByOid(operations);
 		this.events.add.invoke(this, {
 			operations: operationsGroupedByOid,
@@ -372,12 +384,7 @@ export class EntityStore extends Disposable {
 			'Only root documents may be deleted via client methods',
 		);
 
-		const allOids = await Promise.all(
-			oids.flatMap(async (oid) => {
-				const entity = await this.hydrate(oid);
-				return entity?.__getFamilyOids__() ?? [];
-			}),
-		);
+		const entities = await Promise.all(oids.map((oid) => this.hydrate(oid)));
 
 		// remove the entities from cache
 		oids.forEach((oid) => {
@@ -385,8 +392,18 @@ export class EntityStore extends Disposable {
 			this.ctx.log('debug', 'Deleted document from cache', oid);
 		});
 
-		// create the delete patches and wait for them to be applied
-		const operations = this.meta.patchCreator.createDeleteAll(allOids.flat());
+		const operations: Operation[] = [];
+		for (const entity of entities) {
+			if (entity) {
+				const oids = entity.__getFamilyOids__();
+				const deletes = this.meta.patchCreator.createDeleteAll(oids);
+				for (const op of deletes) {
+					op.authz = entity.access;
+				}
+				operations.push(...deletes);
+			}
+		}
+
 		await this.batcher.commitOperations(operations, {
 			undoable: options?.undoable === undefined ? true : options.undoable,
 		});

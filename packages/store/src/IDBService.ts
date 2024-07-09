@@ -81,7 +81,7 @@ export class IDBService extends Disposable {
 	iterate = async <T>(
 		storeName: string,
 		getRequest: (store: IDBObjectStore) => IDBRequest | IDBRequest[],
-		iterator: (value: T, store: IDBObjectStore) => void,
+		iterator: (value: T, store: IDBObjectStore) => boolean | void,
 		opts?: {
 			mode?: 'readonly' | 'readwrite';
 			transaction?: IDBTransaction;
@@ -117,10 +117,14 @@ export class IDBService extends Disposable {
 		}
 		return new Promise<void>((resolve, reject) => {
 			request.onsuccess = () => {
-				const cursor = request.result;
+				const cursor = request.result as IDBCursorWithValue | null;
 				if (cursor) {
-					iterator(cursor.value, store);
-					cursor.continue();
+					const stop = iterator(cursor.value, store);
+					if (stop) {
+						resolve();
+					} else {
+						cursor.continue();
+					}
 				} else {
 					resolve();
 				}

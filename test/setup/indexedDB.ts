@@ -23,6 +23,7 @@ global.WebSocket = WebSocket;
 URL.createObjectURL = (blob: Blob) => {
 	return `blob:${blob.type}:${blob.size}`;
 };
+URL.revokeObjectURL = () => {};
 
 process.env.TEST = 'true';
 process.env.NODE_ENV = 'test';

@@ -14,6 +14,7 @@ import {
 	isFileRef,
 	isObjectRef,
 	omit,
+	rewriteAuthzOriginator,
 } from '@verdant-web/common';
 import { MessageSender } from './MessageSender.js';
 import { Presence } from './Presence.js';
@@ -292,9 +293,16 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			changesSince === null && ops.length === 0 && baselines.length === 0;
 		if (isEmptyLibrary) {
 			this.log('info', 'Received sync from new library', replicaId);
+
+			// when initializing a new library, rewrite authz subjects to
+			// the current user ID (on a purely local replica, these authz
+			// subjects will be a generic "originator" constant value, because
+			// it doesnt know what user it is until it connects to the server)
+			rewriteAuthzOriginator(message, info.userId);
 		}
 
-		let overwriteLocalData = replicaShouldReset && !isEmptyLibrary;
+		// don't reset replica if library is empty...
+		let overwriteReplicaData = replicaShouldReset && !isEmptyLibrary;
 
 		// if the local library is empty and the replica is new to us,
 		// but the replica is providing a "since" timestamp, this
@@ -321,10 +329,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				replicaId,
 				'is providing a full history but the library already has data. Requesting replica reset.',
 			);
-			overwriteLocalData = true;
+			overwriteReplicaData = true;
 		}
 
-		if (overwriteLocalData) {
+		if (overwriteReplicaData) {
 			this.log(
 				'info',
 				'Overwriting local data for replica',
@@ -339,7 +347,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 
 		// only write incoming replica data to storage if
 		// we are not overwriting the replica's data
-		if (!overwriteLocalData) {
+		if (!overwriteReplicaData) {
 			// store all incoming operations and baselines
 			await this.storage.baselines.insertAll(info.libraryId, message.baselines);
 
@@ -409,7 +417,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			// only request the client to overwrite local data if a reset is requested
 			// and there is data to overwrite it. otherwise the client may still
 			// send its own history to us.
-			overwriteLocalData,
+			overwriteLocalData: overwriteReplicaData,
 			ackedTimestamp: message.timestamp,
 			ackThisNonce,
 		});

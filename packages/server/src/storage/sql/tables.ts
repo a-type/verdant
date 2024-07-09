@@ -15,6 +15,7 @@ export interface OperationHistoryTable {
 	serverOrder: number;
 	replicaId: string;
 	libraryId: string;
+	authz: string | null;
 }
 export type OperationHistoryRow = Selectable<OperationHistoryTable>;
 
@@ -23,6 +24,7 @@ export interface DocumentBaselineTable {
 	snapshot: string;
 	timestamp: string;
 	libraryId: string;
+	authz: string | null;
 }
 export type DocumentBaselineRow = Selectable<DocumentBaselineTable>;
 

@@ -1,4 +1,8 @@
-import { CollectionFilter, hashObject } from '@verdant-web/common';
+import {
+	AuthorizationKey,
+	CollectionFilter,
+	hashObject,
+} from '@verdant-web/common';
 import { Context } from '../context.js';
 import { EntityStore } from '../entities/EntityStore.js';
 import { GetQuery } from './GetQuery.js';
@@ -7,8 +11,8 @@ import { FindOneQuery } from './FindOneQuery.js';
 import { FindPageQuery } from './FindPageQuery.js';
 import { FindInfiniteQuery } from './FindInfiniteQuery.js';
 import { FindAllQuery } from './FindAllQuery.js';
-import { DocumentManager } from '../DocumentManager.js';
-import { ObjectEntity } from '../index.js';
+import { DocumentManager } from '../entities/DocumentManager.js';
+import { Entity, ObjectEntity } from '../index.js';
 import { UPDATE } from './BaseQuery.js';
 
 export class CollectionQueries<
@@ -22,9 +26,20 @@ export class CollectionQueries<
 	private context;
 	private documentManager;
 
-	put: (init: Init, options?: { undoable?: boolean }) => Promise<T>;
+	put: (
+		init: Init,
+		options?: { undoable?: boolean; access?: AuthorizationKey },
+	) => Promise<T>;
 	delete: (id: string, options?: { undoable?: boolean }) => Promise<void>;
 	deleteAll: (ids: string[], options?: { undoable?: boolean }) => Promise<void>;
+	clone: (
+		entity: ObjectEntity<any, any>,
+		options?: {
+			undoable?: boolean;
+			access?: AuthorizationKey;
+			primaryKey?: string;
+		},
+	) => Promise<T>;
 
 	constructor({
 		collection,
@@ -54,6 +69,10 @@ export class CollectionQueries<
 			this.collection,
 		);
 		this.deleteAll = this.documentManager.deleteAllFromCollection.bind(
+			this.documentManager,
+			this.collection,
+		);
+		this.clone = this.documentManager.clone.bind(
 			this.documentManager,
 			this.collection,
 		);

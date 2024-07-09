@@ -101,10 +101,14 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.dispose();
 	};
 
-	getSnapshot(): EntityFileSnapshot {
+	getSnapshot(): FileData {
+		if (this._fileData) return this._fileData;
 		return {
 			id: this.id,
-			url: this.loading || this.failed ? undefined : this.url,
+			url: this._objectUrl ?? undefined,
+			name: this.name ?? 'unknown-file',
+			remote: false,
+			type: this.type ?? '',
 		};
 	}
 }

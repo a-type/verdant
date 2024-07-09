@@ -161,7 +161,7 @@ export function getIndexValues(
 		basicIndexes,
 		computeCompoundIndices(schema, { ...doc, ...basicIndexes }),
 	);
-	basicIndexes['@@@snapshot'] = doc;
+	basicIndexes['@@@snapshot'] = JSON.stringify(doc);
 	return basicIndexes;
 }
 

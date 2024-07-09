@@ -198,6 +198,25 @@ export async function waitForFileUpload(file: EntityFile, timeout = 5000) {
 	});
 }
 
+export async function waitForFileLoaded(file: EntityFile, timeout = 5000) {
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(() => {
+			reject(new Error('Timed out waiting for file load'));
+		}, timeout);
+		if (!file.loading) {
+			clearTimeout(timer);
+			resolve();
+		} else {
+			file.subscribe('change', () => {
+				if (!file.loading) {
+					clearTimeout(timer);
+					resolve();
+				}
+			});
+		}
+	});
+}
+
 export async function waitForEntitySnapshot(
 	entity: any,
 	snapshot: any,

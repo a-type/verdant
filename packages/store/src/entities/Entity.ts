@@ -17,6 +17,7 @@ import {
 	getDefault,
 	hasDefault,
 	isFileRef,
+	isFile,
 	isNullable,
 	isObject,
 	isObjectRef,
@@ -29,7 +30,7 @@ import {
 } from '@verdant-web/common';
 import { Context } from '../context.js';
 import { FileManager } from '../files/FileManager.js';
-import { isFile, processValueFiles } from '../files/utils.js';
+import { processValueFiles } from '../files/utils.js';
 import { EntityFile } from '../index.js';
 import { EntityCache } from './EntityCache.js';
 import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
@@ -383,6 +384,19 @@ export class Entity<
 	}
 
 	/**
+	 * The authz string signifying the permissions this entity has.
+	 * On the client (where we are) it's only ever possible to see
+	 * an entity with either full access or access for the current
+	 * user.
+	 */
+	get access() {
+		return this.viewData.authz;
+	}
+	get isAuthorized() {
+		return !!this.access;
+	}
+
+	/**
 	 * Pruning - when entities have invalid children, we 'prune' that
 	 * data up to the nearest prunable point - a nullable field,
 	 * or a list.
@@ -443,6 +457,14 @@ export class Entity<
 	// change management methods (internal use only)
 	private addPendingOperations = (operations: Operation[]) => {
 		this.ctx.log('debug', 'Entity: adding pending operations', this.oid);
+
+		// apply authz to all operations
+		if (this.access) {
+			for (const op of operations) {
+				op.authz = this.access;
+			}
+		}
+
 		const changes = this.metadataFamily.addPendingData(operations);
 		for (const change of changes) {
 			this.change(change);
@@ -708,7 +730,9 @@ export class Entity<
 			if (validationError) {
 				// TODO: is it a good idea to throw an error here? a runtime error won't be that helpful,
 				// but also we don't really want invalid data supplied.
-				throw new Error(validationError.message);
+				throw new Error(`Validation error: ${validationError.message}`, {
+					cause: validationError,
+				});
 			}
 		}
 		return processValueFiles(value, this.files.add);

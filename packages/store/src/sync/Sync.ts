@@ -5,7 +5,9 @@ import {
 	FileData,
 	Operation,
 	ReplicaType,
+	rewriteAuthzOriginator,
 	ServerMessage,
+	VerdantError,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
@@ -33,10 +35,11 @@ export interface SyncTransport extends EventSubscriber<SyncTransportEvents> {
 	readonly presence: PresenceManager;
 
 	readonly mode: SyncTransportMode;
+	readonly hasSynced: boolean;
 
 	send(message: ClientMessage): void;
 
-	start(): void;
+	start(): Promise<void>;
 	ignoreIncoming(): void;
 	stop(): void;
 
@@ -57,7 +60,7 @@ export interface Sync<Presence = any, Profile = any>
 	getFile(fileId: string): Promise<FilePullResult>;
 	readonly presence: PresenceManager<Profile, Presence>;
 	send(message: ClientMessage): void;
-	start(): void;
+	start(): Promise<void>;
 	stop(): void;
 	ignoreIncoming(): void;
 	destroy(): void;
@@ -76,7 +79,7 @@ export class NoSync<Presence = any, Profile = any>
 
 	public send(): void {}
 
-	public start(): void {}
+	public async start(): Promise<void> {}
 
 	public stop(): void {}
 
@@ -257,19 +260,19 @@ export class ServerSync<Presence = any, Profile = any>
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
-			log: this.log,
+			log: ctx.log,
 		});
 		this.pushPullSync = new PushPullSync({
 			endpointProvider: this.endpointProvider,
 			meta,
 			presence: this.presence,
-			log: this.log,
+			log: ctx.log,
 			interval: pullInterval,
 			fetch,
 		});
 		this.fileSync = new FileSync({
 			endpointProvider: this.endpointProvider,
-			log: this.log,
+			log: ctx.log,
 		});
 		if (useBroadcastChannel && 'BroadcastChannel' in window) {
 			this.broadcastChannel = new BroadcastChannel(`verdant-${ctx.namespace}`);
@@ -458,6 +461,22 @@ export class ServerSync<Presence = any, Profile = any>
 
 	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
+			// before sync, replace 'originator' authz subjects
+			// with token userId. This is the easiest place to
+			// do this and allows the rest of the system to be
+			// ambivalent about user identity when assigning
+			// authorization for the current user.
+			const userId = this.endpointProvider.tokenInfo?.userId;
+			if (!userId) {
+				throw new VerdantError(
+					VerdantError.Code.Unexpected,
+					undefined,
+					'Active sync has invalid token info',
+				);
+			}
+			if (message.type === 'sync' || message.type === 'op') {
+				rewriteAuthzOriginator(message, userId);
+			}
 			await this.activeSync.send(message);
 			this.onOutgoingMessage?.(message);
 		}
@@ -468,6 +487,7 @@ export class ServerSync<Presence = any, Profile = any>
 			name: info.name,
 			type: info.type,
 			id: info.id,
+			size: info.file?.size,
 		});
 		if (this.activeSync.status === 'active') {
 			return this.fileSync.uploadFile(info);
@@ -475,6 +495,7 @@ export class ServerSync<Presence = any, Profile = any>
 			return {
 				success: false,
 				retry: false,
+				error: 'Sync is not active',
 			};
 		}
 	};
