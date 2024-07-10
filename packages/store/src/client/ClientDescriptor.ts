@@ -47,7 +47,10 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/**
 	 * Provide a log function to log internal debug messages
 	 */
-	log?: (...args: any[]) => void;
+	log?: (
+		level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
+		...args: any[]
+	) => void;
 	disableRebasing?: boolean;
 	/**
 	 * Provide a specific schema number to override the schema version
