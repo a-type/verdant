@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.9.0-next.2
+
+### Patch Changes
+
+- d075461f: Ensure level supplied to all logs
+
 ## 3.9.0-next.1
 
 ### Patch Changes
