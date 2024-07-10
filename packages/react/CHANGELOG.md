@@ -1,5 +1,17 @@
 # @lo-fi/react
 
+## 35.0.0
+
+### Patch Changes
+
+- Updated dependencies [91ab8cd7]
+- Updated dependencies [4679a9fb]
+- Updated dependencies [d075461f]
+- Updated dependencies [176c32e5]
+- Updated dependencies [5882e6dc]
+  - @verdant-web/common@2.4.0
+  - @verdant-web/store@3.9.0
+
 ## 35.0.0-next.1
 
 ### Patch Changes
