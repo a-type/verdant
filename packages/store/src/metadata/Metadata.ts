@@ -380,7 +380,7 @@ export class Metadata extends EventSubscriber<{
 		opts?: { transaction?: IDBTransaction },
 	) => {
 		if (baselines.length === 0) return [];
-		this.log(`Inserting ${baselines.length} remote baselines`);
+		this.log('debug', `Inserting ${baselines.length} remote baselines`);
 
 		await this.baselines.setAll(baselines, opts);
 
@@ -499,7 +499,7 @@ export class Metadata extends EventSubscriber<{
 		// including replica Id for testing I guess
 		const replicaId = (await this.localReplica.get()).id;
 
-		this.log('[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
+		this.log('debug', '[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
 		const transaction =
 			providedTx ||
 			this.createTransaction(['operations', 'baselines'], { write: true });

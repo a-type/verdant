@@ -124,6 +124,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 		this.documentDb.addEventListener('versionchange', () => {
 			this.context.log?.(
+				'warn',
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
 			this.documentDb.close();
@@ -134,6 +135,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 		this.metaDb.addEventListener('versionchange', () => {
 			this.context.log?.(
+				'warn',
 				`Another tab has requested a version change for ${this.namespace}`,
 			);
 			this.metaDb.close();
@@ -275,7 +277,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			resolve();
 		});
 
-		this.context.log?.('Client closed');
+		this.context.log?.('info', 'Client closed');
 	};
 
 	__dangerous__resetLocal = async () => {
@@ -396,7 +398,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		});
 		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
 		// re-initialize data
-		this.context.log('Re-initializing data from imported data...');
+		this.context.log('info', 'Re-initializing data from imported data...');
 		await this._entities.addData({
 			operations: data.operations,
 			baselines: data.baselines,
@@ -405,7 +407,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// close the database and reopen to latest version, applying
 		// migrations
 		await closeDatabase(this.context.documentDb);
-		this.context.log('Migrating up to latest schema...');
+		this.context.log('info', 'Migrating up to latest schema...');
 		// put the schema back
 		this.context.schema = currentSchema;
 		this.context.documentDb = await openQueryDatabase({

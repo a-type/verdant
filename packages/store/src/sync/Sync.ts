@@ -367,7 +367,7 @@ export class ServerSync<Presence = any, Profile = any>
 			}
 		}
 
-		this.log('sync message', JSON.stringify(message, null, 2));
+		this.log('debug', 'sync message', JSON.stringify(message, null, 2));
 		switch (message.type) {
 			case 'op-re':
 				await this.onData({

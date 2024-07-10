@@ -540,7 +540,6 @@ export class Entity<
 			// emit deepchange, too
 			this.deepChange(this, ev);
 			// emit the change, it's for us
-			this.ctx.log('Emitting change event', this.oid);
 			this.emit('change', { isLocal: ev.isLocal });
 		}
 	};
@@ -548,7 +547,6 @@ export class Entity<
 		// chain deepChanges to parents
 		this.deepChange(this, ev);
 		// emit the change, it's for us
-		this.ctx.log('Emitting change event', this.oid);
 		this.emit('change', { isLocal: ev.isLocal });
 	};
 	protected deepChange = (target: Entity, ev: EntityChange) => {
@@ -558,13 +556,6 @@ export class Entity<
 		// reset this flag to recompute snapshot data - children
 		// or self has changed. new pruning needs to happen.
 		this.cachedView = undefined;
-		this.ctx.log(
-			'debug',
-			'Deep change detected at',
-			this.oid,
-			'reset cached view',
-		);
-		this.ctx.log('debug', 'Emitting deep change event', this.oid);
 		this.emit('changeDeep', target, ev);
 		this.parent?.deepChange(target, ev);
 	};

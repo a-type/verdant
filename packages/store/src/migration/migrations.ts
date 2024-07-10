@@ -212,7 +212,9 @@ export async function runMigrations({
 			await closeDatabase(upgradedDatabase);
 
 			context.log('debug', `Migration of ${namespace} complete.`);
-			context.log(`
+			context.log(
+				'info',
+				`
 				⬆️ v${migration.newSchema.version} Migration complete. Here's the rundown:
 					- Added collections: ${migration.addedCollections.join(', ')}
 					- Removed collections: ${migration.removedCollections.join(', ')}
@@ -229,7 +231,8 @@ export async function runMigrations({
 						)
 						.flatMap((i) => i)
 						.join(', ')}
-			`);
+			`,
+			);
 		}
 	});
 }

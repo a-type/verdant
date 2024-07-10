@@ -18,7 +18,10 @@ export interface Context {
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
 	oldSchemas?: StorageSchema[];
-	log: (...args: any[]) => void;
+	log: (
+		level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
+		...args: any[]
+	) => void;
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;
 		documentChanged: (oid: ObjectIdentifier) => void;
