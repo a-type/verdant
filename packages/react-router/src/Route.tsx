@@ -21,7 +21,7 @@ export interface RouteRendererProps {
  */
 export function RouteRenderer({ value, params }: RouteRendererProps) {
 	useEffect(() => {
-		value?.route.onVisited?.(value.params);
+		return value?.route.onVisited?.(value.params);
 	}, [value]);
 
 	const paramsToPass = useMemo(

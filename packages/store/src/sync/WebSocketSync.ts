@@ -94,9 +94,7 @@ export class WebSocketSync
 			this.hasStartedSync = true;
 			this.synced = false;
 			this.send(
-				await this.meta.messageCreator.createPresenceUpdate(
-					this.presence.self.presence,
-				),
+				await this.meta.messageCreator.createPresenceUpdate(this.presence.self),
 			);
 			this.send(await this.meta.messageCreator.createSyncStep1());
 			this.heartbeat.start();

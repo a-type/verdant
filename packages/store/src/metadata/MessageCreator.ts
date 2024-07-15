@@ -10,6 +10,7 @@ import {
 	PresenceUpdateMessage,
 	SyncAckMessage,
 	SyncMessage,
+	VerdantInternalPresence,
 } from '@verdant-web/common';
 
 import { Metadata } from './Metadata.js';
@@ -110,14 +111,16 @@ export class MessageCreator {
 		};
 	};
 
-	createPresenceUpdate = async (
-		presence: any,
-	): Promise<PresenceUpdateMessage> => {
+	createPresenceUpdate = async (data: {
+		presence?: any;
+		internal?: VerdantInternalPresence;
+	}): Promise<PresenceUpdateMessage> => {
 		const localReplicaInfo = await this.meta.localReplica.get();
 		return {
 			type: 'presence-update',
-			presence,
+			presence: data.presence,
 			replicaId: localReplicaInfo.id,
+			internal: data.internal,
 		};
 	};
 

@@ -1,5 +1,10 @@
-import { UserInfo } from '@verdant-web/common';
+import {
+	initialInternalPresence,
+	UserInfo,
+	UserInfoUpdate,
+} from '@verdant-web/common';
 import EventEmitter from 'events';
+import { UserProfiles } from './Profiles.js';
 
 /**
  * Stores client presence in-memory for connected
@@ -15,6 +20,10 @@ export class Presence extends EventEmitter {
 		}
 	> = new Map();
 
+	constructor(private profiles: UserProfiles<any>) {
+		super();
+	}
+
 	private getLibrary = (libraryId: string) => {
 		let map = this.presences.get(libraryId);
 		if (!map) {
@@ -28,12 +37,26 @@ export class Presence extends EventEmitter {
 		return map;
 	};
 
-	set = (libraryId: string, userId: string, presence: UserInfo<any, any>) => {
+	set = async (libraryId: string, userId: string, userInfo: UserInfoUpdate) => {
 		const lib = this.getLibrary(libraryId);
-		lib.presences[userId] = presence;
-		lib.replicaToUser[presence.replicaId] = userId;
+		if (!lib.presences[userId]) {
+			lib.presences[userId] = {
+				...userInfo,
+				profile: await this.profiles.get(userId),
+				internal: userInfo.internal || initialInternalPresence,
+			};
+		} else {
+			Object.assign(lib.presences[userId], userInfo);
+		}
+		lib.replicaToUser[userInfo.replicaId] = userId;
 		lib.userToReplica[userId] = lib.userToReplica[userId] || new Set<string>();
-		lib.userToReplica[userId].add(presence.replicaId);
+		lib.userToReplica[userId].add(userInfo.replicaId);
+
+		return lib.presences[userId]!;
+	};
+
+	get = (libraryId: string, userId: string) => {
+		return this.presences.get(libraryId)?.presences[userId];
 	};
 
 	removeReplica = (libraryId: string, replicaId: string) => {

@@ -204,9 +204,7 @@ export class PushPullSync
 		// will include the client's own presence info and fill in missing profile
 		// data on the first request. otherwise it would have to wait for the second.
 		this.sendRequest([
-			await this.meta.messageCreator.createPresenceUpdate(
-				this.presence.self.presence,
-			),
+			await this.meta.messageCreator.createPresenceUpdate(this.presence.self),
 			await this.meta.messageCreator.createSyncStep1(),
 		]);
 	};

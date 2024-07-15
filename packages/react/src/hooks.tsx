@@ -299,6 +299,37 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
+	/**
+	 * Returns the peers that are in the same view as the local user.
+	 */
+	function useViewPeers() {
+		const storage = useStorage();
+		return useSyncExternalStoreWithSelector(
+			(callback) => {
+				return storage.sync.presence.subscribe('change', callback);
+			},
+			() => {
+				const viewId = storage.sync.presence.self.internal.viewId;
+				return Object.values(storage.sync.presence.peers).filter(
+					(peer) => peer.internal.viewId === viewId,
+				);
+			},
+			() => [] as UserInfo<any, any>[],
+			(peers) => peers,
+			(a, b) => a.length === b.length && a.every((peer, i) => peer === b[i]),
+		);
+	}
+
+	function useViewId(viewId: string) {
+		const client = useStorage();
+		useEffect(() => {
+			client.sync.presence.setViewId(viewId);
+			return () => {
+				client.sync.presence.setViewId(undefined);
+			};
+		}, [viewId, client]);
+	}
+
 	function useSyncStatus() {
 		const storage = useStorage();
 		return useSyncExternalStore(
@@ -412,6 +443,8 @@ export function createHooks<Presence = any, Profile = any>(
 		useCanUndo,
 		useCanRedo,
 		useSync,
+		useViewPeers,
+		useViewId,
 		Context,
 		Provider: ({
 			value,

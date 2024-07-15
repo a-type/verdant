@@ -3,6 +3,8 @@ import {
 	EventSubscriber,
 	Batcher,
 	Batch,
+	VerdantInternalPresence,
+	initialInternalPresence,
 } from '@verdant-web/common';
 import type { UserInfo } from '../index.js';
 import {
@@ -30,8 +32,13 @@ export class PresenceManager<
 	/** Fired when a peer presence goes offline */
 	peerLeft: (userId: string, lastPresence: UserInfo<Profile, Presence>) => void;
 	/** Fired after local presence changes are flushed to the server. */
-	update: (presence: Partial<Presence>) => void;
+	update: (data: {
+		presence?: Presence;
+		internal?: VerdantInternalPresence;
+	}) => void;
 	load: () => void;
+	/** Fired on any change to a peer or the local user */
+	change: () => void;
 }> {
 	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
 	private _self = { profile: {} } as UserInfo<Profile, Presence>;
@@ -39,7 +46,10 @@ export class PresenceManager<
 	private _selfReplicaIds = new Set<string>();
 	private _peerIds = new Array<string>();
 	private _updateBatcher;
-	private _updateBatch: Batch<Partial<Presence>>;
+	private _updateBatch: Batch<{
+		presence?: Partial<Presence>;
+		internal?: Partial<VerdantInternalPresence>;
+	}>;
 
 	get self() {
 		return this._self;
@@ -77,6 +87,7 @@ export class PresenceManager<
 		super();
 		this.self.presence = initialPresence;
 		this.self.profile = defaultProfile;
+		this.self.internal = initialInternalPresence;
 		this.self.id = '';
 		this.self.replicaId = '';
 
@@ -119,12 +130,14 @@ export class PresenceManager<
 		message: ServerMessage,
 	) => {
 		let peersChanged = false;
+		let selfChanged = false;
 		const peerIdsSet = new Set<string>(this.peerIds);
 
 		if (message.type === 'presence-changed') {
 			if (this.isSelf(localReplicaInfo, message.userInfo)) {
 				this._self = message.userInfo;
 				this._selfReplicaIds.add(message.userInfo.replicaId);
+				selfChanged = true;
 				this.emit('selfChanged', message.userInfo);
 			} else {
 				peerIdsSet.add(message.userInfo.id);
@@ -141,6 +154,7 @@ export class PresenceManager<
 				if (this.isSelf(localReplicaInfo, userInfo)) {
 					this._self = userInfo;
 					this._selfReplicaIds.add(userInfo.replicaId);
+					selfChanged = true;
 					this.emit('selfChanged', userInfo);
 				} else {
 					peersChanged = true;
@@ -161,21 +175,57 @@ export class PresenceManager<
 			this._peerIds = Array.from(peerIdsSet);
 			this.emit('peersChanged', this._peers);
 		}
+		if (peersChanged || selfChanged) {
+			this.emit('change');
+		}
 	};
 
 	update = async (presence: Partial<Presence>) => {
 		this._updateBatch.update({
-			items: [presence],
+			items: [{ presence }],
 		});
 		// proactively update the local presence
 		this.self.presence = { ...this.self.presence, ...presence };
 		this.emit('selfChanged', this.self);
+		this.emit('change');
 	};
 
-	flushPresenceUpdates = (presenceUpdates: Partial<Presence>[]) => {
-		const presence = presenceUpdates.reduce((acc, update) => {
-			return { ...acc, ...update };
-		}, this.self.presence);
-		this.emit('update', presence);
+	flushPresenceUpdates = (
+		presenceUpdates: {
+			presence?: Partial<Presence>;
+			internal?: Partial<VerdantInternalPresence>;
+		}[],
+	) => {
+		const data = {
+			presence: this.self.presence,
+			internal: this.self.internal,
+		};
+		for (const update of presenceUpdates) {
+			if (update.presence) {
+				Object.assign(data.presence as any, update.presence);
+			}
+			if (update.internal) {
+				Object.assign(data.internal, update.internal);
+			}
+		}
+		this.emit('update', data);
+	};
+
+	setViewId = (viewId: string | undefined) => {
+		this._updateBatch.update({
+			items: [{ internal: { viewId } }],
+		});
+		this.self.internal.viewId = viewId;
+		this.emit('selfChanged', this.self);
+		this.emit('change');
+	};
+
+	/**
+	 * Get all peers that are in the same view as the local user.
+	 */
+	getViewPeers = () => {
+		return this._peerIds
+			.map((id) => this._peers[id])
+			.filter((peer) => peer.internal.viewId === this.self.internal.viewId);
 	};
 }

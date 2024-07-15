@@ -17,7 +17,8 @@ export type {
 	MigrationIndexDescription,
 	MigrationEngine,
 } from './migration.js';
-export type { UserInfo } from './presence.js';
+export type * from './presence.js';
+export { initialInternalPresence } from './presence.js';
 export * from './patch.js';
 export * from './oids.js';
 export * from './oidsLegacy.js';

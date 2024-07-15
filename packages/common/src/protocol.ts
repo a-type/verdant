@@ -1,8 +1,12 @@
 // client ID, and therefore library ID, is inferred
 
 import { DocumentBaseline } from './baseline.js';
-import { Operation, OperationPatch } from './operation.js';
-import { UserInfo } from './presence.js';
+import { Operation } from './operation.js';
+import {
+	UserInfo,
+	UserInfoUpdate,
+	VerdantInternalPresence,
+} from './presence.js';
 
 export type HeartbeatMessage = {
 	type: 'heartbeat';
@@ -124,7 +128,9 @@ export type PresenceUpdateMessage = {
 	/** The client's replica ID */
 	replicaId: string;
 	/** new presence value */
-	presence: any;
+	presence?: any;
+	/** presence that is internal to verdant */
+	internal?: VerdantInternalPresence;
 };
 
 export type PresenceChangedMessage = {

@@ -40,7 +40,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 	private storage;
 	private sender;
 	private profiles;
-	private presences = new Presence();
+	private presences;
 	private disableRebasing: boolean;
 	private fileStorage: FileStorage | undefined;
 
@@ -66,6 +66,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		this.disableRebasing = !!disableRebasing;
 		this.sender = sender;
 		this.profiles = profiles;
+		this.presences = new Presence(profiles);
 		this.storage = storage;
 		this.fileStorage = fileStorage;
 		this.presences.on('lost', this.onPresenceLost);
@@ -619,10 +620,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		this.presences.set(info.libraryId, info.userId, {
+		const updated = await this.presences.set(info.libraryId, info.userId, {
 			presence: message.presence,
+			internal: message.internal,
 			replicaId: message.replicaId,
-			profile: await this.profiles.get(info.userId),
 			id: info.userId,
 		});
 		this.sender.broadcast(
@@ -630,12 +631,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			{
 				type: 'presence-changed',
 				replicaId: message.replicaId,
-				userInfo: {
-					id: info.userId,
-					presence: message.presence,
-					profile: await this.profiles.get(info.userId),
-					replicaId: message.replicaId,
-				},
+				userInfo: updated,
 			},
 			// mirror back to the replica which sent it so it has profile
 			[],

@@ -26,4 +26,24 @@ export interface UserInfo<Profile, Presence> {
 	 * makes changes. The shape of presence is up to you.
 	 */
 	presence: Presence;
+
+	/**
+	 * This is the internal presence data that Verdant uses
+	 * for some built-in presence functionality. The client
+	 * should manage it transparently to the user.
+	 */
+	internal: VerdantInternalPresence;
 }
+
+export type UserInfoUpdate<Profile = any, Presence = any> = Omit<
+	UserInfo<Profile, Presence>,
+	'internal' | 'profile'
+> & {
+	internal?: VerdantInternalPresence;
+};
+
+export interface VerdantInternalPresence {
+	viewId?: string;
+}
+
+export const initialInternalPresence: VerdantInternalPresence = {};

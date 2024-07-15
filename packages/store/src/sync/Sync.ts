@@ -8,6 +8,7 @@ import {
 	rewriteAuthzOriginator,
 	ServerMessage,
 	VerdantError,
+	VerdantInternalPresence,
 } from '@verdant-web/common';
 import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
@@ -422,8 +423,11 @@ export class ServerSync<Presence = any, Profile = any>
 	private handleOnlineChange = (online: boolean) => {
 		this.emit('onlineChange', online);
 	};
-	private handlePresenceUpdate = async (presence: any) => {
-		this.send(await this.meta.messageCreator.createPresenceUpdate(presence));
+	private handlePresenceUpdate = async (data: {
+		presence?: Presence;
+		internal?: VerdantInternalPresence;
+	}) => {
+		this.send(await this.meta.messageCreator.createPresenceUpdate(data));
 	};
 
 	setMode = (transport: SyncTransportMode) => {
