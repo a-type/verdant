@@ -353,12 +353,52 @@ export function createHooks<Presence = any, Profile = any>(
 			},
 			() => [] as UserInfo<any, any>[],
 			(peers) => peers,
-			(a, b) => a.length === b.length && a.every((peer, i) => peer === b[i]),
+			(a, b) => {
+				if (a.length !== b.length) return false;
+				for (let i = 0; i < a.length; i++) {
+					// looking for changes of peers or their lastFieldTimestamp
+					if (a[i].replicaId !== b[i].replicaId) return false;
+					if (
+						a[i].internal.lastFieldTimestamp !==
+						b[i].internal.lastFieldTimestamp
+					) {
+						return false;
+					}
+				}
+
+				return true;
+			},
 		);
 		const isPresenceOnField = useSyncExternalStore(
 			(callback) => client.sync.presence.subscribe('selfChanged', callback),
 			() => client.sync.presence.self.internal.lastFieldId === fieldId,
 		);
+
+		// set a timer for field peers to track when their claim expires. since expiration
+		// is encoded in static timestamps, the component needs to re-render when the
+		// earliest claim expires to check if it was renewed or if we should drop that
+		// peer's presence on this field now. if this timer wasn't here, the component
+		// may not re-render when a claim expires and it would remain indefinitely.
+		const [_, forceUpdate] = useState(0);
+		useEffect(() => {
+			const earliestExpiration = fieldPeers.reduce(
+				(earliest, peer) =>
+					Math.min(earliest, peer.internal.lastFieldTimestamp ?? Infinity),
+				Infinity,
+			);
+			if (earliestExpiration !== Infinity) {
+				const timeout = setTimeout(
+					() => {
+						forceUpdate((n) => n + 1);
+						// add a bit of buffer
+					},
+					earliestExpiration - Date.now() + 100,
+				);
+				return () => {
+					clearTimeout(timeout);
+				};
+			}
+		}, [fieldPeers]);
 
 		const inputProps = useMemo(() => {
 			const fieldSchema = entity.getFieldSchema(key);
@@ -392,6 +432,9 @@ export function createHooks<Presence = any, Profile = any>(
 				onFocus: () => {
 					client.sync.presence.setFieldId(fieldId);
 				},
+				onBlur: () => {
+					client.sync.presence.setFieldId(undefined);
+				},
 				value: fieldSchema.type === 'boolean' ? key : value.toString(),
 			};
 			if (fieldSchema.type === 'boolean') {
@@ -411,6 +454,7 @@ export function createHooks<Presence = any, Profile = any>(
 				self: isPresenceOnField,
 				peers: fieldPeers,
 				occupied,
+				touch: () => client.sync.presence.setFieldId(fieldId),
 			},
 		};
 	}

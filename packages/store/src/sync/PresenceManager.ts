@@ -172,7 +172,9 @@ export class PresenceManager<
 			this.emit('peerLeft', message.userId, lastPresence);
 		}
 		if (peersChanged) {
-			this._peerIds = Array.from(peerIdsSet);
+			// important that this stays sorted to keep stable order, don't want
+			// peers swapping around.
+			this._peerIds = Array.from(peerIdsSet).sort();
 			this.emit('peersChanged', this._peers);
 		}
 		if (peersChanged || selfChanged) {

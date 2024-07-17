@@ -29,6 +29,7 @@ type FieldInputProps<Shape> = {
 	value: Shape extends boolean ? undefined : Shape;
 	checked?: boolean;
 	onChange: (event: ChangeEvent) => void;
+	onFocus: (event: FocusEvent) => void;
 	onBlur: (event: FocusEvent) => void;
 	type?: string;
 }
@@ -78,6 +79,11 @@ export interface GeneratedHooks<Presence, Profile> {
 			 * Will return false if the current replica is already editing it.
 			 */
 			occupied: boolean;
+			/**
+			 * Mark the field as being edited by the current replica, similar to
+			 * what inputProps do on 'focus' events.
+			 */
+			touch: () => void;
 		};
 	};
   useSyncStatus: () => boolean;
