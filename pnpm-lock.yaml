@@ -316,9 +316,6 @@ importers:
       '@types/use-sync-external-store':
         specifier: ^0.0.3
         version: 0.0.3
-      '@verdant-web/store':
-        specifier: workspace:*
-        version: link:../store
       '@vitejs/plugin-react-swc':
         specifier: ^3.3.0
         version: 3.3.0(vite@4.2.1)
