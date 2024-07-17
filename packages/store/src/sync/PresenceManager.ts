@@ -224,8 +224,16 @@ export class PresenceManager<
 	 * Get all peers that are in the same view as the local user.
 	 */
 	getViewPeers = () => {
-		return this._peerIds
-			.map((id) => this._peers[id])
-			.filter((peer) => peer.internal.viewId === this.self.internal.viewId);
+		return (
+			this._peerIds
+				.map((id) => this._peers[id])
+				// undefined view matches all peers. otherwise,
+				// filter to only those in the same view.
+				.filter(
+					(peer) =>
+						this.self.internal.viewId === undefined ||
+						peer.internal.viewId === this.self.internal.viewId,
+				)
+		);
 	};
 }

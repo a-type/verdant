@@ -300,12 +300,13 @@ export class ServerSync<Presence = any, Profile = any>
 
 		if (automaticTransportSelection && this.canDoRealtime) {
 			// automatically shift between transport modes depending
-			// on whether any peers are present
+			// on whether any peers are present (matching view if
+			// applicable)
 			const decideIfUpgrade = () => {
 				if (switchoverTimeout) {
 					clearTimeout(switchoverTimeout);
 				}
-				const hasPeers = Object.keys(this.presence.peers).length > 0;
+				const hasPeers = this.presence.getViewPeers().length > 0;
 				const shouldUpgrade =
 					hasPeers ||
 					(automaticTransportSelection !== 'peers-only' &&
@@ -315,7 +316,7 @@ export class ServerSync<Presence = any, Profile = any>
 				} else if (!shouldUpgrade && this.mode === 'realtime') {
 					// wait 1 second then switch to pull mode if still empty
 					switchoverTimeout = setTimeout(() => {
-						if (Object.keys(this.presence.peers).length === 0) {
+						if (this.presence.getViewPeers().length === 0) {
 							this.setMode('pull');
 						}
 					}, 1000);
