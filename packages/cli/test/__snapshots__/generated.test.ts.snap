@@ -608,7 +608,13 @@ export function createHooks(options) {
 `;
 
 exports[`generated react hooks > should produce consistent output code 2`] = `
-"import { Context, ComponentType, ReactNode } from "react";
+"import {
+  Context,
+  ComponentType,
+  ReactNode,
+  ChangeEvent,
+  FocusEvent,
+} from "react";
 import type {
   Client,
   ClientDescriptor,
@@ -622,6 +628,7 @@ import type {
   EntityShape,
   AnyEntity,
   EntityDestructured,
+  EntityInit,
   EntityFile,
   Todo,
   TodoFilter,
@@ -635,6 +642,15 @@ type HookConfig<F> = {
   index?: F;
   skip?: boolean;
   key?: string;
+};
+
+type FieldInputProps<Shape> = {
+  value: Shape extends boolean ? undefined : Shape;
+  checked?: boolean;
+  onChange: (event: ChangeEvent) => void;
+  onFocus: (event: FocusEvent) => void;
+  onBlur: (event: FocusEvent) => void;
+  type?: string;
 };
 
 export interface GeneratedHooks<Presence, Profile> {
@@ -666,6 +682,42 @@ export interface GeneratedHooks<Presence, Profile> {
     query: (peer: UserInfo<Profile, Presence>) => boolean,
     options?: { includeSelf: boolean },
   ) => UserInfo<Profile, Presence>[];
+  useViewPeers: () => UserInfo<Profile, Presence>[];
+  useViewId: (viewId: string | undefined) => void;
+  useField<
+    T extends AnyEntity<any, any, any>,
+    K extends keyof EntityDestructured<T>,
+  >(
+    entity: T,
+    fieldName: K,
+  ): {
+    /* The live value of the field */
+    value: EntityDestructured<T>[K];
+    /* Sets the value of the field */
+    setValue: (value: Exclude<EntityInit<T>[K], undefined>) => void;
+    /* Pass these props to any <input> or <textarea> element to auto-wire it */
+    inputProps: FieldInputProps<EntityDestructured<T>[K]>;
+    presence: {
+      /**
+       * Whether the current replica is editing the field
+       */
+      self: boolean;
+      /**
+       * A list of peers editing this field
+       */
+      peers: UserInfo<Profile, Presence>[];
+      /**
+       * Whether the field is currently being edited by someone else.
+       * Will return false if the current replica is already editing it.
+       */
+      occupied: boolean;
+      /**
+       * Mark the field as being edited by the current replica, similar to
+       * what inputProps do on 'focus' events.
+       */
+      touch: () => void;
+    };
+  };
   useSyncStatus: () => boolean;
   useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T,
