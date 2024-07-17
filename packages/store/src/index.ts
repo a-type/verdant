@@ -19,6 +19,7 @@ export type {
 	AccessibleEntityProperty,
 	AnyEntity,
 	EntityDestructured,
+	EntityInit,
 } from './entities/types.js';
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';

@@ -1,3 +1,4 @@
+import cuid from 'cuid';
 import {
 	ShapeFromFieldsWithDefaults,
 	StorageAnyFieldSchema,
@@ -94,6 +95,13 @@ const fileField = (args?: {
 	};
 };
 
+const idField = (): StorageStringFieldSchema => {
+	return {
+		type: 'string',
+		default: cuid,
+	};
+};
+
 export const fields = {
 	object: objectField,
 	array: arrayField,
@@ -103,4 +111,5 @@ export const fields = {
 	any: anyField,
 	map: mapField,
 	file: fileField,
+	id: idField,
 };

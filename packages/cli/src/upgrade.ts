@@ -4,6 +4,7 @@ import { readFile, readdir, unlink, writeFile } from 'fs/promises';
 import { writeSchema } from './schema.js';
 import { writeTS } from './fs/write.js';
 import { isEmpty } from './fs/isEmpty.js';
+import { makeDir } from './fs/makedir.js';
 
 export async function needsUpgrade({ output }: { output: string }) {
 	const metaPath = path.join(output, 'meta.json');
@@ -25,6 +26,7 @@ export async function upgrade({
 }) {
 	// read schemas and write them back
 	const schemasDir = path.join(output, 'schemaVersions');
+	await makeDir(schemasDir);
 	const schemas = (
 		await readdir(schemasDir, {
 			withFileTypes: true,

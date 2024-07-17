@@ -44,6 +44,8 @@ export type UserInfoUpdate<Profile = any, Presence = any> = Omit<
 
 export interface VerdantInternalPresence {
 	viewId?: string;
+	lastFieldId?: string;
+	lastFieldTimestamp?: number;
 }
 
 export const initialInternalPresence: VerdantInternalPresence = {};

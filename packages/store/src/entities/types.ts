@@ -1,4 +1,4 @@
-import { ObjectIdentifier } from '@verdant-web/common';
+import { ObjectIdentifier, StorageFieldSchema } from '@verdant-web/common';
 import type { Entity } from './Entity.js';
 
 export type AccessibleEntityProperty<T> = T extends Array<any>
@@ -75,6 +75,9 @@ export interface BaseEntity<
 	get<Key extends keyof Value>(key: Key): Value[Key];
 	getAll(): Value;
 	getSnapshot(): Snapshot;
+	getFieldSchema<FieldName extends keyof Value>(
+		key: FieldName,
+	): StorageFieldSchema;
 	readonly deleted: boolean;
 	readonly updatedAt: number;
 	readonly uid: string;
@@ -209,3 +212,10 @@ export type EntityDestructured<T extends AnyEntity<any, any, any> | null> =
 			? KeyValue
 			: never)
 	| (T extends null ? null : never);
+
+export type EntityInit<T extends AnyEntity<any, any, any>> =
+	T extends ListEntity<infer Init, any, any>
+		? Init
+		: T extends ObjectEntity<infer Init, any, any>
+		? Init
+		: never;

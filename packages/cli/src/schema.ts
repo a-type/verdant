@@ -14,6 +14,7 @@ import {
 	getSnapshotTypings,
 } from './typings.js';
 import { posixify } from './fs/posixify.js';
+import { makeDir } from './fs/makedir.js';
 
 /**
  * Runs a simple Node script which imports the schema and logs
@@ -268,6 +269,8 @@ export async function writeSchemaVersionsIndex({
 	output: string;
 	commonjs?: boolean;
 }) {
+	// make it first if it doesn't exist
+	await makeDir(`${output}/schemaVersions`);
 	const schemaVersions = await fs.readdir(`${output}/schemaVersions`);
 	const versions = schemaVersions
 		.filter((version) => version.endsWith('.js') && version !== 'index.js')

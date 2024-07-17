@@ -9,9 +9,9 @@ export function getReactTypings({
 	commonjs?: boolean;
 }) {
 	return `
-import { Context, ComponentType, ReactNode } from 'react';
+import { Context, ComponentType, ReactNode, ChangeEvent, FocusEvent } from 'react';
 import type {
-	Client, ClientDescriptor, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityFile,
+	Client, ClientDescriptor, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityInit, EntityFile,
   ${Object.values(schema.collections)
 		.map((v) => v.name)
 		.map((n) => pascalCase(n))
@@ -23,6 +23,14 @@ type HookConfig<F> = {
   index?: F;
   skip?: boolean;
   key?: string;
+}
+
+type FieldInputProps<Shape> = {
+	value: Shape extends boolean ? undefined : Shape;
+	checked?: boolean;
+	onChange: (event: ChangeEvent) => void;
+	onBlur: (event: FocusEvent) => void;
+	type?: string;
 }
 
 export interface GeneratedHooks<Presence, Profile> {
@@ -44,6 +52,34 @@ export interface GeneratedHooks<Presence, Profile> {
   usePeer: (peerId: string | null) => UserInfo<Profile, Presence> | null;
 	useFindPeer: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence> | null;
 	useFindPeers: (query: (peer: UserInfo<Profile, Presence>) => boolean, options?: { includeSelf: boolean }) => UserInfo<Profile, Presence>[];
+	useViewPeers: () => UserInfo<Profile, Presence>[];
+	useViewId: (viewId: string | undefined) => void;
+	useField<T extends AnyEntity<any, any, any>, K extends keyof EntityDestructured<T>>(
+		entity: T,
+		fieldName: K,
+	): {
+		/* The live value of the field */
+		value: EntityDestructured<T>[K];
+		/* Sets the value of the field */
+		setValue: (value: Exclude<EntityInit<T>[K], undefined>) => void;
+		/* Pass these props to any <input> or <textarea> element to auto-wire it */
+		inputProps: FieldInputProps<EntityDestructured<T>[K]>;
+		presence: {
+			/**
+			 * Whether the current replica is editing the field
+			 */
+			self: boolean;
+			/**
+			 * A list of peers editing this field
+			 */
+			peers: UserInfo<Profile, Presence>[];
+			/**
+			 * Whether the field is currently being edited by someone else.
+			 * Will return false if the current replica is already editing it.
+			 */
+			occupied: boolean;
+		};
+	};
   useSyncStatus: () => boolean;
 	useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T,

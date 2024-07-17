@@ -220,6 +220,17 @@ export class PresenceManager<
 		this.emit('change');
 	};
 
+	setFieldId = (fieldId: string | undefined, timestamp = Date.now()) => {
+		this._updateBatch.update({
+			items: [
+				{ internal: { lastFieldId: fieldId, lastFieldTimestamp: timestamp } },
+			],
+		});
+		this.self.internal.lastFieldId = fieldId;
+		this.emit('selfChanged', this.self);
+		this.emit('change');
+	};
+
 	/**
 	 * Get all peers that are in the same view as the local user.
 	 */
@@ -235,5 +246,19 @@ export class PresenceManager<
 						peer.internal.viewId === this.self.internal.viewId,
 				)
 		);
+	};
+
+	/**
+	 * Get all peers that have interacted with the specified
+	 * field most recently.
+	 */
+	getFieldPeers = (fieldId: string, expirationPeriod = 60 * 1000) => {
+		return this._peerIds
+			.map((id) => this._peers[id])
+			.filter(
+				(peer) =>
+					peer.internal.lastFieldId === fieldId &&
+					Date.now() - peer.internal.lastFieldTimestamp! < expirationPeriod,
+			);
 	};
 }

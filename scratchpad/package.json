@@ -5,19 +5,23 @@
 		"@verdant-web/cli": "workspace:*",
 		"@verdant-web/server": "workspace:*",
 		"@verdant-web/store": "workspace:*",
+		"@verdant-web/react": "workspace:*",
 		"@types/express": "^4.17.14",
 		"concurrently": "^7.5.0",
 		"express": "^4.18.2",
 		"gfynonce": "^1.0.2",
 		"tsx": "^4.6.2",
 		"typescript": "^5.4.2",
-		"vite": "^3.2.4"
+		"vite": "^3.2.4",
+		"react": "18.3.1",
+		"react-dom": "18.3.1",
+		"@types/react": "18.3.3",
+		"@types/react-dom": "18.3.0",
+		"@vitejs/plugin-react-swc": "3.7.0"
 	},
 	"scripts": {
-		"dev": "concurrently \"pnpm run dev:app\" \"pnpm run dev:server\"",
-		"dev:app": "vite",
-		"dev:server": "tsx watch server.ts",
-		"generate": "verdant --schema ./src/schema.ts --output ./src/client",
+		"dev": "vite",
+		"generate": "verdant --schema ./src/schema.ts --react --output ./src/client",
 		"preflight": "verdant-preflight --output ./src/client"
 	}
 }

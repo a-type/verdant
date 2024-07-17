@@ -37,8 +37,12 @@
 			"path": "test"
 		},
 		{
-      "name": "📃 Docs",
+			"name": "📃 Docs",
 			"path": "docs"
+		},
+		{
+			"name": "📝 Scratchpad",
+			"path": "scratchpad"
 		}
 	]
 }

@@ -15,7 +15,10 @@ import {
 	QueryStatus,
 } from '@verdant-web/store';
 import {
+	ChangeEvent,
 	createContext,
+	HTMLAttributes,
+	HTMLProps,
 	ReactNode,
 	useCallback,
 	useContext,
@@ -330,6 +333,88 @@ export function createHooks<Presence = any, Profile = any>(
 		}, [viewId, client]);
 	}
 
+	function useField(entity: Entity, key: string | number) {
+		const fieldId = `${entity.uid}.${key}`;
+		const value = useSyncExternalStore(
+			(callback) => entity.subscribeToField(key, 'change', callback),
+			() => entity.get(key),
+		);
+
+		const setValue = useCallback(
+			(val: any) => entity.set(key, val),
+			[entity, key],
+		);
+
+		const client = useStorage();
+		const fieldPeers = useSyncExternalStoreWithSelector(
+			(callback) => client.sync.presence.subscribe('peersChanged', callback),
+			() => {
+				return client.sync.presence.getFieldPeers(fieldId);
+			},
+			() => [] as UserInfo<any, any>[],
+			(peers) => peers,
+			(a, b) => a.length === b.length && a.every((peer, i) => peer === b[i]),
+		);
+		const isPresenceOnField = useSyncExternalStore(
+			(callback) => client.sync.presence.subscribe('selfChanged', callback),
+			() => client.sync.presence.self.internal.lastFieldId === fieldId,
+		);
+
+		const inputProps = useMemo(() => {
+			const fieldSchema = entity.getFieldSchema(key);
+			const props: HTMLProps<HTMLInputElement> = {
+				onChange: (e: ChangeEvent<HTMLInputElement>) => {
+					if (fieldSchema.type === 'number') {
+						setValue(parseFloat(e.currentTarget.value));
+					} else if (fieldSchema.type === 'boolean') {
+						setValue(
+							e.currentTarget.type === 'checkbox'
+								? e.currentTarget.checked
+								: e.currentTarget.value === 'true',
+						);
+					} else if (
+						fieldSchema.type === 'string' ||
+						fieldSchema.type === 'any'
+					) {
+						setValue(e.currentTarget.value);
+					} else {
+						throw new Error(
+							'Unsupported field type ' +
+								fieldSchema.type +
+								' used by useField().inputProps for key ' +
+								key +
+								' of entity ' +
+								entity.uid,
+						);
+					}
+					client.sync.presence.setFieldId(fieldId);
+				},
+				onFocus: () => {
+					client.sync.presence.setFieldId(fieldId);
+				},
+				value: fieldSchema.type === 'boolean' ? key : value.toString(),
+			};
+			if (fieldSchema.type === 'boolean') {
+				props.type = 'checkbox';
+				props.checked = value;
+			}
+			return props;
+		}, [value, setValue, client, entity]);
+
+		const occupied = fieldPeers.length > 0 && !isPresenceOnField;
+
+		return {
+			value,
+			setValue,
+			inputProps,
+			presence: {
+				self: isPresenceOnField,
+				peers: fieldPeers,
+				occupied,
+			},
+		};
+	}
+
 	function useSyncStatus() {
 		const storage = useStorage();
 		return useSyncExternalStore(
@@ -445,6 +530,7 @@ export function createHooks<Presence = any, Profile = any>(
 		useSync,
 		useViewPeers,
 		useViewId,
+		useField,
 		Context,
 		Provider: ({
 			value,

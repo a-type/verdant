@@ -397,6 +397,15 @@ export class Entity<
 	}
 
 	/**
+	 * Introspects the schema of a child field of this entity.
+	 */
+	getFieldSchema = (key: any): StorageFieldSchema => {
+		const fieldSchema = getChildFieldSchema(this.schema, key);
+		assert(fieldSchema, `No schema for key ${key}`);
+		return fieldSchema;
+	};
+
+	/**
 	 * Pruning - when entities have invalid children, we 'prune' that
 	 * data up to the nearest prunable point - a nullable field,
 	 * or a list.

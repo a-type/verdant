@@ -35,6 +35,9 @@ It will generate named hooks based on each document collection, plus a few utili
 - `useSelf`: returns your own presence.
 - `usePeerIds`: returns an array of string user IDs of peers. Good for iterating over peers to render them.
 - `usePeer`: pass a peer's user ID to retrieve their presence.
+- `useViewId`: pass a unique ID for a 'view' and the current replica's presence will be marked as 'on' that view.
+- `useViewPeers`: returns all peers on the same view as the current replica.
+- `useField`: pass an entity and a key, and this returns a bunch of useful stuff for working with a particular field. See below.
 - `useSyncStatus`: returns a boolean indicating whether sync is active or not.
 
 ## Context
@@ -127,6 +130,21 @@ function App() {
 	);
 }
 ```
+
+### `useField` hook
+
+The `useField` hook provides some convenient tools for changing single entity fields.
+
+The hook returns an object with the following properties:
+
+- `value`: the live value of the field
+- `setValue`: a setter to update the field
+- `inputProps`: props you can spread directly to an `input` or `textarea` to wire it up
+- `presence`: data about other replicas interacting with the field
+
+The hook automatically interprets boolean field values for use with checkbox inputs. You don't even need to pass `type="checkbox"`, just spread `inputProps`.
+
+It also tracks presence on fields, starting with `blur`. The local replica will have its presence marked as editing the field for up to a minute after any modification. This presence is accessible to other replicas via the same `useField` presence data, so you can show avatars or disable editing, or whatever.
 
 ### Advanced: changing client libraries
 
