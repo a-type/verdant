@@ -6,7 +6,34 @@ sidebar_position: 1
 
 Verdant doesn't sync by default. It's offline-first, sync-optional. I built it that way because my goal is to support nice local-only anonymous experiences, and add sync & realtime on as an incentive to sign up (and potentially subscribe) to your app.
 
-To start syncing, you must first host a server - just a few lines of code.
+## Quickstart
+
+Verdant provides a simple CLI server which can be used to try out sync and prototype. It's not recommended to deploy this server or use it in a production capacity, as it completely ignores authentication and authorization.
+
+To use this server, run:
+
+```
+verdant-server --port 3242
+```
+
+No options are required. `--port` sets a port, `--secret` sets a token signing secret (the default one is not at all secure).
+
+This server will store data in a SQLite database file called `verdant.sqlite` in the current directory.
+
+To connect to your prototyping sync server, pass the following options to your Verdant client descriptor constructor (the server CLI also outputs instructions for this):
+
+```ts
+const clientDesc = new ClientDescriptor({
+	namespace: 'whatever',
+	sync: cliSync('<a library id>'),
+});
+```
+
+`libraryId` can be anything. Users connected to the same library sync together. You might put it in the URL path or something.
+
+## A real server
+
+To start syncing in production scenarios, you must first host a server - just a few lines of code.
 
 The server can be run standalone, or plugged into an existing HTTP server. It requires a few things to be constructed:
 

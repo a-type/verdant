@@ -39,11 +39,11 @@ export interface GeneratedHooks<Presence, Profile> {
 	 * Render this context Provider at the top level of your
 	 * React tree to provide a Client to all hooks.
 	 */
-  Provider: ComponentType<{ value: ClientDescriptor<Schema>; children: ReactNode; sync?: boolean }>;
+  Provider: ComponentType<{ value: ClientDescriptor<any, any>; children: ReactNode; sync?: boolean }>;
 	/**
 	 * Direct access to the React Context, if needed.
 	 */
-	Context: Context<ClientDescriptor<Schema>>;
+	Context: Context<ClientDescriptor<any, any>>;
 	/** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
 	useClient: () => Client<Presence, Profile>;
@@ -58,6 +58,10 @@ export interface GeneratedHooks<Presence, Profile> {
 	useField<T extends AnyEntity<any, any, any>, K extends keyof EntityDestructured<T>>(
 		entity: T,
 		fieldName: K,
+		options?: {
+			/** after this timeout, the field will be considered abandoned by a peer. defaults to 1m */
+			timeout: number
+		}
 	): {
 		/* The live value of the field */
 		value: EntityDestructured<T>[K];

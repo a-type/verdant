@@ -91,7 +91,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 export class ClientDescriptor<
 	Presence = any,
 	Profile = any,
-	ClientImpl extends Client = Client,
+	ClientImpl extends Client = Client<Presence, Profile>,
 > {
 	private readonly _readyPromise: Promise<ClientImpl>;
 	// assertions because these are defined by plucking them from

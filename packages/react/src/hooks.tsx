@@ -333,7 +333,11 @@ export function createHooks<Presence = any, Profile = any>(
 		}, [viewId, client]);
 	}
 
-	function useField(entity: Entity, key: string | number) {
+	function useField(
+		entity: Entity,
+		key: string | number,
+		{ timeout = 60 * 1000 }: { timeout?: number } = {},
+	) {
 		const fieldId = `${entity.uid}.${key}`;
 		const value = useSyncExternalStore(
 			(callback) => entity.subscribeToField(key, 'change', callback),
@@ -349,7 +353,7 @@ export function createHooks<Presence = any, Profile = any>(
 		const fieldPeers = useSyncExternalStoreWithSelector(
 			(callback) => client.sync.presence.subscribe('peersChanged', callback),
 			() => {
-				return client.sync.presence.getFieldPeers(fieldId);
+				return client.sync.presence.getFieldPeers(fieldId, timeout);
 			},
 			() => [] as UserInfo<any, any>[],
 			(peers) => peers,
@@ -387,18 +391,26 @@ export function createHooks<Presence = any, Profile = any>(
 				Infinity,
 			);
 			if (earliestExpiration !== Infinity) {
-				const timeout = setTimeout(
-					() => {
-						forceUpdate((n) => n + 1);
-						// add a bit of buffer
-					},
-					earliestExpiration - Date.now() + 100,
-				);
+				const time = earliestExpiration + timeout - Date.now() + 100;
+				if (time < 0) {
+					return;
+				}
+
+				const timer = setTimeout(() => {
+					forceUpdate((n) => n + 1);
+					// add a bit of buffer
+				}, time);
 				return () => {
-					clearTimeout(timeout);
+					clearTimeout(timer);
 				};
 			}
-		}, [fieldPeers]);
+		}, [fieldPeers, timeout]);
+
+		const fieldPeersFilteredByTime = fieldPeers.filter(
+			(value) =>
+				value.internal.lastFieldTimestamp &&
+				Date.now() - value.internal.lastFieldTimestamp < timeout,
+		);
 
 		const inputProps = useMemo(() => {
 			const fieldSchema = entity.getFieldSchema(key);
@@ -444,7 +456,7 @@ export function createHooks<Presence = any, Profile = any>(
 			return props;
 		}, [value, setValue, client, entity]);
 
-		const occupied = fieldPeers.length > 0 && !isPresenceOnField;
+		const occupied = fieldPeersFilteredByTime.length > 0 && !isPresenceOnField;
 
 		return {
 			value,
@@ -452,7 +464,7 @@ export function createHooks<Presence = any, Profile = any>(
 			inputProps,
 			presence: {
 				self: isPresenceOnField,
-				peers: fieldPeers,
+				peers: fieldPeersFilteredByTime,
 				occupied,
 				touch: () => client.sync.presence.setFieldId(fieldId),
 			},

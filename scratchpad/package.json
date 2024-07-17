@@ -21,6 +21,7 @@
 	},
 	"scripts": {
 		"dev": "vite",
+		"devserver": "verdant-server",
 		"generate": "verdant --schema ./src/schema.ts --react --output ./src/client",
 		"preflight": "verdant-preflight --output ./src/client"
 	}
