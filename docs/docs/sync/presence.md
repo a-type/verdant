@@ -36,4 +36,4 @@ A "field" is similar to a "view" in that it's really just an ID. Fields are _rou
 
 Like views, each replica has one registered field in presence. However, unlike views, it expires after a minute.
 
-Where field presence really works best is in a tighter framework integration, like Verdant's own [React bindings](/react#useField-hook)
+Where field presence really works best is in a tighter framework integration, like Verdant's own [React bindings](/docs/react#useField-hook)
