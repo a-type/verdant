@@ -20,6 +20,7 @@ import {
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
 import { Context } from '../context.js';
+import { attemptToRegisterBackgroundSync } from './background.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
@@ -332,6 +333,8 @@ export class ServerSync<Presence = any, Profile = any>
 		if (autoStart) {
 			this.start();
 		}
+
+		attemptToRegisterBackgroundSync();
 	}
 
 	get canDoRealtime() {

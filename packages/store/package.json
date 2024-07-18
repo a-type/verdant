@@ -13,6 +13,11 @@
 			"development": "./src/backup.ts",
 			"import": "./dist/esm/backup.js",
 			"types": "./dist/esm/backup.d.ts"
+		},
+		"./serviceWorker": {
+			"development": "./src/sync/serviceWorker.ts",
+			"import": "./dist/esm/sync/serviceWorker.js",
+			"types": "./dist/esm/sync/serviceWorker.d.ts"
 		}
 	},
 	"publishConfig": {
@@ -24,6 +29,10 @@
 			"./backup": {
 				"import": "./dist/esm/backup.js",
 				"types": "./dist/esm/backup.d.ts"
+			},
+			"./serviceWorker": {
+				"import": "./dist/esm/sync/serviceWorker.js",
+				"types": "./dist/esm/sync/serviceWorker.d.ts"
 			}
 		},
 		"access": "public"
