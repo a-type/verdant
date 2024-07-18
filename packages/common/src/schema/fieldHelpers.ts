@@ -19,6 +19,8 @@ const objectField = <Props extends StorageFieldsSchema>(args: {
 	default?:
 		| ShapeFromFieldsWithDefaults<Props>
 		| (() => ShapeFromFieldsWithDefaults<Props>);
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageObjectFieldSchema<Props> => {
 	return {
 		type: 'object',
@@ -29,6 +31,8 @@ const objectField = <Props extends StorageFieldsSchema>(args: {
 const arrayField = <T extends StorageFieldSchema>(args: {
 	items: T;
 	nullable?: boolean;
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageArrayFieldSchema<T> => {
 	return {
 		type: 'array',
@@ -40,6 +44,8 @@ const stringField = (args?: {
 	nullable?: boolean;
 	default?: string | (() => string);
 	options?: string[];
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageStringFieldSchema => {
 	return {
 		type: 'string',
@@ -50,6 +56,8 @@ const stringField = (args?: {
 const numberField = (args?: {
 	nullable?: boolean;
 	default?: number | (() => number);
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageNumberFieldSchema => {
 	return {
 		type: 'number',
@@ -60,6 +68,8 @@ const numberField = (args?: {
 const booleanField = (args?: {
 	nullable?: boolean;
 	default?: boolean | (() => boolean);
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageBooleanFieldSchema => {
 	return {
 		type: 'boolean',
@@ -69,6 +79,8 @@ const booleanField = (args?: {
 
 const anyField = <TShape>(args?: {
 	default?: TShape;
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageAnyFieldSchema<TShape> => {
 	return {
 		type: 'any',
@@ -78,6 +90,8 @@ const anyField = <TShape>(args?: {
 
 const mapField = <T extends StorageFieldSchema>(args: {
 	values: T;
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageMapFieldSchema<T> => {
 	return {
 		type: 'map',
@@ -88,6 +102,8 @@ const mapField = <T extends StorageFieldSchema>(args: {
 const fileField = (args?: {
 	nullable?: boolean;
 	downloadRemote?: boolean;
+	/** Add some docs to your field which will annotate the generated typing */
+	documentation?: string;
 }): StorageFileFieldSchema => {
 	return {
 		type: 'file',
@@ -95,6 +111,10 @@ const fileField = (args?: {
 	};
 };
 
+/**
+ * Meant for use on primary key fields. Do not use this to refer
+ * to another document as a 'foreign key'
+ */
 const idField = (): StorageStringFieldSchema => {
 	return {
 		type: 'string',

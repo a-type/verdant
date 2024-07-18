@@ -43,7 +43,7 @@ export function interfaceBuilder(name: string) {
 	};
 }
 
-export function aliasBuilder(name: string, type: string) {
+export function aliasBuilder(name: string, type: string, doc?: string) {
 	let wrapper = '';
 	return {
 		nullable(isNullable: boolean) {
@@ -57,9 +57,11 @@ export function aliasBuilder(name: string, type: string) {
 			return this;
 		},
 		build(external = true) {
-			return `${external ? 'export ' : ''}type ${name} = ${
-				wrapper ? `${wrapper}<` : ''
-			}${type}${wrapper ? '>' : ''};`;
+			return `${doc ? `/** ${doc} */\n` : ''}${
+				external ? 'export ' : ''
+			}type ${name} = ${wrapper ? `${wrapper}<` : ''}${type}${
+				wrapper ? '>' : ''
+			};`;
 		},
 	};
 }

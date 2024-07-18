@@ -359,12 +359,13 @@ function getEntityFieldTypings({
 				return aliasBuilder(
 					name,
 					'(' + field.options.map((s) => `'${s}'`).join(' | ') + ')',
+					field.documentation,
 				).build();
 			}
-			return aliasBuilder(name, field.type).build();
+			return aliasBuilder(name, field.type, field.documentation).build();
 		case 'number':
 		case 'boolean':
-			return aliasBuilder(name, field.type).build();
+			return aliasBuilder(name, field.type, field.documentation).build();
 		case 'array':
 			const itemName = `${name}Item`;
 			const itemTypings = getEntityFieldTypings({
@@ -374,6 +375,7 @@ function getEntityFieldTypings({
 			const baseList = aliasBuilder(
 				name,
 				`ListEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
+				field.documentation,
 			)
 				.nullable(!!field.nullable)
 				.build();
@@ -390,15 +392,18 @@ function getEntityFieldTypings({
 				aliasBuilder(
 					name,
 					`ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
+					field.documentation,
 				)
 					.nullable(!!field.nullable)
 					.build(),
 				...subtypes,
 			].join('\n');
 		case 'any':
-			return aliasBuilder(name, 'any').build();
+			return aliasBuilder(name, 'any', field.documentation).build();
 		case 'file':
-			return aliasBuilder(name, 'string').nullable(!!field.nullable).build();
+			return aliasBuilder(name, 'string', field.documentation)
+				.nullable(!!field.nullable)
+				.build();
 		case 'map':
 			const valueName = `${name}Value`;
 			const valueTypings = getEntityFieldTypings({
@@ -409,6 +414,7 @@ function getEntityFieldTypings({
 				aliasBuilder(
 					name,
 					`ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
+					field.documentation,
 				).build(),
 				valueTypings,
 			].join('\n');
