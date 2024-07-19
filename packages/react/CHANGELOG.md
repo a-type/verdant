@@ -1,5 +1,15 @@
 # @lo-fi/react
 
+## 37.0.1
+
+### Patch Changes
+
+- 3807414d: Fix useField for nullable fields
+- Updated dependencies [7a04f786]
+- Updated dependencies [729a908e]
+  - @verdant-web/store@3.11.1
+  - @verdant-web/common@2.5.2
+
 ## 37.0.0
 
 ### Minor Changes

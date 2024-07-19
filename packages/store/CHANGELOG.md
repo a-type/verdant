@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 3.11.1
+
+### Patch Changes
+
+- 7a04f786: Experimental support for periodic background sync
+- Updated dependencies [729a908e]
+  - @verdant-web/common@2.5.2
+
 ## 3.11.0
 
 ### Minor Changes
