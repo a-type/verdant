@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.5.2
+
+### Patch Changes
+
+- 729a908e: You can now pass a "documentation" property to schema fields to attach a doc string to the generated typing.
+
 ## 2.5.1
 
 ### Patch Changes
