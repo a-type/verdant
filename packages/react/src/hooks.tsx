@@ -414,6 +414,12 @@ export function createHooks<Presence = any, Profile = any>(
 
 		const inputProps = useMemo(() => {
 			const fieldSchema = entity.getFieldSchema(key);
+			const fieldValue =
+				fieldSchema.type === 'boolean'
+					? key
+					: value === null || value === undefined
+					? ''
+					: `${value}`;
 			const props: HTMLProps<HTMLInputElement> = {
 				onChange: (e: ChangeEvent<HTMLInputElement>) => {
 					if (fieldSchema.type === 'number') {
@@ -447,11 +453,11 @@ export function createHooks<Presence = any, Profile = any>(
 				onBlur: () => {
 					client.sync.presence.setFieldId(undefined);
 				},
-				value: fieldSchema.type === 'boolean' ? key : value.toString(),
+				value: fieldValue,
 			};
 			if (fieldSchema.type === 'boolean') {
 				props.type = 'checkbox';
-				props.checked = value;
+				props.checked = !!value;
 			}
 			return props;
 		}, [value, setValue, client, entity]);
