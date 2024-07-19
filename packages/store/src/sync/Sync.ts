@@ -185,6 +185,8 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	 * Not sure why you want to do this, but be careful.
 	 */
 	onOutgoingMessage?: (message: ClientMessage) => void;
+
+	EXPERIMENTAL_backgroundSync?: boolean;
 }
 
 export class ServerSync<Presence = any, Profile = any>
@@ -226,6 +228,7 @@ export class ServerSync<Presence = any, Profile = any>
 			defaultProfile,
 			useBroadcastChannel,
 			onOutgoingMessage,
+			EXPERIMENTAL_backgroundSync,
 		}: ServerSyncOptions<Profile, Presence>,
 		{
 			meta,
@@ -334,7 +337,9 @@ export class ServerSync<Presence = any, Profile = any>
 			this.start();
 		}
 
-		attemptToRegisterBackgroundSync();
+		if (EXPERIMENTAL_backgroundSync) {
+			attemptToRegisterBackgroundSync();
+		}
 	}
 
 	get canDoRealtime() {
