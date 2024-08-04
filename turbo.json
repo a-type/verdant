@@ -1,6 +1,6 @@
 {
 	"$schema": "https://turborepo.org/schema.json",
-	"pipeline": {
+	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
 			"outputs": [".next/**", "dist/**"]
@@ -12,9 +12,6 @@
 		"ci:test:integration": {
 			"outputs": [],
 			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
-		},
-		"test": {
-			"cache": false
 		},
 		"dev": {
 			"cache": false
