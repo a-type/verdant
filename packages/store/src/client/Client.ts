@@ -2,6 +2,7 @@ import {
 	debounce,
 	DocumentBaseline,
 	EventSubscriber,
+	getTimestampSchemaVersion,
 	Migration,
 	Operation,
 } from '@verdant-web/common';
@@ -15,11 +16,16 @@ import {
 	deleteAllDatabases,
 	getSizeOfObjectStore,
 } from '../idb.js';
-import { ExportData, Metadata } from '../metadata/Metadata.js';
+import {
+	ExportData,
+	Metadata,
+	supportLegacyExport,
+} from '../metadata/Metadata.js';
 import { openQueryDatabase } from '../migration/openQueryDatabase.js';
 import { CollectionQueries } from '../queries/CollectionQueries.js';
 import { QueryCache } from '../queries/QueryCache.js';
 import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
+import { getLatestVersion } from '../utils/versions.js';
 
 interface ClientConfig<Presence = any> {
 	syncConfig?: ServerSyncOptions<Presence>;
@@ -50,6 +56,12 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * been offline for too long and reconnects.
 	 */
 	resetToServer: () => void;
+	/**
+	 * These are errors that, as a developer, you should subscribe to
+	 * and prompt users to contact you for resolution. Usually these errors
+	 * indicate the client is in an unrecoverable state.
+	 */
+	developerError: (err: Error) => void;
 }> {
 	readonly meta: Metadata;
 	private _entities: EntityStore;
@@ -104,13 +116,13 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			config: this.config.files,
 			meta: this.meta,
 		});
+		this._queryCache = new QueryCache({
+			context,
+		});
 		this._entities = new EntityStore({
 			ctx: this.context,
 			meta: this.meta,
 			files: this._fileManager,
-		});
-		this._queryCache = new QueryCache({
-			context,
 		});
 		this._documentManager = new DocumentManager(this.schema, this._entities);
 
@@ -122,16 +134,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			this.emit('resetToServer');
 		});
 
-		this.documentDb.addEventListener('versionchange', () => {
-			this.context.log?.(
-				'warn',
-				`Another tab has requested a version change for ${this.namespace}`,
-			);
-			this.documentDb.close();
-			if (typeof window !== 'undefined') {
-				window.location.reload();
-			}
-		});
+		this.watchForVersionChange();
 
 		this.metaDb.addEventListener('versionchange', () => {
 			this.context.log?.(
@@ -160,12 +163,81 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		}
 	}
 
-	private addData = (data: {
+	private watchForVersionChange = () => {
+		this.documentDb.addEventListener('versionchange', () => {
+			this.context.log?.(
+				'warn',
+				`Another tab has requested a version change for ${this.namespace}`,
+			);
+			this.documentDb.close();
+			if (typeof window !== 'undefined') {
+				window.location.reload();
+			}
+		});
+	};
+
+	private importingPromise = Promise.resolve();
+	private addData = async (data: {
 		operations: Operation[];
 		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
-		return this._entities.addData(data);
+		// always wait for an ongoing import to complete before handling data.
+		await this.importingPromise;
+
+		try {
+			const schemaVersion = data.reset
+				? getLatestVersion(data)
+				: this.schema.version;
+
+			if (schemaVersion < this.schema.version) {
+				/**
+				 * Edge case: the server has an older version of the library
+				 * than the client schema, but it wants the client to reset.
+				 *
+				 * This happens when a truant or new client loads up newest client
+				 * code with a new schema version, but the last sync to the
+				 * server was from an old version. It's particularly a problem
+				 * if the new schema drops collections, since the IDB table for
+				 * that collection will no longer exist, so loading in old data
+				 * will result in an error.
+				 *
+				 * To handle this, we treat the reset data as if it were an import
+				 * of exported data. The import procedure handles older
+				 * schema versions by resetting the database to the imported
+				 * version, then migrating up to the current version.
+				 */
+				this.context.log(
+					'warn',
+					'Incoming reset sync data is from an old schema version',
+					schemaVersion,
+					`(current ${this.schema.version})`,
+				);
+				// run through the import flow to properly handle old versions
+				return await this.import({
+					data: {
+						operations: data.operations,
+						baselines: data.baselines ?? [],
+						// keep existing
+						localReplica: undefined,
+						schemaVersion,
+					},
+					fileData: [],
+					files: [],
+				});
+			} else {
+				return await this._entities.addData(data);
+			}
+		} catch (err) {
+			this.context.log('critical', 'Sync failed', err);
+			this.emit(
+				'developerError',
+				new Error('Sync failed, see logs or cause', {
+					cause: err,
+				}),
+			);
+			throw err;
+		}
 	};
 
 	get documentDb() {
@@ -335,7 +407,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	};
 
 	import = async ({
-		data,
+		data: rawData,
 		fileData,
 		files,
 	}: {
@@ -343,6 +415,27 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		fileData: Array<Omit<ReturnedFileData, 'file'>>;
 		files: File[];
 	}) => {
+		/**
+		 * Importing is a pretty involved procedure because of the possibility of
+		 * importing an export from an older version of the schema. We can't add
+		 * data from older schemas because the indexes may have changed or whole
+		 * collections may have been since deleted, leaving no corresponding IDB
+		 * tables.
+		 *
+		 * Since IDB doesn't allow us to go backwards, and we are resetting all
+		 * data anyways, the import procedure blows away the current queryable DB
+		 * and restarts from the imported schema version. It then migrates up
+		 * to the latest (current) version. These migrations are added to the imported
+		 * data to produce the final state.
+		 */
+
+		// register importing promise to halt other data handling
+		let resolve = () => {};
+		this.importingPromise = new Promise<void>((res) => {
+			resolve = res;
+		});
+
+		const data = supportLegacyExport(rawData);
 		this.context.log('info', 'Importing data...');
 		// close the document DB
 		await closeDatabase(this.context.documentDb);
@@ -366,7 +459,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		await this._fileManager.importAll(importedFiles);
 		// now delete the document DB, open it to the specified version
 		// and run migrations to get it to the latest version
-		const version = data.schema.version;
+		const version = data.schemaVersion;
 		const deleteReq = indexedDB.deleteDatabase(
 			[this.namespace, 'collections'].join('_'),
 		);
@@ -377,16 +470,18 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// reset our context to the imported schema for now
 		const currentSchema = this.context.schema;
 		if (currentSchema.version !== version) {
-			// TODO: support importing older schema data - this will
-			// require being able to migrate that data, which requires
-			// a "live" schema for that version. the client does not currently
-			// receive historical schemas, although they should be available
-			// if the CLI was used.
-			// importing from older versions is also tricky because
-			// migration shortcuts mean that versions could get marooned.
-			throw new Error(
-				`Only exports from the current schema version can be imported`,
+			const oldSchema = this.context.oldSchemas?.find(
+				(s) => s.version === version,
 			);
+			if (!oldSchema) {
+				this.emit(
+					'developerError',
+					new Error(`Could not find schema for version ${version}`),
+				);
+				throw new Error(`Could not find schema for version ${version}`);
+			}
+
+			this.context.schema = oldSchema;
 		}
 		// now open the document DB empty at the specified version
 		// and initialize it from the meta DB
@@ -417,6 +512,15 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			version: currentSchema.version,
 		});
 		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
+		// re-establish watcher on database
+		this.watchForVersionChange();
+
+		// finally... clear out memory cache of entities and
+		// re-run all active queries.
+		this.entities.clearCache();
+		this._queryCache.forceRefreshAll();
+
+		resolve();
 	};
 
 	/**

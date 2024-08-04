@@ -56,6 +56,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	const clientA = (await ctx.createTestClient({
 		...clientAInit,
 		schema: v1Schema,
+		oldSchemas: [v1Schema],
 	})) as any as ClientWithCollections;
 	clientA.sync.start();
 
@@ -68,6 +69,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	const clientB = (await ctx.createTestClient({
 		...clientBInit,
 		schema: v1Schema,
+		oldSchemas: [v1Schema],
 	})) as any as ClientWithCollections;
 
 	const item1 = await clientA.items.put({
@@ -142,6 +144,8 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		...clientBInit,
 		schema: v2Schema,
 		migrations,
+		oldSchemas: [v1Schema, v2Schema],
+		// logId: 'B2',
 	})) as any as ClientWithCollections;
 	await clientB2.sync.start();
 
@@ -188,9 +192,14 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 
 	// item 2 is completely pruned (yikes is not nullable and has no default)
 	ctx.log('waiting for item 2 to be pruned');
-	await waitForQueryResult(getItem2, (v) => {
-		return !v;
-	});
+	await waitForQueryResult(
+		getItem2,
+		(v) => {
+			return !v;
+		},
+		2000,
+		'item 2 pruned',
+	);
 
 	await clientA.close();
 	ctx.log('Client A closed');
@@ -200,6 +209,8 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		...clientAInit,
 		schema: v2Schema,
 		migrations,
+		oldSchemas: [v1Schema, v2Schema],
+		// logId: 'A2',
 	})) as any as ClientWithCollections;
 
 	await clientA2.sync.start();
@@ -224,7 +235,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	);
 
 	// this should now recover after A2 migrates
-	await waitForQueryResult(getItem2);
+	await waitForQueryResult(getItem2, (v) => !!v, 2000, 'item 2 recovered');
 	await waitForEntitySnapshot(getItem2.current, {
 		contents: 'hi',
 		id: '2',

@@ -490,6 +490,20 @@ export class EntityStore extends Disposable {
 		entity: Entity,
 		opts?: { abort: AbortSignal },
 	): Promise<Entity | null> => {
+		await this.loadEntityData(entity, opts);
+
+		// only set the cache after loading.
+		// TODO: is this cache/promise stuff redundant?
+		this.cache.set(entity.oid, this.ctx.weakRef(entity));
+		this.entityFinalizationRegistry.register(entity, entity.oid);
+
+		return entity;
+	};
+
+	private loadEntityData = async (
+		entity: Entity,
+		opts?: { abort: AbortSignal },
+	) => {
 		const { operations, baselines } = await this.meta.getDocumentData(
 			entity.oid,
 			opts,
@@ -509,11 +523,14 @@ export class EntityStore extends Disposable {
 			isLocal: false,
 		});
 
-		// only set the cache after loading.
-		// TODO: is this cache/promise stuff redundant?
-		this.cache.set(entity.oid, this.ctx.weakRef(entity));
-		this.entityFinalizationRegistry.register(entity, entity.oid);
-
 		return entity;
+	};
+
+	/**
+	 * Drops all entities from the cache. Any entities
+	 * referenced will go 'dead'...
+	 */
+	clearCache = () => {
+		this.cache.clear();
 	};
 }

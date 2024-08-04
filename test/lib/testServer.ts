@@ -16,7 +16,7 @@ export async function startTestServer({
 	importShardsFrom,
 	truancyMinutes,
 }: {
-	log?: boolean;
+	log?: boolean | ((...args: any[]) => void);
 	disableRebasing?: boolean;
 	keepDb?: boolean;
 	disableSharding?: boolean;
@@ -41,8 +41,10 @@ export async function startTestServer({
 			},
 		},
 		log: log
-			? (...args: any[]) =>
-					console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
+			? typeof log === 'function'
+				? log
+				: (...args: any[]) =>
+						console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
 			: undefined,
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',

@@ -33,8 +33,8 @@ import { Context } from '../context.js';
 export interface ExportData {
 	operations: Operation[];
 	baselines: DocumentBaseline[];
-	localReplica: LocalReplicaInfo;
-	schema: StorageSchema;
+	localReplica?: LocalReplicaInfo;
+	schemaVersion: number;
 }
 
 export class Metadata extends EventSubscriber<{
@@ -635,7 +635,7 @@ export class Metadata extends EventSubscriber<{
 			operations,
 			baselines,
 			localReplica,
-			schema,
+			schemaVersion: schema.version,
 		};
 	};
 
@@ -653,13 +653,15 @@ export class Metadata extends EventSubscriber<{
 		await storeRequestPromise(transaction.objectStore('baselines').clear());
 		await storeRequestPromise(transaction.objectStore('operations').clear());
 		await storeRequestPromise(transaction.objectStore('info').clear());
-		await this.localReplica.update(
-			{
-				ackedLogicalTime: data.localReplica.ackedLogicalTime,
-				lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
-			},
-			{ transaction },
-		);
+		if (data.localReplica) {
+			await this.localReplica.update(
+				{
+					ackedLogicalTime: data.localReplica.ackedLogicalTime,
+					lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
+				},
+				{ transaction },
+			);
+		}
 	};
 
 	stats = async () => {
@@ -672,4 +674,12 @@ export class Metadata extends EventSubscriber<{
 			baselinesSize,
 		};
 	};
+}
+
+export function supportLegacyExport(exportData: any): ExportData {
+	if (exportData.schema) {
+		exportData.schemaVersion = exportData.schema.version;
+		delete exportData.schema;
+	}
+	return exportData;
 }

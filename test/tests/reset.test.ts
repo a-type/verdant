@@ -1,10 +1,16 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import {
+	waitForCondition,
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
+import { startTestServer } from '../lib/testServer.js';
+import { createTestClient } from '../lib/testClient.js';
+import schema from '../schema.js';
+import migrations from '../migrations/index.js';
+import { createDefaultMigration, createMigration } from '@verdant-web/common';
 
 const ctx = createTestContext({
 	// testLog: true,
@@ -271,4 +277,107 @@ it('resets from replica over http sync', async () => {
 		  },
 		]
 	`);
+});
+
+it('can re-initialize a replica from data from an old schema', async () => {
+	const library = 'reset-4';
+	const logWatcher = vi.fn();
+	const server = await startTestServer({
+		disableRebasing: true,
+		log: logWatcher,
+	});
+	const clientA = await createTestClient({
+		library,
+		user: 'User A',
+		server,
+	});
+
+	clientA.sync.start();
+
+	await waitForOnline(clientA);
+
+	const a_produceCategory = await clientA.categories.put({
+		name: 'Produce',
+		id: 'produce',
+	});
+
+	const a_apples = await clientA.items.put({
+		categoryId: a_produceCategory.get('id'),
+		content: 'Apples',
+		id: 'apples',
+	});
+
+	const a_oranges = await clientA.items.put({
+		categoryId: a_produceCategory.get('id'),
+		content: 'Oranges',
+		id: 'oranges',
+	});
+
+	const a_unknownItem = await clientA.items.put({
+		content: 'Unknown',
+		id: 'unknown',
+	});
+
+	vi.waitFor(() =>
+		logWatcher.mock.calls.some((c) =>
+			c.some((m) => m?.toString()?.includes('unknown')),
+		),
+	);
+
+	clientA.sync.stop();
+	await clientA.close();
+
+	// make a new version without categories. we'll also alter items
+	// to prove the migration was run.
+	const { categories, items, ...collections } = schema.collections;
+	const newSchema = {
+		...schema,
+		collections: {
+			...collections,
+			items: {
+				...items,
+				fields: {
+					...items.fields,
+					newField: {
+						type: 'string' as const,
+						default: 'new field',
+					},
+				},
+			},
+		},
+		version: schema.version + 1,
+	};
+	const newMigrations = [...migrations, createMigration(schema, newSchema)];
+
+	const clientB = await createTestClient({
+		library,
+		user: 'User B',
+		server,
+		schema: newSchema,
+		oldSchemas: [schema, newSchema],
+		migrations: newMigrations,
+		logId: 'B',
+	});
+
+	clientB.sync.start();
+	await waitForOnline(clientB);
+
+	const b_applesQuery = clientB.items.get(a_apples.get('id'));
+	b_applesQuery.subscribe('change', () => console.log('b_apples changed'));
+	await waitForQueryResult(b_applesQuery);
+
+	// the new schema will not necessarily be applied immediately.
+	// I think it's possible for the item query to resolve mid-migration.
+	await waitForCondition(() => {
+		try {
+			// newField isn't part of the client typings
+			// @ts-expect-error
+			b_applesQuery.current?.get('newField');
+			return true;
+		} catch {
+			return false;
+		}
+	});
+	const b_apples = b_applesQuery.current! as any;
+	expect(b_apples.get('newField')).toBe('new field');
 });

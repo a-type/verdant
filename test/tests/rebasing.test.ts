@@ -6,11 +6,13 @@ import {
 	waitForBaselineCount,
 	waitForEntityCondition,
 	waitForEverythingToRebase,
+	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
 	waitForTime,
 } from '../lib/waits.js';
 import migrations from '../migrations/index.js';
+import schema from '../schema.js';
 
 const context = createTestContext({
 	// serverLog: true,
@@ -22,6 +24,7 @@ it('an offline client rebases everything', async () => {
 		migrations,
 		namespace: 'offline_rebase',
 		indexedDb,
+		oldSchemas: [schema],
 		// log: (...args: any[]) => console.log('[offline_rebase]', ...args),
 	});
 	const client = await desc.open();
@@ -141,7 +144,7 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	const clientB = await context.createTestClient({
 		library: 'old-rebase-sync-1',
 		user: 'B',
-		// logId: 'B',
+		logId: 'B',
 	});
 
 	clientA.sync.start();
@@ -149,11 +152,18 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 		id: '1',
 		content: 'Item 1',
 	});
+	// we want to make sure A 'wins' the library
+	await waitForOnline(clientA);
 
 	clientB.sync.start();
 	await waitForPeerCount(clientA, 1);
 	await waitForPeerCount(clientB, 1);
-	await waitForQueryResult(clientB.items.get('1'));
+	await waitForQueryResult(
+		clientB.items.get('1'),
+		(res) => !!res,
+		2000,
+		'b should see item 1',
+	);
 
 	clientB.items.put({
 		id: '2',

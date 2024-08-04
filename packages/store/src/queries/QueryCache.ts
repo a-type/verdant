@@ -58,4 +58,8 @@ export class QueryCache extends Disposable {
 		this._cache.forEach((query) => query.dispose());
 		this._cache.clear();
 	};
+
+	forceRefreshAll = () => {
+		this._cache.forEach((q) => q.execute());
+	};
 }

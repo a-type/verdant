@@ -4,7 +4,8 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 } from '../client/index.js';
-import { Operation } from '@verdant-web/common';
+import { Operation, StorageSchema } from '@verdant-web/common';
+import { expect } from 'vitest';
 // import { IDBFactory } from 'fake-indexeddb';
 
 export async function createTestClient({
@@ -22,6 +23,7 @@ export async function createTestClient({
 	autoTransport = false,
 	log,
 	onOperation,
+	oldSchemas,
 }: {
 	server?: { port: number };
 	library: string;
@@ -37,6 +39,7 @@ export async function createTestClient({
 	schema?: any;
 	autoTransport?: boolean;
 	onOperation?: (operation: Operation) => void;
+	oldSchemas?: StorageSchema[];
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
@@ -68,8 +71,14 @@ export async function createTestClient({
 				: undefined),
 		files,
 		schema,
+		oldSchemas: oldSchemas ?? [schema],
 		EXPERIMENTAL_weakRefs: true,
 	});
 	const client = await desc.open();
+	client.subscribe('developerError', (err) => {
+		console.error(err);
+		console.error('>>> cause >>>', err.cause);
+		expect(err).toBe(null);
+	});
 	return client;
 }
