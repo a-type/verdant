@@ -44,5 +44,9 @@
 			"name": "📝 Scratchpad",
 			"path": "scratchpad"
 		}
-	]
+	],
+	"settings": {
+		"vitest.rootConfig": "",
+		"vitest.workspaceConfig": "vitest.workspace.ts"
+	}
 }
