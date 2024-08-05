@@ -10,7 +10,11 @@ import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { startTestServer } from '../lib/testServer.js';
-import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
+import {
+	waitForEntityCondition,
+	waitForOnline,
+	waitForQueryResult,
+} from '../lib/waits.js';
 
 async function createTestClient({
 	schema,
@@ -661,6 +665,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		// logId: 'A',
 	});
 	clientA.sync.start();
+	await waitForOnline(clientA);
 
 	log('📈 Version 1 client A created');
 

@@ -11,7 +11,8 @@
 		},
 		"ci:test:integration": {
 			"outputs": [],
-			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"]
+			"inputs": ["**/*.tsx", "**/*.ts", "**/*.test.tsx", "**/*.test.ts"],
+			"cache": false
 		},
 		"dev": {
 			"cache": false
