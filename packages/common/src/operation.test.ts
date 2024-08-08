@@ -1013,6 +1013,27 @@ describe('applying individual operations', () => {
 			}),
 		).toEqual(['a', 'b', 'c']);
 	});
+	it('applies list-move-by-index', () => {
+		expect(
+			applyPatch(['a', 'b', 'c', 'd'], {
+				op: 'list-move-by-index',
+				from: 0,
+				to: 2,
+			}),
+		).toEqual(['b', 'c', 'a', 'd']);
+	});
+	it('applies list-move-by-ref', () => {
+		expect(
+			applyPatch(
+				[createRef('a'), createRef('b'), createRef('c'), createRef('d')],
+				{
+					op: 'list-move-by-ref',
+					value: createRef('a'),
+					index: 2,
+				},
+			),
+		).toEqual([createRef('b'), createRef('c'), createRef('a'), createRef('d')]);
+	});
 });
 
 describe('collecting deleted refs during patch application', () => {
