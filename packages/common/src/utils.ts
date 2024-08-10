@@ -66,6 +66,12 @@ export function stableStringify(obj: any) {
  * references in the system.
  */
 export function cloneDeep<T>(obj: T, copyOids = true): T {
+	// shortcut... if OIDs aren't important, we can use the built-in
+	// structured cloning algorithm which should be faster.
+	if (!copyOids && typeof structuredClone === 'function') {
+		return structuredClone(obj);
+	}
+
 	if (isObject(obj) || Array.isArray(obj)) {
 		const oid = maybeGetOid(obj);
 		let clone: any;
