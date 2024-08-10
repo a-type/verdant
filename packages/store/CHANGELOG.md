@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 3.12.1
+
+### Patch Changes
+
+- 66041118: Make getAll() result readonly
+
 ## 3.12.0
 
 ### Minor Changes
