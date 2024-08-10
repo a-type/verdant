@@ -73,7 +73,7 @@ export interface BaseEntity<
 		) => void,
 	): () => void;
 	get<Key extends keyof Value>(key: Key): Value[Key];
-	getAll(): Value;
+	getAll(): Readonly<Value>;
 	getSnapshot(): Snapshot;
 	getFieldSchema<FieldName extends keyof Value>(
 		key: FieldName,
