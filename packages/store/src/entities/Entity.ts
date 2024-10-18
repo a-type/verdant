@@ -628,6 +628,7 @@ export class Entity<
 				}
 				const file = this.files.get(child.id, {
 					downloadRemote: !!fieldSchema.downloadRemote,
+					ctx: this.ctx,
 				});
 
 				// FIXME: this seems bad and inconsistent

@@ -438,7 +438,9 @@ export class ServerSync<Presence = any, Profile = any>
 				this.ctx.log(
 					'error',
 					'Failed to upload unsynced files',
-					results.filter((r) => r.status === 'rejected').map((r) => r.reason),
+					results
+						.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+						.map((r) => r.reason),
 				);
 			}
 		}

@@ -1,10 +1,8 @@
 import { ReplicaType, Server } from '@verdant-web/server';
 import {
 	ClientWithCollections,
-	collection,
 	createMigration,
 	Entity,
-	migrate,
 	schema,
 	StorageDescriptor,
 } from '@verdant-web/store';
@@ -222,7 +220,6 @@ async function waitForConsistency(
 			const fuzz2 = await getFuzz(client2);
 			const fuzz1Pending = fuzz1.metadata.pendingOperations;
 			const fuzz2Pending = fuzz2.metadata.pendingOperations;
-			debugger;
 			return `[${debugTag}] consistency (${attempts} attempts):
 
 				${snap1}

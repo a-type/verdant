@@ -122,7 +122,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 
 	updateLocalReplica = async (
 		data: Partial<LocalReplicaInfo>,
-		opts?: CommonQueryOptions,
+		opts: CommonQueryOptions = writeOpts,
 	): Promise<void> => {
 		const localReplicaInfo = await this.getLocalReplica(opts);
 		Object.assign(localReplicaInfo, data);
@@ -199,7 +199,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 
 	setBaselines = async (
 		baselines: DocumentBaseline[],
-		opts?: CommonQueryOptions,
+		opts: CommonQueryOptions = writeOpts,
 	): Promise<void> => {
 		await this.runAll<any>(
 			'baselines',
@@ -210,7 +210,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 
 	deleteBaseline = async (
 		oid: string,
-		opts?: CommonQueryOptions,
+		opts: CommonQueryOptions = writeOpts,
 	): Promise<void> => {
 		await this.run(
 			'baselines',
@@ -269,7 +269,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 	consumeEntityOperations = (
 		oid: string,
 		iterator: Iterator<ClientOperation>,
-		opts?: CommonQueryOptions & { to?: string | null },
+		opts: CommonQueryOptions & { to?: string | null } = writeOpts,
 	): Promise<void> => {
 		return this.iterate<StoredClientOperation>(
 			'operations',
@@ -363,7 +363,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 
 	addOperations = async (
 		ops: StoredClientOperation[],
-		opts?: CommonQueryOptions,
+		opts: CommonQueryOptions = writeOpts,
 	): Promise<ObjectIdentifier[]> => {
 		let affected = new Set<ObjectIdentifier>();
 		await this.runAll(
@@ -454,3 +454,5 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		};
 	};
 }
+
+const writeOpts = { mode: 'readwrite' } as const;
