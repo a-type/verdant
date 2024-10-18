@@ -2,7 +2,6 @@ import {
 	DocumentBaseline,
 	ObjectIdentifier,
 	Operation,
-	StorageFieldsSchema,
 	StorageObjectFieldSchema,
 	assert,
 	assignOid,
@@ -15,14 +14,12 @@ import {
 	removeOidsFromAllSubObjects,
 	AuthorizationKey,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
-import { Metadata } from '../metadata/Metadata.js';
+import { Context } from '../context/context.js';
 import { Entity } from './Entity.js';
 import { Disposable } from '../utils/Disposable.js';
 import { EntityFamilyMetadata } from './EntityMetadata.js';
 import { FileManager } from '../files/FileManager.js';
 import { OperationBatcher } from './OperationBatcher.js';
-import { QueryableStorage } from '../queries/QueryableStorage.js';
 import { WeakEvent } from 'weak-event';
 import { processValueFiles } from '../files/utils.js';
 
@@ -57,10 +54,8 @@ export interface EntityCreateOptions {
 
 export class EntityStore extends Disposable {
 	private ctx;
-	private meta;
 	private files;
 	private batcher;
-	private queryableStorage;
 	private events: EntityStoreEvents = {
 		add: new WeakEvent(),
 		replace: new WeakEvent(),
@@ -80,24 +75,13 @@ export class EntityStore extends Disposable {
 		},
 	);
 
-	constructor({
-		ctx,
-		meta,
-		files,
-	}: {
-		ctx: Context;
-		meta: Metadata;
-		files: FileManager;
-	}) {
+	constructor({ ctx, files }: { ctx: Context; files: FileManager }) {
 		super();
 
 		this.ctx = ctx;
-		this.meta = meta;
 		this.files = files;
-		this.queryableStorage = new QueryableStorage({ ctx });
 		this.batcher = new OperationBatcher({
 			ctx,
-			meta,
 			entities: this,
 		});
 	}
@@ -145,7 +129,7 @@ export class EntityStore extends Disposable {
 	};
 
 	empty = async () => {
-		await this.queryableStorage.reset();
+		await this.ctx.queries.reset();
 		this.events.resetAll.invoke(this);
 		this.cache.clear();
 	};
@@ -155,8 +139,8 @@ export class EntityStore extends Disposable {
 			this.ctx.log('warn', 'EntityStore is disposed, not resetting local data');
 			return;
 		}
-		await this.meta.reset();
-		await this.queryableStorage.reset();
+		await this.ctx.meta.reset();
+		await this.ctx.queries.reset();
 		this.events.resetAll.invoke(this);
 	};
 
@@ -227,7 +211,7 @@ export class EntityStore extends Disposable {
 		// TODO: could messages be sent to sync before storage,
 		// so that realtime is lower latency? What would happen
 		// if the storage failed?
-		await this.meta.insertData(data, abortOptions);
+		await this.ctx.meta.insertData(data, abortOptions);
 
 		// recompute all affected documents for querying
 		const entities = await Promise.all(
@@ -246,7 +230,7 @@ export class EntityStore extends Disposable {
 			}),
 		);
 		try {
-			await this.queryableStorage.saveEntities(entities, abortOptions);
+			await this.ctx.queries.saveEntities(entities, abortOptions);
 		} catch (err) {
 			if (this.disposed) {
 				this.ctx.log(
@@ -345,7 +329,7 @@ export class EntityStore extends Disposable {
 			);
 		}
 
-		const operations = this.meta.patchCreator.createInitialize(processed, oid);
+		const operations = this.ctx.patchCreator.createInitialize(processed, oid);
 		if (access) {
 			operations.forEach((op) => {
 				op.authz = access;
@@ -396,7 +380,7 @@ export class EntityStore extends Disposable {
 		for (const entity of entities) {
 			if (entity) {
 				const oids = entity.__getFamilyOids__();
-				const deletes = this.meta.patchCreator.createDeleteAll(oids);
+				const deletes = this.ctx.patchCreator.createDeleteAll(oids);
 				for (const op of deletes) {
 					op.authz = entity.access;
 				}
@@ -468,7 +452,6 @@ export class EntityStore extends Disposable {
 			readonlyKeys,
 			files: this.files,
 			metadataFamily: metadataFamily,
-			patchCreator: this.meta.patchCreator,
 			storeEvents: this.events,
 			deleteSelf: this.delete.bind(this, oid),
 		});
@@ -504,7 +487,7 @@ export class EntityStore extends Disposable {
 		entity: Entity,
 		opts?: { abort: AbortSignal },
 	) => {
-		const { operations, baselines } = await this.meta.getDocumentData(
+		const { operations, baselines } = await this.ctx.meta.getDocumentData(
 			entity.oid,
 			opts,
 		);

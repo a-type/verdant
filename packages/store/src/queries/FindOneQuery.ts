@@ -1,6 +1,5 @@
 import { CollectionFilter } from '@verdant-web/common';
 import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
-import { findOneOid } from './dbQueries.js';
 import { areIndexesEqual } from './utils.js';
 
 export class FindOneQuery<T> extends BaseQuery<T | null> {
@@ -24,10 +23,9 @@ export class FindOneQuery<T> extends BaseQuery<T | null> {
 	}
 
 	protected run = async () => {
-		const oid = await findOneOid({
+		const oid = await this.context.queries.findOneOid({
 			collection: this.collection,
 			index: this.index,
-			context: this.context,
 		});
 		this.setValue(oid ? await this.hydrate(oid) : null);
 	};

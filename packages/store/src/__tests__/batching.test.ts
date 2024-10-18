@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, MockedFunction } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 import { Entity } from '../entities/Entity.js';
 
@@ -58,9 +58,8 @@ describe('batching operations', () => {
 
 	it('should overwrite superseded sequential set operations on the same key where applicable', async () => {
 		const onOperation = vi.fn();
-		const client = await createTestStorage({
-			onOperation,
-		});
+		const client = await createTestStorage();
+		client.subscribe('operation', onOperation);
 
 		const item = await client.todos.put({
 			content: 'hello world',
@@ -90,9 +89,8 @@ describe('batching operations', () => {
 
 	it('should not interfere with other fields when superseding', async () => {
 		const onOperation = vi.fn();
-		const client = await createTestStorage({
-			onOperation,
-		});
+		const client = await createTestStorage();
+		client.subscribe('operation', onOperation);
 
 		const item = await client.todos.put({
 			content: 'hello world',

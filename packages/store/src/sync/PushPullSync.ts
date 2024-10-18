@@ -4,28 +4,26 @@ import {
 	PresenceUpdateMessage,
 	ServerMessage,
 	VerdantErrorCode,
-	debounce,
 	isVerdantErrorResponse,
 	throttle,
 } from '@verdant-web/common';
-import { Metadata } from '../metadata/Metadata.js';
 import { PresenceManager } from './PresenceManager.js';
 import { Heartbeat } from './Heartbeat.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
+import { Context } from '../context/context.js';
 
 export class PushPullSync
 	extends EventSubscriber<SyncTransportEvents>
 	implements SyncTransport
 {
-	readonly meta: Metadata;
 	readonly presence: PresenceManager;
 	private endpointProvider;
 	private heartbeat;
 	private fetch;
 
 	readonly mode = 'pull';
-	private log;
+	private ctx;
 
 	private _isConnected = false;
 	private _status: 'active' | 'paused' = 'paused';
@@ -33,22 +31,19 @@ export class PushPullSync
 
 	constructor({
 		endpointProvider,
-		meta,
 		presence,
 		interval = 15 * 1000,
-		log = () => {},
 		fetch = window.fetch.bind(window),
+		ctx,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
-		meta: Metadata;
 		presence: PresenceManager;
 		interval?: number;
-		log?: (...args: any[]) => any;
 		fetch?: typeof window.fetch;
+		ctx: Context;
 	}) {
 		super();
-		this.log = log;
-		this.meta = meta;
+		this.ctx = ctx;
 		this.presence = presence;
 		this.endpointProvider = endpointProvider;
 		this.fetch = fetch;
@@ -73,7 +68,7 @@ export class PushPullSync
 	}
 
 	private sendRequest = async (messages: ClientMessage[]) => {
-		this.log('Sending sync request', messages);
+		this.ctx.log('debug', 'Sending sync request', messages);
 		try {
 			const { http: host, token } = await this.endpointProvider.getEndpoints();
 			const response = await this.fetch(host, {
@@ -104,7 +99,12 @@ export class PushPullSync
 				}
 				await handlePromise;
 			} else {
-				this.log('Sync request failed', response.status, await response.text());
+				this.ctx.log(
+					'error',
+					'Sync request failed',
+					response.status,
+					await response.text(),
+				);
 
 				if (this._isConnected) {
 					this._isConnected = false;
@@ -130,7 +130,7 @@ export class PushPullSync
 				this._isConnected = false;
 				this.emit('onlineChange', false);
 			}
-			this.log(error);
+			this.ctx.log('error', error);
 
 			this.heartbeat.keepAlive();
 		}
@@ -142,9 +142,9 @@ export class PushPullSync
 			// but we can go ahead and preemptively allow ops to be sent
 			this._hasSynced = true;
 			if (message.ackThisNonce) {
-				this.log('Sending sync ack', message.ackThisNonce);
+				this.ctx.log('debug', 'Sending sync ack', message.ackThisNonce);
 				await this.sendRequest([
-					await this.meta.messageCreator.createAck(message.ackThisNonce),
+					await this.ctx.meta.messageCreator.createAck(message.ackThisNonce),
 				]);
 			}
 		}
@@ -204,8 +204,10 @@ export class PushPullSync
 		// will include the client's own presence info and fill in missing profile
 		// data on the first request. otherwise it would have to wait for the second.
 		this.sendRequest([
-			await this.meta.messageCreator.createPresenceUpdate(this.presence.self),
-			await this.meta.messageCreator.createSyncStep1(),
+			await this.ctx.meta.messageCreator.createPresenceUpdate(
+				this.presence.self,
+			),
+			await this.ctx.meta.messageCreator.createSyncStep1(),
 		]);
 	};
 
@@ -213,12 +215,14 @@ export class PushPullSync
 	// the connection is lost and go offline.
 	private onHeartbeatMissed = async () => {
 		this.emit('onlineChange', false);
-		this.log('Missed heartbeat');
+		this.ctx.log('warn', 'Missed heartbeat');
 		this._isConnected = false;
 	};
 
 	syncOnce = async () => {
-		await this.sendRequest([await this.meta.messageCreator.createSyncStep1()]);
+		await this.sendRequest([
+			await this.ctx.meta.messageCreator.createSyncStep1(),
+		]);
 	};
 
 	get isConnected(): boolean {

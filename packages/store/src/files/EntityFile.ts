@@ -1,4 +1,5 @@
 import { EventSubscriber, FileData } from '@verdant-web/common';
+import { Context } from '../context/context.js';
 
 export type EntityFileEvents = {
 	change: () => void;
@@ -6,7 +7,6 @@ export type EntityFileEvents = {
 
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
-export const MARK_UPLOADED = Symbol('entity-file-mark-uploaded');
 
 export type EntityFileSnapshot = {
 	id: string;
@@ -24,17 +24,26 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _loading = true;
 	private _failed = false;
 	private _downloadRemote = false;
+	private ctx: Context;
+	private unsubscribes: (() => void)[] = [];
 
 	constructor(
 		public readonly id: string,
 		{
 			downloadRemote = false,
+			ctx,
 		}: {
 			downloadRemote?: boolean;
-		} = {},
+			ctx: Context;
+		},
 	) {
 		super();
+		this.ctx = ctx;
 		this._downloadRemote = downloadRemote;
+
+		this.unsubscribes.push(
+			this.ctx.internalEvents.subscribe(`fileUploaded:${id}`, this.onUploaded),
+		);
 	}
 
 	get downloadRemote() {
@@ -66,7 +75,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.emit('change');
 	};
 
-	[MARK_UPLOADED] = () => {
+	private onUploaded = () => {
 		if (!this._fileData) return;
 		this._fileData!.remote = true;
 		this.emit('change');

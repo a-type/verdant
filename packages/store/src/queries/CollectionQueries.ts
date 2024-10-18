@@ -3,7 +3,7 @@ import {
 	CollectionFilter,
 	hashObject,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { EntityStore } from '../entities/EntityStore.js';
 import { GetQuery } from './GetQuery.js';
 import { QueryCache } from './QueryCache.js';
@@ -12,7 +12,7 @@ import { FindPageQuery } from './FindPageQuery.js';
 import { FindInfiniteQuery } from './FindInfiniteQuery.js';
 import { FindAllQuery } from './FindAllQuery.js';
 import { DocumentManager } from '../entities/DocumentManager.js';
-import { Entity, ObjectEntity } from '../index.js';
+import { ObjectEntity } from '../index.js';
 import { UPDATE } from './BaseQuery.js';
 
 export class CollectionQueries<

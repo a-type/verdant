@@ -182,3 +182,64 @@ export function emptyDatabase(db: IDBDatabase) {
 		tx.onerror = () => reject(tx.error);
 	});
 }
+
+export function copyDatabase(from: IDBDatabase, to: IDBDatabase) {
+	const tx = from.transaction(Array.from(from.objectStoreNames), 'readonly');
+	const promises = Array.from(from.objectStoreNames).map((storeName) => {
+		const store = tx.objectStore(storeName);
+		const cursor = store.openCursor();
+		const targetStore = to
+			.transaction(storeName, 'readwrite')
+			.objectStore(storeName);
+		return cursorIterator(cursor, (value) => {
+			if (value) {
+				targetStore.put(value);
+				return true;
+			}
+			return false;
+		});
+	});
+	return Promise.all(promises);
+}
+
+export function openDatabase(
+	name: string,
+	expectedVersion: number,
+	indexedDB: IDBFactory = window.indexedDB,
+) {
+	return new Promise<IDBDatabase>((resolve, reject) => {
+		const req = indexedDB.open(name, expectedVersion);
+		req.onsuccess = () => {
+			resolve(req.result);
+		};
+		req.onerror = () => {
+			reject(req.error);
+		};
+		req.onblocked = () => {
+			reject(new Error('Database blocked'));
+		};
+		req.onupgradeneeded = (event) => {
+			const db = req.result;
+			if (db.version !== expectedVersion) {
+				db.close();
+				reject(
+					new Error(
+						`Migration error: database version changed unexpectedly when reading current data. Expected ${expectedVersion}, got ${db.version}`,
+					),
+				);
+			}
+		};
+	});
+}
+
+export function getMetadataDbName(namespace: string) {
+	return [namespace, 'meta'].join('_');
+}
+
+export function getDocumentDbName(namespace: string) {
+	return [namespace, 'collections'].join('_');
+}
+
+export function getNamespaceFromDatabaseInfo(info: IDBDatabaseInfo) {
+	return info.name?.split('_')[0];
+}

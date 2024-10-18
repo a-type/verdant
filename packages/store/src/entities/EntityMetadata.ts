@@ -10,7 +10,7 @@ import {
 	compareTimestampSchemaVersions,
 	getWallClockTime,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { EntityChange } from './types.js';
 
 export type EntityMetadataView = {
@@ -118,7 +118,7 @@ export class EntityMetadata {
 			!!confirmedResult.latestTimestamp &&
 			compareTimestampSchemaVersions(
 				confirmedResult.latestTimestamp,
-				this.ctx.getNow(),
+				this.ctx.time.now,
 			) < 0;
 
 		const empty =
@@ -142,7 +142,6 @@ export class EntityMetadata {
 				'warn',
 				`Entity ${this.oid} has no view, no deleted flag, and not empty`,
 			);
-			debugger;
 		}
 
 		return {
@@ -227,7 +226,7 @@ export class EntityMetadata {
 		let futureSeen: string | undefined = undefined;
 		let authz: string | undefined = undefined;
 
-		const now = this.ctx.getNow();
+		const now = this.ctx.time.now;
 		for (const op of operations) {
 			// ignore ops before our after cutoff
 			if (after && op.timestamp <= after) {

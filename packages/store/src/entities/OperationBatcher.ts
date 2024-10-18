@@ -10,8 +10,7 @@ import {
 	isSuperseded,
 	operationSupersedes,
 } from '@verdant-web/common';
-import { Metadata } from '../metadata/Metadata.js';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import type { EntityStore } from './EntityStore.js';
 import { Entity } from './Entity.js';
 
@@ -29,22 +28,18 @@ export class OperationBatcher {
 	private batcher;
 	private currentBatchKey = DEFAULT_BATCH_KEY;
 	private defaultBatchTimeout: number;
-	private meta;
 	private ctx;
 	private entities;
 
 	constructor({
 		batchTimeout = 200,
-		meta,
 		ctx,
 		entities,
 	}: {
 		batchTimeout?: number;
-		meta: Metadata;
 		ctx: Context;
 		entities: EntityStore;
 	}) {
-		this.meta = meta;
 		this.ctx = ctx;
 		this.entities = entities;
 		this.defaultBatchTimeout = batchTimeout;
@@ -129,7 +124,7 @@ export class OperationBatcher {
 		// cannot be done in reversed loop above or timestamps would be
 		// in reverse order.
 		for (const op of committed) {
-			op.timestamp = this.meta.now;
+			op.timestamp = this.ctx.time.now;
 		}
 		await this.commitOperations(committed, meta);
 	};
@@ -273,7 +268,7 @@ export class OperationBatcher {
 			});
 			// set time to now for all undo operations, they're happening now.
 			for (const op of inverseOps) {
-				op.timestamp = this.meta.now;
+				op.timestamp = this.ctx.time.now;
 			}
 			await this.commitOperations(
 				inverseOps,
@@ -293,7 +288,7 @@ export class OperationBatcher {
 	}) => {
 		const grouped = groupPatchesByOid(ops);
 		const inverseOps: Operation[] = [];
-		const getNow = () => this.meta.now;
+		const getNow = () => this.ctx.time.now;
 		await Promise.all(
 			Object.entries(grouped).map(async ([oid, patches]): Promise<void> => {
 				const entity = source ?? (await this.entities.hydrate(getOidRoot(oid)));

@@ -1,12 +1,9 @@
 import {
-	DocumentBaseline,
 	EntityValidationProblem,
 	EventSubscriber,
 	ObjectIdentifier,
 	Operation,
-	PatchCreator,
 	StorageFieldSchema,
-	StorageFieldsSchema,
 	assert,
 	assignOid,
 	cloneDeep,
@@ -20,15 +17,13 @@ import {
 	isFile,
 	isNullable,
 	isObject,
-	isObjectRef,
-	isPrunePoint,
 	isRef,
 	maybeGetOid,
 	memoByKeys,
 	traverseCollectionFieldsAndApplyDefaults,
 	validateEntityField,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';
 import { EntityFile } from '../index.js';
@@ -37,7 +32,6 @@ import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
 import {
 	BaseEntityValue,
 	DataFromInit,
-	DeepPartial,
 	EntityChange,
 	EntityEvents,
 	ListEntity,
@@ -58,7 +52,6 @@ export interface EntityInit {
 	files: FileManager;
 	readonlyKeys?: string[];
 	fieldPath?: (string | number)[];
-	patchCreator: PatchCreator;
 	storeEvents: EntityStoreEvents;
 	deleteSelf: () => void;
 }
@@ -84,7 +77,6 @@ export class Entity<
 	private parent: Entity | undefined;
 	private ctx;
 	private files;
-	private patchCreator;
 	private storeEvents;
 
 	// an internal representation of this Entity.
@@ -110,7 +102,6 @@ export class Entity<
 		metadataFamily,
 		readonlyKeys,
 		files,
-		patchCreator,
 		storeEvents,
 		deleteSelf,
 	}: EntityInit) {
@@ -128,7 +119,6 @@ export class Entity<
 			new EntityCache({
 				initial: [this],
 			});
-		this.patchCreator = patchCreator;
 		this.metadataFamily = metadataFamily;
 		this.storeEvents = storeEvents;
 		this.parent = parent;
@@ -158,6 +148,10 @@ export class Entity<
 
 	private get metadata() {
 		return this.metadataFamily.get(this.oid);
+	}
+
+	private get patchCreator() {
+		return this.ctx.patchCreator;
 	}
 
 	/**
@@ -585,7 +579,6 @@ export class Entity<
 			ctx: this.ctx,
 			files: this.files,
 			fieldPath: [...this.fieldPath, key],
-			patchCreator: this.patchCreator,
 			storeEvents: this.storeEvents,
 			deleteSelf: this.delete.bind(this, key),
 		});

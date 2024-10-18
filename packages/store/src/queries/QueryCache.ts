@@ -1,4 +1,4 @@
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { Disposable } from '../utils/Disposable.js';
 import { BaseQuery, ON_ALL_UNSUBSCRIBED } from './BaseQuery.js';
 

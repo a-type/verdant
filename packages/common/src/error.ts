@@ -9,6 +9,8 @@ export enum VerdantErrorCode {
 	Unexpected = 5000,
 	ConfigurationError = 5010,
 	NoFileStorage = 5011,
+	// Client errors
+	MigrationPathNotFound = 7001,
 }
 
 export class VerdantError extends Error {

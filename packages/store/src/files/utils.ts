@@ -55,18 +55,3 @@ export function processValueFiles(
 
 	return value;
 }
-
-export function fileToArrayBuffer(file: File | Blob) {
-	// special case for testing...
-	if ('__testReadBuffer' in file) {
-		return file.__testReadBuffer;
-	}
-	return new Promise<ArrayBuffer>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => {
-			resolve(reader.result as ArrayBuffer);
-		};
-		reader.onerror = reject;
-		reader.readAsArrayBuffer(file);
-	});
-}

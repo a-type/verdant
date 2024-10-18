@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Entity } from './Entity.js';
 import { EntityFamilyMetadata } from './EntityMetadata.js';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { EntityStoreEvents } from './EntityStore.js';
 import { WeakEvent } from 'weak-event';
 import { FileManager } from '../files/FileManager.js';
 import {
 	NaiveTimestampProvider,
 	PatchCreator,
-	createRef,
 	groupPatchesByOid,
 } from '@verdant-web/common';
+import { Time } from '../context/Time.js';
 
 describe('Entity', () => {
 	const schema = {
@@ -60,18 +60,19 @@ describe('Entity', () => {
 			resetAll: new WeakEvent(),
 		};
 		const time = new NaiveTimestampProvider();
-		const mockContext = {
-			log: vi.fn(),
-			getNow: () => time.now(1),
-		} as any as Context;
 		const patchCreator = new PatchCreator(() => time.now(1));
+		const mockContext: Partial<Context> = {
+			log: vi.fn(),
+			time: new Time(time, 1),
+			patchCreator,
+		};
 		const entity = new Entity({
 			oid: 'test/1',
 			schema,
-			ctx: mockContext,
+			ctx: mockContext as Context,
 			storeEvents: events,
 			metadataFamily: new EntityFamilyMetadata({
-				ctx: mockContext,
+				ctx: mockContext as Context,
 				onPendingOperations,
 				rootOid: 'test/1',
 			}),
@@ -79,7 +80,6 @@ describe('Entity', () => {
 				add: vi.fn(),
 				get: vi.fn(),
 			} as any as FileManager,
-			patchCreator,
 			readonlyKeys: ['id'],
 			deleteSelf: vi.fn(),
 		});

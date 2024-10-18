@@ -1,22 +1,31 @@
 import { replaceLegacyOidsInObject } from '@verdant-web/common';
-import { closeDatabase, storeRequestPromise } from '../idb.js';
+import {
+	closeDatabase,
+	getMetadataDbName,
+	storeRequestPromise,
+} from '../util.js';
+import { Context } from '../../../context/context.js';
 
 const migrations = [version1, version2, version3, version4, version5, version6];
+export const CURRENT_METADATA_VERSION = migrations.length;
 
 export function openMetadataDatabase({
 	indexedDB = window.indexedDB,
 	namespace,
 	log,
-	metadataVersion = 5,
+	metadataVersion = CURRENT_METADATA_VERSION,
 }: {
 	indexedDB?: IDBFactory;
 	namespace: string;
-	log?: (...args: any[]) => void;
+	log?: Context['log'];
 	metadataVersion?: number;
 }): Promise<{ wasInitialized: boolean; db: IDBDatabase }> {
 	return new Promise<{ wasInitialized: boolean; db: IDBDatabase }>(
 		(resolve, reject) => {
-			const request = indexedDB.open(`${namespace}_meta`, metadataVersion);
+			const request = indexedDB.open(
+				getMetadataDbName(namespace),
+				metadataVersion,
+			);
 			let wasInitialized = false;
 			request.onupgradeneeded = async (event) => {
 				const db = request.result;
@@ -200,6 +209,10 @@ async function version3(db: IDBDatabase, tx: IDBTransaction) {
 	operations.createIndex('timestamp', 'timestamp');
 }
 
+/**
+ * 3 -> 4 changes:
+ * Add files store
+ */
 async function version4(db: IDBDatabase, tx: IDBTransaction) {
 	const files = db.createObjectStore('files', {
 		keyPath: 'id',
@@ -208,6 +221,10 @@ async function version4(db: IDBDatabase, tx: IDBTransaction) {
 	files.createIndex('deletedAt', 'deletedAt');
 }
 
+/**
+ * 4 -> 5 changes:
+ * replace legacy OIDs
+ */
 async function version5(db: IDBDatabase, tx: IDBTransaction) {
 	// rewrites all baselines and operations to replace legacy OIDs
 	// with new ones.

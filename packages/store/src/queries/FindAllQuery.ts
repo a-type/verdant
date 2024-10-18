@@ -1,6 +1,5 @@
 import { CollectionFilter } from '@verdant-web/common';
 import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
-import { findAllOids } from './dbQueries.js';
 import { areIndexesEqual } from './utils.js';
 
 export class FindAllQuery<T> extends BaseQuery<T[]> {
@@ -24,10 +23,9 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const oids = await findAllOids({
+		const { result: oids } = await this.context.queries.findAllOids({
 			collection: this.collection,
 			index: this.index,
-			context: this.context,
 		});
 		this.context.log(
 			'debug',

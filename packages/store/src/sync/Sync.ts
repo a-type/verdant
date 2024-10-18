@@ -10,7 +10,6 @@ import {
 	VerdantError,
 	VerdantInternalPresence,
 } from '@verdant-web/common';
-import { Metadata } from '../metadata/Metadata.js';
 import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
 import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
 import { PushPullSync } from './PushPullSync.js';
@@ -19,7 +18,7 @@ import {
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { attemptToRegisterBackgroundSync } from './background.js';
 
 type SyncEvents = {
@@ -100,12 +99,12 @@ export class NoSync<Presence = any, Profile = any>
 
 	public readonly presence;
 
-	constructor({ meta }: { meta: Metadata }) {
+	constructor(ctx: Context) {
 		super();
 		this.presence = new PresenceManager({
 			initialPresence: null as any,
 			defaultProfile: null as any,
-			replicaStore: meta.localReplica,
+			ctx,
 		});
 	}
 
@@ -119,7 +118,7 @@ export class NoSync<Presence = any, Profile = any>
 	getFile = async (): Promise<FilePullResult> => {
 		return {
 			success: false,
-			retry: false,
+			error: 'Sync is not active',
 		};
 	};
 
@@ -206,13 +205,11 @@ export class ServerSync<Presence = any, Profile = any>
 	private broadcastChannel: BroadcastChannel | null = null;
 	private _activelySyncing = false;
 
-	private meta: Metadata;
-
 	readonly presence: PresenceManager<Profile, Presence>;
 
 	private onOutgoingMessage?: (message: ClientMessage) => void;
 
-	private log;
+	private ctx;
 
 	constructor(
 		{
@@ -231,11 +228,9 @@ export class ServerSync<Presence = any, Profile = any>
 			EXPERIMENTAL_backgroundSync,
 		}: ServerSyncOptions<Profile, Presence>,
 		{
-			meta,
 			ctx,
 			onData,
 		}: {
-			meta: Metadata;
 			ctx: Context;
 			onData: (data: {
 				operations: Operation[];
@@ -245,15 +240,14 @@ export class ServerSync<Presence = any, Profile = any>
 		},
 	) {
 		super();
-		this.meta = meta;
 		this.onData = onData;
-		this.log = ctx.log;
+		this.ctx = ctx;
 		this.onOutgoingMessage = onOutgoingMessage;
 		this.presence = new PresenceManager({
 			initialPresence,
 			defaultProfile,
 			updateBatchTimeout: presenceUpdateBatchTimeout,
-			replicaStore: meta.localReplica,
+			ctx,
 		});
 		this.endpointProvider = new ServerSyncEndpointProvider({
 			authEndpoint,
@@ -263,21 +257,19 @@ export class ServerSync<Presence = any, Profile = any>
 
 		this.webSocketSync = new WebSocketSync({
 			endpointProvider: this.endpointProvider,
-			meta,
 			presence: this.presence,
-			log: ctx.log,
+			ctx,
 		});
 		this.pushPullSync = new PushPullSync({
 			endpointProvider: this.endpointProvider,
-			meta,
 			presence: this.presence,
-			log: ctx.log,
 			interval: pullInterval,
 			fetch,
+			ctx,
 		});
 		this.fileSync = new FileSync({
 			endpointProvider: this.endpointProvider,
-			log: ctx.log,
+			ctx,
 		});
 		if (useBroadcastChannel && 'BroadcastChannel' in window) {
 			this.broadcastChannel = new BroadcastChannel(`verdant-${ctx.namespace}`);
@@ -294,7 +286,7 @@ export class ServerSync<Presence = any, Profile = any>
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
 
-		this.meta.subscribe('message', this.send);
+		ctx.internalEvents.subscribe('syncMessage', this.send);
 
 		this.webSocketSync.subscribe('message', this.handleMessage);
 		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
@@ -373,11 +365,11 @@ export class ServerSync<Presence = any, Profile = any>
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
 			for (const op of message.operations) {
-				this.meta.time.update(op.timestamp);
+				this.ctx.time.update(op.timestamp);
 			}
 		}
 
-		this.log('debug', 'sync message', JSON.stringify(message, null, 2));
+		this.ctx.log('debug', 'sync message', JSON.stringify(message, null, 2));
 		switch (message.type) {
 			case 'op-re':
 				await this.onData({
@@ -385,11 +377,11 @@ export class ServerSync<Presence = any, Profile = any>
 					baselines: message.baselines,
 				});
 				if (message.globalAckTimestamp) {
-					await this.meta.setGlobalAck(message.globalAckTimestamp);
+					await this.ctx.meta.setGlobalAck(message.globalAckTimestamp);
 				}
 				break;
 			case 'global-ack':
-				await this.meta.setGlobalAck(message.timestamp);
+				await this.ctx.meta.setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
 				this._activelySyncing = true;
@@ -401,21 +393,22 @@ export class ServerSync<Presence = any, Profile = any>
 				});
 
 				if (message.globalAckTimestamp) {
-					await this.meta.setGlobalAck(message.globalAckTimestamp);
+					await this.ctx.meta.setGlobalAck(message.globalAckTimestamp);
 				}
 
-				await this.meta.updateLastSynced(message.ackedTimestamp);
+				await this.ctx.meta.updateLastSynced(message.ackedTimestamp);
 				this._activelySyncing = false;
 				this.emit('syncingChange', false);
 				break;
 			case 'need-since':
 				this.emit('serverReset', message.since);
+				this.ctx.files.onServerReset(message.since);
 				this.activeSync.send(
-					await this.meta.messageCreator.createSyncStep1(message.since),
+					await this.ctx.meta.messageCreator.createSyncStep1(message.since),
 				);
 				break;
 			case 'server-ack':
-				await this.meta.updateLastSynced(message.timestamp);
+				await this.ctx.meta.updateLastSynced(message.timestamp);
 		}
 
 		// avoid rebroadcasting messages
@@ -427,16 +420,34 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 
 		// update presence if necessary
-		this.presence[HANDLE_MESSAGE](await this.meta.localReplica.get(), message);
+		this.presence[HANDLE_MESSAGE](
+			await this.ctx.meta.getLocalReplica(),
+			message,
+		);
 	};
-	private handleOnlineChange = (online: boolean) => {
+	private handleOnlineChange = async (online: boolean) => {
 		this.emit('onlineChange', online);
+
+		// if online, attempt to upload any unsynced files.
+		if (online) {
+			const unsyncedFiles = await this.ctx.files.listUnsynced();
+			const results = await Promise.allSettled(
+				unsyncedFiles.map((file) => this.fileSync.uploadFile(file)),
+			);
+			if (results.some((r) => r.status === 'rejected')) {
+				this.ctx.log(
+					'error',
+					'Failed to upload unsynced files',
+					results.filter((r) => r.status === 'rejected').map((r) => r.reason),
+				);
+			}
+		}
 	};
 	private handlePresenceUpdate = async (data: {
 		presence?: Presence;
 		internal?: VerdantInternalPresence;
 	}) => {
-		this.send(await this.meta.messageCreator.createPresenceUpdate(data));
+		this.send(await this.ctx.meta.messageCreator.createPresenceUpdate(data));
 	};
 
 	setMode = (transport: SyncTransportMode) => {
@@ -454,7 +465,7 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 
 		if (newSync === this.activeSync) return;
-		this.log('debug', 'switching to', transport, 'mode');
+		this.ctx.log('debug', 'switching to', transport, 'mode');
 
 		// transfer state to new sync
 		if (this.activeSync.status === 'active') {
@@ -496,7 +507,7 @@ export class ServerSync<Presence = any, Profile = any>
 	};
 
 	uploadFile = async (info: FileData) => {
-		this.log('info', 'Uploading file', {
+		this.ctx.log('info', 'Uploading file', {
 			name: info.name,
 			type: info.type,
 			id: info.id,

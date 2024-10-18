@@ -6,12 +6,11 @@ import {
 	getIndexValues,
 	getOidRoot,
 } from '@verdant-web/common';
-import { Metadata } from '../metadata/Metadata.js';
-import { ClientOperation } from '../metadata/OperationsStore.js';
+import { ClientOperation } from '../../../interfaces.js';
 import { acquireLock, openDatabase, upgradeDatabase } from './db.js';
 import { getInitialMigrationEngine, getMigrationEngine } from './engine.js';
 import { OpenDocumentDbContext } from './types.js';
-import { closeDatabase } from '../idb.js';
+import { closeDatabase } from '../../util.js';
 
 const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -19,13 +18,11 @@ const globalIDB =
 export async function runMigrations({
 	context,
 	toRun,
-	meta,
 	indexedDB = globalIDB,
 	namespace = context.namespace,
 }: {
 	context: OpenDocumentDbContext;
 	toRun: Migration<any>[];
-	meta: Metadata;
 	indexedDB?: IDBFactory;
 	/** This namespace value controls where the database being migrated is. */
 	namespace?: string;
@@ -39,7 +36,6 @@ export async function runMigrations({
 			// migrations from 0 (i.e. initial migrations) don't attempt to open an existing db
 			if (migration.oldSchema.version === 0) {
 				engine = getInitialMigrationEngine({
-					meta,
 					migration,
 					context,
 				});
@@ -56,12 +52,9 @@ export async function runMigrations({
 
 				// this will only write to our metadata store via operations!
 				engine = getMigrationEngine({
-					meta,
 					migration,
-					context: {
-						...context,
-						documentDb: originalDatabase,
-					},
+					context,
+					queryDb: originalDatabase,
 				});
 				try {
 					await migration.migrate(engine);
@@ -115,9 +108,9 @@ export async function runMigrations({
 			 * would be missing from findAll and findOne queries.
 			 */
 			const docsWithUnappliedMigrations = await getDocsWithUnappliedMigrations({
-				meta,
 				currentVersion: migration.oldSchema.version,
 				newVersion: migration.newSchema.version,
+				ctx: context,
 			});
 
 			// once the schema is ready, we can write back the migrated documents
@@ -163,7 +156,7 @@ export async function runMigrations({
 				const snapshots = await Promise.all(
 					oids.map(async (oid) => {
 						try {
-							const snap = await meta.getDocumentSnapshot(oid);
+							const snap = await context.meta.getDocumentSnapshot(oid);
 							return [oid, snap];
 						} catch (e) {
 							// this seems to happen with baselines/ops which are not fully
@@ -279,22 +272,24 @@ async function putView(store: IDBObjectStore, view: any) {
  * future. These documents need to be refreshed in storage.
  */
 async function getDocsWithUnappliedMigrations({
-	meta,
 	currentVersion,
 	newVersion: _,
+	ctx,
 }: {
 	currentVersion: number;
 	newVersion: number;
-	meta: Metadata;
+	ctx: OpenDocumentDbContext;
 }) {
 	// scan for all operations in metadata after the current version.
 	// this could be more efficient if also filtering below or equal newVersion but
 	// that seems so unlikely in practice...
 	const unappliedOperations: ClientOperation[] = [];
-	await meta.operations.iterateOverAllOperations(
-		(op) => unappliedOperations.push(op),
+	await ctx.meta.iterateAllOperations(
+		(op) => {
+			unappliedOperations.push(op);
+		},
 		{
-			from: meta.time.zero(currentVersion + 1),
+			from: ctx.time.zeroWithVersion(currentVersion + 1),
 		},
 	);
 	return Array.from(

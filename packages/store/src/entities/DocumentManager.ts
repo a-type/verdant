@@ -11,9 +11,6 @@ import {
 	AuthorizationKey,
 } from '@verdant-web/common';
 import { EntityCreateOptions, EntityStore } from '../entities/EntityStore.js';
-import { Metadata } from '../metadata/Metadata.js';
-import { Sync } from '../sync/Sync.js';
-import { Context } from '../context.js';
 import { ObjectEntity } from '../index.js';
 
 /**

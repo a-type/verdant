@@ -4,17 +4,16 @@ import {
 	ServerMessage,
 } from '@verdant-web/common';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
-import { Metadata } from '../metadata/Metadata.js';
 import { Heartbeat } from './Heartbeat.js';
 import { PresenceManager } from './PresenceManager.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
+import { Context } from '../context/context.js';
 
 export class WebSocketSync
 	extends EventSubscriber<SyncTransportEvents>
 	implements SyncTransport
 {
-	private meta: Metadata;
 	readonly presence: PresenceManager;
 	private socket: WebSocket | null = null;
 	// messages awaiting websocket connection to send
@@ -30,7 +29,7 @@ export class WebSocketSync
 	private _ignoreIncoming = false;
 
 	readonly mode = 'realtime';
-	private log = (...args: any[]) => {};
+	private ctx: Context;
 
 	private heartbeat = new Heartbeat();
 
@@ -40,19 +39,16 @@ export class WebSocketSync
 
 	constructor({
 		endpointProvider,
-		meta,
+		ctx,
 		presence,
-		log,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
-		meta: Metadata;
+		ctx: Context;
 		presence: PresenceManager;
-		log?: (...args: any[]) => any;
 	}) {
 		super();
-		this.log = log || this.log;
+		this.ctx = ctx;
 		this.endpointProvider = endpointProvider;
-		this.meta = meta;
 		this.presence = presence;
 
 		this.reconnectScheduler.subscribe('trigger', this.initializeSocket);
@@ -70,18 +66,22 @@ export class WebSocketSync
 		this.synced = false;
 		if (this.connectQueue.length) {
 			for (const msg of this.connectQueue) {
-				this.log('Sending queued message', JSON.stringify(msg, null, 2));
+				this.ctx.log(
+					'debug',
+					'Sending queued message',
+					JSON.stringify(msg, null, 2),
+				);
 				this.socket.send(JSON.stringify(msg));
 			}
 			this.connectQueue = [];
 		}
-		this.log('Sync connected');
+		this.ctx.log('debug', 'Sync connected');
 		this.onOnlineChange(true);
 		this.reconnectScheduler.reset();
 	};
 
 	private onOnlineChange = async (online: boolean) => {
-		this.log('Socket online change', online);
+		this.ctx.log('info', 'Socket online change', online);
 		if (this.disposed) {
 			return;
 		}
@@ -90,13 +90,15 @@ export class WebSocketSync
 			this.synced = false;
 			this.heartbeat.stop();
 		} else {
-			this.log('Starting sync');
+			this.ctx.log('debug', 'Starting sync');
 			this.hasStartedSync = true;
 			this.synced = false;
 			this.send(
-				await this.meta.messageCreator.createPresenceUpdate(this.presence.self),
+				await this.ctx.meta.messageCreator.createPresenceUpdate(
+					this.presence.self,
+				),
 			);
-			this.send(await this.meta.messageCreator.createSyncStep1());
+			this.send(await this.ctx.meta.messageCreator.createSyncStep1());
 			this.heartbeat.start();
 		}
 		this.emit('onlineChange', online);
@@ -104,7 +106,8 @@ export class WebSocketSync
 
 	private onMessage = async (event: MessageEvent) => {
 		if (this._ignoreIncoming) {
-			this.log(
+			this.ctx.log(
+				'warn',
 				'Ignoring incoming message (ignore incoming flag set)',
 				event.data,
 			);
@@ -117,14 +120,14 @@ export class WebSocketSync
 				if (message.ackThisNonce) {
 					// we need to send the ack to confirm we got the response
 					this.send(
-						await this.meta.messageCreator.createAck(message.ackThisNonce),
+						await this.ctx.meta.messageCreator.createAck(message.ackThisNonce),
 					);
 				}
 				this.hasStartedSync = true;
 				this.synced = true;
 				if (this.syncQueue.length) {
 					if (message.overwriteLocalData) {
-						this.log(
+						this.ctx.log(
 							'warn',
 							'Overwriting local data - dropping outgoing message queue',
 						);
@@ -151,7 +154,8 @@ export class WebSocketSync
 				break;
 			case 'op-re':
 				if (!this.synced) {
-					this.log(
+					this.ctx.log(
+						'debug',
 						`Enqueueing op-re message because sync hasn't finished yet`,
 						message,
 					);
@@ -173,14 +177,14 @@ export class WebSocketSync
 	};
 
 	private onError = (event: Event) => {
-		this.log(event);
+		this.ctx.log('error', event);
 		this.reconnectScheduler.next();
 
-		this.log(`Attempting reconnect to websocket sync`);
+		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private onClose = (event: CloseEvent) => {
-		this.log('Sync disconnected');
+		this.ctx.log('info', 'Sync disconnected');
 		this.onOnlineChange(false);
 		this.onError(event);
 	};
@@ -197,7 +201,7 @@ export class WebSocketSync
 	};
 
 	private sendHeartbeat = async () => {
-		this.send(await this.meta.messageCreator.createHeartbeat());
+		this.send(await this.ctx.meta.messageCreator.createHeartbeat());
 	};
 
 	reconnect = () => {
@@ -225,10 +229,15 @@ export class WebSocketSync
 
 		if (this.canSkipSyncWait(message)) {
 			if (this.socket?.readyState === WebSocket.OPEN) {
-				this.log('Sending message', JSON.stringify(message, null, 2));
+				this.ctx.log(
+					'debug',
+					'Sending message',
+					JSON.stringify(message, null, 2),
+				);
 				this.socket!.send(JSON.stringify(message));
 			} else {
-				this.log(
+				this.ctx.log(
+					'debug',
 					'Enqueueing message until socket is open',
 					JSON.stringify(message, null, 2),
 				);
@@ -236,11 +245,16 @@ export class WebSocketSync
 			}
 		} else if (this.synced) {
 			if (this.socket?.readyState === WebSocket.OPEN) {
-				this.log('Sending message', JSON.stringify(message, null, 2));
+				this.ctx.log(
+					'debug',
+					'Sending message',
+					JSON.stringify(message, null, 2),
+				);
 				this.socket.send(JSON.stringify(message));
 			}
 		} else if (this.hasStartedSync) {
-			this.log(
+			this.ctx.log(
+				'debug',
 				'Enqueueing message until synced',
 				JSON.stringify(message, null, 2),
 			);

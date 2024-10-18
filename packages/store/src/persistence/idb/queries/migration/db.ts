@@ -1,4 +1,10 @@
-import { closeDatabase, globalIDB, storeRequestPromise } from '../idb.js';
+import {
+	closeDatabase,
+	globalIDB,
+	storeRequestPromise,
+	openDatabase as baseOpenDatabase,
+	getDocumentDbName,
+} from '../../util.js';
 import { OpenDocumentDbContext } from './types.js';
 
 export async function getDatabaseVersion(
@@ -121,40 +127,11 @@ export async function openDatabase({
 	context: OpenDocumentDbContext;
 }): Promise<IDBDatabase> {
 	context.log('debug', 'Opening database', namespace, 'at version', version);
-	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
-		request.onupgradeneeded = async (event) => {
-			const transaction = request.transaction!;
-			transaction.abort();
-
-			context.log(
-				'error',
-				'Database upgrade needed, but not expected',
-				'Expected',
-				version,
-				'Got',
-				request.result.version,
-			);
-			reject(
-				request.error ||
-					new Error(
-						`Migration error: database version changed unexpectedly when reading current data. Expected ${version}, got ${request.result.version}`,
-					),
-			);
-		};
-		request.onsuccess = (event) => {
-			resolve(request.result);
-		};
-		request.onblocked = (event) => {
-			reject(new Error('Migration error: database blocked'));
-		};
-		request.onerror = (event) => {
-			reject(new Error('Migration error: database error'));
-		};
-	});
+	const db = await baseOpenDatabase(
+		getDocumentDbName(namespace),
+		version,
+		indexedDB,
+	);
 
 	db.addEventListener('versionchange', (event) => {
 		db.close();

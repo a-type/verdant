@@ -2,6 +2,7 @@
  * High-level patch creation for use with complex nested objects.
  */
 
+import { AuthorizationKey } from './authz.js';
 import { FileRef } from './files.js';
 import { createRef, createSubOid, ObjectIdentifier } from './oids.js';
 import {
@@ -32,8 +33,19 @@ export class PatchCreator {
 		return diffToPatches(from, to, this.getNow, this.createSubId, [], options);
 	};
 
-	createInitialize = (obj: any, oid: ObjectIdentifier) => {
-		return initialToPatches(obj, oid, this.getNow, this.createSubId);
+	createInitialize = (
+		obj: any,
+		oid: ObjectIdentifier,
+		authz?: AuthorizationKey,
+	) => {
+		return initialToPatches(
+			obj,
+			oid,
+			this.getNow,
+			this.createSubId,
+			undefined,
+			authz ? { authz } : undefined,
+		);
 	};
 
 	createSet = (
@@ -294,13 +306,17 @@ export class PatchCreator {
 		];
 	};
 
-	createDeleteAll = (oids: ObjectIdentifier[]): Operation[] => {
+	createDeleteAll = (
+		oids: ObjectIdentifier[],
+		authz?: AuthorizationKey,
+	): Operation[] => {
 		return oids.map((oid) => ({
 			oid,
 			timestamp: this.getNow(),
 			data: {
 				op: 'delete',
 			},
+			authz,
 		}));
 	};
 }

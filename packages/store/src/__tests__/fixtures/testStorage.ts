@@ -1,14 +1,8 @@
-import {
-	ClientMessage,
-	createMigration,
-	Operation,
-	schema,
-} from '@verdant-web/common';
+import { createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { ClientWithCollections, ClientDescriptor } from '../../index.js';
 import { METADATA_VERSION_KEY } from '../../client/constants.js';
-import { Sync } from '../../sync/Sync.js';
 
 export const todoCollection = schema.collection({
 	name: 'todo',
@@ -102,13 +96,11 @@ export function createTestStorage({
 	disableRebasing = false,
 	metadataVersion,
 	log,
-	onOperation,
 }: {
 	idb?: IDBFactory;
 	disableRebasing?: boolean;
 	metadataVersion?: number;
 	log?: (...args: any[]) => void;
-	onOperation?: (op: Operation) => void;
 } = {}) {
 	const storage = new ClientDescriptor({
 		schema: testSchema,
@@ -118,7 +110,6 @@ export function createTestStorage({
 		disableRebasing,
 		log,
 		[METADATA_VERSION_KEY]: metadataVersion,
-		onOperation,
 	}).open();
 	return storage as Promise<ClientWithCollections>;
 }
