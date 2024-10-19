@@ -73,9 +73,11 @@ export class Client<Presence = any, Profile = any> {
 	__manualRebase: () => Promise<void>;
 }
 
-export interface ClientDescriptorOptions<Presence = any, Profile = any> extends Omit<BaseClientDescriptorOptions<Presence, Profile>, 'schema' | 'migrations'> {
+export interface ClientDescriptorOptions<Presence = any, Profile = any> extends Omit<BaseClientDescriptorOptions<Presence, Profile>, 'schema' | 'migrations' | 'oldSchemas'> {
   /** WARNING: overriding the schema is dangerous and almost definitely not what you want. */
   schema?: StorageSchema;
+	/** WARNING: overriding old schemas is dangerous and almost definitely not what you want. */
+	oldSchemas?: StorageSchema[];
 	/** WARNING: overriding the migrations is dangerous and almost definitely not what you want. */
 	migrations?: Migration[];
 }

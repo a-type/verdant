@@ -575,6 +575,7 @@ export class Server extends EventEmitter implements MessageSender {
 					await this.storage.ready;
 					await this.storage.fileMetadata.put(info.libraryId, lofiFileInfo);
 					fs.put(stream, lofiFileInfo);
+					this.log('info', 'File uploading', lofiFileInfo);
 				} catch (e) {
 					reject(e);
 				}

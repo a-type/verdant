@@ -180,7 +180,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 	): Promise<void> => {
 		await this.iterate(
 			'baselines',
-			(store) => store.index('timestamp').getAll(),
+			(store) => store.index('timestamp').openCursor(),
 			iterator,
 			this.convertOpts(opts),
 		);
@@ -321,9 +321,11 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 					? createCompoundIndexValue(true, opts.after)
 					: createLowerBoundIndexValue(true);
 				const end = createUpperBoundIndexValue(true);
-				return store.openCursor(
+				const index = store.index('l_t');
+				return index.openCursor(
 					// NOTE: differs from original impl -- last arg is 'false' instead of 'true'
 					IDBKeyRange.bound(start, end, !!opts?.after, false),
+					'next',
 				);
 			},
 			iterator,
@@ -384,7 +386,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 	}: {
 		clearReplica?: boolean;
 		transaction?: AbstractTransaction;
-	}): Promise<void> => {
+	} = {}): Promise<void> => {
 		const tx =
 			(transaction as IDBTransaction) ||
 			this.createTransaction(['info', 'operations', 'baselines'], {

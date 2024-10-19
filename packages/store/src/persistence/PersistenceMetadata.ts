@@ -35,31 +35,50 @@ export class PersistenceMetadata extends Disposable {
 		this.compose(this.db);
 	}
 
-	private insertLocalOperations = async (
-		operations: Operation[],
+	private insertOperations = async (
+		operations: ClientOperation[],
 		options?: { transaction?: AbstractTransaction },
 	) => {
-		if (operations.length === 0) return;
-		// await this.rebaseLock;
 		this.ctx.log(
 			'debug',
-			`Inserting ${operations.length} local operations`,
+			`Inserting ${operations.length} operations`,
 			operations,
 		);
 
-		// add local flag, in place.
-		for (const operation of operations) {
-			(operation as ClientOperation).isLocal = true;
-		}
-		await this.db.addOperations(operations as ClientOperation[], options);
+		const affectedDocumentOids = await this.db.addOperations(
+			operations,
+			options,
+		);
 
-		const message = await this.messageCreator.createOperation({ operations });
-		this.ctx.internalEvents.emit('syncMessage', message);
+		for (const op of operations) {
+			this.ctx.globalEvents.emit('operation', op);
+		}
 
 		// we can now enqueue and check for rebase opportunities
 		if (!this.ctx.config.persistence?.disableRebasing) {
 			this.rebaser.tryAutonomousRebase();
 		}
+
+		return affectedDocumentOids;
+	};
+
+	private insertLocalOperations = async (
+		operations: Operation[],
+		options?: { transaction?: AbstractTransaction },
+	) => {
+		if (operations.length === 0) return;
+
+		// add local flag, in place.
+		for (const operation of operations) {
+			(operation as ClientOperation).isLocal = true;
+		}
+		await this.insertOperations(operations as ClientOperation[], options);
+
+		const message = await this.messageCreator.createOperation({ operations });
+		if (!this.ctx.internalEvents.subscriberCount('syncMessage')) {
+			this.ctx.log('critical', 'No syncMessage subscribers');
+		}
+		this.ctx.internalEvents.emit('syncMessage', message);
 
 		operations.forEach((o) => this.ctx.globalEvents.emit('operation', o));
 	};
@@ -69,26 +88,15 @@ export class PersistenceMetadata extends Disposable {
 		options?: { transaction?: AbstractTransaction },
 	) => {
 		if (operations.length === 0) return [];
-		// await this.rebaseLock;
-		this.ctx.log(
-			'debug',
-			`Inserting ${operations.length} remote operations`,
-			operations,
-		);
 
-		const affectedDocumentOids = await this.db.addOperations(
-			operations.map((patch) => ({
-				...patch,
-				isLocal: false,
-			})),
-			options,
-		);
+		// add local flag, in place
+		for (const operation of operations) {
+			(operation as ClientOperation).isLocal = false;
+		}
+
+		await this.insertOperations(operations as ClientOperation[], options);
 
 		this.ack(operations[operations.length - 1].timestamp);
-
-		operations.forEach((o) => this.ctx.globalEvents.emit('operation', o));
-
-		return affectedDocumentOids;
 	};
 
 	private insertRemoteBaselines = async (

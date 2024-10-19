@@ -331,8 +331,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 		// finally... clear out memory cache of entities and
 		// re-run all active queries.
-		this.entities.clearCache();
-		this._queryCache.forceRefreshAll();
+		// this.entities.clearCache();
+		// this._queryCache.forceRefreshAll();
+
+		// ^ this is now done via the persistenceReset internal event.
 
 		resolve();
 	};

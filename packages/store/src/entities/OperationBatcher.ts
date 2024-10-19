@@ -64,6 +64,7 @@ export class OperationBatcher {
 		batchKey: string,
 		meta: { undoable?: boolean },
 	) => {
+		if (!operations.length) return;
 		this.ctx.log(
 			'debug',
 			'Flushing',
@@ -72,7 +73,6 @@ export class OperationBatcher {
 			batchKey,
 			'to storage / sync',
 		);
-		if (!operations.length) return;
 
 		// next block of logic computes superseding rules to eliminate
 		// operations which are 'overshadowed' by later ones on the same
@@ -252,7 +252,10 @@ export class OperationBatcher {
 		return externalApi;
 	};
 
-	flushAll = () => Promise.all(this.batcher.flushAll());
+	flushAll = () => {
+		this.ctx.log('debug', 'Flushing all operations');
+		return Promise.all(this.batcher.flushAll());
+	};
 
 	private createUndo = async (data: { ops: Operation[]; source?: Entity }) => {
 		// this can't be done on-demand because we rely on the current

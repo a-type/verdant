@@ -18,6 +18,12 @@ export class QueryCache extends Disposable {
 
 		this._evictionTime = evictionTime;
 		this.context = context;
+		this.addDispose(
+			this.context.internalEvents.subscribe(
+				'persistenceReset',
+				this.forceRefreshAll,
+			),
+		);
 	}
 
 	get<T extends BaseQuery<any>>(key: string): T | null {

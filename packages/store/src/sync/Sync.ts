@@ -352,10 +352,6 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 	};
 
-	private onTokenExpired = () => {
-		this.endpointProvider.clearCache();
-	};
-
 	private handleMessage = async (
 		message: ServerMessage,
 		{ source }: { source: 'network' | 'broadcastChannel' } = {

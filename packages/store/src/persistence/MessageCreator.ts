@@ -18,7 +18,7 @@ import { PersistenceMetadataDb } from './interfaces.js';
 export class MessageCreator {
 	constructor(
 		private db: PersistenceMetadataDb,
-		private ctx: Pick<Context, 'time' | 'schema'>,
+		private ctx: Pick<Context, 'time' | 'schema' | 'log'>,
 	) {}
 
 	createOperation = async (
@@ -49,11 +49,21 @@ export class MessageCreator {
 		const operations: Operation[] = [];
 		const affectedDocs = new Set<ObjectIdentifier>();
 
+		const tx = await this.db.transaction({
+			mode: 'readwrite',
+			storeNames: ['operations', 'baselines'],
+		});
+
 		// FIXME: this branch gives bad vibes. should we always
 		// send all operations from other replicas too? is there
 		// ever a case where we have a "since" timestamp and there
 		// are foreign ops that match it?
 		if (provideChangesSince) {
+			this.ctx.log(
+				'debug',
+				'Syncing local operations since',
+				provideChangesSince,
+			);
 			await this.db.iterateLocalOperations(
 				(patch) => {
 					operations.push(pickValidOperationKeys(patch));
@@ -62,10 +72,11 @@ export class MessageCreator {
 				{
 					after: provideChangesSince,
 					// block on writes to prevent race conditions
-					mode: 'readwrite',
+					transaction: tx,
 				},
 			);
 		} else {
+			this.ctx.log('debug', 'Syncing all operations');
 			// if providing the whole history, don't limit to only local
 			// operations
 			await this.db.iterateAllOperations(
@@ -74,16 +85,28 @@ export class MessageCreator {
 					affectedDocs.add(getOidRoot(patch.oid));
 				},
 				{
-					mode: 'readwrite',
+					transaction: tx,
 				},
 			);
 		}
 		// we only need to send baselines if we've never synced before
 		let baselines: DocumentBaseline[] = [];
 		if (!provideChangesSince) {
-			await this.db.iterateAllBaselines((b) => {
-				baselines.push(b);
-			});
+			await this.db.iterateAllBaselines(
+				(b) => {
+					baselines.push(b);
+				},
+				{
+					transaction: tx,
+				},
+			);
+		}
+
+		if (operations.length > 0) {
+			this.ctx.log(
+				'debug',
+				`Syncing ${operations.length} operations since ${provideChangesSince}`,
+			);
 		}
 
 		return {

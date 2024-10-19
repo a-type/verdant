@@ -38,7 +38,7 @@ export interface Context {
 
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
-	oldSchemas?: StorageSchema[];
+	oldSchemas: StorageSchema[];
 	log: (
 		level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
 		...args: any[]
@@ -48,7 +48,11 @@ export interface Context {
 		documentChanged: (oid: ObjectIdentifier) => void;
 	}>;
 	internalEvents: EventSubscriber<{
-		documentDbChanged: (db: IDBDatabase) => void;
+		/**
+		 * Fired when persisted data changes fundamentally, like resetting to 0,
+		 * or importing different data.
+		 */
+		persistenceReset: () => void;
 		/**
 		 * A message is ready to be delivered to the server.
 		 */

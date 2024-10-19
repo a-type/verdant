@@ -73,24 +73,29 @@ export class IdbPersistence implements PersistenceImplementation {
 		to: string,
 		ctx: InitialContext,
 	): Promise<void> => {
-		const fromMetaDb = await this.openMetadata(ctx);
-		const fromMeta = new PersistenceMetadata(fromMetaDb, ctx);
-		const fromQueries = await this.openQueries({ ...ctx, meta: fromMeta });
+		const fromCtx = { ...ctx, namespace: from, originalNamespace: from };
+		const fromMetaDb = await this.openMetadata(fromCtx);
+		const fromMeta = new PersistenceMetadata(fromMetaDb, fromCtx);
+		const fromQueries = await this.openQueries({ ...fromCtx, meta: fromMeta });
+		ctx.log('info', `Copying data from ${from} to ${to}`);
 
 		const { db: toMetaDb } = await openMetadataDatabase({
 			indexedDB: this.indexedDB,
 			log: ctx.log,
 			namespace: to,
 		});
+		ctx.log('debug', 'Metadata database opened');
 		await fromMetaDb.cloneTo(toMetaDb);
+		ctx.log('debug', 'Metadata copied');
 
 		const toQueryDb = await openQueryDatabase({
 			version: ctx.schema.version,
 			indexedDB: this.indexedDB,
 			migrations: ctx.migrations,
-			context: { ...ctx, namespace: to, meta: fromMeta },
+			context: { ...ctx, namespace: to, originalNamespace: to, meta: fromMeta },
 		});
 		await fromQueries.cloneTo(toQueryDb);
+		ctx.log('debug', 'Indexes copied');
 
 		await fromMetaDb.dispose();
 		await closeDatabase(toMetaDb);

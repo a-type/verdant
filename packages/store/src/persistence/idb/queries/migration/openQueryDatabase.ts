@@ -18,10 +18,6 @@ export async function openQueryDatabase({
 	indexedDB?: IDBFactory;
 	context: OpenDocumentDbContext;
 }) {
-	if (context.schema.wip) {
-		throw new Error('Cannot open a production client with a WIP schema!');
-	}
-
 	const currentVersion = await getDatabaseVersion(
 		indexedDB,
 		context.namespace,
@@ -35,6 +31,7 @@ export async function openQueryDatabase({
 		currentVersion,
 		'target version:',
 		version,
+		context.schema.wip ? '(wip)' : '',
 	);
 
 	const toRun = getMigrationPath({

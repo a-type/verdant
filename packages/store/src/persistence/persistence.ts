@@ -56,6 +56,7 @@ export async function importPersistence(
 	ctx: Context,
 	exportedData: ExportedData,
 ): Promise<void> {
+	ctx.log('info', 'Importing data from export');
 	// open persistence at the version of the import
 	const exportedSchema = ctx.oldSchemas?.find(
 		(s) => s.version === exportedData.data.schemaVersion,
@@ -81,25 +82,68 @@ export async function importPersistence(
 	await importedContext.meta.resetFrom(exportedData.data);
 	await importedContext.files.import(exportedData);
 
+	ctx.log('debug', 'Imported data into temporary namespace', importedNamespace);
+
 	// shut down the imported databases
 	await importedContext.queries.dispose();
 	await importedContext.meta.dispose();
 	await importedContext.files.dispose();
 
-	// upgrade the imported data to the latest schema
-	const currentSchema = ctx.schema;
-	const upgradedContext = await initializePersistence({
-		...importedContext,
-		schema: currentSchema,
-	});
+	if (exportedSchema.version !== ctx.schema.version) {
+		// an upgrade of the imported data is needed ; it's an older version
+		// of the schema.
+		ctx.log('debug', 'Shut down imported databases');
 
-	await upgradedContext.queries.dispose();
-	await upgradedContext.meta.dispose();
-	await upgradedContext.files.dispose();
+		// upgrade the imported data to the latest schema
+		const currentSchema = ctx.schema;
+		const upgradedContext = await initializePersistence({
+			...importedContext,
+			schema: currentSchema,
+		});
+
+		ctx.log('debug', 'Upgraded imported data to current schema');
+
+		await upgradedContext.queries.dispose();
+		await upgradedContext.meta.dispose();
+		await upgradedContext.files.dispose();
+
+		ctx.log('debug', 'Shut down upgraded databases');
+	}
 
 	// copy the imported data into the current namespace
 	await ctx.persistence.copyNamespace(importedNamespace, ctx.namespace, ctx);
 
+	// verify integrity
+	const stats = await ctx.meta.stats();
+	if (stats.operationsSize.count !== exportedData.data.operations.length) {
+		ctx.log(
+			'critical',
+			'Imported operations count mismatch',
+			'expected',
+			exportedData.data.operations.length,
+			'actual',
+			stats.operationsSize.count,
+		);
+	}
+	if (stats.baselinesSize.count !== exportedData.data.baselines.length) {
+		ctx.log(
+			'critical',
+			'Imported documents count mismatch',
+			'expected',
+			exportedData.data.baselines.length,
+			'actual',
+			stats.baselinesSize.count,
+		);
+	}
+
+	ctx.log('debug', 'Data copied to primary namespace');
+
+	ctx.internalEvents.emit('persistenceReset');
+
 	// cleanup the imported namespace
 	await ctx.persistence.deleteNamespace(importedNamespace, ctx);
+
+	ctx.log('debug', 'Deleted temporary namespace');
+
+	ctx.log('info', 'Data imported successfully');
 }

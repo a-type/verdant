@@ -39,6 +39,7 @@ export class FileSync extends Disposable {
 
 	private onFileAdded = async (data: FileData) => {
 		if (data.remote) return;
+		this.ctx.log('debug', 'Uploading file', data.id, data.name);
 		try {
 			await this.uploadFile(data);
 			this.ctx.internalEvents.emit(`fileUploaded:${data.id}`);

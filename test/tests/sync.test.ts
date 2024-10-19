@@ -10,6 +10,7 @@ import {
 
 const context = createTestContext({
 	// testLog: true,
+	// serverLog: true,
 });
 
 it('can sync multiple clients even if they go offline', async () => {
@@ -223,18 +224,25 @@ it('can sync multiple clients even if they go offline', async () => {
 	const b_unknownItemQ = clientB.items.get(a_unknownItem.get('id'));
 	const c_unknownItemQ = clientC.items.get(a_unknownItem.get('id'));
 	await waitForQueryResult(a_unknownItemQ);
+	log('🔺--- 1 ---');
 	await waitForEntityCondition(
 		a_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
+		3000,
+		'a unknown item comment applied',
 	);
+	log('🔺--- 2 ---');
 	await waitForQueryResult(b_unknownItemQ);
+	log('🔺--- 3 ---');
 	await waitForEntityCondition(
 		b_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
+	log('🔺--- 4 ---');
 	await waitForQueryResult(c_unknownItemQ);
+	log('🔺--- 5 ---');
 	await waitForEntityCondition(
 		c_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
-}, 30000);
+}, 15000);

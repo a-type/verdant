@@ -85,7 +85,11 @@ export class IdbService extends Disposable {
 
 	iterate = async <T>(
 		storeName: string,
-		getRequest: (store: IDBObjectStore) => IDBRequest | IDBRequest[],
+		getRequest: (
+			store: IDBObjectStore,
+		) =>
+			| IDBRequest<IDBCursorWithValue | null>
+			| IDBRequest<IDBCursorWithValue | null>[],
 		iterator: (
 			value: T,
 			store: IDBObjectStore,

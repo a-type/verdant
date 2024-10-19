@@ -12,11 +12,9 @@ export class FileManager {
 	constructor({ sync, context }: { sync: Sync; context: Context }) {
 		this.sync = sync;
 		this.context = context;
-
-		this.context.internalEvents.subscribe('fileAdded', this.add);
 	}
 
-	add = async (file: FileData) => {
+	add = async (file: FileData, options?: { downloadRemote: boolean }) => {
 		// immediately cache the file
 		if (!this.cache.has(file.id)) {
 			const entityFile = new EntityFile(file.id, { ctx: this.context });
@@ -25,6 +23,8 @@ export class FileManager {
 		} else {
 			this.cache.get(file.id)![UPDATE](file);
 		}
+
+		await this.context.files.add(file, options);
 	};
 
 	/**

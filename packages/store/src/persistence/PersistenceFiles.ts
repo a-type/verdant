@@ -38,6 +38,11 @@ export class PersistenceFiles extends Disposable {
 		// filedata was marked deleted, the original file would be deleted
 		// and the clone would refer to a missing file.
 		if (file.url && !file.file) {
+			this.context.log(
+				'debug',
+				'Remote file added to an entity. This usually means an entity was cloned. Downloading remote file...',
+				file.id,
+			);
 			const blob = await this.context.files.downloadRemoteFile(file.url, 0, 3);
 			// convert blob to file with name and type
 			file.file = new File([blob], file.name, { type: file.type });
@@ -48,6 +53,7 @@ export class PersistenceFiles extends Disposable {
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
 		await this.db.add(file, options);
+		this.context.log('debug', 'File added', file.id);
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);
 	get = this.db.get.bind(this.db);

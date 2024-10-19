@@ -229,7 +229,7 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 		doc: any,
 		{ transaction }: { transaction?: IDBTransaction },
 	) => {
-		this.ctx.log('debug', `Saving document indexes for querying ${oid}`, doc);
+		this.ctx.log('debug', `Saving document indexes for querying ${oid}`);
 		const { collection, id } = decomposeOid(oid);
 		if (!doc) {
 			await this.run(collection, (store) => store.delete(id), {
@@ -245,7 +245,7 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 				mode: 'readwrite',
 				transaction,
 			});
-			this.ctx.log('debug', `Saved document indexes for querying ${oid}`, doc);
+			this.ctx.log('debug', `Save complete for ${oid}`, indexes);
 		}
 	};
 }

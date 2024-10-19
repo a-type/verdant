@@ -183,23 +183,23 @@ export function emptyDatabase(db: IDBDatabase) {
 	});
 }
 
-export function copyDatabase(from: IDBDatabase, to: IDBDatabase) {
-	const tx = from.transaction(Array.from(from.objectStoreNames), 'readonly');
-	const promises = Array.from(from.objectStoreNames).map((storeName) => {
-		const store = tx.objectStore(storeName);
-		const cursor = store.openCursor();
-		const targetStore = to
-			.transaction(storeName, 'readwrite')
-			.objectStore(storeName);
-		return cursorIterator(cursor, (value) => {
-			if (value) {
-				targetStore.put(value);
-				return true;
-			}
-			return false;
-		});
+export async function copyDatabase(from: IDBDatabase, to: IDBDatabase) {
+	await emptyDatabase(to);
+	const records = await getAllFromObjectStores(
+		from,
+		Array.from(from.objectStoreNames),
+	);
+	const writeTx = to.transaction(Array.from(to.objectStoreNames), 'readwrite');
+	for (let i = 0; i < records.length; i++) {
+		const store = writeTx.objectStore(from.objectStoreNames[i]);
+		for (const record of records[i]) {
+			store.add(record);
+		}
+	}
+	return new Promise<void>((resolve, reject) => {
+		writeTx.oncomplete = () => resolve();
+		writeTx.onerror = () => reject(writeTx.error);
 	});
-	return Promise.all(promises);
 }
 
 export function openDatabase(

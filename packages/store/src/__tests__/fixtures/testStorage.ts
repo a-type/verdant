@@ -108,6 +108,7 @@ export function createTestStorage({
 		indexedDb: idb,
 		namespace: 'test',
 		disableRebasing,
+		oldSchemas: [testSchema],
 		log,
 		[METADATA_VERSION_KEY]: metadataVersion,
 	}).open();

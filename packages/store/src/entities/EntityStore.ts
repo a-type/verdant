@@ -84,6 +84,9 @@ export class EntityStore extends Disposable {
 			ctx,
 			entities: this,
 		});
+		this.addDispose(
+			this.ctx.internalEvents.subscribe('persistenceReset', this.clearCache),
+		);
 	}
 
 	// expose batch APIs
@@ -259,7 +262,6 @@ export class EntityStore extends Disposable {
 		}
 
 		if (this.cache.has(oid)) {
-			this.ctx.log('debug', 'Hydrating entity from cache', oid);
 			const cached = this.cache.get(oid);
 			if (cached) {
 				const entity = cached.deref();
@@ -292,7 +294,7 @@ export class EntityStore extends Disposable {
 			this.pendingEntityPromises.set(oid, pendingPromise);
 			return pendingPromise;
 		} else {
-			this.ctx.log('debug', 'Waiting for entity hydration', oid);
+			this.ctx.log('debug', 'Waiting for ongoing entity hydration', oid);
 			return pendingPromise;
 		}
 	};
