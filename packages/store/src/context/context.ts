@@ -53,10 +53,6 @@ export interface Context {
 		 * or importing different data.
 		 */
 		persistenceReset: () => void;
-		/**
-		 * A message is ready to be delivered to the server.
-		 */
-		syncMessage: (message: ClientMessage) => void;
 		filesDeleted: (files: FileRef[]) => void;
 		fileAdded: (file: FileData) => void;
 		[ev: `fileUploaded:${string}`]: () => void;

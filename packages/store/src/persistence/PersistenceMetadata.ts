@@ -2,7 +2,9 @@ import {
 	applyPatch,
 	assert,
 	assignOid,
+	ClientMessage,
 	DocumentBaseline,
+	EventSubscriber,
 	getOidRoot,
 	ObjectIdentifier,
 	Operation,
@@ -24,6 +26,9 @@ export class PersistenceMetadata extends Disposable {
 	private rebaser: PersistenceRebaser;
 	/** Available to others, like sync... */
 	readonly messageCreator: MessageCreator;
+	readonly events = new EventSubscriber<{
+		syncMessage: (message: ClientMessage) => void;
+	}>();
 
 	constructor(
 		private db: PersistenceMetadataDb,
@@ -75,10 +80,7 @@ export class PersistenceMetadata extends Disposable {
 		await this.insertOperations(operations as ClientOperation[], options);
 
 		const message = await this.messageCreator.createOperation({ operations });
-		if (!this.ctx.internalEvents.subscriberCount('syncMessage')) {
-			this.ctx.log('critical', 'No syncMessage subscribers');
-		}
-		this.ctx.internalEvents.emit('syncMessage', message);
+		this.events.emit('syncMessage', message);
 
 		operations.forEach((o) => this.ctx.globalEvents.emit('operation', o));
 	};
@@ -380,6 +382,7 @@ export class PersistenceMetadata extends Disposable {
 				{ transaction },
 			);
 		}
+		this.ctx.log('debug', 'Resetting metadata from export', data);
 		await this.insertData({
 			operations: data.operations,
 			baselines: data.baselines,
@@ -401,7 +404,7 @@ export class PersistenceMetadata extends Disposable {
 		// can't ack timestamps from the future.
 		if (timestamp > this.ctx.time.now) return;
 
-		this.ctx.internalEvents.emit('syncMessage', {
+		this.events.emit('syncMessage', {
 			type: 'ack',
 			replicaId: localReplicaInfo.id,
 			timestamp,

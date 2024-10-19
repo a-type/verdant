@@ -11,6 +11,7 @@ export enum VerdantErrorCode {
 	NoFileStorage = 5011,
 	// Client errors
 	MigrationPathNotFound = 7001,
+	ImportFailed = 7002,
 }
 
 export class VerdantError extends Error {

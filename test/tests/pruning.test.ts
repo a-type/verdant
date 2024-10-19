@@ -8,8 +8,6 @@ import {
 } from '@verdant-web/common';
 import { ClientWithCollections } from '@verdant-web/store';
 import {
-	waitForCondition,
-	waitForEntityCondition,
 	waitForEntitySnapshot,
 	waitForPeerCount,
 	waitForQueryResult,
@@ -17,6 +15,7 @@ import {
 
 const ctx = createTestContext({
 	// testLog: true,
+	// serverLog: true,
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {
@@ -57,6 +56,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		...clientAInit,
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
+		// logId: 'A1',
 	})) as any as ClientWithCollections;
 	clientA.sync.start();
 
@@ -70,6 +70,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		...clientBInit,
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
+		// logId: 'B1',
 	})) as any as ClientWithCollections;
 
 	const item1 = await clientA.items.put({
@@ -85,6 +86,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	// reset next sync... TODO: don't require this arbitrary thing.
 	const item2B = await clientB.items.get('1').resolved;
 	item2B.set('contents', 'world...');
+	ctx.log('made change on B');
 
 	await clientB.close();
 

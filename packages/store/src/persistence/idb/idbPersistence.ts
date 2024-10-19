@@ -11,7 +11,9 @@ import {
 	deleteDatabase,
 	getMetadataDbName,
 	getNamespaceFromDatabaseInfo,
+	getSizesOfAllObjectStores,
 } from './util.js';
+import { getDatabaseVersion } from './queries/migration/db.js';
 
 export class IdbPersistence implements PersistenceImplementation {
 	private metadataDb: IDBDatabase | undefined;
@@ -25,6 +27,10 @@ export class IdbPersistence implements PersistenceImplementation {
 				dbs.map(getNamespaceFromDatabaseInfo).filter((n): n is string => !!n),
 			),
 		);
+	};
+
+	getNamespaceVersion = async (namespace: string): Promise<number> => {
+		return getDatabaseVersion(this.indexedDB, namespace);
 	};
 
 	deleteNamespace = async (
@@ -96,6 +102,7 @@ export class IdbPersistence implements PersistenceImplementation {
 		});
 		await fromQueries.cloneTo(toQueryDb);
 		ctx.log('debug', 'Indexes copied');
+		ctx.log('debug', await getSizesOfAllObjectStores(toQueryDb));
 
 		await fromMetaDb.dispose();
 		await closeDatabase(toMetaDb);

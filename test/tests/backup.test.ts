@@ -9,7 +9,7 @@ import {
 } from '@verdant-web/store/backup';
 
 const ctx = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 it('can backup to file', async () => {
@@ -79,7 +79,7 @@ it('can backup to file', async () => {
 	const clientC = await ctx.createTestClient({
 		library: 'backup',
 		user: 'C',
-		logId: 'C',
+		// logId: 'C',
 	});
 
 	await importClientBackup(clientC as any, backupFile);

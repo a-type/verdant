@@ -93,6 +93,20 @@ export function getSizeOfObjectStore(
 	});
 }
 
+export async function getSizesOfAllObjectStores(
+	database: IDBDatabase,
+): Promise<{ [storeName: string]: { count: number; size: number } }> {
+	const storeNames = Array.from(database.objectStoreNames);
+	const promises = storeNames.map(async (storeName) => {
+		const result = await getSizeOfObjectStore(database, storeName);
+		return { [storeName]: result };
+	});
+	const results = await Promise.all(promises);
+	return results.reduce((acc, result_1) => {
+		return { ...acc, ...result_1 };
+	}, {});
+}
+
 export function getAllFromObjectStores(db: IDBDatabase, stores: string[]) {
 	const transaction = db.transaction(stores, 'readonly');
 	const promises = stores.map((store) => {

@@ -235,4 +235,6 @@ export interface PersistenceImplementation {
 	getNamespaces(): Promise<string[]>;
 	/** Deletes all data from a particular namespace. */
 	deleteNamespace(namespace: string, ctx: InitialContext): Promise<void>;
+	/** Gets the schema version of the given namespace */
+	getNamespaceVersion(namespace: string): Promise<number>;
 }

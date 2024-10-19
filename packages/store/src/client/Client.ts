@@ -259,9 +259,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	};
 
 	close = async () => {
-		this.context.closing = true;
 		this.sync.ignoreIncoming();
 		await this._entities.flushAllBatches();
+		// NOTE: this happens after flushing or else flushed data
+		// won't be written to storage or synced.
+		this.context.closing = true;
 		this.context.files.dispose();
 		this.sync.stop();
 		this.sync.destroy();

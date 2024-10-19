@@ -1,3 +1,4 @@
+import { getOidRoot, VerdantError } from '@verdant-web/common';
 import { Context, InitialContext } from '../context/context.js';
 import { getWipNamespace } from '../utils/wip.js';
 import { ExportedData } from './interfaces.js';
@@ -10,30 +11,62 @@ export async function initializePersistence(
 ): Promise<Context> {
 	let context = ctx as any as Context;
 	if (ctx.schema.wip) {
-		ctx.namespace = getWipNamespace(ctx.originalNamespace, ctx.schema);
+		// this is a WIP database, so we need to create a new namespace for the WIP data.
+		context.namespace = getWipNamespace(ctx.originalNamespace, ctx.schema);
+		context.log('info', 'Switched to WIP namespace', context.namespace);
 		// check if this WIP database is already in use
-		const namespaces = await ctx.persistence.getNamespaces();
+		const namespaces = await context.persistence.getNamespaces();
 
-		if (!namespaces.includes(ctx.namespace)) {
-			// copy all data to WIP namespace
-			await ctx.persistence.copyNamespace(
-				ctx.originalNamespace,
-				ctx.namespace,
-				ctx,
+		if (!namespaces.includes(context.namespace)) {
+			// copy all data to WIP namespace -- from the current version of local
+			// data, not the WIP schema version. this may not be n-1, we might
+			// be loading a WIP schema over older data.
+			const currentVersion = await context.persistence.getNamespaceVersion(
+				context.originalNamespace,
 			);
+
+			if (currentVersion === 0) {
+				// there is no existing data. nothing to copy.
+			} else {
+				const currentSchema = ctx.oldSchemas?.find(
+					(s) => s.version === currentVersion,
+				);
+				if (!currentSchema) {
+					throw new VerdantError(
+						VerdantError.Code.MigrationPathNotFound,
+						undefined,
+						`Trying to open WIP database for version ${ctx.schema.version}, but the current local data is version ${currentVersion} and a historical schema for that version is not available.`,
+					);
+				}
+				context.log(
+					'info',
+					`Copying data from ${context.originalNamespace} to ${context.namespace}`,
+				);
+				await context.persistence.copyNamespace(
+					context.originalNamespace,
+					context.namespace,
+					{
+						...context,
+						schema: currentSchema,
+					},
+				);
+			}
 		}
 	}
 
+	context.log('info', 'Opening persistence metadata');
 	context.meta = new PersistenceMetadata(
 		await ctx.persistence.openMetadata(ctx),
 		ctx,
 	);
 
+	context.log('info', 'Opening persistence files');
 	context.files = new PersistenceFiles(
 		await ctx.persistence.openFiles(context),
 		context,
 	);
 
+	context.log('info', 'Opening persistence queries');
 	context.queries = new PersistenceQueries(
 		await ctx.persistence.openQueries(context),
 		context,
@@ -44,6 +77,7 @@ export async function initializePersistence(
 		// cleanup old WIP databases
 		for (const namespace of namespaces) {
 			if (namespace.startsWith(`@@wip_`)) {
+				ctx.log('debug', 'Cleaning up old WIP namespace', namespace);
 				await ctx.persistence.deleteNamespace(namespace, ctx);
 			}
 		}
@@ -77,9 +111,34 @@ export async function importPersistence(
 		schema: exportedSchema,
 		namespace: importedNamespace,
 		originalNamespace: importedNamespace,
+		config: {
+			...ctx.config,
+			persistence: {
+				...ctx.config.persistence,
+				disableRebasing: true,
+			},
+		},
 	});
 	// load imported data into persistence
 	await importedContext.meta.resetFrom(exportedData.data);
+	// need to write indexes here!
+	const affectedOids = new Set<string>();
+	for (const baseline of exportedData.data.baselines) {
+		affectedOids.add(getOidRoot(baseline.oid));
+	}
+	for (const operation of exportedData.data.operations) {
+		affectedOids.add(getOidRoot(operation.oid));
+	}
+	const toSave = await Promise.all(
+		Array.from(affectedOids).map(async (oid) => {
+			const snapshot = await importedContext.meta.getDocumentSnapshot(oid);
+			return {
+				oid,
+				getSnapshot: () => snapshot,
+			};
+		}),
+	);
+	await importedContext.queries.saveEntities(toSave);
 	await importedContext.files.import(exportedData);
 
 	ctx.log('debug', 'Imported data into temporary namespace', importedNamespace);
@@ -113,27 +172,41 @@ export async function importPersistence(
 	// copy the imported data into the current namespace
 	await ctx.persistence.copyNamespace(importedNamespace, ctx.namespace, ctx);
 
-	// verify integrity
-	const stats = await ctx.meta.stats();
-	if (stats.operationsSize.count !== exportedData.data.operations.length) {
-		ctx.log(
-			'critical',
-			'Imported operations count mismatch',
-			'expected',
-			exportedData.data.operations.length,
-			'actual',
-			stats.operationsSize.count,
-		);
-	}
-	if (stats.baselinesSize.count !== exportedData.data.baselines.length) {
-		ctx.log(
-			'critical',
-			'Imported documents count mismatch',
-			'expected',
-			exportedData.data.baselines.length,
-			'actual',
-			stats.baselinesSize.count,
-		);
+	// verify integrity -- this can only be done if imported data was same
+	// version as current schema, because migrations could add or remove
+	// operations. still, it's a good sanity check.
+	if (exportedData.data.schemaVersion === ctx.schema.version) {
+		const stats = await ctx.meta.stats();
+		if (stats.operationsSize.count !== exportedData.data.operations.length) {
+			ctx.log(
+				'critical',
+				'Imported operations count mismatch',
+				'expected',
+				exportedData.data.operations.length,
+				'actual',
+				stats.operationsSize.count,
+			);
+			throw new VerdantError(
+				VerdantError.Code.ImportFailed,
+				undefined,
+				'Imported operations count mismatch',
+			);
+		}
+		if (stats.baselinesSize.count !== exportedData.data.baselines.length) {
+			ctx.log(
+				'critical',
+				'Imported documents count mismatch',
+				'expected',
+				exportedData.data.baselines.length,
+				'actual',
+				stats.baselinesSize.count,
+			);
+			throw new VerdantError(
+				VerdantError.Code.ImportFailed,
+				undefined,
+				'Imported documents count mismatch',
+			);
+		}
 	}
 
 	ctx.log('debug', 'Data copied to primary namespace');

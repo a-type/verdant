@@ -286,7 +286,7 @@ export class ServerSync<Presence = any, Profile = any>
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
 
-		ctx.internalEvents.subscribe('syncMessage', this.send);
+		ctx.meta.events.subscribe('syncMessage', this.send);
 
 		this.webSocketSync.subscribe('message', this.handleMessage);
 		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);

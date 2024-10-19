@@ -81,6 +81,7 @@ export async function createTestClient({
 		client.subscribe('operation', onOperation);
 	}
 	client.subscribe('developerError', (err) => {
+		console.error(`Developer Error (client: ${library}_${user})`);
 		console.error(err);
 		console.error('>>> cause >>>', err.cause);
 		expect(err).toBe(null);

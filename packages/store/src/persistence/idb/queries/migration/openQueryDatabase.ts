@@ -18,15 +18,12 @@ export async function openQueryDatabase({
 	indexedDB?: IDBFactory;
 	context: OpenDocumentDbContext;
 }) {
-	const currentVersion = await getDatabaseVersion(
-		indexedDB,
-		context.namespace,
-		version,
-		context.log,
-	);
+	const currentVersion = await getDatabaseVersion(indexedDB, context.namespace);
 
 	context.log(
 		'debug',
+		'Opening index database',
+		context.namespace,
 		'Current database version:',
 		currentVersion,
 		'target version:',

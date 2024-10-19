@@ -1,5 +1,4 @@
 import {
-	closeDatabase,
 	globalIDB,
 	storeRequestPromise,
 	openDatabase as baseOpenDatabase,
@@ -10,45 +9,15 @@ import { OpenDocumentDbContext } from './types.js';
 export async function getDatabaseVersion(
 	indexedDB: IDBFactory,
 	namespace: string,
-	version: number,
-	log?: (...args: any[]) => void,
 ): Promise<number> {
-	function openAndGetVersion(
-		resolve: (res: [number, IDBDatabase]) => void,
-		reject: (err: Error) => void,
-	) {
-		let currentVersion: number;
-		let database: IDBDatabase;
-		const request = indexedDB.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
-		request.onupgradeneeded = async (event) => {
-			currentVersion = event.oldVersion;
-			const transaction = request.transaction!;
-			database = request.result;
-			transaction.abort();
-		};
-		request.onsuccess = (event) => {
-			resolve([request.result.version, request.result]);
-		};
-		request.onblocked = (event) => {
-			// retry if blocked
-			log?.('Database blocked, waiting...');
-			// setTimeout(() => {
-			// 	openAndGetVersion(resolve, reject);
-			// }, 200);
-		};
-		request.onerror = (event) => {
-			// FIXME: this fails if the code is older than the local database
-			resolve([currentVersion!, database!]);
-		};
+	const databaseName = getDocumentDbName(namespace);
+	const dbInfo = await indexedDB.databases();
+	const existingDb = dbInfo.find((info) => info.name === databaseName);
+	if (existingDb) {
+		return existingDb.version ?? 0;
 	}
-	const [currentVersion, db] = await new Promise<[number, IDBDatabase]>(
-		openAndGetVersion,
-	);
-	await closeDatabase(db);
-	return currentVersion;
+
+	return 0;
 }
 
 /**
