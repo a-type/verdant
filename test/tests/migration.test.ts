@@ -1,4 +1,4 @@
-import { it, expect, describe } from 'vitest';
+import { it, expect } from 'vitest';
 import {
 	schema,
 	StorageDescriptor,
@@ -15,9 +15,11 @@ import {
 	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
+import { Operation } from '@verdant-web/common';
 
 async function createTestClient({
 	schema,
+	oldSchemas,
 	migrations,
 	server,
 	library,
@@ -28,6 +30,7 @@ async function createTestClient({
 	indexedDb = new IDBFactory(),
 }: {
 	schema: any;
+	oldSchemas: any[];
 	migrations: Migration<any>[];
 	server?: { port: number };
 	library: string;
@@ -39,6 +42,7 @@ async function createTestClient({
 }): Promise<ClientWithCollections> {
 	const desc = new StorageDescriptor({
 		schema,
+		oldSchemas,
 		migrations,
 		namespace: `${library}_${user}`,
 		sync: server
@@ -170,6 +174,7 @@ it(
 
 		client = await createTestClient({
 			schema: v2Schema,
+			oldSchemas: [v1Schema, v2Schema],
 			...clientInit,
 		});
 
@@ -318,6 +323,7 @@ it(
 
 		client = await createTestClient({
 			schema: v3Schema,
+			oldSchemas: [v1Schema, v2Schema, v3Schema],
 			...clientInit,
 		});
 
@@ -442,6 +448,7 @@ it(
 
 		client = await createTestClient({
 			schema: v4Schema,
+			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 			// disable rebasing so we get predictable metadata
 			disableRebasing: true,
 			...clientInit,
@@ -512,13 +519,12 @@ it(
 		// breaking the surface API a bit, I also want to check to see
 		// that we created delete operations for every existing item
 		// when dropping the table.
-		const localItemDeletes: any[] = [];
-		await client.meta.operations.iterateOverAllLocalOperations((op) => {
-			if (op.oid.startsWith('items') && op.data.op === 'delete') {
+		const localItemDeletes: Operation[] = [];
+		await client.__persistence.meta.iterateAllOperations((op) => {
+			if (op.data.op === 'delete' && op.oid.startsWith('items')) {
 				localItemDeletes.push(op);
 			}
-		}, {});
-		// 13 is the number of total nested objects in our 3 items
+		});
 		expect(localItemDeletes).toHaveLength(11);
 
 		await client.close();
@@ -561,6 +567,7 @@ it(
 
 		client = await createTestClient({
 			schema: v5Schema,
+			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema, v5Schema],
 			...clientInit,
 		});
 
@@ -688,6 +695,7 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	let clientB = await createTestClient({
 		schema: v1Schema,
+		oldSchemas: [v1Schema],
 		...clientInit,
 		indexedDb: indexedDBB,
 		// logId: 'B',
@@ -762,6 +770,7 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	clientA = await createTestClient({
 		schema: v2Schema,
+		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
 		indexedDb: indexedDbA,
 		// logId: 'A2',
@@ -1041,6 +1050,7 @@ it('supports skip migrations in real life', async () => {
 
 	client = await createTestClient({
 		schema: v4Schema,
+		oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 		...clientInit,
 	});
 

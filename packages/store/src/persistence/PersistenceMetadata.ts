@@ -323,7 +323,13 @@ export class PersistenceMetadata extends Disposable {
 			lastSyncedLogicalTime: timestamp,
 		});
 	};
-	setGlobalAck = this.db.setGlobalAck;
+	setGlobalAck = async (ack: string) => {
+		if (this.ctx.closing) return;
+		await this.db.setGlobalAck(ack);
+		if (!this.ctx.config.persistence?.disableRebasing) {
+			await this.rebaser.scheduleRebase(ack);
+		}
+	};
 
 	getLocalReplica = async (options?: CommonQueryOptions) => {
 		return this.db.getLocalReplica(options);
@@ -395,7 +401,7 @@ export class PersistenceMetadata extends Disposable {
 			return;
 		const ackInfo = await this.db.getAckInfo();
 		if (ackInfo.globalAckTimestamp) {
-			await this.rebaser.tryAutonomousRebase();
+			await this.rebaser.scheduleRebase(ackInfo.globalAckTimestamp);
 		}
 	};
 

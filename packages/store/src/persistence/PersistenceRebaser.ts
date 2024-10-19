@@ -1,8 +1,6 @@
 import {
 	applyPatch,
 	assignOid,
-	DocumentBaseline,
-	EventSubscriber,
 	isFileRef,
 	ObjectIdentifier,
 	Ref,
@@ -10,16 +8,19 @@ import {
 import { Context } from '../context/context.js';
 import { AbstractTransaction, PersistenceMetadataDb } from './interfaces.js';
 
-export class PersistenceRebaser extends EventSubscriber<{
-	rebase: (baselines: DocumentBaseline[]) => void;
-}> {
+export class PersistenceRebaser {
 	constructor(
 		private db: PersistenceMetadataDb,
-		private ctx: Pick<Context, 'closing' | 'log' | 'time' | 'internalEvents'>,
-	) {
-		super();
-	}
+		private ctx: Pick<
+			Context,
+			'closing' | 'log' | 'time' | 'internalEvents' | 'globalEvents' | 'config'
+		>,
+	) {}
 
+	/**
+	 * Autonomous rebases are only allowed for clients who have never synced. They
+	 * keep storage clean for non-syncing clients by compressing history.
+	 */
 	tryAutonomousRebase = async () => {
 		const localReplicaInfo = await this.db.getLocalReplica();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
@@ -75,18 +76,30 @@ export class PersistenceRebaser extends EventSubscriber<{
 				),
 			);
 		}
-		this.emit('rebase', newBaselines);
+		this.ctx.globalEvents.emit('rebase');
 	};
+
+	/**
+	 * Debounces rebase attempts to avoid thrashing the database with
+	 * rebase operations.
+	 */
+	scheduleRebase = async (timestamp: string) => {
+		if (this.rebaseTimeout) {
+			clearTimeout(this.rebaseTimeout);
+		}
+		this.rebaseTimeout = setTimeout(
+			this.runRebase,
+			this.ctx.config.persistence?.rebaseTimeout ?? 10000,
+			timestamp,
+		);
+	};
+	private rebaseTimeout: NodeJS.Timeout | null = null;
 
 	rebase = async (
 		oid: ObjectIdentifier,
 		upTo: string,
 		providedTx?: AbstractTransaction,
 	) => {
-		// including replica Id for testing I guess
-		const replicaId = (await this.db.getLocalReplica()).id;
-
-		this.ctx.log('debug', '[', replicaId, ']', 'Rebasing', oid, 'up to', upTo);
 		const transaction =
 			providedTx ||
 			this.db.transaction({
@@ -134,7 +147,7 @@ export class PersistenceRebaser extends EventSubscriber<{
 
 		this.ctx.log(
 			'debug',
-			'successfully rebased',
+			'rebased',
 			oid,
 			'up to',
 			upTo,

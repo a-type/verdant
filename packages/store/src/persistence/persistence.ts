@@ -1,4 +1,4 @@
-import { getOidRoot, VerdantError } from '@verdant-web/common';
+import { EventSubscriber, getOidRoot, VerdantError } from '@verdant-web/common';
 import { Context, InitialContext } from '../context/context.js';
 import { getWipNamespace } from '../utils/wip.js';
 import { ExportedData } from './interfaces.js';
@@ -111,6 +111,8 @@ export async function importPersistence(
 		schema: exportedSchema,
 		namespace: importedNamespace,
 		originalNamespace: importedNamespace,
+		// no-op entity events -- don't need to inform queries of changes.
+		entityEvents: new EventSubscriber(),
 		config: {
 			...ctx.config,
 			persistence: {
@@ -211,12 +213,11 @@ export async function importPersistence(
 
 	ctx.log('debug', 'Data copied to primary namespace');
 
-	ctx.internalEvents.emit('persistenceReset');
-
 	// cleanup the imported namespace
 	await ctx.persistence.deleteNamespace(importedNamespace, ctx);
 
 	ctx.log('debug', 'Deleted temporary namespace');
 
+	ctx.internalEvents.emit('persistenceReset');
 	ctx.log('info', 'Data imported successfully');
 }

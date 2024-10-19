@@ -3,13 +3,17 @@ import { AnyEntity, Client, Query } from '../client/index.js';
 import { ClientWithCollections, EntityFile } from '@verdant-web/store';
 import { stableStringify } from '@verdant-web/common';
 
-export async function waitForMockCall(mock: Mock, calls = 1) {
-	return waitForCondition(() => {
-		if (mock.mock.calls.length >= calls) {
-			return true;
-		}
-		return false;
-	});
+export async function waitForMockCall(mock: Mock, calls = 1, debug?: string) {
+	return waitForCondition(
+		() => {
+			if (mock.mock.calls.length >= calls) {
+				return true;
+			}
+			return false;
+		},
+		5000,
+		debug,
+	);
 }
 
 export async function waitForOnline(
@@ -78,6 +82,12 @@ export async function waitForQueryResult(
 			if (debug) {
 				debugger;
 			}
+			console.error(
+				'Timed out query state',
+				query.status,
+				'raw value',
+				query.__rawValue,
+			);
 			reject(new Error('Timed out waiting for query ' + (debug || query.key)));
 		}, timeoutMs);
 
@@ -102,14 +112,22 @@ export async function waitForEverythingToRebase(client: Client) {
 	});
 }
 
-export async function waitForBaselineCount(client: Client, count = 1) {
-	await waitForCondition(async () => {
-		const stats = await client.stats();
-		if (stats.meta.baselinesSize.count >= count) {
-			return true;
-		}
-		return false;
-	});
+export async function waitForBaselineCount(
+	client: Client,
+	count = 1,
+	debug?: string,
+) {
+	await waitForCondition(
+		async () => {
+			const stats = await client.stats();
+			if (stats.meta.baselinesSize.count >= count) {
+				return true;
+			}
+			return false;
+		},
+		5000,
+		debug,
+	);
 }
 
 export async function waitForCondition(

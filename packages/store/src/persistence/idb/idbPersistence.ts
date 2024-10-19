@@ -102,7 +102,11 @@ export class IdbPersistence implements PersistenceImplementation {
 		});
 		await fromQueries.cloneTo(toQueryDb);
 		ctx.log('debug', 'Indexes copied');
-		ctx.log('debug', await getSizesOfAllObjectStores(toQueryDb));
+		ctx.log(
+			'debug',
+			'New document store stats:',
+			await getSizesOfAllObjectStores(toQueryDb),
+		);
 
 		await fromMetaDb.dispose();
 		await closeDatabase(toMetaDb);

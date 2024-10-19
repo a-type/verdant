@@ -51,6 +51,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * It's a very hot code path...
 	 */
 	operation: (operation: Operation) => void;
+	/**
+	 * Emitted when storage rebases history. This should never actually affect application behavior
+	 * or stored data, but is useful for debugging and testing.
+	 */
+	rebase: () => void;
 }> {
 	private _entities: EntityStore;
 	private _queryCache: QueryCache;
@@ -94,12 +99,16 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			sync: this.sync,
 			context: this.context,
 		});
-		this._queryCache = new QueryCache({
-			context,
-		});
 		this._entities = new EntityStore({
 			ctx: this.context,
 			files: this._fileManager,
+		});
+		// note: query cache must be initialized after EntityStore,
+		// since EntityStore needs to clear its cache before queries
+		// refresh.
+		// FIXME: make this less fragile
+		this._queryCache = new QueryCache({
+			context,
 		});
 		this._documentManager = new DocumentManager(this.schema, this._entities);
 
@@ -112,6 +121,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		});
 		this.context.globalEvents.subscribe('operation', (operation) => {
 			this.emit('operation', operation);
+		});
+		this.context.globalEvents.subscribe('rebase', () => {
+			this.emit('rebase');
 		});
 
 		// self-assign collection shortcuts. these are not typed
@@ -376,6 +388,19 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * during normal operation, so you probably don't need this.
 	 */
 	__manualRebase = () => this.context.meta.manualRebase();
+
+	/**
+	 * WARNING: the internal functions of the persistence layer
+	 * are not guaranteed and cannot be relied upon for application
+	 * behavior. They are subject to change without notice.
+	 */
+	get __persistence() {
+		return {
+			meta: this.context.meta,
+			queries: this.context.queries,
+			files: this.context.files,
+		};
+	}
 }
 
 export interface ClientStats {

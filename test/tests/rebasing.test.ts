@@ -1,11 +1,12 @@
 import { ReplicaType } from '@verdant-web/server';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { ClientDescriptor } from '../client/index.js';
 import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForBaselineCount,
 	waitForEntityCondition,
 	waitForEverythingToRebase,
+	waitForMockCall,
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
@@ -15,7 +16,8 @@ import migrations from '../migrations/index.js';
 import schema from '../schema.js';
 
 const context = createTestContext({
-	// serverLog: true,
+	serverLog: true,
+	testLog: true,
 });
 
 it('an offline client rebases everything', async () => {
@@ -60,22 +62,28 @@ it('an offline client rebases everything', async () => {
 });
 
 it('passive clients do not interfere with rebasing when offline', async () => {
+	const onClientARebase = vi.fn();
 	const clientA = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User A',
 		// logId: 'A',
 	});
+	clientA.subscribe('rebase', onClientARebase);
+	const onClientBRebase = vi.fn();
 	const clientB = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User B',
 		// logId: 'B',
 	});
+	clientB.subscribe('rebase', onClientBRebase);
+	const onClientCRebase = vi.fn();
 	const clientC = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User C',
 		type: ReplicaType.PassiveRealtime,
 		// logId: 'C',
 	});
+	clientC.subscribe('rebase', onClientCRebase);
 
 	clientA.sync.start();
 	clientB.sync.start();
@@ -93,12 +101,15 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 		content: 'Oranges',
 	});
 
-	// console.info('🔺 --- Waiting for all realtime changes to rebase ---');
-	await waitForBaselineCount(clientA, 4);
-	await waitForBaselineCount(clientB, 4);
-	await waitForBaselineCount(clientC, 4);
+	context.log('🔺 --- Waiting for all realtime changes to rebase ---');
+	await waitForMockCall(onClientARebase, 1, 'client a rebase');
+	await waitForBaselineCount(clientA, 4, 'client a 4 baselines');
+	await waitForMockCall(onClientBRebase, 1, 'client b rebase');
+	await waitForBaselineCount(clientB, 4, 'client b 4 baselines');
+	await waitForMockCall(onClientCRebase, 1, 'client c rebase');
+	await waitForBaselineCount(clientC, 4, 'client c 4 baselines');
 
-	// console.info('🔺 --- Disconnecting passive replica ---');
+	context.log('🔺 --- Disconnecting passive replica ---');
 	clientC.sync.stop();
 
 	const oranges = await clientA.items.put({
@@ -109,7 +120,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 		content: 'Bananas',
 	});
 
-	// console.info('🔺 --- Waiting for all new changes to rebase ---');
+	context.log('🔺 --- Waiting for all new changes to rebase ---');
 	await waitForBaselineCount(clientA, 10);
 	await waitForBaselineCount(clientB, 10);
 
@@ -124,7 +135,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	).toBeGreaterThanOrEqual(10);
 
 	// can client C come back online and sync up to the latest state?
-	// console.info('🔺 --- Reconnecting passive replica ---');
+	context.log('🔺 --- Reconnecting passive replica ---');
 	clientC.sync.start();
 	const queryCOranges = clientC.items.get(oranges.get('id'));
 	await waitForQueryResult(queryCOranges);

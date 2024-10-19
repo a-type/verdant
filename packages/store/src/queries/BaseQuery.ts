@@ -253,4 +253,8 @@ export abstract class BaseQuery<T> extends Disposable {
 	[ON_ALL_UNSUBSCRIBED] = (handler: (query: BaseQuery<T>) => void) => {
 		this._allUnsubscribedHandler = handler;
 	};
+
+	get __rawValue() {
+		return this._rawValue;
+	}
 }

@@ -45,6 +45,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 		...args: any[]
 	) => void;
 	disableRebasing?: boolean;
+	rebaseTimeout?: number;
 	/**
 	 * Provide a specific schema number to override the schema version
 	 * in the database. This is useful for testing migrations or recovering
@@ -147,6 +148,10 @@ export class ClientDescriptor<
 				config: {
 					files: init.files,
 					sync: init.sync,
+					persistence: {
+						disableRebasing: init.disableRebasing,
+						rebaseTimeout: init.rebaseTimeout,
+					},
 				},
 				persistence: init.persistence || new IdbPersistence(init.indexedDb),
 			};

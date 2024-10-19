@@ -78,6 +78,11 @@ export interface Context {
 		 * operation or a remote operation from sync.
 		 */
 		operation: (operation: Operation) => void;
+		/**
+		 * Emitted when storage rebases history. This should never actually affect application behavior
+		 * or stored data, but is useful for debugging and testing.
+		 */
+		rebase: () => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
@@ -189,6 +194,7 @@ export interface SyncConfig<Profile = any, Presence = any>
 
 export interface PersistenceConfig {
 	disableRebasing?: boolean;
+	rebaseTimeout?: number;
 }
 
 export type InitialContext = Omit<Context, 'queries' | 'meta' | 'files'>;

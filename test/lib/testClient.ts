@@ -74,6 +74,7 @@ export async function createTestClient({
 				: undefined),
 		files,
 		schema,
+		rebaseTimeout: 0,
 		EXPERIMENTAL_weakRefs: true,
 	});
 	const client = await desc.open();

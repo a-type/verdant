@@ -267,8 +267,11 @@ export class EntityStore extends Disposable {
 				const entity = cached.deref();
 				if (entity) {
 					if (entity.deleted) {
+						this.ctx.log('debug', 'Hydrated entity is deleted', oid);
+						// debugger;
 						return null;
 					}
+					this.ctx.log('debug', 'Hydrating entity from cache', oid);
 					return entity;
 				} else {
 					this.ctx.log('debug', "Removing GC'd entity from cache", oid);
@@ -285,6 +288,7 @@ export class EntityStore extends Disposable {
 			this.ctx.log('debug', 'Hydrating entity from storage', oid);
 			const entity = this.constructEntity(oid);
 			if (!entity) {
+				this.ctx.log('warn', 'Entity schema not found, cannot construct', oid);
 				return null;
 			}
 			const pendingPromise = this.loadEntity(entity, opts);
@@ -516,6 +520,7 @@ export class EntityStore extends Disposable {
 	 * referenced will go 'dead'...
 	 */
 	clearCache = () => {
+		this.ctx.log('debug', 'Emptying entity cache');
 		this.cache.clear();
 	};
 }

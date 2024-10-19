@@ -10,10 +10,10 @@ import { startTestServer } from '../lib/testServer.js';
 import { createTestClient } from '../lib/testClient.js';
 import schema from '../schema.js';
 import migrations from '../migrations/index.js';
-import { createDefaultMigration, createMigration } from '@verdant-web/common';
+import { createMigration } from '@verdant-web/common';
 
 const ctx = createTestContext({
-	// testLog: true,
+	testLog: true,
 });
 
 async function connectAndSeedData(library = 'reset-1') {
@@ -290,6 +290,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 		library,
 		user: 'User A',
 		server,
+		// logId: 'A',
 	});
 
 	clientA.sync.start();
@@ -324,7 +325,6 @@ it('can re-initialize a replica from data from an old schema', async () => {
 		),
 	);
 
-	clientA.sync.stop();
 	await clientA.close();
 
 	// make a new version without categories. we'll also alter items
@@ -363,7 +363,6 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	await waitForOnline(clientB);
 
 	const b_applesQuery = clientB.items.get(a_apples.get('id'));
-	b_applesQuery.subscribe('change', () => console.log('b_apples changed'));
 	await waitForQueryResult(b_applesQuery);
 
 	// the new schema will not necessarily be applied immediately.
