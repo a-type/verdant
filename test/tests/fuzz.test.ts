@@ -47,6 +47,7 @@ async function createTestClient({
 	const desc = new StorageDescriptor({
 		// disableRebasing: true,
 		schema: fuzzSchema,
+		oldSchemas: [fuzzSchema],
 		migrations: [
 			createMigration(fuzzSchema, async ({ mutations }) => {
 				// create the default fuzz object

@@ -35,7 +35,7 @@ export class LocalFileStorage implements FileStorage {
 	}: {
 		rootDirectory: string;
 		host: string;
-		log: (level: string, ...args: any[]) => void;
+		log?: (level: string, ...args: any[]) => void;
 	}) {
 		this.host = this.prepareHost(host);
 		this.rootDirectory = rootDirectory;

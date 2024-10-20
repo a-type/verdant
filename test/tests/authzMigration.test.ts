@@ -23,6 +23,7 @@ async function createTestClient({
 	logId,
 	disableRebasing,
 	indexedDb = new IDBFactory(),
+	oldSchemas,
 }: {
 	schema: any;
 	migrations: Migration<any>[];
@@ -33,6 +34,7 @@ async function createTestClient({
 	logId?: string;
 	disableRebasing?: boolean;
 	indexedDb?: IDBFactory;
+	oldSchemas: any[];
 }): Promise<ClientWithCollections> {
 	const desc = new StorageDescriptor({
 		schema,
@@ -51,6 +53,7 @@ async function createTestClient({
 			: undefined,
 		indexedDb,
 		disableRebasing,
+		oldSchemas,
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;
@@ -95,6 +98,7 @@ it('does not expose private documents when migrating', async () => {
 
 	let client = await createTestClient({
 		schema: v1Schema,
+		oldSchemas: [v1Schema],
 		...clientInit,
 	});
 
@@ -139,6 +143,7 @@ it('does not expose private documents when migrating', async () => {
 
 	client = await createTestClient({
 		schema: v2Schema,
+		oldSchemas: [v1Schema, v2Schema],
 		server,
 		...clientInit,
 	});
@@ -158,6 +163,7 @@ it('does not expose private documents when migrating', async () => {
 
 	const client2 = await createTestClient({
 		schema: v2Schema,
+		oldSchemas: [v1Schema, v2Schema],
 		server,
 		...clientInit,
 		user: 'B',
