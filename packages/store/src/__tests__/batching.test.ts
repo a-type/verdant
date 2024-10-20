@@ -58,14 +58,16 @@ describe('batching operations', () => {
 
 	it('should overwrite superseded sequential set operations on the same key where applicable', async () => {
 		const onOperation = vi.fn();
-		const client = await createTestStorage();
+		const client = await createTestStorage({
+			// log: console.log,
+		});
 		client.subscribe('operation', onOperation);
 
 		const item = await client.todos.put({
 			content: 'hello world',
 			category: 'general',
 		});
-		onOperation.mockReset();
+		onOperation.mockClear();
 
 		item.set('content', 'hello world 2');
 		item.set('content', 'hello world 3');

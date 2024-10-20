@@ -81,8 +81,6 @@ export class PersistenceMetadata extends Disposable {
 
 		const message = await this.messageCreator.createOperation({ operations });
 		this.events.emit('syncMessage', message);
-
-		operations.forEach((o) => this.ctx.globalEvents.emit('operation', o));
 	};
 
 	private insertRemoteOperations = async (
