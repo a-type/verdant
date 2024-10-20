@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.6.1
+
+### Patch Changes
+
+- 1787ef97: Official release of refactored persistence layer! This doesn't have much functional impact for users, but some advanced/experimental config settings have changed. Store now requires a recently generated client via CLI; be sure to upgrade CLI and regenerate your client from your schema even if your schema hasn't changed.
+
 ## 0.6.0
 
 ### Minor Changes
