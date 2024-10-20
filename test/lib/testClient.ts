@@ -45,7 +45,6 @@ export async function createTestClient({
 		migrations,
 		namespace: `${library}_${user}`,
 		indexedDb,
-		onOperation,
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
@@ -61,8 +60,12 @@ export async function createTestClient({
 		log:
 			log ||
 			(logId
-				? (...args: any[]) => {
-						console.log(`[${logId}]`, ...args);
+				? (level, ...args: any[]) => {
+						console.log(
+							`[${logId}]`,
+							level === 'critical' ? '🔺🔺🔺 CRITICAL' : level,
+							...args,
+						);
 						onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
 				  }
 				: onLog
@@ -71,11 +74,15 @@ export async function createTestClient({
 				: undefined),
 		files,
 		schema,
-		oldSchemas: oldSchemas ?? [schema],
+		rebaseTimeout: 0,
 		EXPERIMENTAL_weakRefs: true,
 	});
 	const client = await desc.open();
+	if (onOperation) {
+		client.subscribe('operation', onOperation);
+	}
 	client.subscribe('developerError', (err) => {
+		console.error(`Developer Error (client: ${library}_${user})`);
 		console.error(err);
 		console.error('>>> cause >>>', err.cause);
 		expect(err).toBe(null);

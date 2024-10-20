@@ -1,6 +1,5 @@
 import { CollectionFilter } from '@verdant-web/common';
 import { BaseQuery, BaseQueryOptions, UPDATE } from './BaseQuery.js';
-import { findPageOfOids } from './dbQueries.js';
 import { areIndexesEqual } from './utils.js';
 
 export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
@@ -38,9 +37,8 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result, hasNextPage } = await findPageOfOids({
+		const { result, hasNextPage } = await this.context.queries.findAllOids({
 			collection: this.collection,
-			context: this.context,
 			limit: this._pageSize * this._upToPage,
 			offset: 0,
 			index: this.index,
@@ -50,9 +48,8 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	};
 
 	public loadMore = async () => {
-		const { result, hasNextPage } = await findPageOfOids({
+		const { result, hasNextPage } = await this.context.queries.findAllOids({
 			collection: this.collection,
-			context: this.context,
 			limit: this._pageSize,
 			offset: this._pageSize * this._upToPage,
 			index: this.index,

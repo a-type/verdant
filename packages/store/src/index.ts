@@ -48,12 +48,13 @@ export type {
 	StorageFieldsSchema,
 	IndexValueTag,
 	Migration,
+	VerdantError,
+	VerdantErrorCode,
 } from '@verdant-web/common';
 export type { UserInfo } from '@verdant-web/common';
 export type { Query } from './queries/types.js';
 export type { QueryStatus } from './queries/BaseQuery.js';
 export type { CollectionQueries } from './queries/CollectionQueries.js';
-export { MigrationPathError } from './migration/errors.js';
 export * from './utils/id.js';
 export { UndoHistory } from './UndoHistory.js';
 export * from './authorization.js';

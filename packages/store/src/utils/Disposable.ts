@@ -1,14 +1,17 @@
 export class Disposable {
-	private _disposes: (() => void)[] = [];
+	private _disposes: (() => void | Promise<void>)[] = [];
 	protected disposed = false;
 
-	dispose = () => {
+	dispose = async () => {
 		this.disposed = true;
-		this._disposes.forEach((dispose) => dispose());
+		await Promise.all(this._disposes.map((dispose) => dispose()));
 		this._disposes = [];
 	};
 
-	protected addDispose = (dispose: () => void) => {
+	compose = (disposable: { dispose: () => void | Promise<void> }) =>
+		this.addDispose(disposable.dispose.bind(disposable));
+
+	protected addDispose = (dispose: () => void | Promise<void>) => {
 		this._disposes.push(dispose);
 	};
 }

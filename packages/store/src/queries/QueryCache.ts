@@ -1,4 +1,4 @@
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { Disposable } from '../utils/Disposable.js';
 import { BaseQuery, ON_ALL_UNSUBSCRIBED } from './BaseQuery.js';
 
@@ -18,6 +18,12 @@ export class QueryCache extends Disposable {
 
 		this._evictionTime = evictionTime;
 		this.context = context;
+		this.addDispose(
+			this.context.internalEvents.subscribe(
+				'persistenceReset',
+				this.forceRefreshAll,
+			),
+		);
 	}
 
 	get<T extends BaseQuery<any>>(key: string): T | null {
@@ -40,6 +46,7 @@ export class QueryCache extends Disposable {
 			update?.(existing);
 			return existing;
 		}
+		this.context.log('debug', 'QueryCache: creating new query', key);
 		return this.set(create());
 	}
 
@@ -55,11 +62,23 @@ export class QueryCache extends Disposable {
 	};
 
 	dropAll = () => {
+		this.context.log(
+			'debug',
+			'QueryCache: drop all',
+			this._cache.size,
+			'queries',
+		);
 		this._cache.forEach((query) => query.dispose());
 		this._cache.clear();
 	};
 
 	forceRefreshAll = () => {
+		this.context.log(
+			'debug',
+			'QueryCache: force refresh all',
+			this._cache.size,
+			'queries',
+		);
 		this._cache.forEach((q) => q.execute());
 	};
 }

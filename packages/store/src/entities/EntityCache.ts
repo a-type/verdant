@@ -26,15 +26,6 @@ export class EntityCache {
 		return this.cache.has(oid);
 	};
 
-	getFile = (id: string, options: { downloadRemote: boolean }): EntityFile => {
-		if (this.cache.has(id)) {
-			return this.cache.get(id)! as EntityFile;
-		}
-		const file = new EntityFile(id, options);
-		this.cache.set(id, file);
-		return file;
-	};
-
 	getCached = (oid: string) => {
 		return this.cache.get(oid);
 	};

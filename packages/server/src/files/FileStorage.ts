@@ -26,16 +26,20 @@ export interface FileStorage {
 export class LocalFileStorage implements FileStorage {
 	private readonly host: string;
 	private readonly rootDirectory: string;
+	private log: (level: string, ...args: any[]) => void;
 
 	constructor({
 		rootDirectory,
 		host,
+		log,
 	}: {
 		rootDirectory: string;
 		host: string;
+		log?: (level: string, ...args: any[]) => void;
 	}) {
 		this.host = this.prepareHost(host);
 		this.rootDirectory = rootDirectory;
+		this.log = log || (() => {});
 	}
 
 	private prepareHost = (host: string) => {
@@ -53,8 +57,10 @@ export class LocalFileStorage implements FileStorage {
 		await fs.promises.mkdir(containingDirectory, {
 			recursive: true,
 		});
-		const dest = fs.createWriteStream(this.getStorageLocation(data));
+		const location = this.getStorageLocation(data);
+		const dest = fs.createWriteStream(location);
 		fileStream.pipe(dest);
+		this.log('info', 'File saving to', location);
 	}
 
 	getUrl(data: FileInfo): string {

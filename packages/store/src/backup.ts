@@ -1,7 +1,6 @@
 import { Client } from './client/Client.js';
 import Zip from 'jszip';
-import { ExportData } from './metadata/Metadata.js';
-import { ReturnedFileData } from './files/FileStorage.js';
+import { MetadataExport, PersistedFileData } from './persistence/interfaces.js';
 
 // narrow type to just what's needed
 type BackupClient = Pick<Client, 'export' | 'import' | 'namespace'>;
@@ -28,9 +27,9 @@ export async function readBackupFile(file: Blob) {
 	if (!data || !fileData) {
 		throw new Error('Failed to read data from backup');
 	}
-	const parsedData = JSON.parse(data) as ExportData;
+	const parsedData = JSON.parse(data) as MetadataExport;
 	const parsedFileData = JSON.parse(fileData) as Omit<
-		ReturnedFileData,
+		PersistedFileData,
 		'file'
 	>[];
 	const filesInFilesFolder = Object.entries(zipFile.files).filter(

@@ -93,6 +93,20 @@ export function getSizeOfObjectStore(
 	});
 }
 
+export async function getSizesOfAllObjectStores(
+	database: IDBDatabase,
+): Promise<{ [storeName: string]: { count: number; size: number } }> {
+	const storeNames = Array.from(database.objectStoreNames);
+	const promises = storeNames.map(async (storeName) => {
+		const result = await getSizeOfObjectStore(database, storeName);
+		return { [storeName]: result };
+	});
+	const results = await Promise.all(promises);
+	return results.reduce((acc, result_1) => {
+		return { ...acc, ...result_1 };
+	}, {});
+}
+
 export function getAllFromObjectStores(db: IDBDatabase, stores: string[]) {
 	const transaction = db.transaction(stores, 'readonly');
 	const promises = stores.map((store) => {
@@ -181,4 +195,65 @@ export function emptyDatabase(db: IDBDatabase) {
 		tx.oncomplete = () => resolve();
 		tx.onerror = () => reject(tx.error);
 	});
+}
+
+export async function copyDatabase(from: IDBDatabase, to: IDBDatabase) {
+	await emptyDatabase(to);
+	const records = await getAllFromObjectStores(
+		from,
+		Array.from(from.objectStoreNames),
+	);
+	const writeTx = to.transaction(Array.from(to.objectStoreNames), 'readwrite');
+	for (let i = 0; i < records.length; i++) {
+		const store = writeTx.objectStore(from.objectStoreNames[i]);
+		for (const record of records[i]) {
+			store.add(record);
+		}
+	}
+	return new Promise<void>((resolve, reject) => {
+		writeTx.oncomplete = () => resolve();
+		writeTx.onerror = () => reject(writeTx.error);
+	});
+}
+
+export function openDatabase(
+	name: string,
+	expectedVersion: number,
+	indexedDB: IDBFactory = window.indexedDB,
+) {
+	return new Promise<IDBDatabase>((resolve, reject) => {
+		const req = indexedDB.open(name, expectedVersion);
+		req.onsuccess = () => {
+			resolve(req.result);
+		};
+		req.onerror = () => {
+			reject(req.error);
+		};
+		req.onblocked = () => {
+			reject(new Error('Database blocked'));
+		};
+		req.onupgradeneeded = (event) => {
+			const db = req.result;
+			if (db.version !== expectedVersion) {
+				db.close();
+				reject(
+					new Error(
+						`Migration error: database version changed unexpectedly when reading current data. Expected ${expectedVersion}, got ${db.version}`,
+					),
+				);
+			}
+		};
+	});
+}
+
+export function getMetadataDbName(namespace: string) {
+	return [namespace, 'meta'].join('_');
+}
+
+export function getDocumentDbName(namespace: string) {
+	return [namespace, 'collections'].join('_');
+}
+
+export function getNamespaceFromDatabaseInfo(info: IDBDatabaseInfo) {
+	return info.name?.split('_')[0];
 }

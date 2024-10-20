@@ -8,7 +8,9 @@ import {
 	readBackupFile,
 } from '@verdant-web/store/backup';
 
-const ctx = createTestContext();
+const ctx = createTestContext({
+	// testLog: true,
+});
 
 it('can backup to file', async () => {
 	const clientA = await ctx.createTestClient({
@@ -18,10 +20,9 @@ it('can backup to file', async () => {
 	const clientB = await ctx.createTestClient({
 		library: 'backup',
 		user: 'B',
-		// logId: 'B',
 	});
 
-	ctx.log('Seeing data');
+	ctx.log('Seeding data');
 	clientA.sync.start();
 	clientB.sync.start();
 	const a_apples = await clientA.items.put({ id: 'apples', content: 'Apples' });
@@ -82,13 +83,25 @@ it('can backup to file', async () => {
 	});
 
 	await importClientBackup(clientC as any, backupFile);
+	ctx.log('backup imported');
 
 	// check the data
-	await waitForQueryResult(clientC.items.findAll(), (r) => r.length === 4);
+	await waitForQueryResult(
+		clientC.items.findAll(),
+		(r) => r.length === 4,
+		1000,
+		'backed up items',
+	);
+	ctx.log('items synced');
 	const cOranges = clientC.items.get('oranges');
-	await waitForQueryResult(cOranges);
+	await waitForQueryResult(cOranges, (r) => !!r, 1000, 'oranges');
 	await waitForEntityCondition(cOranges.current!, (o) => !!o?.get('purchased'));
 	const cBananas = clientC.items.get('bananas');
-	await waitForQueryResult(cBananas);
-	await waitForEntityCondition(cBananas.current!, (b) => !!b?.get('image'));
+	await waitForQueryResult(cBananas, (r) => !!r, 1000, 'bananas');
+	await waitForEntityCondition(
+		cBananas.current!,
+		(b) => !!b?.get('image'),
+		1000,
+		'image',
+	);
 });

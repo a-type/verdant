@@ -1,12 +1,13 @@
-import { Context } from './context.js';
+import { Context } from '../../context/context.js';
 import {
+	copyDatabase,
 	createAbortableTransaction,
 	isAbortError,
 	storeRequestPromise,
-} from './idb.js';
-import { Disposable } from './utils/Disposable.js';
+} from './util.js';
+import { Disposable } from '../../utils/Disposable.js';
 
-export class IDBService extends Disposable {
+export class IdbService extends Disposable {
 	protected log?: Context['log'];
 	private globalAbortController = new AbortController();
 
@@ -18,6 +19,10 @@ export class IDBService extends Disposable {
 		this.log = log;
 		this.addDispose(() => {
 			this.globalAbortController.abort();
+		});
+		this.db.addEventListener('versionchange', this.onVersionChange);
+		this.addDispose(() => {
+			this.db.removeEventListener('versionchange', this.onVersionChange);
 		});
 	}
 
@@ -45,7 +50,7 @@ export class IDBService extends Disposable {
 		return tx;
 	};
 
-	run = async <T>(
+	run = async <T = any>(
 		storeName: string,
 		getRequest: (store: IDBObjectStore) => IDBRequest<T>,
 		opts?: {
@@ -66,7 +71,7 @@ export class IDBService extends Disposable {
 		storeName: string,
 		getRequests: (store: IDBObjectStore) => IDBRequest<T>[],
 		opts?: {
-			mode: 'readonly' | 'readwrite';
+			mode?: 'readonly' | 'readwrite';
 			transaction?: IDBTransaction;
 			abort?: AbortSignal;
 		},
@@ -80,8 +85,16 @@ export class IDBService extends Disposable {
 
 	iterate = async <T>(
 		storeName: string,
-		getRequest: (store: IDBObjectStore) => IDBRequest | IDBRequest[],
-		iterator: (value: T, store: IDBObjectStore) => boolean | void,
+		getRequest: (
+			store: IDBObjectStore,
+		) =>
+			| IDBRequest<IDBCursorWithValue | null>
+			| IDBRequest<IDBCursorWithValue | null>[],
+		iterator: (
+			value: T,
+			store: IDBObjectStore,
+			cursor: IDBCursorWithValue,
+		) => boolean | void,
 		opts?: {
 			mode?: 'readonly' | 'readwrite';
 			transaction?: IDBTransaction;
@@ -98,8 +111,12 @@ export class IDBService extends Disposable {
 						req.onsuccess = () => {
 							const cursor = req.result;
 							if (cursor) {
-								iterator(cursor.value, store);
-								cursor.continue();
+								const stop = iterator(cursor.value, store, cursor);
+								if (stop) {
+									resolve();
+								} else {
+									cursor.continue();
+								}
 							} else {
 								resolve();
 							}
@@ -119,7 +136,7 @@ export class IDBService extends Disposable {
 			request.onsuccess = () => {
 				const cursor = request.result as IDBCursorWithValue | null;
 				if (cursor) {
-					const stop = iterator(cursor.value, store);
+					const stop = iterator(cursor.value, store, cursor);
 					if (stop) {
 						resolve();
 					} else {
@@ -139,9 +156,25 @@ export class IDBService extends Disposable {
 		});
 	};
 
-	clear = (storeName: string) => {
+	clear = (storeName: string, transaction?: IDBTransaction) => {
 		return this.run<undefined>(storeName, (store) => store.clear(), {
 			mode: 'readwrite',
+			transaction,
 		});
+	};
+
+	cloneTo = async (otherDb: IDBDatabase) => {
+		await copyDatabase(this.db, otherDb);
+	};
+
+	private onVersionChange = () => {
+		this.log?.(
+			'warn',
+			`Another tab has requested a version change for ${this.db.name}`,
+		);
+		this.db.close();
+		if (typeof window !== 'undefined') {
+			window.location.reload();
+		}
 	};
 }

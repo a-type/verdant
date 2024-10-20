@@ -185,3 +185,5 @@ export function throttle<T extends (...args: any[]) => any>(
 		}
 	} as any;
 }
+
+export function noop() {}

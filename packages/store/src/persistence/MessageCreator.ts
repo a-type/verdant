@@ -8,45 +8,30 @@ import {
 	OperationMessage,
 	pickValidOperationKeys,
 	PresenceUpdateMessage,
-	SyncAckMessage,
 	SyncMessage,
 	VerdantInternalPresence,
 } from '@verdant-web/common';
 
-import { Metadata } from './Metadata.js';
+import { Context } from '../context/context.js';
+import { PersistenceMetadataDb } from './interfaces.js';
 
 export class MessageCreator {
-	constructor(private meta: Metadata) {}
+	constructor(
+		private db: PersistenceMetadataDb,
+		private ctx: Pick<Context, 'time' | 'schema' | 'log'>,
+	) {}
 
 	createOperation = async (
 		init: Pick<OperationMessage, 'operations'> & {
 			timestamp?: string;
 		},
 	): Promise<OperationMessage> => {
-		const localInfo = await this.meta.localReplica.get();
+		const localInfo = await this.db.getLocalReplica();
 		return {
 			type: 'op',
-			timestamp: this.meta.now,
+			timestamp: this.ctx.time.now,
 			replicaId: localInfo.id,
 			operations: init.operations.map(pickValidOperationKeys),
-		};
-	};
-
-	createMigrationOperation = async ({
-		targetVersion,
-		...init
-	}: Pick<OperationMessage, 'operations'> & {
-		targetVersion: number;
-	}): Promise<OperationMessage> => {
-		const localInfo = await this.meta.localReplica.get();
-		return {
-			type: 'op',
-			operations: init.operations.map((op) => ({
-				...op,
-				timestamp: this.meta.time.zero(targetVersion),
-			})),
-			timestamp: this.meta.time.zero(targetVersion),
-			replicaId: localInfo.id,
 		};
 	};
 
@@ -54,7 +39,7 @@ export class MessageCreator {
 	 * @param since - override local understanding of last sync time
 	 */
 	createSyncStep1 = async (since?: string | null): Promise<SyncMessage> => {
-		const localReplicaInfo = await this.meta.localReplica.get();
+		const localReplicaInfo = await this.db.getLocalReplica();
 
 		const provideChangesSince =
 			since === null ? null : localReplicaInfo.lastSyncedLogicalTime;
@@ -64,12 +49,22 @@ export class MessageCreator {
 		const operations: Operation[] = [];
 		const affectedDocs = new Set<ObjectIdentifier>();
 
+		const tx = await this.db.transaction({
+			mode: 'readwrite',
+			storeNames: ['operations', 'baselines'],
+		});
+
 		// FIXME: this branch gives bad vibes. should we always
 		// send all operations from other replicas too? is there
 		// ever a case where we have a "since" timestamp and there
 		// are foreign ops that match it?
 		if (provideChangesSince) {
-			await this.meta.operations.iterateOverAllLocalOperations(
+			this.ctx.log(
+				'debug',
+				'Syncing local operations since',
+				provideChangesSince,
+			);
+			await this.db.iterateLocalOperations(
 				(patch) => {
 					operations.push(pickValidOperationKeys(patch));
 					affectedDocs.add(getOidRoot(patch.oid));
@@ -77,32 +72,47 @@ export class MessageCreator {
 				{
 					after: provideChangesSince,
 					// block on writes to prevent race conditions
-					mode: 'readwrite',
+					transaction: tx,
 				},
 			);
 		} else {
+			this.ctx.log('debug', 'Syncing all operations');
 			// if providing the whole history, don't limit to only local
 			// operations
-			await this.meta.operations.iterateOverAllOperations(
+			await this.db.iterateAllOperations(
 				(patch) => {
 					operations.push(pickValidOperationKeys(patch));
 					affectedDocs.add(getOidRoot(patch.oid));
 				},
 				{
-					mode: 'readwrite',
+					transaction: tx,
 				},
 			);
 		}
 		// we only need to send baselines if we've never synced before
 		let baselines: DocumentBaseline[] = [];
 		if (!provideChangesSince) {
-			baselines = await this.meta.baselines.getAllSince('');
+			await this.db.iterateAllBaselines(
+				(b) => {
+					baselines.push(b);
+				},
+				{
+					transaction: tx,
+				},
+			);
+		}
+
+		if (operations.length > 0) {
+			this.ctx.log(
+				'debug',
+				`Syncing ${operations.length} operations since ${provideChangesSince}`,
+			);
 		}
 
 		return {
 			type: 'sync',
-			schemaVersion: this.meta.schema.currentVersion,
-			timestamp: this.meta.now,
+			schemaVersion: this.ctx.schema.version,
+			timestamp: this.ctx.time.now,
 			replicaId: localReplicaInfo.id,
 			resyncAll: !localReplicaInfo.lastSyncedLogicalTime,
 			operations,
@@ -115,7 +125,7 @@ export class MessageCreator {
 		presence?: any;
 		internal?: VerdantInternalPresence;
 	}): Promise<PresenceUpdateMessage> => {
-		const localReplicaInfo = await this.meta.localReplica.get();
+		const localReplicaInfo = await this.db.getLocalReplica();
 		return {
 			type: 'presence-update',
 			presence: data.presence,
@@ -125,19 +135,19 @@ export class MessageCreator {
 	};
 
 	createHeartbeat = async (): Promise<HeartbeatMessage> => {
-		const localReplicaInfo = await this.meta.localReplica.get();
+		const localReplicaInfo = await this.db.getLocalReplica();
 		return {
 			type: 'heartbeat',
-			timestamp: this.meta.now,
+			timestamp: this.ctx.time.now,
 			replicaId: localReplicaInfo.id,
 		};
 	};
 
 	createAck = async (nonce: string): Promise<AckMessage> => {
-		const localReplicaInfo = await this.meta.localReplica.get();
+		const localReplicaInfo = await this.db.getLocalReplica();
 		return {
 			type: 'ack',
-			timestamp: this.meta.now,
+			timestamp: this.ctx.time.now,
 			replicaId: localReplicaInfo.id,
 			nonce,
 		};

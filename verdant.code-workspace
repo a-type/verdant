@@ -43,10 +43,13 @@
 		{
 			"name": "📝 Scratchpad",
 			"path": "scratchpad"
+		},
+		{
+			"name": "⚙️ Configs",
+			"path": "configs"
 		}
 	],
 	"settings": {
-		"vitest.rootConfig": "",
-		"vitest.workspaceConfig": "vitest.workspace.ts"
+		"vitest.workspaceConfig": "./configs/vitest.workspace.ts"
 	}
 }

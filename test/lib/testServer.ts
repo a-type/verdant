@@ -1,7 +1,6 @@
 import { Server, TokenProvider, ReplicaType } from '@verdant-web/server';
 import express from 'express';
 import { createServer } from 'http';
-import * as fs from 'fs/promises';
 import { LocalFileStorage } from '@verdant-web/server';
 import { sqlShardStorage, sqlStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';

@@ -1,5 +1,4 @@
-import { Migration } from '@verdant-web/common';
-import { MigrationPathError } from './errors.js';
+import { Migration, VerdantError } from '@verdant-web/common';
 
 export function getMigrationPath({
 	currentVersion,
@@ -16,7 +15,9 @@ export function getMigrationPath({
 		migrations,
 	});
 	if (!path) {
-		throw new MigrationPathError(
+		throw new VerdantError(
+			VerdantError.Code.MigrationPathNotFound,
+			undefined,
 			`No migration path found from ${currentVersion} to ${targetVersion}! This is a bug. If you're seeing this, contact the developer and provide them with the full contents of this message.`,
 		);
 	}

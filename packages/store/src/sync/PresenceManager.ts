@@ -7,10 +7,8 @@ import {
 	initialInternalPresence,
 } from '@verdant-web/common';
 import type { UserInfo } from '../index.js';
-import {
-	LocalReplicaInfo,
-	LocalReplicaStore,
-} from '../metadata/LocalReplicaStore.js';
+import { Context } from '../context/context.js';
+import { LocalReplicaInfo } from '../persistence/interfaces.js';
 
 export const HANDLE_MESSAGE = Symbol('handleMessage');
 
@@ -77,12 +75,12 @@ export class PresenceManager<
 		initialPresence,
 		updateBatchTimeout = 200,
 		defaultProfile,
-		replicaStore,
+		ctx,
 	}: {
 		initialPresence: Presence;
 		defaultProfile: Profile;
 		updateBatchTimeout?: number;
-		replicaStore: LocalReplicaStore;
+		ctx: Context;
 	}) {
 		super();
 		this.self.presence = initialPresence;
@@ -92,7 +90,7 @@ export class PresenceManager<
 		this.self.replicaId = '';
 
 		// set the local replica ID as soon as it's loaded
-		replicaStore.get().then((info) => {
+		ctx.meta.getLocalReplica().then((info) => {
 			this.self.replicaId = info.id;
 		});
 

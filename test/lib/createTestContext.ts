@@ -23,7 +23,7 @@ export function createTestContext({
 	const context = {
 		clients: [],
 		log: (...args: any[]) => {
-			if (testLog) console.log('⭐⭐⭐', ...args);
+			if (testLog) console.log('🔺', ...args);
 		},
 		filterLog:
 			(prefix: string, ...matches: string[]) =>

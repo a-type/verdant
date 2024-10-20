@@ -1,4 +1,4 @@
-import { describe, it, expect, vitest } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 import type { ClientWithCollections } from '../index.js';
 import { assert } from '@verdant-web/common';

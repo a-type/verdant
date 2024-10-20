@@ -1,9 +1,10 @@
 import { FileData } from '@verdant-web/common';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
+import { Context } from '../context/context.js';
+import { Disposable } from '../utils/Disposable.js';
 
 export interface FileUploadResult {
 	success: boolean;
-	retry: boolean;
 	error?: string;
 }
 
@@ -14,26 +15,47 @@ export type FilePullResult =
 	  }
 	| {
 			success: false;
-			retry: boolean;
 			error?: any;
 	  };
 
-export class FileSync {
+export class FileSync extends Disposable {
 	private endpointProvider: ServerSyncEndpointProvider;
-	private log: (...args: any[]) => any;
+	private ctx;
 
 	constructor({
 		endpointProvider,
-		log,
+		ctx,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
-		log: (...args: any[]) => any;
+		ctx: Context;
 	}) {
+		super();
 		this.endpointProvider = endpointProvider;
-		this.log = log;
+		this.ctx = ctx;
+		this.addDispose(
+			ctx.internalEvents.subscribe('fileAdded', this.onFileAdded),
+		);
 	}
 
-	uploadFile = async (data: FileData): Promise<FileUploadResult> => {
+	private onFileAdded = async (data: FileData) => {
+		if (data.remote) return;
+		this.ctx.log('debug', 'Uploading file', data.id, data.name);
+		try {
+			await this.uploadFile(data);
+			this.ctx.internalEvents.emit(`fileUploaded:${data.id}`);
+		} catch (e) {
+			this.ctx.log('error', 'File upload failed', e);
+		}
+	};
+
+	/**
+	 * Attempts to upload a file to the sync server. Will be retried
+	 * according to retry config.
+	 */
+	uploadFile = async (
+		data: FileData,
+		retries: { max: number; current: number } = { current: 0, max: 3 },
+	): Promise<FileUploadResult> => {
 		const file = data.file;
 
 		if (!file) {
@@ -58,31 +80,54 @@ export class FileSync {
 			});
 
 			if (response.ok) {
-				this.log('info', 'File upload successful');
+				this.ctx.log('info', 'File upload successful');
 				return {
 					success: true,
-					retry: false,
 				};
 			} else {
 				const responseText = await response.text();
-				this.log('error', 'File upload failed', response.status, responseText);
-				return {
-					success: false,
-					retry: response.status >= 500,
-					error: `Failed to upload file: ${response.status} ${responseText}`,
-				};
+				this.ctx.log(
+					'error',
+					'File upload failed',
+					response.status,
+					responseText,
+				);
+				if (response.status < 500 || retries.current >= retries.max) {
+					return {
+						success: false,
+						error: `Failed to upload file: ${response.status} ${responseText}`,
+					};
+				}
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				return this.uploadFile(data, {
+					max: retries.max,
+					current: retries.current + 1,
+				});
 			}
 		} catch (e) {
-			this.log('error', 'File upload failed', e);
-			return {
-				success: false,
-				retry: true,
-				error: (e as Error).message,
-			};
+			this.ctx.log('error', 'File upload failed', e);
+			if (retries.current >= retries.max) {
+				return {
+					success: false,
+					error: (e as Error).message,
+				};
+			}
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			return this.uploadFile(data, {
+				max: retries.max,
+				current: retries.current + 1,
+			});
 		}
 	};
 
-	getFile = async (id: string): Promise<FilePullResult> => {
+	/**
+	 * Pulls a file from the server by its ID. Will be retried
+	 * according to retry config.
+	 */
+	getFile = async (
+		id: string,
+		retries: { current: number; max: number } = { current: 0, max: 3 },
+	): Promise<FilePullResult> => {
 		const { files: fileEndpoint, token } =
 			await this.endpointProvider.getEndpoints();
 
@@ -103,24 +148,42 @@ export class FileSync {
 					data,
 				};
 			} else {
-				this.log(
+				this.ctx.log(
 					'error',
 					'File information fetch failed',
 					response.status,
 					await response.text(),
 				);
-				return {
-					success: false,
-					retry: response.status >= 500 || response.status === 404,
-				};
+				if (
+					(response.status < 500 && response.status !== 404) ||
+					retries.current >= retries.max
+				) {
+					return {
+						success: false,
+						error: `Failed to fetch file: ${response.status}`,
+					};
+				}
+
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				return this.getFile(id, {
+					current: retries.current + 1,
+					max: retries.max,
+				});
 			}
 		} catch (e) {
-			this.log('error', 'File information fetch failed', e);
-			return {
-				success: false,
-				error: e,
-				retry: true,
-			};
+			this.ctx.log('error', 'File information fetch failed', e);
+			if (retries.current >= retries.max) {
+				return {
+					success: false,
+					error: (e as Error).message,
+				};
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			return this.getFile(id, {
+				current: retries.current + 1,
+				max: retries.max,
+			});
 		}
 	};
 }

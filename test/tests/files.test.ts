@@ -7,6 +7,7 @@ import { waitForEverythingToRebase } from '../lib/waits.js';
 
 const context = createTestContext({
 	// serverLog: true,
+	// testLog: true,
 });
 
 it('can store and cleanup local files', async () => {
@@ -18,6 +19,7 @@ it('can store and cleanup local files', async () => {
 		library: 'files-1',
 		user: 'User A',
 		indexedDb,
+		// logId: 'A',
 	});
 
 	const a_item = await clientA.items.put({
@@ -83,6 +85,7 @@ it('can store and cleanup local files', async () => {
 			// immediately delete files
 			canCleanupDeletedFile: () => true,
 		},
+		// logId: 'A3',
 	});
 
 	// wait for microtasks to run
@@ -91,7 +94,7 @@ it('can store and cleanup local files', async () => {
 	// file should be gone - check in indexeddb
 	// NOTE: this is brittle, relies on implementation details
 	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDb.open('files-1_User A_meta', 5);
+		const request = indexedDb.open('files-1_User A_meta');
 		request.onsuccess = () => resolve(request.result);
 		request.onerror = () => reject(request.error);
 		request.onupgradeneeded = (ev) => {

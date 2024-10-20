@@ -686,7 +686,7 @@ describe('entities', () => {
 
 	it('should allow subscribing to one field and not break on deletion', async () => {
 		const storage = await createTestStorage({
-			log: console.log,
+			// log: console.log,
 		});
 		const item = await storage.todos.put({
 			content: 'item',

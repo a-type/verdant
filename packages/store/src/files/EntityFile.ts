@@ -1,4 +1,5 @@
 import { EventSubscriber, FileData } from '@verdant-web/common';
+import { Context } from '../context/context.js';
 
 export type EntityFileEvents = {
 	change: () => void;
@@ -6,7 +7,6 @@ export type EntityFileEvents = {
 
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
-export const MARK_UPLOADED = Symbol('entity-file-mark-uploaded');
 
 export type EntityFileSnapshot = {
 	id: string;
@@ -24,17 +24,26 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _loading = true;
 	private _failed = false;
 	private _downloadRemote = false;
+	private ctx: Context;
+	private unsubscribes: (() => void)[] = [];
 
 	constructor(
 		public readonly id: string,
 		{
 			downloadRemote = false,
+			ctx,
 		}: {
 			downloadRemote?: boolean;
-		} = {},
+			ctx: Context;
+		},
 	) {
 		super();
+		this.ctx = ctx;
 		this._downloadRemote = downloadRemote;
+
+		this.unsubscribes.push(
+			this.ctx.internalEvents.subscribe(`fileUploaded:${id}`, this.onUploaded),
+		);
 	}
 
 	get downloadRemote() {
@@ -48,6 +57,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	}
 
 	[UPDATE] = (fileData: FileData) => {
+		this.ctx.log('debug', 'EntityFile updated', this.id, fileData);
 		this._loading = false;
 		this._failed = false;
 		this._fileData = fileData;
@@ -55,6 +65,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			if (this._objectUrl) {
 				URL.revokeObjectURL(this._objectUrl);
 			}
+			this.ctx.log('debug', 'Creating object URL for file', this.id);
 			this._objectUrl = URL.createObjectURL(fileData.file);
 		}
 		this.emit('change');
@@ -66,7 +77,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.emit('change');
 	};
 
-	[MARK_UPLOADED] = () => {
+	private onUploaded = () => {
 		if (!this._fileData) return;
 		this._fileData!.remote = true;
 		this.emit('change');
@@ -102,13 +113,13 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	};
 
 	getSnapshot(): FileData {
-		if (this._fileData) return this._fileData;
 		return {
 			id: this.id,
-			url: this._objectUrl ?? undefined,
+			url: this._objectUrl ?? this._fileData?.url ?? undefined,
 			name: this.name ?? 'unknown-file',
 			remote: false,
 			type: this.type ?? '',
+			file: this._fileData?.file,
 		};
 	}
 }

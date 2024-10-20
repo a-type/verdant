@@ -1,5 +1,4 @@
 import { Migration } from '@verdant-web/common';
-import { Metadata } from '../metadata/Metadata.js';
 import { getDatabaseVersion, openDatabase } from './db.js';
 import { runMigrations } from './migrations.js';
 import { getMigrationPath } from './paths.js';
@@ -12,32 +11,24 @@ export async function openQueryDatabase({
 	version,
 	indexedDB = globalIDB,
 	migrations,
-	meta,
 	context,
 }: {
 	version: number;
 	migrations: Migration<any>[];
 	indexedDB?: IDBFactory;
-	meta: Metadata;
 	context: OpenDocumentDbContext;
 }) {
-	if (context.schema.wip) {
-		throw new Error('Cannot open a production client with a WIP schema!');
-	}
-
-	const currentVersion = await getDatabaseVersion(
-		indexedDB,
-		context.namespace,
-		version,
-		context.log,
-	);
+	const currentVersion = await getDatabaseVersion(indexedDB, context.namespace);
 
 	context.log(
 		'debug',
+		'Opening index database',
+		context.namespace,
 		'Current database version:',
 		currentVersion,
 		'target version:',
 		version,
+		context.schema.wip ? '(wip)' : '',
 	);
 
 	const toRun = getMigrationPath({
@@ -52,7 +43,7 @@ export async function openQueryDatabase({
 			'Migrations to run:',
 			toRun.map((m) => m.version),
 		);
-		await runMigrations({ context, toRun, meta, indexedDB });
+		await runMigrations({ context, toRun, indexedDB });
 	}
 	return openDatabase({
 		indexedDB,

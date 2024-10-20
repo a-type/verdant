@@ -2,36 +2,19 @@ import {
 	debounce,
 	DocumentBaseline,
 	EventSubscriber,
-	getTimestampSchemaVersion,
-	Migration,
 	Operation,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
+import { Context } from '../context/context.js';
 import { DocumentManager } from '../entities/DocumentManager.js';
 import { EntityStore } from '../entities/EntityStore.js';
-import { FileManager, FileManagerConfig } from '../files/FileManager.js';
-import { ReturnedFileData } from '../files/FileStorage.js';
-import {
-	closeDatabase,
-	deleteAllDatabases,
-	getSizeOfObjectStore,
-} from '../idb.js';
-import {
-	ExportData,
-	Metadata,
-	supportLegacyExport,
-} from '../metadata/Metadata.js';
-import { openQueryDatabase } from '../migration/openQueryDatabase.js';
+import { FileManager } from '../files/FileManager.js';
+import { deleteAllDatabases } from '../persistence/idb/util.js';
 import { CollectionQueries } from '../queries/CollectionQueries.js';
 import { QueryCache } from '../queries/QueryCache.js';
-import { NoSync, ServerSync, ServerSyncOptions, Sync } from '../sync/Sync.js';
+import { NoSync, ServerSync, Sync } from '../sync/Sync.js';
 import { getLatestVersion } from '../utils/versions.js';
-
-interface ClientConfig<Presence = any> {
-	syncConfig?: ServerSyncOptions<Presence>;
-	migrations: Migration[];
-	files?: FileManagerConfig;
-}
+import { ExportedData } from '../persistence/interfaces.js';
+import { importPersistence } from '../persistence/persistence.js';
 
 // not actually used below, but helpful for internal code which
 // might rely on this stuff...
@@ -62,13 +45,22 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * indicate the client is in an unrecoverable state.
 	 */
 	developerError: (err: Error) => void;
+	/**
+	 * Listen for operations as they are applied to the database.
+	 * Wouldn't recommend using this unless you know what you're doing.
+	 * It's a very hot code path...
+	 */
+	operation: (operation: Operation) => void;
+	/**
+	 * Emitted when storage rebases history. This should never actually affect application behavior
+	 * or stored data, but is useful for debugging and testing.
+	 */
+	rebase: () => void;
 }> {
-	readonly meta: Metadata;
 	private _entities: EntityStore;
 	private _queryCache: QueryCache;
 	private _documentManager: DocumentManager<any>;
 	private _fileManager: FileManager;
-	private _closed = false;
 
 	readonly collectionNames: string[];
 
@@ -86,23 +78,17 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		return this._documentManager;
 	}
 
-	constructor(
-		private config: ClientConfig,
-		private context: Context,
-		components: { meta: Metadata },
-	) {
+	constructor(private context: Context) {
 		super();
-		this.meta = components.meta;
 		this.collectionNames = Object.keys(context.schema.collections);
 		this._sync =
-			this.config.syncConfig && !context.schema.wip
-				? new ServerSync<Presence, Profile>(this.config.syncConfig, {
-						meta: this.meta,
+			this.context.config.sync && !context.schema.wip
+				? new ServerSync<Presence, Profile>(this.context.config.sync, {
 						onData: this.addData,
 						ctx: this.context,
 				  })
-				: new NoSync<Presence, Profile>({ meta: this.meta });
-		if (context.schema.wip && this.config.syncConfig) {
+				: new NoSync<Presence, Profile>(this.context);
+		if (context.schema.wip && this.context.config.sync) {
 			context.log(
 				'warn',
 				'⚠️⚠️ Sync is disabled for WIP schemas. Commit your schema changes to start syncing again. ⚠️⚠️',
@@ -110,19 +96,19 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		}
 
 		this._fileManager = new FileManager({
-			db: this.metaDb,
 			sync: this.sync,
 			context: this.context,
-			config: this.config.files,
-			meta: this.meta,
-		});
-		this._queryCache = new QueryCache({
-			context,
 		});
 		this._entities = new EntityStore({
 			ctx: this.context,
-			meta: this.meta,
 			files: this._fileManager,
+		});
+		// note: query cache must be initialized after EntityStore,
+		// since EntityStore needs to clear its cache before queries
+		// refresh.
+		// FIXME: make this less fragile
+		this._queryCache = new QueryCache({
+			context,
 		});
 		this._documentManager = new DocumentManager(this.schema, this._entities);
 
@@ -133,18 +119,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		this.context.globalEvents.subscribe('resetToServer', () => {
 			this.emit('resetToServer');
 		});
-
-		this.watchForVersionChange();
-
-		this.metaDb.addEventListener('versionchange', () => {
-			this.context.log?.(
-				'warn',
-				`Another tab has requested a version change for ${this.namespace}`,
-			);
-			this.metaDb.close();
-			if (typeof window !== 'undefined') {
-				window.location.reload();
-			}
+		this.context.globalEvents.subscribe('operation', (operation) => {
+			this.emit('operation', operation);
+		});
+		this.context.globalEvents.subscribe('rebase', () => {
+			this.emit('rebase');
 		});
 
 		// self-assign collection shortcuts. these are not typed
@@ -162,19 +141,6 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			});
 		}
 	}
-
-	private watchForVersionChange = () => {
-		this.documentDb.addEventListener('versionchange', () => {
-			this.context.log?.(
-				'warn',
-				`Another tab has requested a version change for ${this.namespace}`,
-			);
-			this.documentDb.close();
-			if (typeof window !== 'undefined') {
-				window.location.reload();
-			}
-		});
-	};
 
 	private importingPromise = Promise.resolve();
 	private addData = async (data: {
@@ -240,14 +206,6 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		}
 	};
 
-	get documentDb() {
-		return this.context.documentDb;
-	}
-
-	get metaDb() {
-		return this.context.metaDb;
-	}
-
 	get schema() {
 		return this.context.schema;
 	}
@@ -275,25 +233,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	}
 
 	stats = async (): Promise<ClientStats> => {
-		const collectionNames = Object.keys(this.schema.collections);
-		let collections = {} as Record<string, { count: number; size: number }>;
 		if (this.disposed) {
 			return {} as any;
 		}
-		for (const collectionName of collectionNames) {
-			try {
-				collections[collectionName] = await getSizeOfObjectStore(
-					this.documentDb,
-					collectionName,
-				);
-			} catch (err) {
-				this.context.log?.('error', err);
-			}
-		}
-		if (this.disposed) {
-			return { collections } as any;
-		}
-		const meta = await this.meta.stats();
+		const collections = await this.context.queries.stats();
+		const meta = await this.context.meta.stats();
 		const storage =
 			typeof navigator !== 'undefined' &&
 			typeof navigator.storage !== 'undefined' &&
@@ -301,7 +245,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				? await navigator.storage.estimate()
 				: undefined;
 
-		const files = await this._fileManager.stats();
+		const files = await this.context.files.stats();
 
 		// determine data:metadata ratio for total size of all collections vs metadata
 		const totalCollectionsSize = Object.values(collections).reduce(
@@ -327,25 +271,26 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	};
 
 	close = async () => {
-		this._closed = true;
 		this.sync.ignoreIncoming();
 		await this._entities.flushAllBatches();
-		this._fileManager.close();
+		// NOTE: this happens after flushing or else flushed data
+		// won't be written to storage or synced.
+		this.context.closing = true;
+		this.context.files.dispose();
 		this.sync.stop();
 		this.sync.destroy();
 		// this step does have the potential to flush
 		// changes to storage, so don't close metadata db yet
 		await this._entities.destroy();
 
-		this.meta.close();
+		this.context.queries.dispose();
+		this.context.meta.dispose();
 
 		// the idea here is to flush the microtask queue -
 		// we may have queued tasks related to queries that
 		// we want to settle before closing the databases
 		// to avoid invalid state errors
-		await new Promise<void>(async (resolve) => {
-			await closeDatabase(this.documentDb);
-			await closeDatabase(this.metaDb);
+		await new Promise<void>((resolve) => {
 			resolve();
 		});
 
@@ -361,35 +306,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		{ downloadRemoteFiles }: { downloadRemoteFiles?: boolean } = {
 			downloadRemoteFiles: true,
 		},
-	) => {
+	): Promise<ExportedData> => {
 		this.context.log('info', 'Exporting data...');
-		const metaExport = await this.meta.export();
-		const filesExport = await this._fileManager.exportAll(downloadRemoteFiles);
-		// split files into data and files
-		const fileData: Array<Omit<ReturnedFileData, 'file'>> = [];
-		const files: Array<File> = [];
-
-		for (const fileExport of filesExport) {
-			const file = fileExport.file;
-			delete fileExport.file;
-			fileData.push(fileExport);
-			if (file) {
-				// rename with ID
-				const asFile = new File(
-					[file],
-					this.getFileExportName(fileExport.name, fileExport.id),
-					{
-						type: fileExport.type,
-					},
-				);
-				files.push(asFile);
-			} else {
-				this.context.log(
-					'warn',
-					`File ${fileExport.id} was could not be loaded locally or from the server. It will be missing in the export.`,
-				);
-			}
-		}
+		const metaExport = await this.context.meta.export();
+		const { fileData, files } =
+			await this.context.files.export(downloadRemoteFiles);
 		return {
 			data: metaExport,
 			fileData,
@@ -397,24 +318,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		};
 	};
 
-	private getFileExportName = (originalFileName: string, id: string) => {
-		return `${id}___${originalFileName}`;
-	};
-
-	private parseFileExportname = (name: string) => {
-		const [id, originalFileName] = name.split('___');
-		return { id, originalFileName };
-	};
-
-	import = async ({
-		data: rawData,
-		fileData,
-		files,
-	}: {
-		data: ExportData;
-		fileData: Array<Omit<ReturnedFileData, 'file'>>;
-		files: File[];
-	}) => {
+	import = async ({ data, fileData, files }: ExportedData) => {
 		/**
 		 * Importing is a pretty involved procedure because of the possibility of
 		 * importing an export from an older version of the schema. We can't add
@@ -435,90 +339,16 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			resolve = res;
 		});
 
-		const data = supportLegacyExport(rawData);
 		this.context.log('info', 'Importing data...');
-		// close the document DB
-		await closeDatabase(this.context.documentDb);
 
-		await this.meta.resetFrom(data);
-		// re-attach files to their file data and import
-		const fileToIdMap = new Map(
-			files.map((file) => {
-				const { id } = this.parseFileExportname(file.name);
-				return [id, file];
-			}),
-		);
-		const importedFiles: ReturnedFileData[] = fileData.map((fileData) => {
-			const file = fileToIdMap.get(fileData.id);
-
-			return {
-				...fileData,
-				file,
-			};
-		});
-		await this._fileManager.importAll(importedFiles);
-		// now delete the document DB, open it to the specified version
-		// and run migrations to get it to the latest version
-		const version = data.schemaVersion;
-		const deleteReq = indexedDB.deleteDatabase(
-			[this.namespace, 'collections'].join('_'),
-		);
-		await new Promise((resolve, reject) => {
-			deleteReq.onsuccess = resolve;
-			deleteReq.onerror = reject;
-		});
-		// reset our context to the imported schema for now
-		const currentSchema = this.context.schema;
-		if (currentSchema.version !== version) {
-			const oldSchema = this.context.oldSchemas?.find(
-				(s) => s.version === version,
-			);
-			if (!oldSchema) {
-				this.emit(
-					'developerError',
-					new Error(`Could not find schema for version ${version}`),
-				);
-				throw new Error(`Could not find schema for version ${version}`);
-			}
-
-			this.context.schema = oldSchema;
-		}
-		// now open the document DB empty at the specified version
-		// and initialize it from the meta DB
-		this.context.documentDb = await openQueryDatabase({
-			meta: this.meta,
-			migrations: this.config.migrations,
-			context: this.context,
-			version,
-		});
-		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
-		// re-initialize data
-		this.context.log('info', 'Re-initializing data from imported data...');
-		await this._entities.addData({
-			operations: data.operations,
-			baselines: data.baselines,
-			reset: true,
-		});
-		// close the database and reopen to latest version, applying
-		// migrations
-		await closeDatabase(this.context.documentDb);
-		this.context.log('info', 'Migrating up to latest schema...');
-		// put the schema back
-		this.context.schema = currentSchema;
-		this.context.documentDb = await openQueryDatabase({
-			meta: this.meta,
-			migrations: this.config.migrations,
-			context: this.context,
-			version: currentSchema.version,
-		});
-		this.context.internalEvents.emit('documentDbChanged', this.documentDb);
-		// re-establish watcher on database
-		this.watchForVersionChange();
+		await importPersistence(this.context, { data, files, fileData });
 
 		// finally... clear out memory cache of entities and
 		// re-run all active queries.
-		this.entities.clearCache();
-		this._queryCache.forceRefreshAll();
+		// this.entities.clearCache();
+		// this._queryCache.forceRefreshAll();
+
+		// ^ this is now done via the persistenceReset internal event.
 
 		resolve();
 	};
@@ -549,7 +379,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * invoking this manually will not skip that 3 day waiting period.
 	 */
 	__cleanupFilesImmediately = () => {
-		return this._fileManager.tryCleanupDeletedFiles();
+		return this.context.files.cleanupDeletedFiles();
 	};
 
 	/**
@@ -557,7 +387,20 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * rebasing rules. Rebases already happen automatically
 	 * during normal operation, so you probably don't need this.
 	 */
-	__manualRebase = () => this.meta.manualRebase();
+	__manualRebase = () => this.context.meta.manualRebase();
+
+	/**
+	 * WARNING: the internal functions of the persistence layer
+	 * are not guaranteed and cannot be relied upon for application
+	 * behavior. They are subject to change without notice.
+	 */
+	get __persistence() {
+		return {
+			meta: this.context.meta,
+			queries: this.context.queries,
+			files: this.context.files,
+		};
+	}
 }
 
 export interface ClientStats {

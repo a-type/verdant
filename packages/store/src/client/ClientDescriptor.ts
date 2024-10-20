@@ -1,34 +1,27 @@
 import {
 	EventSubscriber,
+	HybridLogicalClockTimestampProvider,
 	Migration,
-	Operation,
+	PatchCreator,
 	StorageSchema,
-	hashObject,
+	noop,
 } from '@verdant-web/common';
-import { Context } from '../context.js';
-import { FileManagerConfig } from '../files/FileManager.js';
-import { Metadata } from '../metadata/Metadata.js';
-import {
-	openMetadataDatabase,
-	openWIPMetadataDatabase,
-} from '../metadata/openMetadataDatabase.js';
-import { openWIPDatabase } from '../migration/openWIPDatabase.js';
+import { FileConfig, InitialContext } from '../context/context.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
-import {
-	deleteAllDatabases,
-	deleteDatabase,
-	getAllDatabaseNamesAndVersions,
-} from '../idb.js';
+import { deleteAllDatabases } from '../persistence/idb/util.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
 import { METADATA_VERSION_KEY } from './constants.js';
-import { openQueryDatabase } from '../migration/openQueryDatabase.js';
+import { Time } from '../context/Time.js';
+import { initializePersistence } from '../persistence/persistence.js';
+import { PersistenceImplementation } from '../persistence/interfaces.js';
+import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
 	schema: StorageSchema<any>;
-	oldSchemas?: StorageSchema<any>[];
+	oldSchemas: StorageSchema<any>[];
 	/** Migrations, in order, to upgrade to each successive version of the schema */
 	migrations: Migration<any>[];
 	/** Provide a sync config to turn on synchronization with a server */
@@ -52,6 +45,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 		...args: any[]
 	) => void;
 	disableRebasing?: boolean;
+	rebaseTimeout?: number;
 	/**
 	 * Provide a specific schema number to override the schema version
 	 * in the database. This is useful for testing migrations or recovering
@@ -62,14 +56,13 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/**
 	 * Configuration for file management
 	 */
-	files?: FileManagerConfig;
+	files?: FileConfig;
 
 	/**
-	 * Listen for operations as they are applied to the database.
-	 * Wouldn't recommend using this unless you know what you're doing.
-	 * It's a very hot code path...
+	 * Override the default IndexedDB persistence implementation.
 	 */
-	onOperation?: (operation: Operation) => void;
+	persistence?: PersistenceImplementation;
+
 	/**
 	 * Enables experimental WeakRef usage to cull documents
 	 * from cache that aren't being used. This is a performance
@@ -121,7 +114,7 @@ export class ClientDescriptor<
 		// we can't initialize the storage
 		if (typeof window === 'undefined' && !init.indexedDb) {
 			throw new Error(
-				'A verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
+				'A Verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
 			);
 		}
 
@@ -130,17 +123,43 @@ export class ClientDescriptor<
 		}
 		this._initializing = true;
 		try {
-			let storage: ClientImpl;
-			if (init.schema.wip) {
-				storage = await this.initializeWIPDatabases(init);
-			} else {
-				storage = await this.initializeDatabases(init);
-				this.cleanupWIPDatabases(init);
-			}
-
-			this.resolveReady(storage);
-			this._resolvedValue = storage;
-			return storage;
+			const time = new Time(
+				new HybridLogicalClockTimestampProvider(),
+				init.schema.version,
+			);
+			let ctx: InitialContext = {
+				closing: false,
+				entityEvents: new EventSubscriber(),
+				globalEvents: new EventSubscriber(),
+				internalEvents: new EventSubscriber(),
+				log: init.log || noop,
+				migrations: init.migrations,
+				namespace: init.namespace,
+				originalNamespace: init.namespace,
+				schema: init.schema,
+				oldSchemas: init.oldSchemas,
+				time,
+				undoHistory: init.undoHistory || new UndoHistory(),
+				weakRef: (val) =>
+					init.EXPERIMENTAL_weakRefs
+						? new WeakRef(val)
+						: (new FakeWeakRef(val) as any),
+				patchCreator: new PatchCreator(() => time.now),
+				config: {
+					files: init.files,
+					sync: init.sync,
+					persistence: {
+						disableRebasing: init.disableRebasing,
+						rebaseTimeout: init.rebaseTimeout,
+					},
+				},
+				persistence: init.persistence || new IdbPersistence(init.indexedDb),
+			};
+			const context = await initializePersistence(ctx);
+			const client = new Client(context) as ClientImpl;
+			this.resolveReady(client);
+			this._resolvedValue = client;
+			return client;
 		} catch (err) {
 			if (err instanceof Error) {
 				this.rejectReady(err as Error);
@@ -150,156 +169,6 @@ export class ClientDescriptor<
 			}
 		} finally {
 			this._initializing = false;
-		}
-	};
-
-	private initializeDatabases = async (init: ClientDescriptorOptions) => {
-		const metadataVersion = init[METADATA_VERSION_KEY];
-		const { db: metaDb } = await openMetadataDatabase({
-			indexedDB: init.indexedDb,
-			log: init.log,
-			namespace: init.namespace,
-			metadataVersion,
-		});
-
-		const context: Omit<Context, 'documentDb' | 'getNow'> = {
-			namespace: this._namespace,
-			metaDb,
-			schema: init.schema,
-			log: init.log || (() => {}),
-			undoHistory: init.undoHistory || new UndoHistory(),
-			entityEvents: new EventSubscriber(),
-			globalEvents: new EventSubscriber(),
-			internalEvents: new EventSubscriber(),
-			weakRef: (value) => {
-				if (init.EXPERIMENTAL_weakRefs) {
-					return new WeakRef(value);
-				} else {
-					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
-				}
-			},
-			migrations: init.migrations,
-			oldSchemas: init.oldSchemas,
-		};
-		const meta = new Metadata({
-			context,
-			disableRebasing: init.disableRebasing,
-			onOperation: init.onOperation,
-		});
-
-		// verify schema integrity
-		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
-
-		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
-			getNow: () => meta.now,
-		});
-
-		const documentDb = await openQueryDatabase({
-			context: contextWithNow,
-			version: init.schema.version,
-			meta,
-			migrations: init.migrations,
-			indexedDB: init.indexedDb,
-		});
-
-		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
-
-		const storage = new Client(
-			{
-				syncConfig: init.sync,
-				migrations: init.migrations,
-				files: init.files,
-			},
-			fullContext,
-			{
-				meta,
-			},
-		) as ClientImpl;
-
-		return storage;
-	};
-
-	private initializeWIPDatabases = async (init: ClientDescriptorOptions) => {
-		const schemaHash = hashObject(init.schema);
-		console.info(`WIP schema in use. Opening database with hash ${schemaHash}`);
-
-		const wipNamespace = `@@wip_${init.namespace}_${schemaHash}`;
-		const { db: metaDb } = await openWIPMetadataDatabase({
-			indexedDB: init.indexedDb,
-			log: init.log,
-			namespace: init.namespace,
-			wipNamespace: wipNamespace,
-		});
-
-		const context: Omit<Context, 'documentDb' | 'getNow'> = {
-			namespace: this._namespace,
-			metaDb,
-			schema: init.schema,
-			log: init.log || (() => {}),
-			undoHistory: init.undoHistory || new UndoHistory(),
-			entityEvents: new EventSubscriber(),
-			globalEvents: new EventSubscriber(),
-			internalEvents: new EventSubscriber(),
-			weakRef: (value) => {
-				if (init.EXPERIMENTAL_weakRefs) {
-					return new WeakRef(value);
-				} else {
-					return new FakeWeakRef(value) as unknown as WeakRef<typeof value>;
-				}
-			},
-			migrations: init.migrations,
-			oldSchemas: init.oldSchemas,
-		};
-		const meta = new Metadata({
-			context,
-			disableRebasing: init.disableRebasing,
-		});
-
-		const contextWithNow: Omit<Context, 'documentDb'> = Object.assign(context, {
-			getNow: () => meta.now,
-		});
-
-		// verify schema integrity
-		await meta.updateSchema(init.schema, init.overrideSchemaConflict);
-
-		const documentDb = await openWIPDatabase({
-			context: contextWithNow,
-			version: init.schema.version,
-			meta,
-			migrations: init.migrations,
-			indexedDB: init.indexedDb,
-			wipNamespace,
-		});
-
-		const fullContext: Context = Object.assign(contextWithNow, { documentDb });
-
-		const storage = new Client(
-			{
-				syncConfig: init.sync,
-				migrations: init.migrations,
-				files: init.files,
-			},
-			fullContext,
-			{
-				meta,
-			},
-		) as ClientImpl;
-
-		return storage;
-	};
-
-	private cleanupWIPDatabases = async (init: ClientDescriptorOptions) => {
-		const databaseInfo = await getAllDatabaseNamesAndVersions(init.indexedDb);
-		const wipDatabases = databaseInfo
-			.filter((db) => db.name?.startsWith('@@wip_'))
-			.map((db) => db.name!);
-		// don't clear a current WIP database.
-		const wipDatabasesToDelete = wipDatabases.filter(
-			(db) =>
-				!db.startsWith(`@@wip_${init.namespace}_${hashObject(init.schema)}`),
-		);
-		for (const db of wipDatabasesToDelete) {
-			await deleteDatabase(db, init.indexedDb);
 		}
 	};
 
