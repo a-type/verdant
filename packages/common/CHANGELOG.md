@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.6.0-next.0
+
+### Minor Changes
+
+- 423493cf: Major internal refactoring of persistence layer. Verdant still only supports IndexedDB for now, but this is a huge step toward configurable storage. Prereleasing this version to test in real-world environments.
+
 ## 2.5.2
 
 ### Patch Changes

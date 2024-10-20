@@ -11,5 +11,7 @@
     "@verdant-web/server": "3.3.2",
     "@verdant-web/store": "3.12.1"
   },
-  "changesets": []
+  "changesets": [
+    "light-cups-poke"
+  ]
 }

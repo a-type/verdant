@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 3.3.3-next.0
+
+### Patch Changes
+
+- 423493cf: Major internal refactoring of persistence layer. Verdant still only supports IndexedDB for now, but this is a huge step toward configurable storage. Prereleasing this version to test in real-world environments.
+- Updated dependencies [423493cf]
+  - @verdant-web/common@2.6.0-next.0
+
 ## 3.3.2
 
 ### Patch Changes
