@@ -12,6 +12,7 @@
     "@verdant-web/store": "3.12.1"
   },
   "changesets": [
-    "light-cups-poke"
+    "light-cups-poke",
+    "stale-gifts-smile"
   ]
 }

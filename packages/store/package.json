@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/store",
-	"version": "4.0.0-next.0",
+	"version": "4.0.0-next.1",
 	"access": "public",
 	"type": "module",
 	"exports": {

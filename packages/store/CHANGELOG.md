@@ -1,5 +1,13 @@
 # @lo-fi/web
 
+## 4.0.0-next.1
+
+### Patch Changes
+
+- 5576e5ee: Fix file downloads failing when sync isn't immediately started on launch
+- Updated dependencies [5576e5ee]
+  - @verdant-web/common@2.6.0-next.1
+
 ## 4.0.0-next.0
 
 ### Major Changes

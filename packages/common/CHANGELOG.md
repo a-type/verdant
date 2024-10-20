@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.6.0-next.1
+
+### Patch Changes
+
+- 5576e5ee: Fix file downloads failing when sync isn't immediately started on launch
+
 ## 2.6.0-next.0
 
 ### Minor Changes
