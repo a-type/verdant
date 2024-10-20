@@ -48,6 +48,23 @@ export class FileManager {
 		} else {
 			// maybe we don't have it yet, it might be on the server still.
 			try {
+				// if not online, enqueue this for whenever we go online.
+				if (this.sync.status !== 'active') {
+					this.context.log(
+						'info',
+						'Sync is not active, waiting for online to load file',
+						file.id,
+						file.name,
+					);
+					const unsub = this.sync.subscribe('onlineChange', (online) => {
+						if (online) {
+							unsub();
+							this.load(file);
+						}
+					});
+					return;
+				}
+
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
 					file[UPDATE](result.data);

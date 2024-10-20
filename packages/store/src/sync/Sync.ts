@@ -527,8 +527,33 @@ export class ServerSync<Presence = any, Profile = any>
 		if (this.activeSync.status === 'active') {
 			return this.fileSync.getFile(id);
 		} else {
-			throw new Error('Offline, cannot retrieve remote file details');
+			// wait for sync to start, up to 5 seconds
+			await this.getSyncStartPromise();
+			if (this.activeSync.status === 'paused') {
+				throw new VerdantError(
+					VerdantError.Code.Offline,
+					undefined,
+					'Sync is not active',
+				);
+			}
+			return this.fileSync.getFile(id);
 		}
+	};
+
+	private getSyncStartPromise = (timeout = 5000) => {
+		return new Promise<void>((resolve, reject) => {
+			const timeoutHandle = setTimeout(() => {
+				reject(new Error('Sync did not start in time'));
+				unsubscribe();
+			}, timeout);
+			const unsubscribe = this.subscribe('onlineChange', (online: boolean) => {
+				if (online) {
+					clearTimeout(timeoutHandle);
+					unsubscribe();
+					resolve();
+				}
+			});
+		});
 	};
 
 	public start = () => {
