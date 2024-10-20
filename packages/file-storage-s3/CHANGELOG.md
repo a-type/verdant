@@ -1,5 +1,14 @@
 # @verdant-web/s3-file-storage
 
+## 1.0.30
+
+### Patch Changes
+
+- 1787ef97: Official release of refactored persistence layer! This doesn't have much functional impact for users, but some advanced/experimental config settings have changed. Store now requires a recently generated client via CLI; be sure to upgrade CLI and regenerate your client from your schema even if your schema hasn't changed.
+- Updated dependencies [423493cf]
+- Updated dependencies [1787ef97]
+  - @verdant-web/server@3.3.3
+
 ## 1.0.30-next.1
 
 ### Patch Changes

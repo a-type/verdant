@@ -1,5 +1,16 @@
 # @verdant-web/common
 
+## 2.6.0
+
+### Minor Changes
+
+- 423493cf: Major internal refactoring of persistence layer. Verdant still only supports IndexedDB for now, but this is a huge step toward configurable storage. Prereleasing this version to test in real-world environments.
+- 1787ef97: Official release of refactored persistence layer! This doesn't have much functional impact for users, but some advanced/experimental config settings have changed. Store now requires a recently generated client via CLI; be sure to upgrade CLI and regenerate your client from your schema even if your schema hasn't changed.
+
+### Patch Changes
+
+- 5576e5ee: Fix file downloads failing when sync isn't immediately started on launch
+
 ## 2.6.0-next.1
 
 ### Patch Changes

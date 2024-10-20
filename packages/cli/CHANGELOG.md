@@ -1,5 +1,15 @@
 # @verdant-web/cli
 
+## 4.7.0
+
+### Minor Changes
+
+- 1787ef97: Official release of refactored persistence layer! This doesn't have much functional impact for users, but some advanced/experimental config settings have changed. Store now requires a recently generated client via CLI; be sure to upgrade CLI and regenerate your client from your schema even if your schema hasn't changed.
+
+### Patch Changes
+
+- 423493cf: Major internal refactoring of persistence layer. Verdant still only supports IndexedDB for now, but this is a huge step toward configurable storage. Prereleasing this version to test in real-world environments.
+
 ## 4.6.2-next.0
 
 ### Patch Changes
