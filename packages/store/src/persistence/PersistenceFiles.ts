@@ -46,6 +46,12 @@ export class PersistenceFiles extends Disposable {
 			const blob = await this.context.files.downloadRemoteFile(file.url, 0, 3);
 			// convert blob to file with name and type
 			file.file = new File([blob], file.name, { type: file.type });
+		} else if (!file.file) {
+			this.context.log(
+				'warn',
+				'File added without a file or URL. This file will not be available for use.',
+				file.id,
+			);
 		}
 
 		file.remote = false;
@@ -53,7 +59,14 @@ export class PersistenceFiles extends Disposable {
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
 		await this.db.add(file, options);
-		this.context.log('debug', 'File added', file.id);
+		this.context.log(
+			'debug',
+			'File added',
+			file.id,
+			file.name,
+			file.type,
+			file.file ? 'with binary file' : file.url ? 'with url' : 'with no data',
+		);
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);
 	get = this.db.get.bind(this.db);
@@ -131,6 +144,11 @@ export class PersistenceFiles extends Disposable {
 		);
 		const importedFiles: PersistedFileData[] = fileData.map((fileData) => {
 			const file = fileToIdMap.get(fileData.id);
+
+			if (!file) {
+				this.context.log('warn', `File ${fileData.id} was not found in import`);
+				return fileData;
+			}
 
 			return {
 				...fileData,

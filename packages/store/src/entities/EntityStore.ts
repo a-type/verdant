@@ -159,6 +159,11 @@ export class EntityStore extends Disposable {
 		const baselines = data?.baselines ?? [];
 		const operations = data?.operations ?? [];
 
+		if (baselines.length === 0 && operations.length === 0) {
+			this.ctx.log('debug', 'No data to process');
+			return;
+		}
+
 		this.ctx.log('debug', 'Processing incoming data', {
 			operations: operations.length,
 			baselines: baselines.length,
@@ -187,6 +192,7 @@ export class EntityStore extends Disposable {
 			const event = data.reset ? this.events.replace : this.events.add;
 			const hydrationPromise = this.pendingEntityPromises.get(oid);
 			if (hydrationPromise) {
+				this.ctx.log('debug', 'Waiting for ongoing entity hydration', oid);
 				hydrationPromise.then(() => {
 					event.invoke(this, {
 						oid,
@@ -196,6 +202,7 @@ export class EntityStore extends Disposable {
 					});
 				});
 			} else {
+				this.ctx.log('debug', 'Applying data to entity', oid);
 				event.invoke(this, {
 					oid,
 					baselines,

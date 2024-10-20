@@ -57,6 +57,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	}
 
 	[UPDATE] = (fileData: FileData) => {
+		this.ctx.log('debug', 'EntityFile updated', this.id, fileData);
 		this._loading = false;
 		this._failed = false;
 		this._fileData = fileData;
@@ -64,6 +65,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			if (this._objectUrl) {
 				URL.revokeObjectURL(this._objectUrl);
 			}
+			this.ctx.log('debug', 'Creating object URL for file', this.id);
 			this._objectUrl = URL.createObjectURL(fileData.file);
 		}
 		this.emit('change');
@@ -111,13 +113,13 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	};
 
 	getSnapshot(): FileData {
-		if (this._fileData) return this._fileData;
 		return {
 			id: this.id,
-			url: this._objectUrl ?? undefined,
+			url: this._objectUrl ?? this._fileData?.url ?? undefined,
 			name: this.name ?? 'unknown-file',
 			remote: false,
 			type: this.type ?? '',
+			file: this._fileData?.file,
 		};
 	}
 }

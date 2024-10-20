@@ -6,8 +6,8 @@ import { createTestFile } from '../lib/createTestFile.js';
 import { waitForEverythingToRebase } from '../lib/waits.js';
 
 const context = createTestContext({
-	serverLog: true,
-	testLog: true,
+	// serverLog: true,
+	// testLog: true,
 });
 
 it('can store and cleanup local files', async () => {
@@ -19,7 +19,7 @@ it('can store and cleanup local files', async () => {
 		library: 'files-1',
 		user: 'User A',
 		indexedDb,
-		logId: 'A',
+		// logId: 'A',
 	});
 
 	const a_item = await clientA.items.put({
@@ -49,7 +49,7 @@ it('can store and cleanup local files', async () => {
 		library: 'files-1',
 		user: 'User A',
 		indexedDb,
-		logId: 'A2',
+		// logId: 'A2',
 	});
 
 	const a_item2 = await clientA2.items.get(a_item.get('id')).resolved;
@@ -85,7 +85,7 @@ it('can store and cleanup local files', async () => {
 			// immediately delete files
 			canCleanupDeletedFile: () => true,
 		},
-		logId: 'A3',
+		// logId: 'A3',
 	});
 
 	// wait for microtasks to run

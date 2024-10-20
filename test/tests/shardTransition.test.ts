@@ -60,12 +60,44 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		importShardsFrom: unifiedServer.databaseLocation,
 	});
 
-	expect(
-		shardedServer.server.getLibraryInfo('sharding-a'),
-	).toMatchInlineSnapshot(`Promise {}`);
-	expect(
-		shardedServer.server.getLibraryInfo('sharding-b'),
-	).toMatchInlineSnapshot(`Promise {}`);
+	expect(await shardedServer.server.getLibraryInfo('sharding-a')).toEqual({
+		baselinesCount: 0,
+		globalAck: expect.any(String),
+		id: 'sharding-a',
+		latestServerOrder: 6,
+		operationsCount: 6,
+		replicas: [
+			{
+				ackedLogicalTime: expect.any(String),
+				ackedServerOrder: 0,
+				id: expect.any(String),
+				profile: {
+					id: 'A',
+				},
+				truant: false,
+				type: 0,
+			},
+		],
+	});
+	expect(await shardedServer.server.getLibraryInfo('sharding-b')).toEqual({
+		baselinesCount: 0,
+		globalAck: expect.any(String),
+		id: 'sharding-b',
+		latestServerOrder: 6,
+		operationsCount: 6,
+		replicas: [
+			{
+				ackedLogicalTime: expect.any(String),
+				ackedServerOrder: 0,
+				id: expect.any(String),
+				profile: {
+					id: 'B',
+				},
+				truant: false,
+				type: 0,
+			},
+		],
+	});
 
 	const libAClient2 = await createTestClient({
 		library: 'sharding-a',

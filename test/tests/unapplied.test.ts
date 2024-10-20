@@ -1,18 +1,9 @@
-import { it, expect, beforeAll, afterAll, vitest } from 'vitest';
+import { it, expect, vitest } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import {
-	waitForCondition,
-	waitForMockCall,
-	waitForQueryResult,
-} from '../lib/waits.js';
+import { waitForMockCall, waitForQueryResult } from '../lib/waits.js';
 import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
-import {
-	schema,
-	collection,
-	migrate,
-	createMigration,
-} from '@verdant-web/store';
+import { schema, createMigration } from '@verdant-web/store';
 
 const context = createTestContext();
 
@@ -26,12 +17,14 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		library: 'unapplied-1',
 		user: 'User A',
 		indexedDb,
+		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'unapplied-1',
 		user: 'User B',
 		indexedDb,
+		// logId: 'B',
 	});
 
 	const bHasSeenFuture = vitest.fn();
@@ -45,7 +38,12 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 	});
 
 	// wait for B to sync
-	await waitForQueryResult(clientB.items.get(a_apples.get('id')));
+	await waitForQueryResult(
+		clientB.items.get(a_apples.get('id')),
+		(item) => !!item,
+		5000,
+		"B should see A's item",
+	);
 	clientB.items.put({
 		content: 'Oranges',
 	});
@@ -83,7 +81,7 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 		migrations: [
 			...defaultMigrations,
 			// items should automigrate due to the field change
-			migrate(defaultSchema, v2Schema, async () => {}),
+			createMigration(defaultSchema, v2Schema),
 		],
 		schema: v2Schema,
 		indexedDb,

@@ -2,7 +2,6 @@ import { it, expect } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
 import {
-	waitForCondition,
 	waitForFileLoaded,
 	waitForFileUpload,
 	waitForQueryResult,
@@ -35,6 +34,7 @@ it('can clone entities with files, and the files survive deletion of the origina
 	const clone = await clientA.items.clone(original);
 	expect(clone.get('image')).not.toBeNull();
 	const cloneImage = clone.get('image')!;
+	await waitForFileLoaded(cloneImage);
 	expect(cloneImage.url).not.toBeNull();
 	// at this point it's blob URLs, so they will be the same as the
 	// file is the same
@@ -42,7 +42,6 @@ it('can clone entities with files, and the files survive deletion of the origina
 	clone.set('content', 'clone');
 
 	// there should be 2 files in the database now
-	// check that the original file is gone
 	let stats = await clientA.stats();
 	expect(stats.files.size.count).toEqual(2);
 

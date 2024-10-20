@@ -322,6 +322,7 @@ export class EntityFamilyMetadata {
 				);
 			}
 			this.get(baseline.oid).addBaseline(baseline);
+			changes[baseline.oid] ??= { oid: baseline.oid, isLocal };
 		}
 		for (const [oid, ops] of Object.entries(operations)) {
 			if (!areOidsRelated(this.rootOid, oid)) {

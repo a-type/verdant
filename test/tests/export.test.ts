@@ -1,13 +1,12 @@
 import { ReplicaType } from '@verdant-web/server';
 import {
-	collection,
 	createMigration,
 	Migration,
 	schema,
 	StorageDescriptor,
 } from '@verdant-web/store';
 import { expect, it, vitest } from 'vitest';
-import { waitForQueryResult } from '../lib/waits.js';
+import { waitForFileLoaded, waitForQueryResult } from '../lib/waits.js';
 import { createTestFile } from '../lib/createTestFile.js';
 
 async function createTestClient({
@@ -19,6 +18,7 @@ async function createTestClient({
 	type = ReplicaType.Realtime,
 	logId,
 	indexedDb = new IDBFactory(),
+	oldSchemas,
 }: {
 	schema: any;
 	migrations: Migration<any>[];
@@ -28,6 +28,7 @@ async function createTestClient({
 	type?: ReplicaType;
 	logId?: string;
 	indexedDb?: IDBFactory;
+	oldSchemas: any[];
 }): Promise<any> {
 	const desc = new StorageDescriptor({
 		schema,
@@ -45,13 +46,13 @@ async function createTestClient({
 			? (...args: any[]) => console.log(`[${logId}]`, ...args)
 			: undefined,
 		indexedDb,
+		oldSchemas,
 	});
 	const client = await desc.open();
 	return client;
 }
 
-// TODO: restore when this is supported again?
-it.skip('can export data and import it even after a schema migration', async () => {
+it('can export data and import it even after a schema migration', async () => {
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -77,14 +78,15 @@ it.skip('can export data and import it even after a schema migration', async () 
 		user: 'a',
 	};
 
-	// @ts-ignore
 	let client = await createTestClient({
 		schema: v1Schema,
+		oldSchemas: [v1Schema],
 		...clientInit,
 		// logId: 'client1',
 	});
 
-	const originalLocalReplicaInfo = await client.meta.localReplica.get();
+	const originalLocalReplicaInfo =
+		await client.__persistence.meta.getLocalReplica();
 
 	// add test data
 	await client.items.put({
@@ -104,7 +106,10 @@ it.skip('can export data and import it even after a schema migration', async () 
 		file: createTestFile('file 2 a different file'),
 	});
 
+	await client.entities.flushAllBatches();
+
 	const exported = await client.export();
+	expect(exported.files.length).toBe(2);
 
 	await client.close();
 
@@ -116,6 +121,7 @@ it.skip('can export data and import it even after a schema migration', async () 
 			contents: schema.fields.string({ default: 'empty' }),
 			tags: schema.fields.array({ items: schema.fields.string() }),
 			listId: schema.fields.string({ nullable: true }),
+			file: schema.fields.file({ nullable: true }),
 		},
 		indexes: {
 			listId: {
@@ -132,7 +138,7 @@ it.skip('can export data and import it even after a schema migration', async () 
 			},
 		},
 	});
-	const v2List = collection({
+	const v2List = schema.collection({
 		name: 'list',
 		primaryKey: 'id',
 		fields: {
@@ -154,6 +160,7 @@ it.skip('can export data and import it even after a schema migration', async () 
 
 	client = await createTestClient({
 		schema: v2Schema,
+		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
 		// logId: 'client2',
 	});
@@ -171,7 +178,7 @@ it.skip('can export data and import it even after a schema migration', async () 
 	});
 
 	// it gets assigned a new replica ID
-	const newLocalReplicaInfo = await client.meta.localReplica.get();
+	const newLocalReplicaInfo = await client.__persistence.meta.getLocalReplica();
 	expect(newLocalReplicaInfo.id).not.to.equal(originalLocalReplicaInfo.id);
 
 	// make some queries to see how they fare
@@ -194,35 +201,55 @@ it.skip('can export data and import it even after a schema migration', async () 
 	await client.lists.findAll().resolved;
 
 	// it should have the same replica ID, not overwritten
-	const finalLocalReplicaInfo = await client.meta.localReplica.get();
+	const finalLocalReplicaInfo =
+		await client.__persistence.meta.getLocalReplica();
 	expect(finalLocalReplicaInfo.id).not.to.equal(originalLocalReplicaInfo.id);
 
 	// make sure the data is correct
 	const items = await itemsQuery.resolved;
+
+	// wait for all files to be loaded
+	for (const item of items) {
+		if (item.get('file')) {
+			await waitForFileLoaded(item.get('file'));
+		}
+	}
+
 	expect(items.map((item: any) => item.getSnapshot())).toEqual([
 		{
 			contents: 'hello',
 			file: null,
 			id: '1',
 			tags: [],
+			listId: null,
 		},
 		{
 			contents: 'world',
 			file: {
 				id: expect.any(String),
 				url: 'blob:text/plain:6',
+				name: 'test.txt',
+				type: 'text/plain',
+				remote: false,
+				file: expect.any(Blob),
 			},
 			id: '2',
 			tags: ['a', 'b', 'c'],
+			listId: null,
 		},
 		{
 			contents: 'foo',
 			file: {
 				id: expect.any(String),
 				url: 'blob:text/plain:23',
+				name: 'test.txt',
+				remote: false,
+				type: 'text/plain',
+				file: expect.any(Blob),
 			},
 			id: '3',
 			tags: ['a', 'b'],
+			listId: null,
 		},
 	]);
 });

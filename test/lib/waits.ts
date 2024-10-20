@@ -80,7 +80,7 @@ export async function waitForQueryResult(
 
 		const timeout = setTimeout(() => {
 			if (debug) {
-				debugger;
+				// debugger;
 			}
 			console.error(
 				'Timed out query state',
