@@ -1,15 +1,39 @@
-import { expect, it } from 'vitest';
+import { afterAll, expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
 import { createTestClient } from '../lib/testClient.js';
 import { waitForOnline, waitForQueryResult } from '../lib/waits.js';
+import { rm } from 'fs/promises';
+
+let unifiedServer: ReturnType<typeof startTestServer> extends Promise<infer T>
+	? T
+	: never;
+let shardedServer: ReturnType<typeof startTestServer> extends Promise<infer T>
+	? T
+	: never;
+
+afterAll(async () => {
+	try {
+		await unifiedServer.cleanup();
+		await rm(unifiedServer.databaseLocation, { recursive: true });
+	} catch (e) {
+		console.error('Error cleaning up unified database:', e);
+	}
+	try {
+		await shardedServer.cleanup();
+		await rm(shardedServer.databaseLocation, { recursive: true });
+	} catch (e) {
+		console.error('Error cleaning up sharded databases:', e);
+	}
+}, 30 * 1000);
 
 it('migrates data from unified to sharded databases on launch', async () => {
-	const unifiedServer = await startTestServer({
+	unifiedServer = await startTestServer({
 		disableSharding: true,
 		disableRebasing: true,
 		keepDb: true,
-		// log: true,
+		log: true,
 	});
+	console.log('DB:', unifiedServer.databaseLocation);
 
 	// add some data to multiple libraries
 	const libAClient = await createTestClient({
@@ -49,10 +73,12 @@ it('migrates data from unified to sharded databases on launch', async () => {
 
 	libAClient.sync.stop();
 	libBClient.sync.stop();
+	await libAClient.close();
+	await libBClient.close();
 
 	await unifiedServer.cleanup();
 
-	const shardedServer = await startTestServer({
+	shardedServer = await startTestServer({
 		disableSharding: false,
 		disableRebasing: true,
 		keepDb: true,

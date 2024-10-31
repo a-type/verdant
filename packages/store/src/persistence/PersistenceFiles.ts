@@ -29,7 +29,7 @@ export class PersistenceFiles extends Disposable {
 
 	onServerReset = (since: string | null) =>
 		this.db.resetSyncedStatusSince(since);
-	add = async (file: FileData, options?: { downloadRemote?: boolean }) => {
+	add = async (file: FileData) => {
 		// this method accepts a FileData which refers to a remote
 		// file, as well as local files. in the case of a remote file,
 		// we actually re-download and upload the file again. this powers
@@ -58,7 +58,7 @@ export class PersistenceFiles extends Disposable {
 		// fire event for processing immediately
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
-		await this.db.add(file, options);
+		await this.db.add(file);
 		this.context.log(
 			'debug',
 			'File added',
@@ -190,14 +190,18 @@ export class PersistenceFiles extends Disposable {
 	cleanupDeletedFiles = async () => {
 		let count = 0;
 		let skipCount = 0;
-		await this.iterateOverPendingDelete((fileData, store) => {
+		const deletable: string[] = [];
+		await this.iterateOverPendingDelete((fileData) => {
 			if (this.config.canCleanupDeletedFile(fileData)) {
 				count++;
-				store.delete(fileData.id);
+				deletable.push(fileData.id);
 			} else {
 				skipCount++;
 			}
 		});
+		for (const id of deletable) {
+			await this.db.delete(id);
+		}
 
 		this.context.log(
 			'info',
@@ -206,14 +210,10 @@ export class PersistenceFiles extends Disposable {
 	};
 
 	private onFileRefsDeleted = async (fileRefs: FileRef[]) => {
-		const tx = this.db.transaction({
-			mode: 'readwrite',
-			storeNames: ['files'],
-		});
 		await Promise.all(
 			fileRefs.map(async (fileRef) => {
 				try {
-					await this.db.markPendingDelete(fileRef.id, { transaction: tx });
+					await this.db.markPendingDelete(fileRef.id);
 				} catch (err) {
 					this.context.log('error', 'Failed to mark file for deletion', err);
 				}

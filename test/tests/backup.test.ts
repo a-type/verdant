@@ -51,7 +51,10 @@ it('can backup to file', async () => {
 	await waitForEntityCondition(bOranges.current!, (o) => !!o?.get('purchased'));
 	const bBananas = clientB.items.get('bananas');
 	await waitForQueryResult(bBananas);
-	await waitForEntityCondition(bBananas.current!, (b) => !!b?.get('image'));
+	await waitForEntityCondition(
+		bBananas.current!,
+		(b) => !!b?.get('image')?.url,
+	);
 
 	ctx.log('Backing up from B');
 	const backupFile = await createClientBackup(clientB as any);

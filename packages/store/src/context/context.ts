@@ -11,7 +11,7 @@ import {
 } from '@verdant-web/common';
 import { UndoHistory } from '../UndoHistory.js';
 import { Time } from './Time.js';
-import type { PersistenceQueries } from '../persistence/PersistenceQueries.js';
+import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
 import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
 import {
@@ -33,7 +33,7 @@ export interface Context {
 	time: Time;
 
 	meta: PersistenceMetadata;
-	queries: PersistenceQueries;
+	documents: PersistenceDocuments;
 	files: PersistenceFiles;
 
 	undoHistory: UndoHistory;
@@ -197,4 +197,4 @@ export interface PersistenceConfig {
 	rebaseTimeout?: number;
 }
 
-export type InitialContext = Omit<Context, 'queries' | 'meta' | 'files'>;
+export type InitialContext = Omit<Context, 'documents' | 'meta' | 'files'>;

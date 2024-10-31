@@ -79,7 +79,8 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 
 	private onUploaded = () => {
 		if (!this._fileData) return;
-		this._fileData!.remote = true;
+		this._fileData.remote = true;
+		this.ctx.log('debug', 'File marked uploaded', this.id, this._fileData);
 		this.emit('change');
 	};
 

@@ -25,9 +25,11 @@ export type FileData = {
 	name: string;
 	type: string;
 	/** A local File instance, if available. */
-	file?: Blob;
+	file?: Blob | null;
 	/** The server URL of this file. */
-	url?: string;
+	url?: string | null;
+	/** The time this file was added, if available. */
+	timestamp?: string;
 };
 
 export function getAllFileFields(snapshot: any): [string, FileRef][] {

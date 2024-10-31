@@ -12,7 +12,6 @@ import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
 import { deleteAllDatabases } from '../persistence/idb/util.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
-import { METADATA_VERSION_KEY } from './constants.js';
 import { Time } from '../context/Time.js';
 import { initializePersistence } from '../persistence/persistence.js';
 import { PersistenceImplementation } from '../persistence/interfaces.js';
@@ -71,9 +70,6 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * before turning it on.
 	 */
 	EXPERIMENTAL_weakRefs?: boolean;
-
-	// not for public use
-	[METADATA_VERSION_KEY]?: number;
 }
 
 /**
@@ -155,6 +151,11 @@ export class ClientDescriptor<
 				},
 				persistence: init.persistence || new IdbPersistence(init.indexedDb),
 			};
+			ctx.log('info', 'Initializing client', {
+				namespace: ctx.namespace,
+				version: init.schema.version,
+				persistence: ctx.persistence.name,
+			});
 			const context = await initializePersistence(ctx);
 			const client = new Client(context) as ClientImpl;
 			this.resolveReady(client);

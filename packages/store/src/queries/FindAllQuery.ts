@@ -23,7 +23,7 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result: oids } = await this.context.queries.findAllOids({
+		const { result: oids } = await this.context.documents.findAllOids({
 			collection: this.collection,
 			index: this.index,
 		});

@@ -12,6 +12,7 @@ import {
 import { expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
 import { waitForQueryResult } from '../lib/waits.js';
+import { getPersistence } from '../lib/persistence.js';
 
 async function createTestClient({
 	schema,
@@ -54,6 +55,7 @@ async function createTestClient({
 		indexedDb,
 		disableRebasing,
 		oldSchemas,
+		persistence: getPersistence(),
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;

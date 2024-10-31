@@ -8,8 +8,9 @@ import {
 import { ClientWithCollections, StorageDescriptor } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import defaultSchema from '../schema.js';
+import { getPersistence } from '../lib/persistence.js';
 
-const testLog = false;
+const testLog = true;
 function log(...args: any[]) {
 	if (testLog) {
 		console.log('🔺', ...args);
@@ -54,6 +55,7 @@ async function createTestClient({
 			: undefined,
 		indexedDb,
 		oldSchemas,
+		persistence: getPersistence(),
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;
@@ -66,7 +68,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		library: 'wip-1',
 		migrations: [createMigration(defaultSchema)],
 		user: 'a',
-		// logId: 'A',
+		logId: 'A',
 		indexedDb: new IDBFactory(),
 		oldSchemas: [defaultSchema],
 	};
@@ -117,13 +119,17 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		migrations: [
 			createMigration(defaultSchema),
 			createMigration(defaultSchema, wipSchema, async ({ migrate }) => {
-				await migrate('items', ({ comments, ...old }) => ({
-					...old,
-					// no idea what's up with this typing
-					comments: comments.map((c: any) => c.content) as unknown as never,
-				}));
+				await migrate('items', ({ comments, ...old }) => {
+					log('migrating item', old.id);
+					return {
+						...old,
+						// no idea what's up with this typing
+						comments: comments.map((c: any) => c.content) as unknown as never,
+					};
+				});
 			}),
 		],
+		logId: 'wip',
 	});
 
 	const wipItem = await wipClient.items.get('1').resolved;
@@ -251,6 +257,7 @@ it('can start a WIP schema from no pre-existing client', async () => {
 		schema: wipSchema,
 		migrations: [createMigration(wipSchema)],
 		oldSchemas: [wipSchema],
+		// logId: 'A',
 	});
 
 	// make some changes
@@ -270,6 +277,7 @@ it('can start a WIP schema from no pre-existing client', async () => {
 		schema: defaultSchema,
 		oldSchemas: [defaultSchema],
 		migrations: [createMigration(defaultSchema)],
+		// logId: 'A v1',
 	});
 
 	expect(await client.items.findAll().resolved).toHaveLength(0);

@@ -4,7 +4,8 @@ import { getWipNamespace } from '../utils/wip.js';
 import { ExportedData } from './interfaces.js';
 import { PersistenceFiles } from './PersistenceFiles.js';
 import { PersistenceMetadata } from './PersistenceMetadata.js';
-import { PersistenceQueries } from './PersistenceQueries.js';
+import { PersistenceDocuments } from './PersistenceQueries.js';
+import { migrate } from './migration/migrate.js';
 
 export async function initializePersistence(
 	ctx: InitialContext,
@@ -27,6 +28,7 @@ export async function initializePersistence(
 
 			if (currentVersion === 0) {
 				// there is no existing data. nothing to copy.
+				context.log('debug', 'No existing data to copy to WIP namespace');
 			} else {
 				const currentSchema = ctx.oldSchemas?.find(
 					(s) => s.version === currentVersion,
@@ -45,6 +47,9 @@ export async function initializePersistence(
 				await context.persistence.copyNamespace(
 					context.originalNamespace,
 					context.namespace,
+					// needs to be the original schema; the copy should be of the original
+					// data and schema structure; the WIP schema migration application happens
+					// below.
 					{
 						...context,
 						schema: currentSchema,
@@ -54,21 +59,32 @@ export async function initializePersistence(
 		}
 	}
 
+	const namespace = await ctx.persistence.openNamespace(
+		context.namespace,
+		context,
+	);
+
 	context.log('info', 'Opening persistence metadata');
 	context.meta = new PersistenceMetadata(
-		await ctx.persistence.openMetadata(ctx),
+		await namespace.openMetadata(ctx),
 		ctx,
 	);
 
 	context.log('info', 'Opening persistence files');
 	context.files = new PersistenceFiles(
-		await ctx.persistence.openFiles(context),
+		await namespace.openFiles(context),
 		context,
 	);
 
-	context.log('info', 'Opening persistence queries');
-	context.queries = new PersistenceQueries(
-		await ctx.persistence.openQueries(context),
+	context.log('info', 'Migrating document database');
+	await migrate({
+		context,
+		version: ctx.schema.version,
+	});
+
+	context.log('info', 'Opening persistence documents');
+	context.documents = new PersistenceDocuments(
+		await namespace.openDocuments(context),
 		context,
 	);
 
@@ -140,20 +156,19 @@ export async function importPersistence(
 			};
 		}),
 	);
-	await importedContext.queries.saveEntities(toSave);
+	await importedContext.documents.saveEntities(toSave);
 	await importedContext.files.import(exportedData);
 
 	ctx.log('debug', 'Imported data into temporary namespace', importedNamespace);
 
 	// shut down the imported databases
-	await importedContext.queries.dispose();
+	await importedContext.documents.dispose();
 	await importedContext.meta.dispose();
 	await importedContext.files.dispose();
 
 	if (exportedSchema.version !== ctx.schema.version) {
 		// an upgrade of the imported data is needed ; it's an older version
 		// of the schema.
-		ctx.log('debug', 'Shut down imported databases');
 
 		// upgrade the imported data to the latest schema
 		const currentSchema = ctx.schema;
@@ -164,15 +179,23 @@ export async function importPersistence(
 
 		ctx.log('debug', 'Upgraded imported data to current schema');
 
-		await upgradedContext.queries.dispose();
+		await upgradedContext.documents.dispose();
 		await upgradedContext.meta.dispose();
 		await upgradedContext.files.dispose();
 
 		ctx.log('debug', 'Shut down upgraded databases');
 	}
 
+	// shut down the persistence layer
+	await ctx.documents.dispose();
+	await ctx.meta.dispose();
+	await ctx.files.dispose();
+
 	// copy the imported data into the current namespace
 	await ctx.persistence.copyNamespace(importedNamespace, ctx.namespace, ctx);
+
+	// restart the persistence layer
+	await initializePersistence(ctx);
 
 	// verify integrity -- this can only be done if imported data was same
 	// version as current schema, because migrations could add or remove

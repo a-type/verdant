@@ -12,6 +12,7 @@ import { startTestServer } from '../lib/testServer.js';
 import { IDBFactory } from 'fake-indexeddb';
 import { waitForCondition } from '../lib/waits.js';
 import { stableStringify } from '@verdant-web/common';
+import { getPersistence } from '../lib/persistence.js';
 
 const fuzzCollectionSchema = schema.collection({
 	name: 'fuzz',
@@ -74,6 +75,7 @@ async function createTestClient({
 			  }
 			: undefined,
 		indexedDb,
+		persistence: getPersistence(),
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;

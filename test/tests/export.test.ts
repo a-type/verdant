@@ -8,6 +8,7 @@ import {
 import { expect, it, vitest } from 'vitest';
 import { waitForFileLoaded, waitForQueryResult } from '../lib/waits.js';
 import { createTestFile } from '../lib/createTestFile.js';
+import { getPersistence } from '../lib/persistence.js';
 
 async function createTestClient({
 	schema,
@@ -47,6 +48,7 @@ async function createTestClient({
 			: undefined,
 		indexedDb,
 		oldSchemas,
+		persistence: getPersistence(),
 	});
 	const client = await desc.open();
 	return client;
@@ -76,6 +78,7 @@ it('can export data and import it even after a schema migration', async () => {
 		migrations,
 		library: 'test',
 		user: 'a',
+		// logId: 'A',
 	};
 
 	let client = await createTestClient({
@@ -162,7 +165,7 @@ it('can export data and import it even after a schema migration', async () => {
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
-		// logId: 'client2',
+		logId: 'client2',
 	});
 
 	// add more data which will be lost
@@ -186,16 +189,25 @@ it('can export data and import it even after a schema migration', async () => {
 	const itemsSubscriber = vitest.fn();
 	itemsQuery.subscribe(itemsSubscriber);
 
-	await waitForQueryResult(itemsQuery, (items) => {
-		return items?.length === 2;
-	});
+	await waitForQueryResult(
+		itemsQuery,
+		(items) => {
+			return items?.length === 2;
+		},
+		10000,
+		'list all items before import',
+	);
 
 	await client.import(exported);
 
-	await waitForQueryResult(itemsQuery, (items) => {
-		// console.log(items?.length);
-		return items?.length === 3;
-	});
+	await waitForQueryResult(
+		itemsQuery,
+		(items) => {
+			return items?.length === 3;
+		},
+		10000,
+		'list all items after import',
+	);
 
 	// lists should exist now (not throw)
 	await client.lists.findAll().resolved;

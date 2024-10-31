@@ -14,7 +14,7 @@ export class FileManager {
 		this.context = context;
 	}
 
-	add = async (file: FileData, options?: { downloadRemote: boolean }) => {
+	add = async (file: FileData) => {
 		// immediately cache the file
 		if (!this.cache.has(file.id)) {
 			const entityFile = new EntityFile(file.id, { ctx: this.context });
@@ -24,7 +24,7 @@ export class FileManager {
 			this.cache.get(file.id)![UPDATE](file);
 		}
 
-		await this.context.files.add(file, options);
+		await this.context.files.add(file);
 	};
 
 	/**
@@ -68,9 +68,7 @@ export class FileManager {
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
 					file[UPDATE](result.data);
-					await this.context.files.add(result.data, {
-						downloadRemote: file.downloadRemote,
-					});
+					await this.context.files.add(result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
 					file[MARK_FAILED]();

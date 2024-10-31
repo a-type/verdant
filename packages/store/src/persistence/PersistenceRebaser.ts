@@ -7,10 +7,12 @@ import {
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
 import { AbstractTransaction, PersistenceMetadataDb } from './interfaces.js';
+import type { PersistenceMetadata } from './PersistenceMetadata.js';
 
 export class PersistenceRebaser {
 	constructor(
 		private db: PersistenceMetadataDb,
+		private meta: PersistenceMetadata,
 		private ctx: Pick<
 			Context,
 			'closing' | 'log' | 'time' | 'internalEvents' | 'globalEvents' | 'config'
@@ -22,9 +24,10 @@ export class PersistenceRebaser {
 	 * keep storage clean for non-syncing clients by compressing history.
 	 */
 	tryAutonomousRebase = async () => {
-		const localReplicaInfo = await this.db.getLocalReplica();
+		const localReplicaInfo = await this.meta.getLocalReplica();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
 		// but if we have never synced... we can rebase everything!
+		this.ctx.log('debug', 'Running autonomous library rebase');
 		await this.runRebase(this.ctx.time.now);
 	};
 
@@ -37,45 +40,49 @@ export class PersistenceRebaser {
 	private runRebase = async (globalAckTimestamp: string) => {
 		if (this.ctx.closing) return;
 
-		// find all operations before the global ack
-		let lastTimestamp;
-		const toRebase = new Set<ObjectIdentifier>();
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-			mode: 'readwrite',
-		});
-		let operationCount = 0;
-		await this.db.iterateAllOperations(
-			(patch) => {
-				toRebase.add(patch.oid);
-				lastTimestamp = patch.timestamp;
-				operationCount++;
-			},
+		await this.db.transaction(
 			{
-				before: globalAckTimestamp,
-				transaction,
+				storeNames: ['baselines', 'operations'],
+				mode: 'readwrite',
+			},
+			async (transaction) => {
+				// find all operations before the global ack
+				const toRebase = new Set<ObjectIdentifier>();
+				let lastTimestamp;
+				let operationCount = 0;
+				await this.db.iterateAllOperations(
+					(patch) => {
+						toRebase.add(patch.oid);
+						lastTimestamp = patch.timestamp;
+						operationCount++;
+					},
+					{
+						before: globalAckTimestamp,
+						transaction,
+					},
+				);
+
+				if (!toRebase.size) {
+					return;
+				}
+
+				if (this.ctx.closing) {
+					return;
+				}
+
+				// rebase each affected document
+				let newBaselines = [];
+				for (const oid of toRebase) {
+					newBaselines.push(
+						await this.rebase(
+							oid,
+							lastTimestamp || globalAckTimestamp,
+							transaction,
+						),
+					);
+				}
 			},
 		);
-
-		if (!toRebase.size) {
-			return;
-		}
-
-		if (this.ctx.closing) {
-			return;
-		}
-
-		// rebase each affected document
-		let newBaselines = [];
-		for (const oid of toRebase) {
-			newBaselines.push(
-				await this.rebase(
-					oid,
-					lastTimestamp || globalAckTimestamp,
-					transaction,
-				),
-			);
-		}
 		this.ctx.globalEvents.emit('rebase');
 	};
 
@@ -92,20 +99,15 @@ export class PersistenceRebaser {
 			this.ctx.config.persistence?.rebaseTimeout ?? 10000,
 			timestamp,
 		);
+		this.ctx.log('debug', 'Scheduled rebase up to global ack', timestamp);
 	};
 	private rebaseTimeout: NodeJS.Timeout | null = null;
 
-	rebase = async (
+	private rebase = async (
 		oid: ObjectIdentifier,
 		upTo: string,
-		providedTx?: AbstractTransaction,
+		transaction: AbstractTransaction,
 	) => {
-		const transaction =
-			providedTx ||
-			this.db.transaction({
-				storeNames: ['operations', 'baselines'],
-				mode: 'readwrite',
-			});
 		const baseline = await this.db.getBaseline(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;

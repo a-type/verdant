@@ -96,9 +96,14 @@ it('can sync multiple clients even if they go offline', async () => {
 			},
 		});
 
-		await waitForQueryResult(matchingCategoryQuery, (val) => {
-			return !!val;
-		});
+		await waitForQueryResult(
+			matchingCategoryQuery,
+			(val) => {
+				return !!val;
+			},
+			3000,
+			`${client.namespace} category ${category}`,
+		);
 
 		const matchingCategory = await matchingCategoryQuery.resolved;
 		expect(matchingCategory).toBeTruthy();
@@ -223,7 +228,12 @@ it('can sync multiple clients even if they go offline', async () => {
 	const a_unknownItemQ = clientA.items.get(a_unknownItem.get('id'));
 	const b_unknownItemQ = clientB.items.get(a_unknownItem.get('id'));
 	const c_unknownItemQ = clientC.items.get(a_unknownItem.get('id'));
-	await waitForQueryResult(a_unknownItemQ);
+	await waitForQueryResult(
+		a_unknownItemQ,
+		(item) => !!item,
+		3000,
+		'a unknown item',
+	);
 	log('🔺--- 1 ---');
 	await waitForEntityCondition(
 		a_unknownItemQ.current!,
@@ -232,14 +242,24 @@ it('can sync multiple clients even if they go offline', async () => {
 		'a unknown item comment applied',
 	);
 	log('🔺--- 2 ---');
-	await waitForQueryResult(b_unknownItemQ);
+	await waitForQueryResult(
+		b_unknownItemQ,
+		(item) => !!item,
+		3000,
+		'b unknown item',
+	);
 	log('🔺--- 3 ---');
 	await waitForEntityCondition(
 		b_unknownItemQ.current!,
 		(item) => item?.get('comments').length === 2,
 	);
 	log('🔺--- 4 ---');
-	await waitForQueryResult(c_unknownItemQ);
+	await waitForQueryResult(
+		c_unknownItemQ,
+		(item) => !!item,
+		3000,
+		'c unknown item',
+	);
 	log('🔺--- 5 ---');
 	await waitForEntityCondition(
 		c_unknownItemQ.current!,

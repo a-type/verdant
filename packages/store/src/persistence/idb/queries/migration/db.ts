@@ -3,22 +3,9 @@ import {
 	storeRequestPromise,
 	openDatabase as baseOpenDatabase,
 	getDocumentDbName,
+	closeDatabase,
 } from '../../util.js';
-import { OpenDocumentDbContext } from './types.js';
-
-export async function getDatabaseVersion(
-	indexedDB: IDBFactory,
-	namespace: string,
-): Promise<number> {
-	const databaseName = getDocumentDbName(namespace);
-	const dbInfo = await indexedDB.databases();
-	const existingDb = dbInfo.find((info) => info.name === databaseName);
-	if (existingDb) {
-		return existingDb.version ?? 0;
-	}
-
-	return 0;
-}
+import { Context } from '../../../../internal.js';
 
 /**
  * Upgrades the database to the given version, using the given upgrader function.
@@ -34,22 +21,22 @@ export async function upgradeDatabase(
 	) => void,
 	log?: (...args: any[]) => void,
 ): Promise<IDBDatabase> {
+	log?.('debug', 'Upgrading database', namespace, 'to version', version);
 	function openAndUpgrade(
 		resolve: (db: IDBDatabase) => void,
 		reject: (err: Error) => void,
 	) {
-		const request = indexedDb.open(
-			[namespace, 'collections'].join('_'),
-			version,
-		);
+		const request = indexedDb.open(getDocumentDbName(namespace), version);
 		let wasUpgraded = false;
 		request.onupgradeneeded = (event) => {
 			const transaction = request.transaction!;
 			upgrader(transaction, request.result, event);
 			wasUpgraded = true;
 		};
-		request.onsuccess = (event) => {
+		request.onsuccess = async (event) => {
 			if (wasUpgraded) {
+				// close the database
+				await closeDatabase(request.result);
 				resolve(request.result);
 			} else {
 				reject(
@@ -63,39 +50,29 @@ export async function upgradeDatabase(
 			reject(request.error || new Error('Unknown error'));
 		};
 		request.onblocked = (event) => {
-			log?.('Database upgrade blocked, waiting...');
-			// setTimeout(() => {
-			// 	openAndUpgrade(resolve, reject);
-			// }, 200);
+			log?.('Database upgrade blocked!');
+			reject(
+				new Error(
+					'Database upgrade blocked. The app may be open in another tab?',
+				),
+			);
 		};
 	}
 	return new Promise<IDBDatabase>(openAndUpgrade);
-}
-
-export async function acquireLock(
-	namespace: string,
-	procedure: () => Promise<void>,
-) {
-	if (typeof navigator !== 'undefined' && navigator.locks) {
-		await navigator.locks.request(`verdant_migration_${namespace}`, procedure);
-	} else {
-		// TODO: is there a fallback?
-		await procedure();
-	}
 }
 
 export async function openDatabase({
 	indexedDB = globalIDB,
 	namespace,
 	version,
-	context,
+	log,
 }: {
 	indexedDB?: IDBFactory;
 	namespace: string;
 	version: number;
-	context: OpenDocumentDbContext;
+	log?: Context['log'];
 }): Promise<IDBDatabase> {
-	context.log('debug', 'Opening database', namespace, 'at version', version);
+	log?.('debug', 'Opening database', namespace, 'at version', version);
 	const db = await baseOpenDatabase(
 		getDocumentDbName(namespace),
 		version,
@@ -104,6 +81,10 @@ export async function openDatabase({
 
 	db.addEventListener('versionchange', (event) => {
 		db.close();
+	});
+
+	db.addEventListener('close', () => {
+		log?.('warn', 'Database closed', namespace);
 	});
 
 	return db;

@@ -236,7 +236,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		if (this.disposed) {
 			return {} as any;
 		}
-		const collections = await this.context.queries.stats();
+		const collections = await this.context.documents.stats();
 		const meta = await this.context.meta.stats();
 		const storage =
 			typeof navigator !== 'undefined' &&
@@ -283,7 +283,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// changes to storage, so don't close metadata db yet
 		await this._entities.destroy();
 
-		this.context.queries.dispose();
+		this.context.documents.dispose();
 		this.context.meta.dispose();
 
 		// the idea here is to flush the microtask queue -
@@ -397,7 +397,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	get __persistence() {
 		return {
 			meta: this.context.meta,
-			queries: this.context.queries,
+			queries: this.context.documents,
 			files: this.context.files,
 		};
 	}

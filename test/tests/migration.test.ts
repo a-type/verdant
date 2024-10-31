@@ -16,6 +16,7 @@ import {
 	waitForQueryResult,
 } from '../lib/waits.js';
 import { Operation } from '@verdant-web/common';
+import { getPersistence } from '../lib/persistence.js';
 
 async function createTestClient({
 	schema,
@@ -58,6 +59,7 @@ async function createTestClient({
 			: undefined,
 		indexedDb,
 		disableRebasing,
+		persistence: getPersistence(),
 	});
 	const client = await desc.open();
 	return client as ClientWithCollections;

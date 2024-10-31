@@ -6,21 +6,20 @@ import {
 	ObjectIdentifier,
 } from '@verdant-web/common';
 import { Context } from '../../../context/context.js';
-import {
-	AbstractTransaction,
-	CommonQueryOptions,
-	PersistenceQueryDb,
-	QueryMode,
-} from '../../interfaces.js';
+import { PersistenceDocumentDb } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import { getRange } from './ranges.js';
 import { closeDatabase, getSizeOfObjectStore, isAbortError } from '../util.js';
 
-export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
+export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 	private ctx;
-	constructor(db: IDBDatabase, context: Omit<Context, 'queries' | 'files'>) {
+	constructor(db: IDBDatabase, context: Omit<Context, 'documents' | 'files'>) {
 		super(db, { log: context.log });
 		this.ctx = context;
+		this.addDispose(() => {
+			this.ctx.log('info', 'Closing document database for', this.ctx.namespace);
+			return closeDatabase(this.db);
+		});
 	}
 
 	stats = async (): Promise<
@@ -35,17 +34,6 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 			}),
 		);
 		return collections;
-	};
-
-	transaction = (opts: {
-		mode?: QueryMode;
-		storeNames: string[];
-		abort?: AbortSignal;
-	}): AbstractTransaction => {
-		return this.createTransaction(opts.storeNames, {
-			mode: opts.mode,
-			abort: opts.abort,
-		});
 	};
 
 	findOneOid = async (opts: {
@@ -148,35 +136,14 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 
 	saveEntities = async (
 		entities: { oid: ObjectIdentifier; getSnapshot: () => any }[],
-		opts?: CommonQueryOptions & { abort?: AbortSignal },
+		optsAndInfo: { abort?: AbortSignal; collections: string[] },
 	): Promise<void> => {
-		if (entities.length === 0) return;
-
-		let collections = Array.from(
-			new Set(entities.map((e) => decomposeOid(e.oid).collection)),
-		);
-
-		const toRemove = collections.filter((c) => !this.ctx.schema.collections[c]);
-		if (toRemove.length > 0) {
-			this.ctx.log(
-				'warn',
-				`Ignoring entities from collections that no longer exist: ${toRemove.join(
-					', ',
-				)}`,
-			);
-		}
-		const withRemoved = new Set(collections);
-		toRemove.forEach((c) => withRemoved.delete(c));
-		collections = Array.from(withRemoved);
-
 		const options = {
-			transaction: this.createTransaction(collections, {
+			transaction: this.createTransaction(optsAndInfo.collections, {
 				mode: 'readwrite',
-				abort: opts?.abort,
+				abort: optsAndInfo.abort,
 			}),
 		};
-
-		// FIXME: not test is making it to this line
 
 		await Promise.all(
 			entities.map(async (e) => {
@@ -198,19 +165,11 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 			}),
 		);
 		options.transaction.commit();
-		this.ctx.entityEvents.emit('collectionsChanged', collections);
-		for (const entity of entities) {
-			this.ctx.entityEvents.emit('documentChanged', entity.oid);
-		}
 	};
 
-	reset = async (opts?: {
-		transaction?: AbstractTransaction;
-	}): Promise<void> => {
+	reset = async (): Promise<void> => {
 		const names = Object.keys(this.ctx.schema.collections);
-		const tx =
-			(opts?.transaction as IDBTransaction) ||
-			this.createTransaction(names, { mode: 'readwrite' });
+		const tx = this.createTransaction(names, { mode: 'readwrite' });
 		await Promise.all(
 			names.map((name) =>
 				this.run(name, (store) => store.clear(), { transaction: tx }),
@@ -218,10 +177,6 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 		);
 		this.ctx.entityEvents.emit('collectionsChanged', names);
 		this.ctx.log('info', '💨 Reset queryable storage');
-	};
-
-	dispose = () => {
-		return closeDatabase(this.db);
 	};
 
 	private saveDocument = async (
@@ -241,6 +196,7 @@ export class IdbQueryDb extends IdbService implements PersistenceQueryDb {
 			const schema = this.ctx.schema.collections[collection];
 			// no need to validate before storing; the entity's snapshot is already validated.
 			const indexes = getIndexValues(schema, doc);
+			indexes['@@@snapshot'] = JSON.stringify(doc);
 			await this.run(collection, (store) => store.put(indexes), {
 				mode: 'readwrite',
 				transaction,

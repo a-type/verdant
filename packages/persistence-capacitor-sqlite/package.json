@@ -1,0 +1,42 @@
+{
+	"name": "@verdant-web/persistence-expo-sqlite",
+	"version": "1.0.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/esm/index.d.ts"
+		}
+	},
+	"publishConfig": {
+		"exports": {
+			".": {
+				"import": "./dist/esm/index.js",
+				"types": "./dist/esm/index.d.ts"
+			}
+		},
+		"access": "public"
+	},
+	"files": [
+		"dist/",
+		"src/"
+	],
+	"scripts": {
+		"test": "vitest"
+	},
+	"dependencies": {
+		"@capacitor-community/sqlite": "^6.0.2",
+		"@capacitor/filesystem": "^6.0.1",
+		"@verdant-web/persistence-sqlite": "workspace:*",
+		"capacitor-sqlite-kysely": "^1.0.1",
+		"kysely": "^0.27.4"
+	},
+	"peerDependencies": {
+		"@verdant-web/store": "^4.0.0"
+	},
+	"devDependencies": {
+		"@verdant-web/store": "workspace:*",
+		"vitest": "2.1.3"
+	}
+}

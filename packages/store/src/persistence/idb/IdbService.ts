@@ -1,6 +1,5 @@
 import { Context } from '../../context/context.js';
 import {
-	copyDatabase,
 	createAbortableTransaction,
 	isAbortError,
 	storeRequestPromise,
@@ -33,21 +32,40 @@ export class IdbService extends Disposable {
 			abort?: AbortSignal;
 		},
 	) => {
-		const tx = createAbortableTransaction(
-			this.db,
-			storeNames,
-			opts?.mode || 'readonly',
-			opts?.abort,
-			this.log,
-		);
-		this.globalAbortController.signal.addEventListener('abort', tx.abort);
-		tx.addEventListener('complete', () => {
-			this.globalAbortController.signal.removeEventListener('abort', tx.abort);
-		});
-		tx.addEventListener('error', () => {
-			this.globalAbortController.signal.removeEventListener('abort', tx.abort);
-		});
-		return tx;
+		try {
+			if (this.globalAbortController.signal.aborted) {
+				throw new Error('Global abort signal is already aborted');
+			}
+			const tx = createAbortableTransaction(
+				this.db,
+				storeNames,
+				opts?.mode || 'readonly',
+				opts?.abort,
+				this.log,
+			);
+			this.globalAbortController.signal.addEventListener('abort', tx.abort);
+			tx.addEventListener('complete', () => {
+				this.globalAbortController.signal.removeEventListener(
+					'abort',
+					tx.abort,
+				);
+			});
+			tx.addEventListener('error', () => {
+				this.globalAbortController.signal.removeEventListener(
+					'abort',
+					tx.abort,
+				);
+			});
+			return tx;
+		} catch (err) {
+			this.log?.(
+				'error',
+				'Failed to create abortable transaction for store names',
+				storeNames,
+				err,
+			);
+			throw err;
+		}
 	};
 
 	run = async <T = any>(
@@ -163,18 +181,18 @@ export class IdbService extends Disposable {
 		});
 	};
 
-	cloneTo = async (otherDb: IDBDatabase) => {
-		await copyDatabase(this.db, otherDb);
-	};
-
-	private onVersionChange = () => {
+	private onVersionChange = (ev: IDBVersionChangeEvent) => {
 		this.log?.(
 			'warn',
 			`Another tab has requested a version change for ${this.db.name}`,
 		);
 		this.db.close();
 		if (typeof window !== 'undefined') {
-			window.location.reload();
+			try {
+				window.location.reload();
+			} catch (err) {
+				this.log?.('error', 'Failed to reload the page', err);
+			}
 		}
 	};
 }

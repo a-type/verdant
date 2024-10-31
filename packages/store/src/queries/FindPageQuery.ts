@@ -48,7 +48,7 @@ export class FindPageQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result, hasNextPage } = await this.context.queries.findAllOids({
+		const { result, hasNextPage } = await this.context.documents.findAllOids({
 			collection: this.collection,
 			index: this.index,
 			limit: this._pageSize,

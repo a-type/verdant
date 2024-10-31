@@ -84,9 +84,15 @@ export async function waitForQueryResult(
 			}
 			console.error(
 				'Timed out query state',
+				query.key,
+				debug,
 				query.status,
 				'raw value',
-				query.__rawValue,
+				Array.isArray(query.__rawValue)
+					? `${query.__rawValue.length} items`
+					: !!query.__rawValue
+					? 'exists'
+					: 'null',
 			);
 			reject(new Error('Timed out waiting for query ' + (debug || query.key)));
 		}, timeoutMs);
