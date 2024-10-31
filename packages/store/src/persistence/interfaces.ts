@@ -121,10 +121,9 @@ export interface PersistenceMetadataDb<
 		},
 	): Promise<void>;
 	/** Iterates over operations for an entity for processing and deletes them as it goes. */
-	consumeEntityOperations(
+	deleteEntityOperations(
 		oid: string,
-		iterator: Iterator<ClientOperation>,
-		opts?: CommonQueryOptions<Tx> & { to?: string | null },
+		opts: CommonQueryOptions<Tx> & { to: string | null },
 	): Promise<void>;
 	iterateAllOperations(
 		iterator: Iterator<ClientOperation>,

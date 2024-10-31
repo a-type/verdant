@@ -15,7 +15,13 @@ export class PersistenceRebaser {
 		private meta: PersistenceMetadata,
 		private ctx: Pick<
 			Context,
-			'closing' | 'log' | 'time' | 'internalEvents' | 'globalEvents' | 'config'
+			| 'closing'
+			| 'log'
+			| 'time'
+			| 'internalEvents'
+			| 'globalEvents'
+			| 'config'
+			| 'closeLock'
 		>,
 	) {}
 
@@ -26,6 +32,7 @@ export class PersistenceRebaser {
 	tryAutonomousRebase = async () => {
 		const localReplicaInfo = await this.meta.getLocalReplica();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
+		if (this.ctx.closing) return;
 		// but if we have never synced... we can rebase everything!
 		this.ctx.log('debug', 'Running autonomous library rebase');
 		await this.runRebase(this.ctx.time.now);
@@ -108,12 +115,17 @@ export class PersistenceRebaser {
 		upTo: string,
 		transaction: AbstractTransaction,
 	) => {
+		if (this.ctx.closing) return;
+
 		const baseline = await this.db.getBaseline(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
 		let operationsApplied = 0;
 		let authz = baseline?.authz;
 		const deletedRefs: Ref[] = [];
-		await this.db.consumeEntityOperations(
+
+		if (this.ctx.closing) return;
+
+		await this.db.iterateEntityOperations(
 			oid,
 			(patch) => {
 				// FIXME: this seems like the wrong place to do this
@@ -141,32 +153,44 @@ export class PersistenceRebaser {
 			timestamp: upTo,
 			authz,
 		};
-		if (newBaseline.snapshot) {
-			await this.db.setBaselines([newBaseline], { transaction });
-		} else {
-			await this.db.deleteBaseline(oid, { transaction });
-		}
 
-		this.ctx.log(
-			'debug',
-			'rebased',
-			oid,
-			'up to',
-			upTo,
-			':',
-			current,
-			'and deleted',
-			operationsApplied,
-			'operations',
-		);
+		// still time to cancel now...
+		if (this.ctx.closing) return;
 
-		// cleanup deleted refs
-		if (deletedRefs.length) {
-			const fileRefs = deletedRefs.filter(isFileRef);
-			if (fileRefs.length) {
-				this.ctx.internalEvents.emit('filesDeleted', fileRefs);
+		// FROM HERE, WE ARE COMMITTED TO THE REBASE -- otherwise data will be corrupted.
+		this.ctx.closeLock = (async () => {
+			if (newBaseline.snapshot) {
+				await this.db.setBaselines([newBaseline], { transaction });
+			} else {
+				await this.db.deleteBaseline(oid, { transaction });
 			}
-		}
+
+			await this.db.deleteEntityOperations(oid, {
+				to: upTo,
+				transaction,
+			});
+
+			this.ctx.log(
+				'debug',
+				'rebased',
+				oid,
+				'up to',
+				upTo,
+				':',
+				current,
+				'and deleted',
+				operationsApplied,
+				'operations',
+			);
+
+			// cleanup deleted refs
+			if (deletedRefs.length) {
+				const fileRefs = deletedRefs.filter(isFileRef);
+				if (fileRefs.length) {
+					this.ctx.internalEvents.emit('filesDeleted', fileRefs);
+				}
+			}
+		})();
 
 		return newBaseline;
 	};

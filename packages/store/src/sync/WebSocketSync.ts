@@ -192,7 +192,10 @@ export class WebSocketSync
 	private initializeSocket = async () => {
 		const endpoint = await this.endpointProvider.getEndpoints();
 		// abusing protocols to pass the auth token
-		this.socket = new WebSocket(endpoint.websocket, ['Bearer', endpoint.token]);
+		this.socket = new this.ctx.environment.WebSocket(endpoint.websocket, [
+			'Bearer',
+			endpoint.token,
+		]);
 		this.socket.addEventListener('message', this.onMessage);
 		this.socket.addEventListener('open', this.onOpen);
 		this.socket.addEventListener('error', this.onError);
@@ -228,7 +231,7 @@ export class WebSocketSync
 		}
 
 		if (this.canSkipSyncWait(message)) {
-			if (this.socket?.readyState === WebSocket.OPEN) {
+			if (this.socket?.readyState === WEBSOCKET_OPEN) {
 				this.ctx.log(
 					'debug',
 					'Sending message',
@@ -244,7 +247,7 @@ export class WebSocketSync
 				this.connectQueue.push(message);
 			}
 		} else if (this.synced) {
-			if (this.socket?.readyState === WebSocket.OPEN) {
+			if (this.socket?.readyState === WEBSOCKET_OPEN) {
 				this.ctx.log(
 					'debug',
 					'Sending message',
@@ -289,10 +292,12 @@ export class WebSocketSync
 	}
 
 	get isConnected() {
-		return this.socket?.readyState === WebSocket.OPEN;
+		return this.socket?.readyState === WEBSOCKET_OPEN;
 	}
 
 	get status() {
 		return this._status;
 	}
 }
+
+const WEBSOCKET_OPEN = 1;

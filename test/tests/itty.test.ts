@@ -30,11 +30,9 @@ async function createIttyServer() {
 		secret: 'notsecret',
 	});
 
-	const dbFileName = `test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`;
-
 	const server = new Server({
 		storage: sqlStorage({
-			databaseFile: dbFileName,
+			databaseFile: ':memory:',
 		}),
 		tokenSecret: 'notsecret',
 		profiles: {

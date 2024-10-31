@@ -5,12 +5,15 @@ import { waitForCondition, waitForOnline } from '../lib/waits.js';
 const ctx = createTestContext({
 	// test will observe total number of operations synced
 	disableRebasing: true,
+	// testLog: true,
+	// serverLog: true,
 });
 
 it('overwrites superseded operations to the same key before syncing', async () => {
 	const clientA = await ctx.createTestClient({
 		library: 'superseding',
 		user: 'A',
+		// logId: 'A',
 	});
 
 	const item = await clientA.items.put({
@@ -35,6 +38,12 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		})
 		.commit();
 
+	// wait for the sync to complete
+	await waitForCondition(async () => {
+		return !!(await ctx.server.server.getLibraryInfo('superseding'));
+	});
+
+	ctx.log('checking server library');
 	let stats = await ctx.server.server.getLibraryInfo('superseding');
 	expect(stats?.operationsCount).toBe(1);
 
@@ -50,6 +59,11 @@ it('overwrites superseded operations to the same key before syncing', async () =
 			item.delete('categoryId');
 		})
 		.commit();
+
+	await waitForCondition(async () => {
+		stats = await ctx.server.server.getLibraryInfo('superseding');
+		return stats?.operationsCount === 3;
+	});
 
 	stats = await ctx.server.server.getLibraryInfo('superseding');
 	// +1 for write of categoryId, +1 for write of purchased

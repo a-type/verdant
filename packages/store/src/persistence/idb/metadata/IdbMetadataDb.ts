@@ -246,10 +246,9 @@ export class IdbMetadataDb
 		);
 	};
 
-	consumeEntityOperations = (
+	deleteEntityOperations = (
 		oid: string,
-		iterator: Iterator<ClientOperation>,
-		opts: CommonQueryOptions & { to?: string | null } = writeOpts,
+		opts: CommonQueryOptions & { to: string | null },
 	): Promise<void> => {
 		return this.iterate<StoredClientOperation>(
 			'operations',
@@ -263,7 +262,6 @@ export class IdbMetadataDb
 				return store.openCursor(range);
 			},
 			(op, store) => {
-				iterator(op);
 				store.delete(op.oid_timestamp);
 			},
 			opts,

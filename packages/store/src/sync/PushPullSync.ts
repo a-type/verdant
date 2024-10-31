@@ -20,7 +20,9 @@ export class PushPullSync
 	readonly presence: PresenceManager;
 	private endpointProvider;
 	private heartbeat;
-	private fetch;
+	private get fetch() {
+		return this.ctx.environment.fetch;
+	}
 
 	readonly mode = 'pull';
 	private ctx;
@@ -33,20 +35,17 @@ export class PushPullSync
 		endpointProvider,
 		presence,
 		interval = 15 * 1000,
-		fetch = window.fetch.bind(window),
 		ctx,
 	}: {
 		endpointProvider: ServerSyncEndpointProvider;
 		presence: PresenceManager;
 		interval?: number;
-		fetch?: typeof window.fetch;
 		ctx: Context;
 	}) {
 		super();
 		this.ctx = ctx;
 		this.presence = presence;
 		this.endpointProvider = endpointProvider;
-		this.fetch = fetch;
 
 		this.heartbeat = new Heartbeat({
 			interval,

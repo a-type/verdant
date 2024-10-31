@@ -1,10 +1,9 @@
-import { ReplicaType, Server } from '@verdant-web/server';
+import { Server } from '@verdant-web/server';
 import {
 	ClientWithCollections,
 	createMigration,
 	Entity,
 	schema,
-	StorageDescriptor,
 } from '@verdant-web/store';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
@@ -12,7 +11,7 @@ import { startTestServer } from '../lib/testServer.js';
 import { IDBFactory } from 'fake-indexeddb';
 import { waitForCondition } from '../lib/waits.js';
 import { stableStringify } from '@verdant-web/common';
-import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
 
 const fuzzCollectionSchema = schema.collection({
 	name: 'fuzz',
@@ -30,22 +29,19 @@ const fuzzSchema = schema({
 	},
 });
 
-async function createTestClient({
+async function createClient({
 	user,
 	logId,
 	indexedDb = new IDBFactory(),
 	server,
-	logFilter = () => true,
 }: {
 	user: string;
 	logId?: string;
 	indexedDb?: IDBFactory;
 	server?: { port: number };
-	logFilter?: (log: any) => boolean;
 }) {
 	const library = 'fuzz';
-	const type = ReplicaType.Realtime;
-	const desc = new StorageDescriptor({
+	const client = await createTestClient({
 		// disableRebasing: true,
 		schema: fuzzSchema,
 		oldSchemas: [fuzzSchema],
@@ -56,29 +52,13 @@ async function createTestClient({
 				await mutations.fuzz.put({ id: 'default', data: {} });
 			}),
 		],
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-					automaticTransportSelection: false,
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => {
-					const filtered = args.filter(logFilter);
-					if (filtered.length > 0) {
-						console.log(`[${logId}]`, ...filtered);
-					}
-			  }
-			: undefined,
+		library,
+		user,
+		server,
+		logId,
 		indexedDb,
-		persistence: getPersistence(),
 	});
-	const client = await desc.open();
-	return client as ClientWithCollections;
+	return client as any as ClientWithCollections;
 }
 
 function randomString() {
@@ -272,14 +252,14 @@ it(
 	'withstands numerous arbitrary fuzz changes to data from clients offline and online and arrives at consistency',
 	async () => {
 		const client1IndexedDB = new IDBFactory();
-		const client1 = await createTestClient({
+		const client1 = await createClient({
 			user: 'a',
 			server,
 			indexedDb: client1IndexedDB,
 			// logId: 'a',
 		});
 		const client2IndexedDB = new IDBFactory();
-		const client2 = await createTestClient({
+		const client2 = await createClient({
 			user: 'b',
 			server,
 			indexedDb: client2IndexedDB,

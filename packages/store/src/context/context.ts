@@ -87,12 +87,20 @@ export interface Context {
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
 	closing: boolean;
+	/** If this is present, any attempt to close the client should await it first. */
+	closeLock?: Promise<void>;
 	patchCreator: PatchCreator;
 
 	config: {
 		files?: FileConfig;
 		sync?: SyncConfig;
 		persistence?: PersistenceConfig;
+	};
+
+	environment: {
+		WebSocket: typeof WebSocket;
+		fetch: typeof fetch;
+		indexedDB: typeof indexedDB;
 	};
 
 	persistence: PersistenceImplementation;

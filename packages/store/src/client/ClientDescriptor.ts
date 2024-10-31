@@ -25,8 +25,6 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	migrations: Migration<any>[];
 	/** Provide a sync config to turn on synchronization with a server */
 	sync?: ServerSyncOptions<Profile, Presence>;
-	/** Optionally override the IndexedDB implementation */
-	indexedDb?: IDBFactory;
 	/**
 	 * Namespaces are used to separate data from different clients in IndexedDB.
 	 */
@@ -61,6 +59,13 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * Override the default IndexedDB persistence implementation.
 	 */
 	persistence?: PersistenceImplementation;
+
+	/**
+	 * Specify the environment dependencies needed for the client.
+	 * Normally these are provided by the browser, but in other
+	 * runtimes you may need to provide your own.
+	 */
+	environment?: InitialContext['environment'];
 
 	/**
 	 * Enables experimental WeakRef usage to cull documents
@@ -108,9 +113,9 @@ export class ClientDescriptor<
 	private initialize = async (init: ClientDescriptorOptions) => {
 		// if server-side and no alternative IndexedDB implementation was provided,
 		// we can't initialize the storage
-		if (typeof window === 'undefined' && !init.indexedDb) {
+		if (typeof window === 'undefined' && !init.environment) {
 			throw new Error(
-				'A Verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
+				'A Verdant client was initialized in an environment without a global Window or `environment` configuration. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of the environment to the ClientDescriptor options.',
 			);
 		}
 
@@ -123,6 +128,7 @@ export class ClientDescriptor<
 				new HybridLogicalClockTimestampProvider(),
 				init.schema.version,
 			);
+			const environment = init.environment || defaultBrowserEnvironment;
 			let ctx: InitialContext = {
 				closing: false,
 				entityEvents: new EventSubscriber(),
@@ -149,7 +155,9 @@ export class ClientDescriptor<
 						rebaseTimeout: init.rebaseTimeout,
 					},
 				},
-				persistence: init.persistence || new IdbPersistence(init.indexedDb),
+				persistence:
+					init.persistence || new IdbPersistence(environment.indexedDB),
+				environment,
 			};
 			ctx.log('info', 'Initializing client', {
 				namespace: ctx.namespace,
@@ -203,3 +211,9 @@ export class ClientDescriptor<
 		await deleteAllDatabases(this.namespace);
 	};
 }
+
+const defaultBrowserEnvironment = {
+	WebSocket,
+	fetch: typeof window !== 'undefined' ? window.fetch.bind(window) : fetch!,
+	indexedDB,
+};

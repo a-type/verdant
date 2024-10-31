@@ -1,22 +1,15 @@
-import { ReplicaType } from '@verdant-web/server';
-import {
-	createMigration,
-	Migration,
-	schema,
-	StorageDescriptor,
-} from '@verdant-web/store';
+import { createMigration, Migration, schema } from '@verdant-web/store';
 import { expect, it, vitest } from 'vitest';
 import { waitForFileLoaded, waitForQueryResult } from '../lib/waits.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
 
-async function createTestClient({
+async function createClient({
 	schema,
 	migrations,
 	server,
 	library,
 	user,
-	type = ReplicaType.Realtime,
 	logId,
 	indexedDb = new IDBFactory(),
 	oldSchemas,
@@ -26,31 +19,20 @@ async function createTestClient({
 	server?: { port: number };
 	library: string;
 	user: string;
-	type?: ReplicaType;
 	logId?: string;
 	indexedDb?: IDBFactory;
 	oldSchemas: any[];
 }): Promise<any> {
-	const desc = new StorageDescriptor({
+	const client = await createTestClient({
 		schema,
 		migrations,
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
-			: undefined,
-		indexedDb,
+		library,
+		user,
+		server,
+		logId,
 		oldSchemas,
-		persistence: getPersistence(),
+		indexedDb,
 	});
-	const client = await desc.open();
 	return client;
 }
 
@@ -81,7 +63,7 @@ it('can export data and import it even after a schema migration', async () => {
 		// logId: 'A',
 	};
 
-	let client = await createTestClient({
+	let client = await createClient({
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
@@ -161,7 +143,7 @@ it('can export data and import it even after a schema migration', async () => {
 
 	migrations.push(createMigration(v1Schema, v2Schema));
 
-	client = await createTestClient({
+	client = await createClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,

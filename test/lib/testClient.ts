@@ -8,6 +8,7 @@ import {
 import { Operation, StorageSchema } from '@verdant-web/common';
 import { afterAll, expect } from 'vitest';
 import { getPersistence } from './persistence.js';
+import { WebSocket } from 'ws';
 
 const cleanupClients: Client<any, any>[] = [];
 
@@ -27,6 +28,7 @@ export async function createTestClient({
 	log,
 	onOperation,
 	oldSchemas,
+	disableRebasing,
 }: {
 	server?: { port: number };
 	library: string;
@@ -43,11 +45,11 @@ export async function createTestClient({
 	autoTransport?: boolean;
 	onOperation?: (operation: Operation) => void;
 	oldSchemas?: StorageSchema[];
+	disableRebasing?: boolean;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
 		namespace: `${library}_${user}`,
-		indexedDb,
 		persistence: getPersistence(),
 		sync: server
 			? {
@@ -75,7 +77,14 @@ export async function createTestClient({
 		files,
 		schema,
 		rebaseTimeout: 0,
+		disableRebasing,
 		EXPERIMENTAL_weakRefs: true,
+		environment: {
+			fetch,
+			WebSocket: WebSocket as any,
+			indexedDB: indexedDb,
+		},
+		oldSchemas,
 	});
 	const client = await desc.open();
 	if (onOperation) {

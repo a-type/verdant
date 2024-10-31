@@ -215,7 +215,6 @@ export class ServerSync<Presence = any, Profile = any>
 		{
 			authEndpoint,
 			fetchAuth,
-			fetch,
 			initialPresence,
 			automaticTransportSelection = true,
 			autoStart,
@@ -249,11 +248,13 @@ export class ServerSync<Presence = any, Profile = any>
 			updateBatchTimeout: presenceUpdateBatchTimeout,
 			ctx,
 		});
-		this.endpointProvider = new ServerSyncEndpointProvider({
-			authEndpoint,
-			fetchAuth,
-			fetch,
-		});
+		this.endpointProvider = new ServerSyncEndpointProvider(
+			{
+				authEndpoint,
+				fetchAuth,
+			},
+			ctx,
+		);
 
 		this.webSocketSync = new WebSocketSync({
 			endpointProvider: this.endpointProvider,
@@ -264,7 +265,6 @@ export class ServerSync<Presence = any, Profile = any>
 			endpointProvider: this.endpointProvider,
 			presence: this.presence,
 			interval: pullInterval,
-			fetch,
 			ctx,
 		});
 		this.fileSync = new FileSync({

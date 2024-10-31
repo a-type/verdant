@@ -1,26 +1,16 @@
-import {
-	createMigration,
-	Migration,
-	ReplicaType,
-	schema,
-} from '@verdant-web/common';
-import {
-	authorization,
-	ClientWithCollections,
-	StorageDescriptor,
-} from '@verdant-web/store';
+import { createMigration, Migration, schema } from '@verdant-web/common';
+import { authorization, ClientWithCollections } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
 import { waitForQueryResult } from '../lib/waits.js';
-import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
 
-async function createTestClient({
+async function createClient({
 	schema,
 	migrations,
 	server,
 	library,
 	user,
-	type = ReplicaType.Realtime,
 	logId,
 	disableRebasing,
 	indexedDb = new IDBFactory(),
@@ -31,34 +21,23 @@ async function createTestClient({
 	server?: { port: number };
 	library: string;
 	user: string;
-	type?: ReplicaType;
 	logId?: string;
 	disableRebasing?: boolean;
 	indexedDb?: IDBFactory;
 	oldSchemas: any[];
 }): Promise<ClientWithCollections> {
-	const desc = new StorageDescriptor({
+	const client = await createTestClient({
 		schema,
 		migrations,
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
-			: undefined,
-		indexedDb,
+		library,
+		user,
+		server,
+		logId,
 		disableRebasing,
 		oldSchemas,
-		persistence: getPersistence(),
+		indexedDb,
 	});
-	const client = await desc.open();
-	return client as ClientWithCollections;
+	return client as any as ClientWithCollections;
 }
 
 it('does not expose private documents when migrating', async () => {
@@ -96,9 +75,10 @@ it('does not expose private documents when migrating', async () => {
 		migrations,
 		library: 'test',
 		user: 'a',
+		indexedDb: new IDBFactory(),
 	};
 
-	let client = await createTestClient({
+	let client = await createClient({
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
@@ -143,7 +123,7 @@ it('does not expose private documents when migrating', async () => {
 
 	migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
 
-	client = await createTestClient({
+	client = await createClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		server,
@@ -163,7 +143,7 @@ it('does not expose private documents when migrating', async () => {
 	// private doc
 	await client.sync.start();
 
-	const client2 = await createTestClient({
+	const client2 = await createClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		server,

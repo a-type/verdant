@@ -276,6 +276,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// NOTE: this happens after flushing or else flushed data
 		// won't be written to storage or synced.
 		this.context.closing = true;
+		if (this.context.closeLock) {
+			await this.context.closeLock;
+		}
 		this.context.files.dispose();
 		this.sync.stop();
 		this.sync.destroy();
@@ -309,8 +312,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	): Promise<ExportedData> => {
 		this.context.log('info', 'Exporting data...');
 		const metaExport = await this.context.meta.export();
-		const { fileData, files } =
-			await this.context.files.export(downloadRemoteFiles);
+		const { fileData, files } = await this.context.files.export(
+			downloadRemoteFiles,
+		);
 		return {
 			data: metaExport,
 			fileData,

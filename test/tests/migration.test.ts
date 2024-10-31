@@ -1,12 +1,10 @@
 import { it, expect } from 'vitest';
 import {
 	schema,
-	StorageDescriptor,
 	Migration,
 	ClientWithCollections,
 	createMigration,
 } from '@verdant-web/store';
-import { ReplicaType } from '@verdant-web/server';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import { startTestServer } from '../lib/testServer.js';
@@ -16,19 +14,18 @@ import {
 	waitForQueryResult,
 } from '../lib/waits.js';
 import { Operation } from '@verdant-web/common';
-import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
 
-async function createTestClient({
+async function createClient({
 	schema,
 	oldSchemas,
 	migrations,
 	server,
 	library,
 	user,
-	type = ReplicaType.Realtime,
 	logId,
 	disableRebasing,
-	indexedDb = new IDBFactory(),
+	indexedDb,
 }: {
 	schema: any;
 	oldSchemas: any[];
@@ -36,33 +33,22 @@ async function createTestClient({
 	server?: { port: number };
 	library: string;
 	user: string;
-	type?: ReplicaType;
 	logId?: string;
 	disableRebasing?: boolean;
 	indexedDb?: IDBFactory;
 }): Promise<ClientWithCollections> {
-	const desc = new StorageDescriptor({
+	const client = await createTestClient({
 		schema,
 		oldSchemas,
 		migrations,
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
-			: undefined,
+		library,
+		user,
+		server,
+		logId,
 		indexedDb,
 		disableRebasing,
-		persistence: getPersistence(),
 	});
-	const client = await desc.open();
-	return client as ClientWithCollections;
+	return client as any as ClientWithCollections;
 }
 
 function log(...args: any[]) {
@@ -96,13 +82,13 @@ it(
 
 		const clientInit = {
 			migrations,
-			library: 'test',
+			library: 'migration-offline',
 			user: 'a',
 			indexedDb,
 		};
 
 		// @ts-ignore
-		let client = await createTestClient({
+		let client = await createClient({
 			schema: v1Schema,
 			...clientInit,
 			// logId: 'client1',
@@ -174,7 +160,7 @@ it(
 		// be added?
 		migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
 
-		client = await createTestClient({
+		client = await createClient({
 			schema: v2Schema,
 			oldSchemas: [v1Schema, v2Schema],
 			...clientInit,
@@ -323,7 +309,7 @@ it(
 			}),
 		);
 
-		client = await createTestClient({
+		client = await createClient({
 			schema: v3Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema],
 			...clientInit,
@@ -448,7 +434,7 @@ it(
 			),
 		);
 
-		client = await createTestClient({
+		client = await createClient({
 			schema: v4Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 			// disable rebasing so we get predictable metadata
@@ -567,7 +553,7 @@ it(
 
 		migrations.push(createMigration(v4Schema, v5Schema));
 
-		client = await createTestClient({
+		client = await createClient({
 			schema: v5Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema, v5Schema],
 			...clientInit,
@@ -661,13 +647,13 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	const clientInit = {
 		migrations,
-		library: 'test',
+		library: 'migration-online',
 		user: 'a',
 		server,
 	};
 
 	// @ts-ignore
-	let clientA = await createTestClient({
+	let clientA = await createClient({
 		schema: v1Schema,
 		...clientInit,
 		indexedDb: indexedDbA,
@@ -695,7 +681,7 @@ it('migrates in an online world where old operations still come in', async () =>
 	await clientA.close();
 	await new Promise<void>((resolve) => resolve());
 
-	let clientB = await createTestClient({
+	let clientB = await createClient({
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
@@ -770,7 +756,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		createMigration(v1Schema, v2Schema, async ({ migrate }) => {}),
 	);
 
-	clientA = await createTestClient({
+	clientA = await createClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
@@ -876,15 +862,15 @@ it('supports skip migrations in real life', async () => {
 
 	const clientInit = {
 		migrations,
-		library: 'test',
+		library: 'migration-skip',
 		user: 'a',
+		indexedDb: new IDBFactory(),
 	};
 
-	// @ts-ignore
-	let client = await createTestClient({
+	let client = await createClient({
 		schema: v1Schema,
 		...clientInit,
-		// logId: 'client1',
+		oldSchemas: [v1Schema],
 	});
 
 	log('📈 Version 1 client created');
@@ -1050,7 +1036,7 @@ it('supports skip migrations in real life', async () => {
 		}),
 	);
 
-	client = await createTestClient({
+	client = await createClient({
 		schema: v4Schema,
 		oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 		...clientInit,
@@ -1062,7 +1048,35 @@ it('supports skip migrations in real life', async () => {
 	expect(defaultList.getSnapshot()).toMatchInlineSnapshot(`
 		{
 		  "id": "uncategorized",
-		  "items": [],
+		  "items": [
+		    {
+		      "contents": "hello",
+		      "id": "1",
+		      "listId": null,
+		      "tags": [],
+		    },
+		    {
+		      "contents": "world",
+		      "id": "2",
+		      "listId": null,
+		      "tags": [],
+		    },
+		    {
+		      "contents": "empty",
+		      "id": "3",
+		      "listId": null,
+		      "tags": [
+		        {
+		          "color": "red",
+		          "name": "a",
+		        },
+		        {
+		          "color": "red",
+		          "name": "b",
+		        },
+		      ],
+		    },
+		  ],
 		  "name": "Uncategorized",
 		}
 	`);

@@ -42,27 +42,32 @@ export class SqlitePersistenceMetadataDb
 	getLocalReplica = async (
 		opts?: CommonQueryOptions<Transaction>,
 	): Promise<LocalReplicaInfo | undefined> => {
-		return (opts?.transaction ?? this.db)
+		// console.log('getLocalReplica');
+		const query = this.db
 			.selectFrom('__verdant__replicaInfo')
 			.select(['id', 'userId', 'ackedLogicalTime', 'lastSyncedLogicalTime'])
 			.where('unused_pk', '=', 'local_replica')
-			.limit(1)
-			.executeTakeFirst();
+			.limit(1);
+		// console.log('query', query.compile().sql);
+		const result = await query.executeTakeFirst();
+		// console.log('result', result);
+		return result;
 	};
 	updateLocalReplica = async (
 		data: LocalReplicaInfo,
 		opts?: CommonQueryOptions<Transaction>,
 	): Promise<void> => {
-		await (opts?.transaction ?? this.db)
+		// console.log('updateLocalReplica', data);
+		await this.db
 			.insertInto('__verdant__replicaInfo')
 			.values({
 				unused_pk: 'local_replica',
 				...data,
 			})
 			.onConflict((c) => c.column('unused_pk').doUpdateSet(data))
-			.returningAll()
 			// no need for where; there is only one entry.
 			.executeTakeFirst();
+		// console.log('updateLocalReplica complete');
 	};
 
 	/**
@@ -230,29 +235,15 @@ export class SqlitePersistenceMetadataDb
 		const operations = await query.execute();
 		operations.forEach((o) => iterator(this.hydrateOperation(o)));
 	};
-	consumeEntityOperations = async (
+	deleteEntityOperations = async (
 		oid: string,
-		iterator: Iterator<ClientOperation>,
-		opts?: CommonQueryOptions<Transaction> & { to?: string | null },
+		opts: CommonQueryOptions<Transaction> & { to: string | null },
 	): Promise<void> => {
-		const { to } = opts ?? {};
-		let query = (opts?.transaction ?? this.db)
-			.selectFrom('__verdant__operations')
-			.select(operationColumns)
-			.where('oid', '=', oid);
-		if (to) {
-			query = query.where('timestamp', '<=', to);
-		}
-		const operations = await query.execute();
-		operations.forEach((o) => iterator(this.hydrateOperation(o)));
-		// delete only the operations that were consumed
+		const { to } = opts;
 		await (opts?.transaction ?? this.db)
 			.deleteFrom('__verdant__operations')
-			.where(
-				'timestamp',
-				'in',
-				operations.map((o) => o.timestamp),
-			)
+			.where('oid', '=', oid)
+			.where('timestamp', '<=', to)
 			.execute();
 	};
 	iterateAllOperations = async (

@@ -1,5 +1,6 @@
 import { assert, ReplicaType } from '@verdant-web/common';
 import { default as jwtDecode } from 'jwt-decode';
+import { Context } from '../internal.js';
 
 export interface ServerSyncEndpointProviderConfig {
 	/**
@@ -14,12 +15,6 @@ export interface ServerSyncEndpointProviderConfig {
 	fetchAuth?: () => Promise<{
 		accessToken: string;
 	}>;
-	/**
-	 * A spec-compliant fetch implementation. If not provided,
-	 * the global fetch will be used. authEndpoint will
-	 * be used to fetch the token.
-	 */
-	fetch?: typeof fetch;
 }
 
 export interface SyncTokenInfo {
@@ -44,7 +39,10 @@ export class ServerSyncEndpointProvider {
 		return this.tokenInfo?.type ?? ReplicaType.Realtime;
 	}
 
-	constructor(private config: ServerSyncEndpointProviderConfig) {
+	constructor(
+		private config: ServerSyncEndpointProviderConfig,
+		private ctx: Context,
+	) {
 		if (!config.authEndpoint && !config.fetchAuth) {
 			throw new Error(
 				'Either authEndpoint or fetchAuth must be provided to ServerSyncEndpointProvider',
@@ -61,7 +59,7 @@ export class ServerSyncEndpointProvider {
 		if (this.config.fetchAuth) {
 			result = await this.config.fetchAuth();
 		} else {
-			const fetchImpl = this.config.fetch || fetch.bind(window);
+			const fetchImpl = this.ctx.environment.fetch;
 			result = await fetchImpl(this.config.authEndpoint!, {
 				credentials: 'include',
 			}).then((res) => {

@@ -1,20 +1,27 @@
 import { Database, Tables } from './kysely.js';
 import { QueryMode } from '@verdant-web/store';
 import { Transaction } from './kysely.js';
+import { Disposable } from '../../store/src/utils/Disposable.js';
 
-export class SqliteService {
-	constructor(protected db: Database) {}
+export class SqliteService extends Disposable {
+	private globalAbortController = new AbortController();
+
+	constructor(protected db: Database) {
+		super();
+		this.addDispose(() => {
+			this.globalAbortController.abort();
+		});
+	}
 
 	transaction<T>(
 		opts: { mode?: QueryMode; storeNames: string[]; abort?: AbortSignal },
 		procedure: (tx: Transaction) => Promise<T>,
 	): Promise<T> {
-		return this.db
-			.transaction()
-			.setIsolationLevel(
-				opts.mode === 'readwrite' ? 'serializable' : 'read uncommitted',
-			)
-			.execute(procedure);
+		if (this.globalAbortController.signal.aborted) {
+			throw new Error('Global abort signal is already aborted');
+		}
+		// return this.db.transaction().execute(procedure);
+		return procedure(this.db as any);
 	}
 
 	protected tableStats = async (tableName: keyof Tables) => {

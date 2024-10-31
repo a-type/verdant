@@ -164,7 +164,7 @@ export class PersistenceFiles extends Disposable {
 	};
 
 	downloadRemoteFile = async (url: string, retries = 0, maxRetries = 0) => {
-		const resp = await fetch(url, {
+		const resp = await this.context.environment.fetch(url, {
 			method: 'GET',
 			credentials: 'include',
 		});
