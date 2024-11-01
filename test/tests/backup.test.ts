@@ -1,7 +1,12 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
+import {
+	waitForEntityCondition,
+	waitForFileLoaded,
+	waitForMockCall,
+	waitForQueryResult,
+} from '../lib/waits.js';
 import {
 	createClientBackup,
 	importClientBackup,
@@ -9,7 +14,8 @@ import {
 } from '@verdant-web/store/backup';
 
 const ctx = createTestContext({
-	// testLog: true,
+	testLog: true,
+	serverLog: true,
 });
 
 it('can backup to file', async () => {
@@ -17,10 +23,13 @@ it('can backup to file', async () => {
 		library: 'backup',
 		user: 'A',
 	});
+	const onFileSaved = vi.fn();
 	const clientB = await ctx.createTestClient({
 		library: 'backup',
 		user: 'B',
+		logId: 'B',
 	});
+	clientB.subscribe('fileSaved', onFileSaved);
 
 	ctx.log('Seeding data');
 	clientA.sync.start();
@@ -51,10 +60,11 @@ it('can backup to file', async () => {
 	await waitForEntityCondition(bOranges.current!, (o) => !!o?.get('purchased'));
 	const bBananas = clientB.items.get('bananas');
 	await waitForQueryResult(bBananas);
-	await waitForEntityCondition(
-		bBananas.current!,
-		(b) => !!b?.get('image')?.url,
-	);
+	await waitForEntityCondition(bBananas.current!, (b) => !!b?.get('image'));
+	const file = bBananas.current!.get('image')!;
+	await waitForFileLoaded(file);
+
+	await waitForMockCall(onFileSaved, 2);
 
 	ctx.log('Backing up from B');
 	const backupFile = await createClientBackup(clientB as any);

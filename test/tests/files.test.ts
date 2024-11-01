@@ -3,7 +3,11 @@ import { EntityFile } from '@verdant-web/store';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { waitForEverythingToRebase, waitForMockCall } from '../lib/waits.js';
+import {
+	waitForCondition,
+	waitForEverythingToRebase,
+	waitForMockCall,
+} from '../lib/waits.js';
 import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
@@ -71,10 +75,10 @@ it('can store and cleanup local files', async () => {
 	});
 	expect(file2.loading).toBe(false);
 	expect(file2.url).toBeTruthy();
-	// if (!process.env.SQLITE) {
-	// this only works in browsers where the url is the same
-	expect(file2.url).toBe(file.url);
-	// }
+	if (!process.env.SQLITE) {
+		// this only works in browsers where the url is the same
+		expect(file2.url).toBe(file.url);
+	}
 
 	// now try deleting the file
 	context.log('Deleting file');
@@ -102,6 +106,12 @@ it('can store and cleanup local files', async () => {
 
 	// file should be gone - check in storage
 	// TODO: reimplement this without idb specifics
-	stats = await clientA3.stats();
-	expect(stats.files.size.count).toBe(0);
+	await waitForCondition(
+		async () => {
+			stats = await clientA3.stats();
+			return stats.files.size.count === 0;
+		},
+		3000,
+		'file deleted',
+	);
 });

@@ -5,6 +5,7 @@ import {
 	waitForOnline,
 	waitForPeerCount,
 	waitForQueryResult,
+	waitForSync,
 } from '../lib/waits.js';
 import { startTestServer } from '../lib/testServer.js';
 import { createTestClient } from '../lib/testClient.js';
@@ -295,7 +296,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 
 	clientA.sync.start();
 
-	await waitForOnline(clientA);
+	await waitForSync(clientA);
 
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
@@ -360,7 +361,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	});
 
 	clientB.sync.start();
-	await waitForOnline(clientB);
+	await waitForSync(clientB);
 
 	const b_applesQuery = clientB.items.get(a_apples.get('id'));
 	await waitForQueryResult(b_applesQuery);

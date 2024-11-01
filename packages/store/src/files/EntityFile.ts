@@ -85,8 +85,10 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	};
 
 	get url(): string | null {
+		// prefer local file representations.
 		if (this.loading) return null;
 		if (this._objectUrl) return this._objectUrl;
+		// TODO: use localPath here?
 		return this._fileData?.url ?? null;
 	}
 
@@ -118,7 +120,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			id: this.id,
 			url: this._objectUrl ?? this._fileData?.url ?? undefined,
 			name: this.name ?? 'unknown-file',
-			remote: false,
+			remote: this._fileData?.remote ?? false,
 			type: this.type ?? '',
 			file: this._fileData?.file,
 		};

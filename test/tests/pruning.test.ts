@@ -100,6 +100,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	// add some changes which will be invalid in v2
 	item1.get('tags').push('c');
 	item1.set('nested', { a: { b: 'c' } });
+	await clientA.entities.flushAllBatches();
 
 	const v2Item = collection({
 		name: 'item',

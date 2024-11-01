@@ -5,13 +5,14 @@ import {
 	waitForCondition,
 	waitForOnline,
 	waitForQueryResult,
+	waitForSync,
 } from '../lib/waits.js';
 import { assert } from '@a-type/utils';
 
 const context = createTestContext({
 	// serverLog: true,
 	// keepDb: true,
-	// testLog: true,
+	testLog: true,
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {
@@ -34,18 +35,20 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	});
 
 	await client.items.put({
+		id: 'apples',
 		content: 'Apples',
 	});
 	client.sync.start();
 
-	await waitForOnline(client);
+	await waitForSync(client);
 	context.log('Client 1 online');
 
 	clientB.sync.start();
-	await waitForOnline(clientB);
+	await waitForSync(clientB);
 	context.log('Client 2 online');
 
 	const orange = await clientB.items.put({
+		id: 'oranges',
 		content: 'Oranges',
 	});
 
@@ -90,6 +93,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	logWatcher.mockClear();
 
 	await client.items.put({
+		id: 'bananas',
 		content: 'Bananas',
 	});
 
@@ -101,6 +105,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	context.log('Client 1 offline');
 
 	client.items.put({
+		id: 'pineapples',
 		content: 'Pineapples',
 	});
 	await client.entities.flushAllBatches();

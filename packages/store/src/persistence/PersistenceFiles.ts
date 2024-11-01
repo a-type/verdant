@@ -34,7 +34,7 @@ export class PersistenceFiles {
 		// and re-upload to a new file ID. otherwise, when the cloned
 		// filedata was marked deleted, the original file would be deleted
 		// and the clone would refer to a missing file.
-		if (file.url && !file.file) {
+		if (file.url && !(file.localPath || file.file)) {
 			this.context.log(
 				'debug',
 				'Remote file added to an entity. This usually means an entity was cloned. Downloading remote file...',
@@ -43,7 +43,17 @@ export class PersistenceFiles {
 			const blob = await this.loadFileContents(file, 0, 3);
 			// convert blob to file with name and type
 			file.file = new File([blob], file.name, { type: file.type });
-		} else if (!file.file) {
+			// remove the URL - it points to the original file's uploaded server version,
+			// but this file is a clone
+			delete file.url;
+			this.context.log(
+				'debug',
+				'Downloaded remote file',
+				file.id,
+				file.name,
+				'. Cleared its remote URL.',
+			);
+		} else if (!file.url && !file.file && !file.localPath) {
 			this.context.log(
 				'warn',
 				'File added without a file or URL. This file will not be available for use.',
@@ -51,7 +61,10 @@ export class PersistenceFiles {
 			);
 		}
 
+		// always reset remote status to false, this is a new file just created
+		// and must be uploaded, even if it is cloned from an uploaded file.
 		file.remote = false;
+
 		// fire event for processing immediately
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
@@ -63,7 +76,13 @@ export class PersistenceFiles {
 			file.id,
 			file.name,
 			file.type,
-			file.file ? 'with binary file' : file.url ? 'with url' : 'with no data',
+			file.file
+				? 'with binary file'
+				: file.url
+				? 'with url'
+				: file.localPath
+				? 'with local path'
+				: 'with no data',
 		);
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);

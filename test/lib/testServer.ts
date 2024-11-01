@@ -47,7 +47,7 @@ export async function startTestServer({
 			: undefined,
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',
-			host: `http://localhost:${port}/files`,
+			host: `http://127.0.0.1:${port}/files`,
 		}),
 		replicaTruancyMinutes: truancyMinutes,
 	});
@@ -64,7 +64,7 @@ export async function startTestServer({
 		const token = tokenProvider.getToken({
 			libraryId: library,
 			userId: user,
-			syncEndpoint: `http://localhost:${port}/lofi`,
+			syncEndpoint: `http://127.0.0.1:${port}/lofi`,
 			type,
 		});
 		res.json({
@@ -85,7 +85,7 @@ export async function startTestServer({
 	});
 
 	server.on('error', (err) => {
-		console.error(err);
+		console.error('❌❌ SERVER ERROR', err);
 	});
 
 	return {

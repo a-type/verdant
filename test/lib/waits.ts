@@ -31,6 +31,18 @@ export async function waitForOnline(
 	});
 }
 
+export async function waitForSync(client: Client | ClientWithCollections) {
+	return new Promise<void>((resolve) => {
+		if (client.sync.hasSynced) {
+			resolve();
+			return;
+		}
+		client.sync.subscribe('synced', () => {
+			resolve();
+		});
+	});
+}
+
 export function waitForPeerCount(
 	client: Client | ClientWithCollections,
 	count: number,
@@ -110,12 +122,16 @@ export async function waitForQueryResult(
 }
 
 export async function waitForEverythingToRebase(client: Client) {
-	await waitForCondition(async () => {
-		if ((await client.stats()).meta.operationsSize.count === 0) {
-			return true;
-		}
-		return false;
-	});
+	await waitForCondition(
+		async () => {
+			if ((await client.stats()).meta.operationsSize.count === 0) {
+				return true;
+			}
+			return false;
+		},
+		5000,
+		'everything rebased',
+	);
 }
 
 export async function waitForBaselineCount(

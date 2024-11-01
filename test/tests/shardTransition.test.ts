@@ -1,7 +1,7 @@
 import { afterAll, expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
 import { createTestClient } from '../lib/testClient.js';
-import { waitForOnline, waitForQueryResult } from '../lib/waits.js';
+import { waitForQueryResult, waitForSync } from '../lib/waits.js';
 import { rm } from 'fs/promises';
 
 let unifiedServer: ReturnType<typeof startTestServer> extends Promise<infer T>
@@ -31,7 +31,7 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		disableSharding: true,
 		disableRebasing: true,
 		keepDb: true,
-		log: true,
+		// log: true,
 	});
 	console.log('DB:', unifiedServer.databaseLocation);
 
@@ -40,16 +40,18 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		library: 'sharding-a',
 		user: 'A',
 		server: unifiedServer,
+		// logId: 'A',
 	});
 	libAClient.sync.start();
-	await waitForOnline(libAClient);
+	await waitForSync(libAClient);
 	const libBClient = await createTestClient({
 		library: 'sharding-b',
 		user: 'B',
 		server: unifiedServer,
+		// logId: 'B',
 	});
 	libBClient.sync.start();
-	await waitForOnline(libBClient);
+	await waitForSync(libBClient);
 
 	const a_apples = await libAClient.items.put({
 		id: 'apples',
@@ -71,8 +73,6 @@ it('migrates data from unified to sharded databases on launch', async () => {
 	await libAClient.entities.flushAllBatches();
 	await libBClient.entities.flushAllBatches();
 
-	libAClient.sync.stop();
-	libBClient.sync.stop();
 	await libAClient.close();
 	await libBClient.close();
 
@@ -131,14 +131,14 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		server: shardedServer,
 	});
 	libAClient2.sync.start();
-	await waitForOnline(libAClient2);
+	await waitForSync(libAClient2);
 	const libBClient2 = await createTestClient({
 		library: 'sharding-b',
 		user: 'D',
 		server: shardedServer,
 	});
 	libBClient2.sync.start();
-	await waitForOnline(libBClient2);
+	await waitForSync(libBClient2);
 
 	const c_getApples = libAClient2.items.get('apples');
 	await waitForQueryResult(c_getApples);

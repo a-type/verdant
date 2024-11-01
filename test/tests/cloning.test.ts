@@ -4,6 +4,7 @@ import { createTestFile } from '../lib/createTestFile.js';
 import {
 	waitForFileLoaded,
 	waitForFileUpload,
+	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
@@ -32,22 +33,22 @@ it(
 			persistence,
 		});
 		await clientA.sync.start();
+		await waitForOnline(clientA);
 
 		const original = await clientA.items.put({
 			image: createTestFile(),
 			content: 'original',
 		});
 		const originalImage = original.get('image')!;
-		// NOT REACHING THIS?
-		console.log('waiting for file upload');
 		await waitForFileUpload(originalImage);
-		console.log('Uploaded file', originalImage.url);
+		ctx.log('Uploaded file', originalImage.url);
 		const originalImageUrl = originalImage.url;
 
 		const clone = await clientA.items.clone(original);
 		expect(clone.get('image')).not.toBeNull();
 		const cloneImage = clone.get('image')!;
 		await waitForFileLoaded(cloneImage);
+		await waitForFileUpload(cloneImage);
 		expect(cloneImage.url).not.toBeNull();
 		// at this point it's blob URLs, so they will be the same as the
 		// file is the same
@@ -57,6 +58,7 @@ it(
 		// there should be 2 files in the database now
 		let stats = await clientA.stats();
 		expect(stats.files.size.count).toEqual(2);
+		ctx.log('2 files in the db');
 
 		// delete the original
 		await clientA.items.delete(original.get('id'));
@@ -93,16 +95,26 @@ it(
 		const clientB = await ctx.createTestClient({
 			library: 'cloning',
 			user: 'B',
+			logId: 'B',
 		});
 		await clientB.sync.start();
 		const clientBCloneQuery = clientB.items.get(clientAAgainClone.get('id'));
 		await waitForQueryResult(clientBCloneQuery);
+		const clientBClone = clientBCloneQuery.current!;
+		expect(clientBClone.get('image')).not.toBeNull();
+		const clientBCloneImage = clientBClone.get('image')!;
+		await waitForFileLoaded(clientBCloneImage);
+
 		const anotherClone = await clientB.items.clone(clientBCloneQuery.current!);
 		expect(anotherClone.get('image')).not.toBeNull();
-		const clientBCloneImage = anotherClone.get('image')!;
-		expect(clientBCloneImage.url).not.toBeNull();
-		// because B's copy was downloaded from the server, it has
-		// a size... server files are mocked to a hardcoded content
-		expect(clientBCloneImage.url).toEqual('blob:text/plain:13');
+		const anotherCloneImage = anotherClone.get('image')!;
+		await waitForFileLoaded(anotherCloneImage);
+		ctx.log(anotherCloneImage.getSnapshot());
+		expect(anotherCloneImage.url).not.toBeNull();
+		if (!process.env.SQLITE) {
+			// because B's copy was downloaded from the server, it has
+			// a size... server files are mocked to a hardcoded content
+			expect(anotherCloneImage.url).toEqual('blob:text/plain:13');
+		}
 	},
 );

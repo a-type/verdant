@@ -117,7 +117,7 @@ function checkResults({
 	});
 
 	if (error) {
-		console.error('failed to migrate');
+		console.trace('failed to migrate');
 		console.error(error);
 		throw error;
 	}

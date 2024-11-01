@@ -24,6 +24,7 @@ import { attemptToRegisterBackgroundSync } from './background.js';
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
 	syncingChange: (syncing: boolean) => void;
+	synced: () => void;
 	/** When the server has lost data and re-requests data from the past */
 	serverReset: (since: string | null) => void;
 };
@@ -70,6 +71,7 @@ export interface Sync<Presence = any, Profile = any>
 	readonly isConnected: boolean;
 	readonly status: 'active' | 'paused';
 	readonly mode: SyncTransportMode;
+	readonly hasSynced: boolean;
 }
 
 export class NoSync<Presence = any, Profile = any>
@@ -77,6 +79,7 @@ export class NoSync<Presence = any, Profile = any>
 	implements Sync<Presence, Profile>
 {
 	readonly mode = 'pull';
+	readonly hasSynced = false;
 
 	public send(): void {}
 
@@ -204,6 +207,7 @@ export class ServerSync<Presence = any, Profile = any>
 	}) => Promise<void>;
 	private broadcastChannel: BroadcastChannel | null = null;
 	private _activelySyncing = false;
+	private _hasSynced = false;
 
 	readonly presence: PresenceManager<Profile, Presence>;
 
@@ -346,6 +350,10 @@ export class ServerSync<Presence = any, Profile = any>
 		return this._activelySyncing;
 	}
 
+	get hasSynced() {
+		return this._hasSynced;
+	}
+
 	private handleBroadcastChannelMessage = (event: MessageEvent) => {
 		if (event.data.type === 'sync') {
 			this.handleMessage(event.data.message, { source: 'broadcastChannel' });
@@ -398,6 +406,8 @@ export class ServerSync<Presence = any, Profile = any>
 				await this.ctx.meta.updateLastSynced(message.ackedTimestamp);
 				this._activelySyncing = false;
 				this.emit('syncingChange', false);
+				this._hasSynced = true;
+				this.emit('synced');
 				break;
 			case 'need-since':
 				this.emit('serverReset', message.since);

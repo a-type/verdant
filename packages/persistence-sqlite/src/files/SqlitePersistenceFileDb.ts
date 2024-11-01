@@ -131,7 +131,7 @@ export class SqlitePersistenceFileDb
 		const files = await this.db
 			.selectFrom('__verdant__fileInfo')
 			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url', 'localPath'])
-			.where('deletedAt', '<>', null)
+			.where('deletedAt', '>', 0)
 			.execute();
 		for (const file of files) {
 			iterator(this.hydrate(file));

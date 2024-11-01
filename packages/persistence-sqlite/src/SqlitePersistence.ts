@@ -123,6 +123,7 @@ export class SqlitePersistence implements PersistenceImplementation {
 		ctx.log('debug', 'WAL enabled');
 		this.openNamespaceDbs.set(namespace, new WeakRef(db));
 		ctx.persistenceShutdownHandler.register(async () => {
+			ctx.log('debug', 'shutting down namespace db', namespace);
 			this.openNamespaceDbs.delete(namespace);
 			await db.destroy();
 		});
@@ -289,6 +290,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 									removedIndex.name,
 								),
 							)
+							.ifExists()
 							.execute();
 					} else {
 						await tx.schema
@@ -298,6 +300,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 					}
 					await tx.schema
 						.dropIndex(collectionIndexName(collection, removedIndex.name))
+						.ifExists()
 						.execute();
 				}
 			}
@@ -305,6 +308,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 			for (const removedCollection of migration.removedCollections) {
 				await tx.schema
 					.dropTable(collectionTableName(removedCollection))
+					.ifExists()
 					.execute();
 			}
 

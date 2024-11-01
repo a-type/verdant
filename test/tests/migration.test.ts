@@ -10,8 +10,8 @@ import {
 import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
-	waitForOnline,
 	waitForQueryResult,
+	waitForSync,
 } from '../lib/waits.js';
 import { Operation } from '@verdant-web/common';
 import { createTestClient } from '../lib/testClient.js';
@@ -653,15 +653,15 @@ it('migrates in an online world where old operations still come in', async () =>
 		server,
 	};
 
-	// @ts-ignore
 	let clientA = await createClient({
+		oldSchemas: [v1Schema],
 		schema: v1Schema,
 		...clientInit,
 		persistence: persistenceA,
 		// logId: 'A',
 	});
 	clientA.sync.start();
-	await waitForOnline(clientA);
+	await waitForSync(clientA);
 
 	log('📈 Version 1 client A created');
 
@@ -686,6 +686,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
+		user: 'b',
 		persistence: persistenceB,
 		// logId: 'B',
 	});

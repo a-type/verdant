@@ -37,6 +37,7 @@ it('can load initial data before the client opens', async () => {
 		library: 'test',
 		user: 'a',
 		migrations,
+		logId: 'A',
 	});
 
 	expect(migrationsInvokedCount).toBe(1);
@@ -61,7 +62,7 @@ it('can load initial data before the client opens', async () => {
 	expect(item.get('purchased')).toBe(false);
 
 	// it does not load initial data again
-	client.close();
+	await client.close();
 
 	const client2 = await createTestClient({
 		persistence,
