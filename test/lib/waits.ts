@@ -222,7 +222,7 @@ export async function waitForEntityCondition<
 export async function waitForFileUpload(file: EntityFile, timeout = 5000) {
 	return new Promise<void>((resolve, reject) => {
 		const timer = setTimeout(() => {
-			reject(new Error('Timed out waiting for file upload'));
+			reject(new Error('Timed out waiting for file upload' + ' ' + file.id));
 		}, timeout);
 		if (file.isUploaded) {
 			clearTimeout(timer);

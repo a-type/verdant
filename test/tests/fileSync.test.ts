@@ -5,6 +5,8 @@ import { createTestFile } from '../lib/createTestFile.js';
 import {
 	waitForCondition,
 	waitForEntityCondition,
+	waitForFileLoaded,
+	waitForFileUpload,
 	waitForQueryResult,
 } from '../lib/waits.js';
 import * as fs from 'fs';
@@ -24,6 +26,9 @@ afterAll(() => {
 
 it(
 	'can sync files between replicas',
+	{
+		timeout: 15000,
+	},
 	async () => {
 		FileReader.prototype.readAsDataURL = () => {
 			return 'test';
@@ -46,17 +51,18 @@ it(
 			content: 'Apples',
 		});
 		a_item.set('image', createTestFile());
+		await waitForFileUpload(a_item.get('image')!);
 
 		const b_itemQuery = clientB.items.get(a_item.get('id'));
 		await waitForQueryResult(b_itemQuery);
-		context.log(`⭐️ item ${a_item.get('id')} synced to B`);
+		context.log(`item ${a_item.get('id')} synced to B`);
 		const b_item = await b_itemQuery.resolved;
 		assert(!!b_item);
 		await waitForEntityCondition(b_item, () => !!b_item.get('image'));
-		context.log('⭐️ image synced to B');
+		context.log('image synced to B');
 		const file = b_item.get('image')!;
-		await waitForCondition(() => !file.loading);
-		context.log('⭐️ image loaded');
+		await waitForFileLoaded(file);
+		context.log('image loaded');
 		expect(file.failed).toBe(false);
 		expect(file.url).toBeTruthy();
 
@@ -68,18 +74,14 @@ it(
 			fileResponse = await fetch(file.url!);
 			return fileResponse.status !== 404;
 		});
-		context.log('⭐️ image fetched');
+		context.log('image fetched');
 		const blob = await fileResponse!.blob();
 		const text = await blob.text();
-		context.log(`⭐️ image blob: ${text}`);
+		context.log(`image blob: ${text}`);
 		if (blob.size !== 0) {
 			console.error('⚠️ Unexpected blob', blob.size, text);
 		}
 		expect(blob.size).toBe(0);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
-	},
-	{
-		timeout: 15000,
-		// retry: 2,
 	},
 );

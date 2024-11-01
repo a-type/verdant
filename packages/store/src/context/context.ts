@@ -56,7 +56,7 @@ export interface Context {
 		persistenceReset: () => void;
 		filesDeleted: (files: FileRef[]) => void;
 		fileAdded: (file: FileData) => void;
-		[ev: `fileUploaded:${string}`]: () => void;
+		[ev: `fileUploaded:${string}`]: (file: FileData) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**

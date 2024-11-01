@@ -110,14 +110,16 @@ function checkResults({
 }) {
 	results?.forEach((it) => {
 		if (it.status === 'Success') {
-			console.log(`migration "${it.migrationName}" was executed successfully`);
+			// console.log(`migration "${it.migrationName}" was executed successfully`);
 		} else if (it.status === 'Error') {
-			console.error(`failed to execute migration "${it.migrationName}"`);
+			console.error(
+				`Verdant metadata failed to execute migration "${it.migrationName}"`,
+			);
 		}
 	});
 
 	if (error) {
-		console.trace('failed to migrate');
+		console.trace('Verdant failed to migrate');
 		console.error(error);
 		throw error;
 	}

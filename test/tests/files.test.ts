@@ -12,7 +12,7 @@ import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
 	// serverLog: true,
-	testLog: true,
+	// testLog: true,
 });
 
 it('can store and cleanup local files', async () => {
@@ -58,7 +58,7 @@ it('can store and cleanup local files', async () => {
 		server,
 		library: 'files-1',
 		user: 'User A',
-		logId: 'A2',
+		// logId: 'A2',
 		persistence,
 	});
 
@@ -100,7 +100,7 @@ it('can store and cleanup local files', async () => {
 			// immediately delete files
 			canCleanupDeletedFile: () => true,
 		},
-		logId: 'A3',
+		// logId: 'A3',
 		persistence,
 	});
 

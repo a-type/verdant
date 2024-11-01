@@ -14,8 +14,8 @@ import {
 } from '@verdant-web/store/backup';
 
 const ctx = createTestContext({
-	testLog: true,
-	serverLog: true,
+	// testLog: true,
+	// serverLog: true,
 });
 
 it('can backup to file', async () => {
@@ -27,7 +27,7 @@ it('can backup to file', async () => {
 	const clientB = await ctx.createTestClient({
 		library: 'backup',
 		user: 'B',
-		logId: 'B',
+		// logId: 'B',
 	});
 	clientB.subscribe('fileSaved', onFileSaved);
 

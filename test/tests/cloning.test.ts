@@ -11,8 +11,8 @@ import { assert } from '@verdant-web/common';
 import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
-	serverLog: true,
-	testLog: true,
+	// serverLog: true,
+	// testLog: true,
 });
 
 it(
@@ -29,7 +29,7 @@ it(
 				// clean deleted files immediately
 				canCleanupDeletedFile: () => true,
 			},
-			logId: 'A',
+			// logId: 'A',
 			persistence,
 		});
 		await clientA.sync.start();
@@ -41,8 +41,7 @@ it(
 		});
 		const originalImage = original.get('image')!;
 		await waitForFileUpload(originalImage);
-		ctx.log('Uploaded file', originalImage.url);
-		const originalImageUrl = originalImage.url;
+		ctx.log('Uploaded file', originalImage.id);
 
 		const clone = await clientA.items.clone(original);
 		expect(clone.get('image')).not.toBeNull();
@@ -73,7 +72,7 @@ it(
 			files: {
 				canCleanupDeletedFile: () => true,
 			},
-			log: ctx.filterLog('A', 'file', 'File', 'clean'),
+			// log: ctx.filterLog('A', 'file', 'File', 'clean'),
 			persistence,
 		});
 
@@ -85,17 +84,13 @@ it(
 		const clientAAgainCloneImage = clientAAgainClone.get('image')!;
 		await waitForFileLoaded(clientAAgainCloneImage);
 		expect(clientAAgainCloneImage.url).not.toBeNull();
-		// note for future me... this might not be an important
-		// thing to assert since the URL is so dependent on test
-		// env stuff.
-		expect(clientAAgainCloneImage.url).toEqual(originalImageUrl);
 
 		// we will also test with a remote client to make sure it
 		// downloads the file to clone
 		const clientB = await ctx.createTestClient({
 			library: 'cloning',
 			user: 'B',
-			logId: 'B',
+			// logId: 'B',
 		});
 		await clientB.sync.start();
 		const clientBCloneQuery = clientB.items.get(clientAAgainClone.get('id'));

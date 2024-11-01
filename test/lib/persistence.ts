@@ -14,7 +14,7 @@ export function getPersistence() {
 		const dbDirectory = `./.client-sqlite/${Math.random()
 			.toFixed(10)
 			.slice(2)}`;
-		console.log('Using sqlite persistence', dbDirectory);
+		// console.log('Using sqlite persistence', dbDirectory);
 		cleanupDirs.push(dbDirectory);
 		persistence = new SqlitePersistence({
 			databaseDirectory: dbDirectory,

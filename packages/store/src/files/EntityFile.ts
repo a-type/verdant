@@ -24,6 +24,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _loading = true;
 	private _failed = false;
 	private _downloadRemote = false;
+	private _uploaded = false;
 	private ctx: Context;
 	private unsubscribes: (() => void)[] = [];
 
@@ -53,7 +54,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		return true;
 	}
 	get isUploaded() {
-		return this._fileData?.remote ?? false;
+		return this._uploaded || this._fileData?.remote || false;
 	}
 
 	[UPDATE] = (fileData: FileData) => {
@@ -77,9 +78,10 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.emit('change');
 	};
 
-	private onUploaded = () => {
-		if (!this._fileData) return;
-		this._fileData.remote = true;
+	private onUploaded = (data: FileData) => {
+		// TODO: cleanup all this uploaded flagging junk
+		this._fileData ??= data;
+		this._uploaded = true;
 		this.ctx.log('debug', 'File marked uploaded', this.id, this._fileData);
 		this.emit('change');
 	};

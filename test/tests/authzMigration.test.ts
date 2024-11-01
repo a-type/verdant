@@ -132,7 +132,7 @@ it('does not expose private documents when migrating', async () => {
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		server,
-		logId: 'V2',
+		// logId: 'V2',
 		...clientInit,
 	});
 

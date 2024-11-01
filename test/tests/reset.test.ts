@@ -14,7 +14,7 @@ import migrations from '../migrations/index.js';
 import { createMigration } from '@verdant-web/common';
 
 const ctx = createTestContext({
-	testLog: true,
+	// testLog: true,
 });
 
 async function connectAndSeedData(library = 'reset-1') {
@@ -357,7 +357,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 		schema: newSchema,
 		oldSchemas: [schema, newSchema],
 		migrations: newMigrations,
-		logId: 'B',
+		// logId: 'B',
 	});
 
 	clientB.sync.start();

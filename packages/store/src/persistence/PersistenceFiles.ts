@@ -84,6 +84,7 @@ export class PersistenceFiles {
 				? 'with local path'
 				: 'with no data',
 		);
+		return file;
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);
 	get = this.db.get.bind(this.db);
