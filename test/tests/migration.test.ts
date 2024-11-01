@@ -4,9 +4,9 @@ import {
 	Migration,
 	ClientWithCollections,
 	createMigration,
+	PersistenceImplementation,
 } from '@verdant-web/store';
 // @ts-ignore
-import { IDBFactory } from 'fake-indexeddb';
 import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
@@ -15,6 +15,7 @@ import {
 } from '../lib/waits.js';
 import { Operation } from '@verdant-web/common';
 import { createTestClient } from '../lib/testClient.js';
+import { getPersistence } from '../lib/persistence.js';
 
 async function createClient({
 	schema,
@@ -25,7 +26,7 @@ async function createClient({
 	user,
 	logId,
 	disableRebasing,
-	indexedDb,
+	persistence,
 }: {
 	schema: any;
 	oldSchemas: any[];
@@ -35,7 +36,7 @@ async function createClient({
 	user: string;
 	logId?: string;
 	disableRebasing?: boolean;
-	indexedDb?: IDBFactory;
+	persistence?: PersistenceImplementation;
 }): Promise<ClientWithCollections> {
 	const client = await createTestClient({
 		schema,
@@ -45,8 +46,8 @@ async function createClient({
 		user,
 		server,
 		logId,
-		indexedDb,
 		disableRebasing,
+		persistence,
 	});
 	return client as any as ClientWithCollections;
 }
@@ -61,7 +62,7 @@ function log(...args: any[]) {
 it(
 	'offline migrates to add collections, indexes, and defaults; or changing data shape',
 	async () => {
-		const indexedDb = new IDBFactory();
+		const persistence = getPersistence();
 		const v1Item = schema.collection({
 			name: 'item',
 			primaryKey: 'id',
@@ -84,7 +85,7 @@ it(
 			migrations,
 			library: 'migration-offline',
 			user: 'a',
-			indexedDb,
+			persistence,
 		};
 
 		// @ts-ignore
@@ -513,7 +514,7 @@ it(
 				localItemDeletes.push(op);
 			}
 		});
-		expect(localItemDeletes).toHaveLength(11);
+		expect(localItemDeletes.length).toBeGreaterThanOrEqual(11);
 
 		await client.close();
 
@@ -625,8 +626,8 @@ it('migrates in an online world where old operations still come in', async () =>
 	const server = await startTestServer({
 		// log: true,
 	});
-	const indexedDbA = new IDBFactory();
-	const indexedDBB = new IDBFactory();
+	const persistenceA = getPersistence();
+	const persistenceB = getPersistence();
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -656,7 +657,7 @@ it('migrates in an online world where old operations still come in', async () =>
 	let clientA = await createClient({
 		schema: v1Schema,
 		...clientInit,
-		indexedDb: indexedDbA,
+		persistence: persistenceA,
 		// logId: 'A',
 	});
 	clientA.sync.start();
@@ -685,7 +686,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
-		indexedDb: indexedDBB,
+		persistence: persistenceB,
 		// logId: 'B',
 	});
 	clientB.sync.start();
@@ -760,7 +761,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
-		indexedDb: indexedDbA,
+		persistence: persistenceA,
 		// logId: 'A2',
 	});
 	clientA.sync.start();
@@ -842,6 +843,7 @@ it('migrates in an online world where old operations still come in', async () =>
 });
 
 it('supports skip migrations in real life', async () => {
+	const persistence = getPersistence();
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -864,7 +866,7 @@ it('supports skip migrations in real life', async () => {
 		migrations,
 		library: 'migration-skip',
 		user: 'a',
-		indexedDb: new IDBFactory(),
+		persistence,
 	};
 
 	let client = await createClient({

@@ -4,6 +4,7 @@ import {
 	ClientDescriptorOptions,
 	Migration,
 	Client,
+	PersistenceImplementation,
 } from '../client/index.js';
 import { Operation, StorageSchema } from '@verdant-web/common';
 import { afterAll, expect } from 'vitest';
@@ -29,6 +30,7 @@ export async function createTestClient({
 	onOperation,
 	oldSchemas,
 	disableRebasing,
+	persistence,
 }: {
 	server?: { port: number };
 	library: string;
@@ -46,11 +48,12 @@ export async function createTestClient({
 	onOperation?: (operation: Operation) => void;
 	oldSchemas?: StorageSchema[];
 	disableRebasing?: boolean;
+	persistence?: PersistenceImplementation;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
 		namespace: `${library}_${user}`,
-		persistence: getPersistence(),
+		persistence: persistence || getPersistence(),
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,

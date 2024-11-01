@@ -13,16 +13,17 @@ export class SqliteService extends Disposable {
 		});
 	}
 
-	transaction<T>(
+	transaction = async <T>(
 		opts: { mode?: QueryMode; storeNames: string[]; abort?: AbortSignal },
 		procedure: (tx: Transaction) => Promise<T>,
-	): Promise<T> {
+	): Promise<T> => {
 		if (this.globalAbortController.signal.aborted) {
 			throw new Error('Global abort signal is already aborted');
 		}
 		// return this.db.transaction().execute(procedure);
-		return procedure(this.db as any);
-	}
+		const result = await procedure(this.db as any);
+		return result;
+	};
 
 	protected tableStats = async (tableName: keyof Tables) => {
 		return await this.db

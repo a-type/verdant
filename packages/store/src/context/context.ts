@@ -18,6 +18,7 @@ import {
 	PersistedFileData,
 	PersistenceImplementation,
 } from '../persistence/interfaces.js';
+import { ShutdownHandler } from './ShutdownHandler.js';
 
 /**
  * Common components utilized across various client
@@ -83,13 +84,16 @@ export interface Context {
 		 * or stored data, but is useful for debugging and testing.
 		 */
 		rebase: () => void;
+		fileSaved: (file: FileData) => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
 	closing: boolean;
 	/** If this is present, any attempt to close the client should await it first. */
 	closeLock?: Promise<void>;
+	pauseRebasing: boolean;
 	patchCreator: PatchCreator;
+	persistenceShutdownHandler: ShutdownHandler;
 
 	config: {
 		files?: FileConfig;

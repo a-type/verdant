@@ -15,7 +15,8 @@ import { SqlitePersistenceFileDb } from './files/SqlitePersistenceFileDb.js';
 import { SqlitePersistenceMetadataDb } from './metadata/SqlitePersistenceMetadataDb.js';
 import { SqlitePersistenceDocumentDb } from './documents/SqlitePersistenceDocumentDb.js';
 import { FilesystemImplementation } from './interfaces.js';
-import { type Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
+import { SqlContext } from './sqlContext.js';
 
 export interface SqlitePersistenceConfig {
 	/** This filesystem implementation should implement the required methods for your environment. */
@@ -30,6 +31,7 @@ export interface SqlitePersistenceConfig {
 
 export class SqlitePersistence implements PersistenceImplementation {
 	name = 'SqlitePersistence';
+	private openNamespaceDbs = new Map<string, WeakRef<Database>>();
 	constructor(private config: SqlitePersistenceConfig) {}
 
 	private get databasesDirectory() {
@@ -42,6 +44,10 @@ export class SqlitePersistence implements PersistenceImplementation {
 		return this.config.filesystem;
 	}
 	private getKysely(namespace: string) {
+		const open = this.openNamespaceDbs.get(namespace)?.deref();
+		if (open) {
+			return open;
+		}
 		return this.config.getKysely(
 			`${this.databasesDirectory}/${namespace}.sqlite`,
 		);
@@ -67,8 +73,6 @@ export class SqlitePersistence implements PersistenceImplementation {
 				return 0;
 			}
 			throw err;
-		} finally {
-			await db.destroy();
 		}
 	};
 	getNamespaces = async (): Promise<string[]> => {
@@ -84,13 +88,22 @@ export class SqlitePersistence implements PersistenceImplementation {
 			),
 		).filter((n): n is string => !!n);
 	};
-	deleteNamespace = async (namespace: string): Promise<void> => {
+	deleteNamespace = async (
+		namespace: string,
+		ctx: InitialContext,
+	): Promise<void> => {
+		ctx.log('debug', 'Deleting namespace', namespace);
+		const open = this.openNamespaceDbs.get(namespace)?.deref();
+		if (open) {
+			this.openNamespaceDbs.delete(namespace);
+			await open.destroy();
+		}
 		await this.filesystem.deleteFile(
 			`${this.databasesDirectory}/${namespace}.sqlite`,
 		);
 	};
 	copyNamespace = async (from: string, to: string, ctx: InitialContext) => {
-		await this.filesystem.copyDirectory({
+		await this.filesystem.copyFile({
 			from: `${this.databasesDirectory}/${from}.sqlite`,
 			to: `${this.databasesDirectory}/${to}.sqlite`,
 		});
@@ -99,25 +112,51 @@ export class SqlitePersistence implements PersistenceImplementation {
 			to: `${this.filesDirectory}/${to}`,
 		});
 	};
-	openNamespace = async (namespace: string, ctx: Pick<Context, 'log'>) => {
-		const db = this.getKysely(namespace);
+	openNamespace = async (
+		namespace: string,
+		ctx: Pick<Context, 'log' | 'persistenceShutdownHandler'>,
+	) => {
+		let db = this.getKysely(namespace);
 		await migrateToLatest(db);
+		ctx.log('debug', 'Migrated to latest Verdant metadata version');
+		await this.enableWal(db);
+		ctx.log('debug', 'WAL enabled');
+		this.openNamespaceDbs.set(namespace, new WeakRef(db));
+		ctx.persistenceShutdownHandler.register(async () => {
+			this.openNamespaceDbs.delete(namespace);
+			await db.destroy();
+		});
 		return new SqlitePersistenceNamespace(
 			namespace,
 			db,
 			this.filesystem,
 			this.filesDirectory,
+			() => this.openNamespaceDbs.delete(namespace),
 		);
+	};
+
+	private enableWal = async (db: Database) => {
+		await sql`PRAGMA journal_mode = WAL`.execute(db);
 	};
 }
 
 class SqlitePersistenceNamespace implements PersistenceNamespace {
+	private sqlCtx: SqlContext;
+
 	constructor(
 		private namespace: string,
-		private db: Database,
+		readonly db: Database,
 		private fs: FilesystemImplementation,
 		private filesDirectory: string,
-	) {}
+		private onClose: () => void,
+	) {
+		this.sqlCtx = {};
+	}
+
+	close = async () => {
+		this.onClose();
+		await this.db.destroy();
+	};
 
 	openFiles = async (ctx: Omit<Context, 'files' | 'documents'>) => {
 		return new SqlitePersistenceFileDb(
@@ -147,7 +186,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 			'->',
 			migration.newSchema.version,
 		);
-		await this.db.transaction().execute(async (tx) => {
+		this.sqlCtx.migrationLock = this.db.transaction().execute(async (tx) => {
 			for (const newCollection of migration.addedCollections) {
 				const collectionSchema = migration.newSchema.collections[newCollection];
 				const primaryKeySchema =
@@ -173,6 +212,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 
 			for (const collection of migration.allCollections) {
 				for (const newIndex of migration.addedIndexes[collection] || []) {
+					ctx.log('debug', 'adding index', collection, newIndex);
 					try {
 						if (newIndex.multiEntry) {
 							// SQLite doesn't support array columns. Instead, we create a separate table
@@ -290,6 +330,8 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 				)
 				.execute();
 		});
+		await this.sqlCtx.migrationLock;
+		this.sqlCtx.migrationLock = undefined;
 	};
 }
 

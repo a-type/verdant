@@ -2,7 +2,7 @@ import {
 	NodeFilesystem,
 	SqlitePersistence,
 } from '@verdant-web/persistence-sqlite';
-import { PersistenceImplementation } from '@verdant-web/store';
+import { IdbPersistence, PersistenceImplementation } from '@verdant-web/store';
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { Kysely, SqliteDialect } from 'kysely';
@@ -14,6 +14,7 @@ export function getPersistence() {
 		const dbDirectory = `./.client-sqlite/${Math.random()
 			.toFixed(10)
 			.slice(2)}`;
+		console.log('Using sqlite persistence', dbDirectory);
 		cleanupDirs.push(dbDirectory);
 		persistence = new SqlitePersistence({
 			databaseDirectory: dbDirectory,
@@ -27,6 +28,8 @@ export function getPersistence() {
 			userFilesDirectory: `${dbDirectory}/files`,
 		});
 		mkdirSync(dbDirectory, { recursive: true });
+	} else {
+		persistence = new IdbPersistence(new IDBFactory());
 	}
 	return persistence;
 }

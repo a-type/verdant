@@ -1,14 +1,8 @@
-import {
-	Migration,
-	StorageSchema,
-	createMigration,
-	migrate,
-} from '@verdant-web/common';
+import { Migration, StorageSchema, createMigration } from '@verdant-web/common';
 import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
 import { ClientWithCollections } from '@verdant-web/store';
 // @ts-ignore
-import { IDBFactory } from 'fake-indexeddb';
 import { createTestContext } from '../lib/createTestContext.js';
 import { expect, it } from 'vitest';
 import {
@@ -16,6 +10,7 @@ import {
 	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
+import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
 	// testLog: true,
@@ -26,8 +21,8 @@ const log = context.log;
 it('maintains consistency in real world scenarios', async () => {
 	const LIBRARY = 'longevity';
 
-	const clientAIDB = new IDBFactory();
-	const clientBIDB = new IDBFactory();
+	const persistenceA = getPersistence();
+	const persistenceB = getPersistence();
 
 	function createClientA(
 		schema: StorageSchema,
@@ -36,7 +31,7 @@ it('maintains consistency in real world scenarios', async () => {
 		return context.createTestClient({
 			library: LIBRARY,
 			user: 'A',
-			indexedDb: clientAIDB,
+			persistence: persistenceA,
 			schema,
 			migrations,
 			// log: context.filterLog('A', 'a6'),
@@ -52,7 +47,7 @@ it('maintains consistency in real world scenarios', async () => {
 		return context.createTestClient({
 			library: LIBRARY,
 			user: 'B',
-			indexedDb: clientBIDB,
+			persistence: persistenceB,
 			schema,
 			migrations,
 			// logId: 'B',
@@ -116,7 +111,7 @@ it('maintains consistency in real world scenarios', async () => {
 		const getItem = client.items.get(id);
 		await waitForQueryResult(getItem, (v) => !!v, 5000);
 		const current = await getItem.resolved;
-		current.set('content', current.get('content') + '+');
+		current.get('tags').push('a');
 	}
 
 	// So here's what I'm going for:

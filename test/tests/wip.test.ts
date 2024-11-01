@@ -4,10 +4,14 @@ import {
 	createMigration,
 	schema,
 } from '@verdant-web/common';
-import { ClientWithCollections } from '@verdant-web/store';
+import {
+	ClientWithCollections,
+	PersistenceImplementation,
+} from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import defaultSchema from '../schema.js';
 import { createTestClient } from '../lib/testClient.js';
+import { getPersistence } from '../lib/persistence.js';
 
 const testLog = true;
 function log(...args: any[]) {
@@ -23,8 +27,8 @@ async function createClient({
 	library,
 	user,
 	logId,
-	indexedDb,
 	oldSchemas,
+	persistence,
 }: {
 	schema: any;
 	migrations: Migration<any>[];
@@ -32,8 +36,8 @@ async function createClient({
 	library: string;
 	user: string;
 	logId?: string;
-	indexedDb: IDBFactory;
 	oldSchemas: StorageSchema[];
+	persistence?: PersistenceImplementation;
 }): Promise<ClientWithCollections> {
 	const client = await createTestClient({
 		schema,
@@ -42,8 +46,8 @@ async function createClient({
 		user,
 		server,
 		logId,
-		indexedDb,
 		oldSchemas,
+		persistence,
 	});
 	return client as any as ClientWithCollections;
 }
@@ -56,8 +60,8 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		migrations: [createMigration(defaultSchema)],
 		user: 'a',
 		logId: 'A',
-		indexedDb: new IDBFactory(),
 		oldSchemas: [defaultSchema],
+		persistence: getPersistence(),
 	};
 	const client = await createClient(baseClientOptions);
 
@@ -240,7 +244,6 @@ it('can start a WIP schema from no pre-existing client', async () => {
 	const wipClient = await createClient({
 		library: 'wip-from-scratch',
 		user: 'A',
-		indexedDb: new IDBFactory(),
 		schema: wipSchema,
 		migrations: [createMigration(wipSchema)],
 		oldSchemas: [wipSchema],
@@ -260,7 +263,6 @@ it('can start a WIP schema from no pre-existing client', async () => {
 	const client = await createClient({
 		library: 'wip-from-scratch',
 		user: 'A',
-		indexedDb: new IDBFactory(),
 		schema: defaultSchema,
 		oldSchemas: [defaultSchema],
 		migrations: [createMigration(defaultSchema)],

@@ -22,6 +22,7 @@ export class PersistenceRebaser {
 			| 'globalEvents'
 			| 'config'
 			| 'closeLock'
+			| 'persistenceShutdownHandler'
 		>,
 	) {}
 
@@ -32,7 +33,8 @@ export class PersistenceRebaser {
 	tryAutonomousRebase = async () => {
 		const localReplicaInfo = await this.meta.getLocalReplica();
 		if (localReplicaInfo.lastSyncedLogicalTime) return; // cannot autonomously rebase if we've synced
-		if (this.ctx.closing) return;
+		if (this.ctx.closing || this.ctx.persistenceShutdownHandler.isShuttingDown)
+			return;
 		// but if we have never synced... we can rebase everything!
 		this.ctx.log('debug', 'Running autonomous library rebase');
 		await this.runRebase(this.ctx.time.now);
@@ -45,7 +47,8 @@ export class PersistenceRebaser {
 	 * their undo stack.
 	 */
 	private runRebase = async (globalAckTimestamp: string) => {
-		if (this.ctx.closing) return;
+		if (this.ctx.closing || this.ctx.persistenceShutdownHandler.isShuttingDown)
+			return;
 
 		await this.db.transaction(
 			{
@@ -73,7 +76,10 @@ export class PersistenceRebaser {
 					return;
 				}
 
-				if (this.ctx.closing) {
+				if (
+					this.ctx.closing ||
+					this.ctx.persistenceShutdownHandler.isShuttingDown
+				) {
 					return;
 				}
 
@@ -115,7 +121,8 @@ export class PersistenceRebaser {
 		upTo: string,
 		transaction: AbstractTransaction,
 	) => {
-		if (this.ctx.closing) return;
+		if (this.ctx.closing || this.ctx.persistenceShutdownHandler.isShuttingDown)
+			return;
 
 		const baseline = await this.db.getBaseline(oid, { transaction });
 		let current: any = baseline?.snapshot || undefined;
@@ -123,7 +130,8 @@ export class PersistenceRebaser {
 		let authz = baseline?.authz;
 		const deletedRefs: Ref[] = [];
 
-		if (this.ctx.closing) return;
+		if (this.ctx.closing || this.ctx.persistenceShutdownHandler.isShuttingDown)
+			return;
 
 		await this.db.iterateEntityOperations(
 			oid,
@@ -155,7 +163,8 @@ export class PersistenceRebaser {
 		};
 
 		// still time to cancel now...
-		if (this.ctx.closing) return;
+		if (this.ctx.closing || this.ctx.persistenceShutdownHandler.isShuttingDown)
+			return;
 
 		// FROM HERE, WE ARE COMMITTED TO THE REBASE -- otherwise data will be corrupted.
 		this.ctx.closeLock = (async () => {

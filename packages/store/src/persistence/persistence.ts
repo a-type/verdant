@@ -6,6 +6,7 @@ import { PersistenceFiles } from './PersistenceFiles.js';
 import { PersistenceMetadata } from './PersistenceMetadata.js';
 import { PersistenceDocuments } from './PersistenceQueries.js';
 import { migrate } from './migration/migrate.js';
+import { ShutdownHandler } from '../context/ShutdownHandler.js';
 
 export async function initializePersistence(
 	ctx: InitialContext,
@@ -136,6 +137,7 @@ export async function importPersistence(
 				disableRebasing: true,
 			},
 		},
+		persistenceShutdownHandler: new ShutdownHandler(),
 	});
 	// load imported data into persistence
 	await importedContext.meta.resetFrom(exportedData.data);
@@ -162,9 +164,7 @@ export async function importPersistence(
 	ctx.log('debug', 'Imported data into temporary namespace', importedNamespace);
 
 	// shut down the imported databases
-	await importedContext.documents.dispose();
-	await importedContext.meta.dispose();
-	await importedContext.files.dispose();
+	await importedContext.persistenceShutdownHandler.shutdown();
 
 	if (exportedSchema.version !== ctx.schema.version) {
 		// an upgrade of the imported data is needed ; it's an older version
@@ -174,22 +174,19 @@ export async function importPersistence(
 		const currentSchema = ctx.schema;
 		const upgradedContext = await initializePersistence({
 			...importedContext,
+			persistenceShutdownHandler: new ShutdownHandler(),
 			schema: currentSchema,
 		});
 
 		ctx.log('debug', 'Upgraded imported data to current schema');
 
-		await upgradedContext.documents.dispose();
-		await upgradedContext.meta.dispose();
-		await upgradedContext.files.dispose();
+		await upgradedContext.persistenceShutdownHandler.shutdown();
 
 		ctx.log('debug', 'Shut down upgraded databases');
 	}
 
 	// shut down the persistence layer
-	await ctx.documents.dispose();
-	await ctx.meta.dispose();
-	await ctx.files.dispose();
+	await ctx.persistenceShutdownHandler.shutdown();
 
 	// copy the imported data into the current namespace
 	await ctx.persistence.copyNamespace(importedNamespace, ctx.namespace, ctx);
@@ -243,4 +240,7 @@ export async function importPersistence(
 
 	ctx.internalEvents.emit('persistenceReset');
 	ctx.log('info', 'Data imported successfully');
+
+	// reset to allow future shutdowns.
+	ctx.persistenceShutdownHandler.reset();
 }

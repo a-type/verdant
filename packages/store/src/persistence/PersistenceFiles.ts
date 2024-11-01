@@ -1,16 +1,13 @@
 import { FileData, FileRef } from '@verdant-web/common';
 import { Context, FileConfig } from '../context/context.js';
 import { PersistedFileData, PersistenceFileDb } from './interfaces.js';
-import { Disposable } from '../utils/Disposable.js';
 
-export class PersistenceFiles extends Disposable {
+export class PersistenceFiles {
 	constructor(
 		private db: PersistenceFileDb,
 		private context: Omit<Context, 'queries'>,
 	) {
-		super();
 		context.internalEvents.subscribe('filesDeleted', this.onFileRefsDeleted);
-		this.compose(this.db);
 		// on startup, try deleting old files.
 		this.cleanupDeletedFiles();
 	}
@@ -43,7 +40,7 @@ export class PersistenceFiles extends Disposable {
 				'Remote file added to an entity. This usually means an entity was cloned. Downloading remote file...',
 				file.id,
 			);
-			const blob = await this.context.files.downloadRemoteFile(file.url, 0, 3);
+			const blob = await this.loadFileContents(file, 0, 3);
 			// convert blob to file with name and type
 			file.file = new File([blob], file.name, { type: file.type });
 		} else if (!file.file) {
@@ -59,6 +56,7 @@ export class PersistenceFiles extends Disposable {
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
 		await this.db.add(file);
+		this.context.globalEvents.emit('fileSaved', file);
 		this.context.log(
 			'debug',
 			'File added',
@@ -78,22 +76,29 @@ export class PersistenceFiles extends Disposable {
 	private getFileExportName = (originalFileName: string, id: string) => {
 		return `${id}___${originalFileName}`;
 	};
-	export = async (downloadRemote = false) => {
+	export = async (downloadRemote = true) => {
 		const storedFiles = await this.getAll();
 		if (downloadRemote) {
 			for (const storedFile of storedFiles) {
 				// if it doesn't have a buffer, we need to read one from the server
-				if (!storedFile.file && storedFile.url) {
+				if (!storedFile.file && (storedFile.url || storedFile.localPath)) {
 					try {
-						const blob = await this.downloadRemoteFile(storedFile.url);
+						const blob = await this.loadFileContents(storedFile);
 						storedFile.file = blob;
 					} catch (err) {
 						this.context.log(
 							'error',
 							"Failed to download file to cache it locally. The file will still be available using its URL. Check the file server's CORS configuration.",
+							storedFile,
 							err,
 						);
 					}
+				} else if (!storedFile.file) {
+					this.context.log(
+						'warn',
+						`File ${storedFile.id} has no file or URL. It will be missing in the export.`,
+						storedFile,
+					);
 				}
 			}
 		}
@@ -163,28 +168,29 @@ export class PersistenceFiles extends Disposable {
 		return { id, originalFileName };
 	};
 
-	downloadRemoteFile = async (url: string, retries = 0, maxRetries = 0) => {
-		const resp = await this.context.environment.fetch(url, {
-			method: 'GET',
-			credentials: 'include',
-		});
-		if (!resp.ok) {
+	private loadFileContents = async (
+		file: FileData,
+		retries = 0,
+		maxRetries = 0,
+	) => {
+		try {
+			return await this.db.loadFileContents(file, this.context);
+		} catch (err) {
 			if (retries < maxRetries) {
 				return new Promise<Blob>((resolve, reject) => {
 					setTimeout(() => {
-						this.downloadRemoteFile(url, retries + 1, maxRetries).then(
+						this.loadFileContents(file, retries + 1, maxRetries).then(
 							resolve,
 							reject,
 						);
 					}, 1000);
 				});
 			} else {
-				throw new Error(
-					`Failed to download file after ${maxRetries} retries (status: ${resp.status})`,
-				);
+				throw new Error(`Failed to download file after ${maxRetries} retries`, {
+					cause: err,
+				});
 			}
 		}
-		return await resp.blob();
 	};
 
 	cleanupDeletedFiles = async () => {

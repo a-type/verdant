@@ -7,6 +7,7 @@ import {
 	waitForQueryResult,
 } from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
+import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
 	serverLog: true,
@@ -19,6 +20,7 @@ it(
 		timeout: 10000,
 	},
 	async () => {
+		const persistence = getPersistence();
 		const clientA = await ctx.createTestClient({
 			library: 'cloning',
 			user: 'A',
@@ -27,6 +29,7 @@ it(
 				canCleanupDeletedFile: () => true,
 			},
 			logId: 'A',
+			persistence,
 		});
 		await clientA.sync.start();
 
@@ -69,6 +72,7 @@ it(
 				canCleanupDeletedFile: () => true,
 			},
 			log: ctx.filterLog('A', 'file', 'File', 'clean'),
+			persistence,
 		});
 
 		const clientAAgainClone = await clientAAgain.items.get(clone.get('id'))

@@ -22,6 +22,10 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 		});
 	}
 
+	close = async () => {
+		await this.dispose();
+	};
+
 	stats = async (): Promise<
 		Record<string, { count: number; size: number }>
 	> => {

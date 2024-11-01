@@ -16,6 +16,7 @@ import { Time } from '../context/Time.js';
 import { initializePersistence } from '../persistence/persistence.js';
 import { PersistenceImplementation } from '../persistence/interfaces.js';
 import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
+import { ShutdownHandler } from '../context/ShutdownHandler.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -158,6 +159,8 @@ export class ClientDescriptor<
 				persistence:
 					init.persistence || new IdbPersistence(environment.indexedDB),
 				environment,
+				persistenceShutdownHandler: new ShutdownHandler(),
+				pauseRebasing: false,
 			};
 			ctx.log('info', 'Initializing client', {
 				namespace: ctx.namespace,
@@ -213,7 +216,7 @@ export class ClientDescriptor<
 }
 
 const defaultBrowserEnvironment = {
-	WebSocket,
+	WebSocket: typeof WebSocket !== 'undefined' ? WebSocket : (undefined as any),
 	fetch: typeof window !== 'undefined' ? window.fetch.bind(window) : fetch!,
-	indexedDB,
+	indexedDB: typeof indexedDB !== 'undefined' ? indexedDB : (undefined as any),
 };

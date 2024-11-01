@@ -13,6 +13,7 @@ import {
 	hasDefault,
 	validateEntity,
 	AuthorizationKey,
+	isMultiValueIndex,
 } from './index.js';
 
 /**@deprecated */
@@ -437,11 +438,11 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 				`Could not determine type of index ${collection}.${key}. Index must have a type. Perhaps your schema is malformed?`,
 			);
 
+			const multiEntry = isMultiValueIndex(collection, key);
+
 			return {
 				name: key,
-				multiEntry: ['array', 'string[]', 'number[]', 'boolean[]'].includes(
-					indexType,
-				),
+				multiEntry,
 				synthetic: true,
 				compound: false,
 				type: indexType?.replace('[]', '') as any,
@@ -449,11 +450,7 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 		}),
 		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
-			multiEntry: collection.compounds[key].of.some(
-				(fieldName: string) =>
-					(collection.fields[fieldName] || collection.indexes[fieldName])
-						.type === 'array',
-			),
+			multiEntry: isMultiValueIndex(collection, key),
 			synthetic: false,
 			compound: true,
 			type: 'string' as const,

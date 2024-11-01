@@ -6,6 +6,7 @@ import {
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import { getAllFromObjectStores, getSizeOfObjectStore } from '../util.js';
+import { Context } from '../../../internal.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
@@ -176,6 +177,20 @@ export class IdbPersistenceFileDb
 			size: await getSizeOfObjectStore(this.db, 'files'),
 		};
 	};
+	loadFileContents = async (file: FileData, ctx: Context): Promise<Blob> => {
+		if (file.file) return file.file;
+		if (file.localPath) {
+			throw new Error('Local file paths are not supported in browser');
+		}
+		if (file.url) {
+			const response = await ctx.environment.fetch(file.url);
+			if (!response.ok) {
+				throw new Error(`Failed to download file: ${response.statusText}`);
+			}
+			return response.blob();
+		}
+		throw new Error('File is missing url, file, and localPath');
+	}
 
 	private hydrateFileData = (raw: StoredFileData): PersistedFileData => {
 		(raw as any).remote = raw.remote === 'true';

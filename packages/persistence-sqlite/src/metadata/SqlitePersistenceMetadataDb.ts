@@ -18,9 +18,6 @@ export class SqlitePersistenceMetadataDb
 	extends SqliteService
 	implements PersistenceMetadataDb<Transaction>
 {
-	dispose = async (): Promise<void> => {
-		await this.db.destroy();
-	};
 	getAckInfo = async (): Promise<AckInfo> => {
 		return (
 			(await this.db

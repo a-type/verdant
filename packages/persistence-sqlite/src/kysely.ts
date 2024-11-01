@@ -49,6 +49,7 @@ export interface FileInfoTable {
 	name: string;
 	type: string;
 	url: string | null;
+	localPath: string | null;
 	deletedAt: number | null;
 	timestamp: string | null;
 }
@@ -156,17 +157,22 @@ export async function migrateDown(
 	}
 }
 
-export function collectionTableName(collection: string) {
+export function collectionTableName(
+	collection: string,
+): `collection__${string}` {
 	return `collection__${collection}`;
 }
 
-export function collectionIndexName(collection: string, field: string) {
+export function collectionIndexName(
+	collection: string,
+	field: string,
+): `index__${string}` {
 	return `index__${collection}__${field}`;
 }
 
 export function collectionMultiValueIndexTableName(
 	collection: string,
 	field: string,
-) {
+): `collection_index__${string}` {
 	return `collection_index__${collection}__${field}`;
 }

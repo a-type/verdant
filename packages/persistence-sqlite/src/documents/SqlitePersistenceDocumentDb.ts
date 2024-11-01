@@ -4,7 +4,12 @@ import {
 	ObjectIdentifier,
 } from '@verdant-web/store';
 import { SqliteService } from '../SqliteService.js';
-import { Database, Transaction } from '../kysely.js';
+import {
+	collectionMultiValueIndexTableName,
+	collectionTableName,
+	Database,
+	Transaction,
+} from '../kysely.js';
 import {
 	Context,
 	isRangeIndexFilter,
@@ -18,6 +23,7 @@ import {
 	createUpperBoundIndexValue,
 	decomposeOid,
 	getIndexValues,
+	isMultiValueIndex,
 } from '@verdant-web/store/internal';
 import { SelectQueryBuilder } from 'kysely';
 
@@ -28,9 +34,6 @@ export class SqlitePersistenceDocumentDb
 	constructor(db: Database, private ctx: Pick<Context, 'log' | 'schema'>) {
 		super(db);
 	}
-	dispose = (): void | Promise<void> => {
-		// nothing to do; database is closed in metadata service
-	};
 	findOneOid = async (opts: {
 		collection: string;
 		index?: CollectionFilter;
@@ -69,11 +72,14 @@ export class SqlitePersistenceDocumentDb
 		const key = index?.where;
 		let query: SelectQueryBuilder<any, any, any>;
 		let whereKey: string;
-		if (key && this.isMultiValueIndex(collection, key)) {
-			query = this.db.selectFrom(`collection_index__${key}`).select('oid');
+		const schema = this.ctx.schema.collections[collection];
+		if (key && isMultiValueIndex(schema, key)) {
+			query = this.db
+				.selectFrom(collectionMultiValueIndexTableName(collection, key))
+				.select('oid');
 			whereKey = 'value';
 		} else {
-			query = this.db.selectFrom(`collection__${collection}`).select('oid');
+			query = this.db.selectFrom(collectionTableName(collection)).select('oid');
 			whereKey = key ?? '';
 		}
 
@@ -146,22 +152,6 @@ export class SqlitePersistenceDocumentDb
 		];
 	};
 
-	private isMultiValueIndex = (
-		collection: string,
-		indexKey: string,
-	): boolean => {
-		const schema = this.ctx.schema.collections[collection];
-		if (schema.compounds?.[indexKey]) {
-			const ofKeys = schema.compounds[indexKey].of;
-			return ofKeys.some((k) => this.isMultiValueIndex(collection, k));
-		} else if (schema.indexes?.[indexKey]) {
-			const index = schema.indexes[indexKey];
-			return index && 'type' in index && index.type.includes('[]');
-		} else {
-			return schema.fields[indexKey]?.type.includes('[]');
-		}
-	};
-
 	saveEntities = async (
 		entities: { oid: ObjectIdentifier; getSnapshot: () => any }[],
 		optsAndInfo: { abort?: AbortSignal; collections: string[] },
@@ -205,7 +195,7 @@ export class SqlitePersistenceDocumentDb
 		if (!snapshot) {
 			// cascade will handle multi-value rows
 			await tx
-				.deleteFrom(`collection__${collection}`)
+				.deleteFrom(collectionTableName(collection))
 				.where('oid', '=', ent.oid)
 				.execute();
 			this.ctx.log('debug', `Deleted document indexes for querying ${ent.oid}`);
@@ -218,23 +208,40 @@ export class SqlitePersistenceDocumentDb
 			const singleValues: Record<string, any> = {};
 			const multiValues: Array<{ key: string; value: any }> = [];
 			for (const [key, value] of Object.entries(indexValues)) {
-				if (this.isMultiValueIndex(collection, key)) {
+				if (isMultiValueIndex(schema, key)) {
 					multiValues.push({ key, value });
 				} else {
 					singleValues[key] = value;
 				}
 			}
 			await tx
-				.insertInto(`collection__${collection}`)
+				.insertInto(collectionTableName(collection))
 				.values({ oid: ent.oid, ...singleValues })
 				.onConflict((c) => c.column('oid').doUpdateSet(singleValues))
 				.execute();
 			for (const { key, value } of multiValues) {
+				// clean old values... unfortunate, but necessary...
 				await tx
-					.insertInto(`collection_index__${key}`)
-					.values({ oid: ent.oid, value })
-					.onConflict((c) => c.column('oid').doUpdateSet({ value }))
+					.deleteFrom(collectionMultiValueIndexTableName(collection, key))
+					.where('oid', '=', ent.oid)
 					.execute();
+				if (Array.isArray(value)) {
+					for (const val of value) {
+						this.checkBindableValue(val, `multi-value index ${key}`);
+						await tx
+							.insertInto(collectionMultiValueIndexTableName(collection, key))
+							.values({ oid: ent.oid, value: val })
+							.onConflict((c) => c.columns(['oid', 'value']).doNothing())
+							.execute();
+					}
+				} else {
+					this.checkBindableValue(value, `multi-value index ${key}`);
+					await tx
+						.insertInto(collectionMultiValueIndexTableName(collection, key))
+						.values({ oid: ent.oid, value })
+						.onConflict((c) => c.columns(['oid', 'value']).doNothing())
+						.execute();
+				}
 			}
 		}
 	};
@@ -244,7 +251,7 @@ export class SqlitePersistenceDocumentDb
 		await this.db.transaction().execute(async (tx) => {
 			await Promise.all(
 				collections.map((name) =>
-					tx.deleteFrom(`collection__${name}`).execute(),
+					tx.deleteFrom(collectionTableName(name)).execute(),
 				),
 			);
 		});
@@ -257,7 +264,7 @@ export class SqlitePersistenceDocumentDb
 		const stats = await Promise.all(
 			collections.map(
 				async (coll) =>
-					[coll, await this.tableStats(`collection__${coll}`)] as const,
+					[coll, await this.tableStats(collectionTableName(coll))] as const,
 			),
 		);
 		return Object.fromEntries(
@@ -269,5 +276,22 @@ export class SqlitePersistenceDocumentDb
 				},
 			]),
 		);
+	};
+
+	close = async () => {
+		// nothing to do.
+	};
+
+	private checkBindableValue = (value: any, debug?: string) => {
+		const type = typeof value;
+		if (!['number', 'string', 'bigint'].includes(type)) {
+			if (value instanceof Buffer) {
+				return;
+			}
+			if (value === null) {
+				return;
+			}
+			throw new Error(`Invalid bindable value: ${value} ${debug}`);
+		}
 	};
 }

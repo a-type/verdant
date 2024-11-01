@@ -77,6 +77,7 @@ export async function up(db: Kysely<any>) {
 		.addColumn('name', 'text', (b) => b.notNull())
 		.addColumn('type', 'text', (b) => b.notNull())
 		.addColumn('url', 'text')
+		.addColumn('localPath', 'text')
 		.addColumn('deletedAt', 'integer')
 		.addColumn('timestamp', 'text')
 		.execute();

@@ -3,6 +3,7 @@ import { it, expect } from 'vitest';
 import v1 from '../client/schemaVersions/v1.js';
 import { createTestClient } from '../lib/testClient.js';
 import { assert } from '@verdant-web/common';
+import { getPersistence } from '../lib/persistence.js';
 
 async function fakeApi() {
 	return new Promise<string>((resolve) => {
@@ -13,7 +14,7 @@ async function fakeApi() {
 }
 
 it('can load initial data before the client opens', async () => {
-	const indexedDb = new IDBFactory();
+	const persistence = getPersistence();
 
 	// using a custom v1 migration to create the initial data
 	let migrationsInvokedCount = 0;
@@ -32,7 +33,7 @@ it('can load initial data before the client opens', async () => {
 	];
 
 	const client = await createTestClient({
-		indexedDb,
+		persistence,
 		library: 'test',
 		user: 'a',
 		migrations,
@@ -63,7 +64,7 @@ it('can load initial data before the client opens', async () => {
 	client.close();
 
 	const client2 = await createTestClient({
-		indexedDb,
+		persistence,
 		library: 'test',
 		user: 'a',
 	});

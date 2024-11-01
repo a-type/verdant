@@ -9,6 +9,7 @@ export {
 	isMatchIndexFilter,
 	isSortIndexFilter,
 	isStartsWithIndexFilter,
+	isMultiValueIndex,
 	assert,
 	createCompoundIndexValue,
 	createLowerBoundIndexValue,

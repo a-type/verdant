@@ -28,6 +28,8 @@ export type FileData = {
 	file?: Blob | null;
 	/** The server URL of this file. */
 	url?: string | null;
+	/** Local filesystem path for the file. Only used in environments with direct fs access. */
+	localPath?: string;
 	/** The time this file was added, if available. */
 	timestamp?: string;
 };

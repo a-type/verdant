@@ -57,7 +57,6 @@ export interface PersistenceMetadataDb<
 		},
 		procedure: (tx: Tx) => Promise<T>,
 	): Promise<T>;
-	dispose(): void | Promise<void>;
 
 	// infos
 	getAckInfo(): Promise<AckInfo>;
@@ -150,8 +149,6 @@ export interface PersistenceMetadataDb<
 }
 
 export interface PersistenceDocumentDb {
-	dispose(): void | Promise<void>;
-
 	findOneOid(opts: {
 		collection: string;
 		index?: CollectionFilter;
@@ -171,6 +168,8 @@ export interface PersistenceDocumentDb {
 	reset(): Promise<void>;
 
 	stats(): Promise<Record<string, { count: number; size: number }>>;
+
+	close(): Promise<void>;
 }
 
 export interface PersistedFileData extends FileData {
@@ -178,8 +177,6 @@ export interface PersistedFileData extends FileData {
 }
 
 export interface PersistenceFileDb {
-	dispose(): void | Promise<void>;
-
 	add(file: FileData, options?: { downloadRemote?: boolean }): Promise<void>;
 	markUploaded(fileId: string): Promise<void>;
 	get(fileId: string): Promise<PersistedFileData | null>;
@@ -190,6 +187,7 @@ export interface PersistenceFileDb {
 	iterateOverPendingDelete(
 		iterator: (file: PersistedFileData) => void,
 	): Promise<void>;
+	loadFileContents(file: FileData, ctx: Context): Promise<Blob>;
 	getAll(): Promise<PersistedFileData[]>;
 	stats(): Promise<{ size: { count: number; size: number } }>;
 }
@@ -224,7 +222,7 @@ export interface PersistenceImplementation {
 	name: string;
 	openNamespace(
 		namespace: string,
-		ctx: Pick<Context, 'log'>,
+		ctx: Pick<Context, 'log' | 'persistenceShutdownHandler'>,
 	): Promise<PersistenceNamespace>;
 	/** Returns a list of all persisted namespaces visible to this app. */
 	getNamespaces(): Promise<string[]>;

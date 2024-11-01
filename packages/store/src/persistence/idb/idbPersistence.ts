@@ -129,6 +129,7 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 			namespace: this.namespace,
 		});
 		this.metadataDb = db;
+		ctx.persistenceShutdownHandler.register(() => closeDatabase(db));
 		return new IdbMetadataDb(db, ctx);
 	};
 
@@ -139,6 +140,7 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 			log: ctx.log,
 			namespace: this.namespace,
 		});
+		ctx.persistenceShutdownHandler.register(() => closeDatabase(db));
 		return new IdbDocumentDb(db, ctx);
 	};
 

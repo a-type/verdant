@@ -5,7 +5,7 @@ import {
 } from '@verdant-web/persistence-sqlite';
 import CapacitorSQLiteKyselyDialect from 'capacitor-sqlite-kysely';
 import { Kysely } from 'kysely';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem } from '@capacitor/filesystem';
 import { FilesystemImplementation } from '../../persistence-sqlite/src/interfaces';
 
 function getKysely(databaseFile: string) {
@@ -22,7 +22,6 @@ class CapacitorFilesystem implements FilesystemImplementation {
 		await Filesystem.copy({
 			from: options.from,
 			to: options.to,
-			directory: Directory.Data,
 		});
 	};
 	deleteFile = (path: string) => Filesystem.deleteFile({ path });
@@ -34,8 +33,24 @@ class CapacitorFilesystem implements FilesystemImplementation {
 		await Filesystem.writeFile({
 			path,
 			data,
-			directory: Directory.Data,
 		});
+	};
+	copyFile = async (options: { from: string; to: string }) => {
+		await Filesystem.copy({
+			from: options.from,
+			to: options.to,
+		});
+	};
+	readFile = async (path: string) => {
+		const res = await Filesystem.readFile({
+			path,
+		});
+		if (typeof res.data === 'string') {
+			throw new Error(
+				"Verdant doesn't support non-Web Capacitor runtime environments.",
+			);
+		}
+		return res.data;
 	};
 }
 

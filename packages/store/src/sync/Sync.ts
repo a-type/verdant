@@ -358,6 +358,9 @@ export class ServerSync<Presence = any, Profile = any>
 			source: 'network',
 		},
 	) => {
+		// cancel if client is shutting down
+		if (this.ctx.closing) return;
+
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
 			for (const op of message.operations) {

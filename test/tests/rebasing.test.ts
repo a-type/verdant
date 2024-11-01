@@ -17,16 +17,14 @@ import schema from '../schema.js';
 import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
-	serverLog: true,
-	testLog: true,
+	// serverLog: true,
+	// testLog: true,
 });
 
 it('an offline client rebases everything', async () => {
-	const indexedDb = new IDBFactory();
 	const desc = new ClientDescriptor({
 		migrations,
 		namespace: 'offline_rebase',
-		indexedDb,
 		oldSchemas: [schema],
 		persistence: getPersistence(),
 		// log: (...args: any[]) => console.log('[offline_rebase]', ...args),
@@ -68,7 +66,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	const clientA = await context.createTestClient({
 		library: 'rebase-passive-1',
 		user: 'User A',
-		logId: 'A',
+		// logId: 'A',
 	});
 	clientA.subscribe('rebase', onClientARebase);
 	const onClientBRebase = vi.fn();

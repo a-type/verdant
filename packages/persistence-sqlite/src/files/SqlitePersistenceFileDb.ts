@@ -8,6 +8,7 @@ import { SqliteService } from '../SqliteService.js';
 import { Database, StoredFileInfo } from '../kysely.js';
 import { FilesystemImplementation } from '../interfaces.js';
 import { Context } from '@verdant-web/store/internal';
+import path from 'path';
 
 export class SqlitePersistenceFileDb
 	extends SqliteService
@@ -27,10 +28,10 @@ export class SqlitePersistenceFileDb
 		this.fs = fs;
 		this.directory = directory;
 	}
-	dispose = (): void | Promise<void> => {
-		// nothing to do here.
-	};
 	add = async (file: FileData): Promise<void> => {
+		const fileStoragePath = path.resolve(
+			`${this.directory}/${file.id}/${file.name}`,
+		);
 		await this.db
 			.insertInto('__verdant__fileInfo')
 			.values({
@@ -40,6 +41,7 @@ export class SqlitePersistenceFileDb
 				name: file.name,
 				type: file.type,
 				url: file.url,
+				localPath: fileStoragePath,
 				timestamp: file.timestamp,
 			})
 			.onConflict((c) =>
@@ -48,15 +50,13 @@ export class SqlitePersistenceFileDb
 					name: file.name,
 					type: file.type,
 					url: file.url,
+					localPath: fileStoragePath,
 					remote: file.remote ? 1 : 0,
 				}),
 			)
 			.execute();
 		if (file.file) {
-			await this.fs.writeFile(
-				`${this.directory}/${file.id}/${file.name}`,
-				file.file,
-			);
+			await this.fs.writeFile(fileStoragePath, file.file);
 		}
 	};
 	markUploaded = async (fileId: string): Promise<void> => {
@@ -76,7 +76,7 @@ export class SqlitePersistenceFileDb
 	get = async (fileId: string): Promise<PersistedFileData | null> => {
 		const info = await this.db
 			.selectFrom('__verdant__fileInfo')
-			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url'])
+			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url', 'localPath'])
 			.where('id', '=', fileId)
 			.executeTakeFirst();
 
@@ -87,7 +87,7 @@ export class SqlitePersistenceFileDb
 		try {
 			return this.hydrate({
 				...info,
-				url: info.url ?? `file://${this.directory}/${info.id}/${info.name}`,
+				url: info.url ?? `file://${info.localPath}`,
 			});
 		} catch (e) {
 			return this.hydrate(info);
@@ -111,7 +111,7 @@ export class SqlitePersistenceFileDb
 	}): Promise<PersistedFileData[]> => {
 		const result = await this.db
 			.selectFrom('__verdant__fileInfo')
-			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url'])
+			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url', 'localPath'])
 			.where('remote', '=', 0)
 			.execute();
 		return result.map(this.hydrate);
@@ -130,7 +130,7 @@ export class SqlitePersistenceFileDb
 	): Promise<void> => {
 		const files = await this.db
 			.selectFrom('__verdant__fileInfo')
-			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url'])
+			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url', 'localPath'])
 			.where('deletedAt', '<>', null)
 			.execute();
 		for (const file of files) {
@@ -142,7 +142,7 @@ export class SqlitePersistenceFileDb
 	}): Promise<PersistedFileData[]> => {
 		const result = await this.db
 			.selectFrom('__verdant__fileInfo')
-			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url'])
+			.select(['id', 'name', 'type', 'deletedAt', 'remote', 'url', 'localPath'])
 			.execute();
 		return result.map(this.hydrate);
 	};
@@ -154,5 +154,30 @@ export class SqlitePersistenceFileDb
 				size: 0, // not supported
 			},
 		};
+	};
+	loadFileContents = async (file: FileData, ctx: Context): Promise<Blob> => {
+		if (file.file) {
+			return file.file;
+		}
+		if (file.localPath) {
+			return this.fs.readFile(file.localPath);
+		}
+		if (file.url) {
+			// try downloading the file
+			const resp = await ctx.environment.fetch(file.url, {
+				method: 'GET',
+				credentials: 'include',
+			});
+			if (resp.ok) {
+				return resp.blob();
+			} else {
+				throw new Error(
+					`Failed to download file ${file.id} from ${file.url}: ${resp.status} ${resp.statusText}`,
+				);
+			}
+		}
+		throw new Error(
+			`File ${file.id} has no file, localPath, or url. Cannot load contents.`,
+		);
 	};
 }

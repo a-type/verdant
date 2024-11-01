@@ -1,9 +1,14 @@
 import { createMigration, Migration, schema } from '@verdant-web/common';
-import { authorization, ClientWithCollections } from '@verdant-web/store';
+import {
+	authorization,
+	ClientWithCollections,
+	PersistenceImplementation,
+} from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import { startTestServer } from '../lib/testServer.js';
 import { waitForQueryResult } from '../lib/waits.js';
 import { createTestClient } from '../lib/testClient.js';
+import { getPersistence } from '../lib/persistence.js';
 
 async function createClient({
 	schema,
@@ -13,8 +18,8 @@ async function createClient({
 	user,
 	logId,
 	disableRebasing,
-	indexedDb = new IDBFactory(),
 	oldSchemas,
+	persistence,
 }: {
 	schema: any;
 	migrations: Migration<any>[];
@@ -23,8 +28,8 @@ async function createClient({
 	user: string;
 	logId?: string;
 	disableRebasing?: boolean;
-	indexedDb?: IDBFactory;
 	oldSchemas: any[];
+	persistence?: PersistenceImplementation;
 }): Promise<ClientWithCollections> {
 	const client = await createTestClient({
 		schema,
@@ -35,7 +40,7 @@ async function createClient({
 		logId,
 		disableRebasing,
 		oldSchemas,
-		indexedDb,
+		persistence,
 	});
 	return client as any as ClientWithCollections;
 }
@@ -75,7 +80,7 @@ it('does not expose private documents when migrating', async () => {
 		migrations,
 		library: 'test',
 		user: 'a',
-		indexedDb: new IDBFactory(),
+		persistence: getPersistence(),
 	};
 
 	let client = await createClient({
@@ -127,6 +132,7 @@ it('does not expose private documents when migrating', async () => {
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		server,
+		logId: 'V2',
 		...clientInit,
 	});
 

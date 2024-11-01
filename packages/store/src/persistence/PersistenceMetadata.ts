@@ -21,10 +21,9 @@ import {
 import { InitialContext } from '../context/context.js';
 import { PersistenceRebaser } from './PersistenceRebaser.js';
 import { MessageCreator } from './MessageCreator.js';
-import { Disposable } from '../utils/Disposable.js';
 import cuid from 'cuid';
 
-export class PersistenceMetadata extends Disposable {
+export class PersistenceMetadata {
 	private rebaser: PersistenceRebaser;
 	/** Available to others, like sync... */
 	readonly messageCreator: MessageCreator;
@@ -33,10 +32,8 @@ export class PersistenceMetadata extends Disposable {
 	}>();
 
 	constructor(private db: PersistenceMetadataDb, private ctx: InitialContext) {
-		super();
 		this.rebaser = new PersistenceRebaser(db, this, ctx);
 		this.messageCreator = new MessageCreator(db, this, ctx);
-		this.compose(this.db);
 	}
 
 	private insertOperations = async (
@@ -59,7 +56,10 @@ export class PersistenceMetadata extends Disposable {
 		}
 
 		// we can now enqueue and check for rebase opportunities
-		if (!this.ctx.config.persistence?.disableRebasing) {
+		if (
+			!this.ctx.config.persistence?.disableRebasing &&
+			!this.ctx.pauseRebasing
+		) {
 			this.rebaser.tryAutonomousRebase();
 		}
 
@@ -408,7 +408,7 @@ export class PersistenceMetadata extends Disposable {
 	iterateAllBaselines = this.db.iterateAllBaselines;
 
 	reset = async () => {
-		if (this.disposed) return;
+		if (this.ctx.closing) return;
 		await this.db.reset();
 	};
 	stats = this.db.stats;

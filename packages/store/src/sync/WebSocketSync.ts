@@ -85,6 +85,7 @@ export class WebSocketSync
 		if (this.disposed) {
 			return;
 		}
+		if (this.ctx.closing) return;
 		if (!online) {
 			this.hasStartedSync = false;
 			this.synced = false;
