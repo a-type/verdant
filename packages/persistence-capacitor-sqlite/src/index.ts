@@ -60,7 +60,7 @@ export class CapacitorSQLitePersistence extends SqlitePersistence {
 	) {
 		super({
 			...config,
-			getKysely: getKysely,
+			getKysely,
 			filesystem: new CapacitorFilesystem(),
 		});
 	}

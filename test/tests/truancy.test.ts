@@ -46,7 +46,10 @@ it('should reset truant replicas upon their reconnection', async () => {
 				onServerLog.mock.calls.length > 0 &&
 				onServerLog.mock.calls.some((call) =>
 					call.some((arg) => {
-						return arg.includes('item 2 updated');
+						if (typeof arg !== 'string') {
+							return false;
+						}
+						return arg?.includes('item 2 updated');
 					}),
 				)
 			);
