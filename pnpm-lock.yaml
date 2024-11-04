@@ -654,9 +654,6 @@ importers:
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
-      env-cmd:
-        specifier: ^10.1.0
-        version: 10.1.0
 
 packages:
 
@@ -6184,11 +6181,6 @@ packages:
   entities@4.4.0:
     resolution: {integrity: sha512-oYp7156SP8LkeGD0GF85ad1X9Ai79WtRsZ2gxJqtBuzH+98YUV6jkHEKlZkMbcrjJjIVJNIDP/3WL9wQkoPbWA==}
     engines: {node: '>=0.12'}
-
-  env-cmd@10.1.0:
-    resolution: {integrity: sha512-mMdWTT9XKN7yNth/6N6g2GuKuJTsKMDHlQFUDacb/heQRRWOTIZ42t1rMHnQu4jYxU1ajdTeJM+9eEETlqToMA==}
-    engines: {node: '>=8.0.0'}
-    hasBin: true
 
   env-editor@0.4.2:
     resolution: {integrity: sha512-ObFo8v4rQJAE59M69QzwloxPZtd33TpYEIjtKD1rrFDcM1Gd7IkDxEBU+HriziN6HSHQnBJi8Dmy+JWkav5HKA==}
@@ -18690,7 +18682,8 @@ snapshots:
 
   commander@2.20.3: {}
 
-  commander@4.1.1: {}
+  commander@4.1.1:
+    optional: true
 
   commander@5.1.0: {}
 
@@ -19394,11 +19387,6 @@ snapshots:
   entities@2.2.0: {}
 
   entities@4.4.0: {}
-
-  env-cmd@10.1.0:
-    dependencies:
-      commander: 4.1.1
-      cross-spawn: 7.0.3
 
   env-editor@0.4.2:
     optional: true

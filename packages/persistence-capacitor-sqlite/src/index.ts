@@ -1,12 +1,12 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import {
 	SqlitePersistence,
-	SqlitePersistenceConfig,
 	FilesystemImplementation,
 } from '@verdant-web/persistence-sqlite';
 import CapacitorSQLiteKyselyDialect from 'capacitor-sqlite-kysely';
 import { Kysely } from 'kysely';
-import { Filesystem } from '@capacitor/filesystem';
+import { Directory, Filesystem } from '@capacitor/filesystem';
+import path from 'path';
 
 function getKysely(databaseFile: string) {
 	return new Kysely({
@@ -55,13 +55,12 @@ class CapacitorFilesystem implements FilesystemImplementation {
 }
 
 export class CapacitorSQLitePersistence extends SqlitePersistence {
-	constructor(
-		config: Omit<SqlitePersistenceConfig, 'getKysely' | 'filesystem'>,
-	) {
+	constructor() {
 		super({
-			...config,
 			getKysely,
 			filesystem: new CapacitorFilesystem(),
+			databaseDirectory: path.resolve(Directory.Data, 'databases'),
+			userFilesDirectory: path.resolve(Directory.Data, 'userFiles'),
 		});
 	}
 }
