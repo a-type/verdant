@@ -24,3 +24,4 @@ export type {
 } from '@verdant-web/common';
 export * from './persistence/migration/paths.js';
 export * from './persistence/migration/types.js';
+export { Disposable } from './utils/Disposable.js';

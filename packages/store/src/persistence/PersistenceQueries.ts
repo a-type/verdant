@@ -1,18 +1,16 @@
 import { PersistenceDocumentDb } from './interfaces.js';
 import { Context } from '../context/context.js';
-import { Disposable } from '../utils/Disposable.js';
 import { decomposeOid, ObjectIdentifier } from '@verdant-web/common';
 
-export class PersistenceDocuments extends Disposable {
+export class PersistenceDocuments {
 	constructor(
 		private db: PersistenceDocumentDb,
 		private ctx: Omit<Context, 'queries'>,
-	) {
-		super();
-		this.compose(this.db);
-	}
+	) {}
 
 	reset = this.db.reset.bind(this.db);
+
+	close = this.db.close.bind(this.db);
 
 	saveEntities = async (
 		entities: { oid: ObjectIdentifier; getSnapshot: () => any }[],

@@ -16,7 +16,7 @@ export class NodeFilesystem implements FilesystemImplementation {
 		}
 		// it's... not always a real Blob... because vitest/jsdom...
 		if ('stream' in data) {
-			const stream = data.stream();
+			const stream = data.stream() as any;
 			await fs.writeFile(filePath, stream);
 		} else {
 			const buffer = await readJsdomFile(data);
@@ -69,6 +69,7 @@ export class NodeFilesystem implements FilesystemImplementation {
 	};
 }
 
+// TODO: remove this to the testing project as an override? doesn't belong in core lib.
 const readJsdomFile = async (file: Buffer): Promise<NodeJS.ArrayBufferView> => {
 	const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
 		// @ts-ignore
@@ -79,7 +80,7 @@ const readJsdomFile = async (file: Buffer): Promise<NodeJS.ArrayBufferView> => {
 		reader.onerror = function () {
 			return reject(reader.error);
 		};
-		reader.readAsArrayBuffer(file);
+		reader.readAsArrayBuffer(file as any);
 	});
 	return new Uint8Array(arrayBuffer);
 };

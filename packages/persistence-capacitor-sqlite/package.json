@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/persistence-expo-sqlite",
-	"version": "1.0.0",
+	"version": "0.1.0-alpha.1",
 	"type": "module",
 	"exports": {
 		".": {
@@ -23,7 +23,9 @@
 		"src/"
 	],
 	"scripts": {
-		"test": "vitest"
+		"test": "vitest",
+		"build": "tsc",
+		"prepublishOnly": "pnpm run build"
 	},
 	"dependencies": {
 		"@capacitor-community/sqlite": "^6.0.2",

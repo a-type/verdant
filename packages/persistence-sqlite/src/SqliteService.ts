@@ -1,7 +1,7 @@
 import { Database, Tables } from './kysely.js';
 import { QueryMode } from '@verdant-web/store';
 import { Transaction } from './kysely.js';
-import { Disposable } from '../../store/src/utils/Disposable.js';
+import { Disposable } from '@verdant-web/store/internal';
 
 export class SqliteService extends Disposable {
 	private globalAbortController = new AbortController();

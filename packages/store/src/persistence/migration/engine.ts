@@ -202,7 +202,7 @@ export async function getMigrationEngine({
 		mutations,
 		awaitables,
 		close: async () => {
-			await documents.dispose();
+			await documents.close();
 		},
 	};
 	return engine;
