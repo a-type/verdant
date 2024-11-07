@@ -8,7 +8,6 @@ import { SqliteService } from '../SqliteService.js';
 import { Database, StoredFileInfo } from '../kysely.js';
 import { FilesystemImplementation } from '../interfaces.js';
 import { Context } from '@verdant-web/store/internal';
-import path from 'path';
 
 export class SqlitePersistenceFileDb
 	extends SqliteService
@@ -29,9 +28,7 @@ export class SqlitePersistenceFileDb
 		this.directory = directory;
 	}
 	add = async (file: FileData): Promise<void> => {
-		const fileStoragePath = path.resolve(
-			`${this.directory}/${file.id}/${file.name}`,
-		);
+		const fileStoragePath = `${this.directory}/${file.id}/${file.name}`;
 		await this.db
 			.insertInto('__verdant__fileInfo')
 			.values({

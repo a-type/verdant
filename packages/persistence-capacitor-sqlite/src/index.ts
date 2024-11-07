@@ -6,7 +6,6 @@ import {
 import CapacitorSQLiteKyselyDialect from 'capacitor-sqlite-kysely';
 import { Kysely } from 'kysely';
 import { Directory, Filesystem } from '@capacitor/filesystem';
-import path from 'path';
 
 function getKysely(databaseFile: string) {
 	return new Kysely({
@@ -59,8 +58,8 @@ export class CapacitorSQLitePersistence extends SqlitePersistence {
 		super({
 			getKysely,
 			filesystem: new CapacitorFilesystem(),
-			databaseDirectory: path.resolve(Directory.Data, 'databases'),
-			userFilesDirectory: path.resolve(Directory.Data, 'userFiles'),
+			databaseDirectory: Directory.Data + '/databases',
+			userFilesDirectory: Directory.Data + '/userFiles',
 		});
 	}
 }
