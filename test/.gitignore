@@ -1,3 +1,5 @@
 *.sqlite
 processed.txt
 *.journal
+.client-sqlite/*
+!.client-sqlite/.gitkeep

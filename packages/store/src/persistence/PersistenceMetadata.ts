@@ -14,15 +14,16 @@ import {
 	AbstractTransaction,
 	ClientOperation,
 	CommonQueryOptions,
+	LocalReplicaInfo,
 	MetadataExport,
 	PersistenceMetadataDb,
 } from './interfaces.js';
 import { InitialContext } from '../context/context.js';
 import { PersistenceRebaser } from './PersistenceRebaser.js';
 import { MessageCreator } from './MessageCreator.js';
-import { Disposable } from '../utils/Disposable.js';
+import cuid from 'cuid';
 
-export class PersistenceMetadata extends Disposable {
+export class PersistenceMetadata {
 	private rebaser: PersistenceRebaser;
 	/** Available to others, like sync... */
 	readonly messageCreator: MessageCreator;
@@ -30,14 +31,9 @@ export class PersistenceMetadata extends Disposable {
 		syncMessage: (message: ClientMessage) => void;
 	}>();
 
-	constructor(
-		private db: PersistenceMetadataDb,
-		private ctx: InitialContext,
-	) {
-		super();
-		this.rebaser = new PersistenceRebaser(db, ctx);
-		this.messageCreator = new MessageCreator(db, ctx);
-		this.compose(this.db);
+	constructor(private db: PersistenceMetadataDb, private ctx: InitialContext) {
+		this.rebaser = new PersistenceRebaser(db, this, ctx);
+		this.messageCreator = new MessageCreator(db, this, ctx);
 	}
 
 	private insertOperations = async (
@@ -60,7 +56,10 @@ export class PersistenceMetadata extends Disposable {
 		}
 
 		// we can now enqueue and check for rebase opportunities
-		if (!this.ctx.config.persistence?.disableRebasing) {
+		if (
+			!this.ctx.config.persistence?.disableRebasing &&
+			!this.ctx.pauseRebasing
+		) {
 			this.rebaser.tryAutonomousRebase();
 		}
 
@@ -78,7 +77,10 @@ export class PersistenceMetadata extends Disposable {
 			(operation as ClientOperation).isLocal = true;
 		}
 		await this.insertOperations(operations as ClientOperation[], options);
-
+		this.ctx.log(
+			'debug',
+			`Inserted ${operations.length} local operations; sending sync message`,
+		);
 		const message = await this.messageCreator.createOperation({ operations });
 		this.events.emit('syncMessage', message);
 	};
@@ -124,72 +126,80 @@ export class PersistenceMetadata extends Disposable {
 		assert(documentOid === rootOid, 'Must be root document OID');
 		oids.add(documentOid);
 		// readwrite mode to block on other write transactions
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-		});
-		await Promise.all([
-			this.db.iterateDocumentBaselines(
-				documentOid,
-				(baseline) => {
-					oids.add(baseline.oid);
-				},
-				{ transaction },
-			),
-			this.db.iterateDocumentOperations(
-				documentOid,
-				(patch) => {
-					oids.add(patch.oid);
-				},
-				{ transaction },
-			),
-		]);
-		const authz = await this.getDocumentAuthz(documentOid);
-		const ops = new Array<Operation>();
-		for (const oid of oids) {
-			ops.push({
-				oid,
-				timestamp: this.ctx.time.now,
-				data: { op: 'delete' },
-				authz,
-			});
-		}
-		return this.insertLocalOperations(ops);
+		return this.db.transaction(
+			{
+				storeNames: ['baselines', 'operations'],
+			},
+			async (transaction) => {
+				await Promise.all([
+					this.db.iterateDocumentBaselines(
+						documentOid,
+						(baseline) => {
+							oids.add(baseline.oid);
+						},
+						{ transaction },
+					),
+					this.db.iterateDocumentOperations(
+						documentOid,
+						(patch) => {
+							oids.add(patch.oid);
+						},
+						{ transaction },
+					),
+				]);
+				const authz = await this.getDocumentAuthz(documentOid);
+				const ops = new Array<Operation>();
+				for (const oid of oids) {
+					ops.push({
+						oid,
+						timestamp: this.ctx.time.now,
+						data: { op: 'delete' },
+						authz,
+					});
+				}
+				return this.insertLocalOperations(ops, { transaction });
+			},
+		);
 	};
 
 	deleteCollection = async (collection: string) => {
 		const oids = new Set<ObjectIdentifier>();
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-			mode: 'readwrite',
-		});
-		await Promise.all([
-			this.db.iterateCollectionBaselines(
-				collection,
-				(baseline) => {
-					oids.add(baseline.oid);
-				},
-				{ transaction },
-			),
-			this.db.iterateCollectionOperations(
-				collection,
-				(patch) => {
-					oids.add(patch.oid);
-				},
-				{ transaction },
-			),
-		]);
+		return this.db.transaction(
+			{
+				storeNames: ['baselines', 'operations'],
+				mode: 'readwrite',
+			},
+			async (transaction) => {
+				await Promise.all([
+					this.db.iterateCollectionBaselines(
+						collection,
+						(baseline) => {
+							oids.add(baseline.oid);
+						},
+						{ transaction },
+					),
+					this.db.iterateCollectionOperations(
+						collection,
+						(patch) => {
+							oids.add(patch.oid);
+						},
+						{ transaction },
+					),
+				]);
 
-		const ops = new Array<Operation>();
-		for (const oid of oids) {
-			ops.push({
-				oid,
-				timestamp: this.ctx.time.now,
-				data: { op: 'delete' },
-				authz: undefined,
-			});
-		}
+				const ops = new Array<Operation>();
+				for (const oid of oids) {
+					ops.push({
+						oid,
+						timestamp: this.ctx.time.now,
+						data: { op: 'delete' },
+						authz: undefined,
+					});
+				}
 
-		return this.insertLocalOperations(ops);
+				return this.insertLocalOperations(ops, { transaction });
+			},
+		);
 	};
 
 	getDocumentSnapshot = async (
@@ -198,83 +208,91 @@ export class PersistenceMetadata extends Disposable {
 	) => {
 		const documentOid = getOidRoot(oid);
 		assert(documentOid === oid, 'Must be root document OID');
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-			mode: 'readwrite',
-		});
-		const baselines: DocumentBaseline[] = [];
-		await this.db.iterateDocumentBaselines(
-			documentOid,
-			(b) => {
-				baselines.push(b);
-			},
+		return this.db.transaction(
 			{
-				transaction,
+				storeNames: ['baselines', 'operations'],
+				mode: 'readwrite',
 			},
-		);
-		const objectMap = new Map<ObjectIdentifier, any>();
-		for (const baseline of baselines) {
-			if (baseline.snapshot) {
-				assignOid(baseline.snapshot, baseline.oid);
-			}
-			objectMap.set(baseline.oid, baseline.snapshot);
-		}
-		await this.db.iterateDocumentOperations(
-			documentOid,
-			(op) => {
-				const obj = objectMap.get(op.oid) || undefined;
-				const newObj = applyPatch(obj, op.data);
-				if (newObj) {
-					assignOid(newObj, op.oid);
+			async (transaction) => {
+				const baselines: DocumentBaseline[] = [];
+				await this.db.iterateDocumentBaselines(
+					documentOid,
+					(b) => {
+						baselines.push(b);
+					},
+					{
+						transaction,
+					},
+				);
+				const objectMap = new Map<ObjectIdentifier, any>();
+				for (const baseline of baselines) {
+					if (baseline.snapshot) {
+						assignOid(baseline.snapshot, baseline.oid);
+					}
+					objectMap.set(baseline.oid, baseline.snapshot);
 				}
-				objectMap.set(op.oid, newObj);
-			},
-			{
-				transaction,
-				// only apply operations up to the current time
-				to: options.to || this.ctx.time.now,
+				await this.db.iterateDocumentOperations(
+					documentOid,
+					(op) => {
+						const obj = objectMap.get(op.oid) || undefined;
+						const newObj = applyPatch(obj, op.data);
+						if (newObj) {
+							assignOid(newObj, op.oid);
+						}
+						objectMap.set(op.oid, newObj);
+					},
+					{
+						transaction,
+						// only apply operations up to the current time
+						to: options.to || this.ctx.time.now,
+					},
+				);
+				const root = objectMap.get(documentOid);
+				if (root) {
+					substituteRefsWithObjects(root, objectMap);
+				}
+				return root;
 			},
 		);
-		const root = objectMap.get(documentOid);
-		if (root) {
-			substituteRefsWithObjects(root, objectMap);
-		}
-		return root;
 	};
 
 	getDocumentData = async (
 		oid: ObjectIdentifier,
 		options?: { abort?: AbortSignal },
 	) => {
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-			abort: options?.abort,
-		});
-		const baselines: DocumentBaseline[] = [];
-		const operations: Record<ObjectIdentifier, Operation[]> = {};
-		await Promise.all([
-			this.db.iterateDocumentBaselines(
-				oid,
-				(baseline) => {
-					baselines.push(baseline);
-				},
-				{
-					transaction,
-				},
-			),
-			this.db.iterateDocumentOperations(
-				oid,
-				(op) => {
-					operations[op.oid] ??= [];
-					operations[op.oid].push(op);
-				},
-				{ transaction },
-			),
-		]);
-		return {
-			baselines,
-			operations,
-		};
+		return this.db.transaction(
+			{
+				storeNames: ['baselines', 'operations'],
+				abort: options?.abort,
+			},
+			async (transaction) => {
+				const baselines: DocumentBaseline[] = [];
+				const operations: Record<ObjectIdentifier, Operation[]> = {};
+				await Promise.all([
+					this.db.iterateDocumentBaselines(
+						oid,
+						(baseline) => {
+							baselines.push(baseline);
+						},
+						{
+							transaction,
+						},
+					),
+					this.db.iterateDocumentOperations(
+						oid,
+						(op) => {
+							operations[op.oid] ??= [];
+							operations[op.oid].push(op);
+						},
+						{ transaction },
+					),
+				]);
+				return {
+					baselines,
+					operations,
+				};
+			},
+		);
 	};
 
 	getDocumentAuthz = async (oid: ObjectIdentifier) => {
@@ -296,28 +314,37 @@ export class PersistenceMetadata extends Disposable {
 		},
 		options?: { abort?: AbortSignal },
 	) => {
-		const transaction = this.db.transaction({
-			storeNames: ['baselines', 'operations'],
-			abort: options?.abort,
-			mode: 'readwrite',
-		});
-		if (data.baselines) {
-			await this.insertRemoteBaselines(data.baselines, { transaction });
-		}
-		if (options?.abort?.aborted) return;
-		if (data.operations) {
-			if (data.isLocal) {
-				await this.insertLocalOperations(data.operations, { transaction });
-			} else {
-				await this.insertRemoteOperations(data.operations, { transaction });
-			}
-		}
+		return this.db.transaction(
+			{
+				storeNames: ['baselines', 'operations'],
+				abort: options?.abort,
+				mode: 'readwrite',
+			},
+			async (transaction) => {
+				this.ctx.log('debug', 'Begin insert data transaction');
+				if (data.baselines) {
+					await this.insertRemoteBaselines(data.baselines, { transaction });
+				}
+				this.ctx.log('debug', 'Inserted baselines (if any)');
+				if (options?.abort?.aborted) throw new Error('Aborted');
+				if (data.operations) {
+					if (data.isLocal) {
+						this.ctx.log('debug', 'Inserting local operations');
+						await this.insertLocalOperations(data.operations, { transaction });
+					} else {
+						this.ctx.log('debug', 'Inserting remote operations');
+						await this.insertRemoteOperations(data.operations, { transaction });
+					}
+				}
+				this.ctx.log('debug', 'End insert data transaction');
+			},
+		);
 	};
 
 	updateLastSynced = async (timestamp: string) => {
 		if (this.ctx.closing) return;
 
-		return this.db.updateLocalReplica({
+		return this.updateLocalReplica({
 			lastSyncedLogicalTime: timestamp,
 		});
 	};
@@ -329,8 +356,50 @@ export class PersistenceMetadata extends Disposable {
 		}
 	};
 
-	getLocalReplica = async (options?: CommonQueryOptions) => {
-		return this.db.getLocalReplica(options);
+	// caching local replica as it's accessed often and only changed
+	// via this class.
+	private _cachedLocalReplica: LocalReplicaInfo | null = null;
+	private _creatingLocalReplica: Promise<LocalReplicaInfo> | undefined =
+		undefined;
+	getLocalReplica = async (
+		options?: CommonQueryOptions,
+	): Promise<LocalReplicaInfo> => {
+		if (this._cachedLocalReplica) return this._cachedLocalReplica;
+
+		const lookup = await this.db.getLocalReplica(options);
+		if (lookup) {
+			this.ctx.log('debug', 'Read local replica', lookup);
+			this._cachedLocalReplica = lookup;
+			return lookup;
+		}
+
+		if (this._creatingLocalReplica) {
+			return this._creatingLocalReplica;
+		}
+
+		this._creatingLocalReplica = (async () => {
+			const replicaId = cuid();
+			const replicaInfo: LocalReplicaInfo = {
+				id: replicaId,
+				userId: null,
+				ackedLogicalTime: null,
+				lastSyncedLogicalTime: null,
+			};
+			await this.db.updateLocalReplica(replicaInfo);
+			this._cachedLocalReplica = replicaInfo;
+			return replicaInfo;
+		})();
+		return this._creatingLocalReplica;
+	};
+	updateLocalReplica = async (
+		data: Partial<LocalReplicaInfo>,
+		opts?: { transaction?: AbstractTransaction },
+	) => {
+		const original = await this.getLocalReplica(opts);
+		assert(!!original, 'Local replica must exist');
+		Object.assign(original, data);
+		this._cachedLocalReplica = original;
+		await this.db.updateLocalReplica(original, opts);
 	};
 
 	// used to construct sync messages
@@ -338,54 +407,77 @@ export class PersistenceMetadata extends Disposable {
 	iterateAllOperations = this.db.iterateAllOperations;
 	iterateAllBaselines = this.db.iterateAllBaselines;
 
-	reset = this.db.reset;
+	reset = async () => {
+		if (this.ctx.closing) return;
+		await this.db.reset();
+	};
 	stats = this.db.stats;
 
 	export = async (): Promise<MetadataExport> => {
-		const db = this.db;
 		const baselines = new Array<DocumentBaseline>();
 		const operations = new Array<ClientOperation>();
-		const transaction = db.transaction({
-			storeNames: ['baselines', 'operations'],
-			mode: 'readwrite',
-		});
-		await this.iterateAllOperations(
-			(op) => {
-				operations.push(op);
+		return this.db.transaction(
+			{
+				storeNames: ['baselines', 'operations'],
+				mode: 'readwrite',
 			},
-			{ transaction },
-		);
-		await this.iterateAllBaselines(
-			(baseline) => {
-				baselines.push(baseline);
+			async (transaction) => {
+				await this.iterateAllOperations(
+					(op) => {
+						operations.push(op);
+					},
+					{ transaction },
+				);
+				await this.iterateAllBaselines(
+					(baseline) => {
+						baselines.push(baseline);
+					},
+					{ transaction },
+				);
+				const localReplica = await this.getLocalReplica();
+				return {
+					operations,
+					baselines,
+					localReplica,
+					schemaVersion: this.ctx.schema.version,
+				};
 			},
-			{ transaction },
 		);
-		const localReplica = await this.db.getLocalReplica();
-		return {
-			operations,
-			baselines,
-			localReplica,
-			schemaVersion: this.ctx.schema.version,
-		};
 	};
 
 	resetFrom = async (data: MetadataExport) => {
-		const db = this.db;
-		const transaction = db.transaction({
-			storeNames: ['baselines', 'operations', 'info'],
-			mode: 'readwrite',
-		});
-		await this.db.reset({ clearReplica: true, transaction });
+		this._cachedLocalReplica = null;
+
+		// await this.db.transaction(
+		// 	{ mode: 'readwrite', storeNames: ['baselines', 'operations', 'info'] },
+		// 	async (tx) => {
+		// 		await this.db.reset({ clearReplica: true, transaction: tx });
+
+		// 		if (data.localReplica) {
+		// 			await this.updateLocalReplica(
+		// 				{
+		// 					ackedLogicalTime: data.localReplica.ackedLogicalTime,
+		// 					lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
+		// 				},
+		// 				{
+		// 					transaction: tx,
+		// 				},
+		// 			);
+		// 		}
+		// 	},
+		// );
+
+		// transaction wasn't working for IDB (invalid state -- it was closing early?)
+		await this.db.reset({ clearReplica: true });
+
 		if (data.localReplica) {
-			await this.db.updateLocalReplica(
-				{
-					ackedLogicalTime: data.localReplica.ackedLogicalTime,
-					lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
-				},
-				{ transaction },
-			);
+			await this.updateLocalReplica({
+				ackedLogicalTime: data.localReplica.ackedLogicalTime,
+				lastSyncedLogicalTime: data.localReplica.lastSyncedLogicalTime,
+			});
 		}
+		// after transaction completes, insert new data.
+		// TODO: does this have to be split up like this?
 		this.ctx.log('debug', 'Resetting metadata from export', data);
 		await this.insertData({
 			operations: data.operations,
@@ -404,7 +496,7 @@ export class PersistenceMetadata extends Disposable {
 	};
 
 	private ack = async (timestamp: string) => {
-		const localReplicaInfo = await this.db.getLocalReplica();
+		const localReplicaInfo = await this.getLocalReplica();
 		// can't ack timestamps from the future.
 		if (timestamp > this.ctx.time.now) return;
 
@@ -419,7 +511,7 @@ export class PersistenceMetadata extends Disposable {
 			(!localReplicaInfo.ackedLogicalTime ||
 				timestamp > localReplicaInfo.ackedLogicalTime)
 		) {
-			this.db.updateLocalReplica({ ackedLogicalTime: timestamp });
+			this.updateLocalReplica({ ackedLogicalTime: timestamp });
 		}
 	};
 }

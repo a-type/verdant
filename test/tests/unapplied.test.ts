@@ -4,26 +4,27 @@ import { waitForMockCall, waitForQueryResult } from '../lib/waits.js';
 import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
 import { schema, createMigration } from '@verdant-web/store';
+import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext();
 
 it('updates docs with unapplied operations after upgrading versions', async () => {
 	const { server, createTestClient } = context;
 
-	const indexedDb = new IDBFactory();
+	const persistence = getPersistence();
 
 	const clientA = await createTestClient({
 		server,
 		library: 'unapplied-1',
 		user: 'User A',
-		indexedDb,
+		persistence,
 		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
 		library: 'unapplied-1',
 		user: 'User B',
-		indexedDb,
+		persistence,
 		// logId: 'B',
 	});
 
@@ -84,7 +85,7 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 			createMigration(defaultSchema, v2Schema),
 		],
 		schema: v2Schema,
-		indexedDb,
+		persistence,
 	});
 
 	clientA2.sync.start();
@@ -131,7 +132,7 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 			}),
 		],
 		schema: v2Schema,
-		indexedDb,
+		persistence,
 	});
 
 	// B should now be able to query the changed items

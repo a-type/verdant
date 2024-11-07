@@ -24,6 +24,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _loading = true;
 	private _failed = false;
 	private _downloadRemote = false;
+	private _uploaded = false;
 	private ctx: Context;
 	private unsubscribes: (() => void)[] = [];
 
@@ -53,7 +54,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		return true;
 	}
 	get isUploaded() {
-		return this._fileData?.remote ?? false;
+		return this._uploaded || this._fileData?.remote || false;
 	}
 
 	[UPDATE] = (fileData: FileData) => {
@@ -62,7 +63,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this._failed = false;
 		this._fileData = fileData;
 		if (fileData.file) {
-			if (this._objectUrl) {
+			if (this._objectUrl && 'revokeObjectURL' in URL) {
 				URL.revokeObjectURL(this._objectUrl);
 			}
 			this.ctx.log('debug', 'Creating object URL for file', this.id);
@@ -77,15 +78,19 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.emit('change');
 	};
 
-	private onUploaded = () => {
-		if (!this._fileData) return;
-		this._fileData!.remote = true;
+	private onUploaded = (data: FileData) => {
+		// TODO: cleanup all this uploaded flagging junk
+		this._fileData ??= data;
+		this._uploaded = true;
+		this.ctx.log('debug', 'File marked uploaded', this.id, this._fileData);
 		this.emit('change');
 	};
 
 	get url(): string | null {
+		// prefer local file representations.
 		if (this.loading) return null;
 		if (this._objectUrl) return this._objectUrl;
+		// TODO: use localPath here?
 		return this._fileData?.url ?? null;
 	}
 
@@ -117,7 +122,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			id: this.id,
 			url: this._objectUrl ?? this._fileData?.url ?? undefined,
 			name: this.name ?? 'unknown-file',
-			remote: false,
+			remote: this._fileData?.remote ?? false,
 			type: this.type ?? '',
 			file: this._fileData?.file,
 		};

@@ -24,14 +24,7 @@ export type {
 export { ServerSync } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { EntityFile, type EntityFileSnapshot } from './files/EntityFile.js';
-export {
-	/** @deprecated - use schema.collection */
-	collection,
-	schema,
-	createDefaultMigration,
-	migrate,
-	createMigration,
-} from '@verdant-web/common';
+export { schema, createMigration } from '@verdant-web/common';
 export type {
 	StorageDocument,
 	StorageSchema,
@@ -50,8 +43,12 @@ export type {
 	Migration,
 	VerdantError,
 	VerdantErrorCode,
+	ObjectIdentifier,
+	CollectionFilter,
+	FileData,
+	DocumentBaseline,
+	UserInfo,
 } from '@verdant-web/common';
-export type { UserInfo } from '@verdant-web/common';
 export type { Query } from './queries/types.js';
 export type { QueryStatus } from './queries/BaseQuery.js';
 export type { CollectionQueries } from './queries/CollectionQueries.js';
@@ -59,3 +56,5 @@ export * from './utils/id.js';
 export { UndoHistory } from './UndoHistory.js';
 export * from './authorization.js';
 export * from './sync/cliSync.js';
+export type * from './persistence/interfaces.js';
+export { IdbPersistence } from './persistence/idb/idbPersistence.js';

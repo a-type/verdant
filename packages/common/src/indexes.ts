@@ -122,17 +122,14 @@ export function computeCompoundIndices(
 ): any {
 	return Object.entries(schema.compounds || {}).reduce<
 		Record<string, CompoundIndexValue>
-	>(
-		(acc, [indexKey, index]) => {
-			acc[indexKey] = createCompoundIndexValue(
-				...(index as CollectionCompoundIndex<any, any>).of.map(
-					(key) => doc[key] as string | number,
-				),
-			);
-			return acc;
-		},
-		{} as Record<string, CompoundIndexValue>,
-	);
+	>((acc, [indexKey, index]) => {
+		acc[indexKey] = createCompoundIndexValue(
+			...(index as CollectionCompoundIndex<any, any>).of.map(
+				(key) => doc[key] as string | number,
+			),
+		);
+		return acc;
+	}, {} as Record<string, CompoundIndexValue>);
 }
 
 function computeIndexedFields(schema: StorageCollectionSchema, doc: any) {
@@ -161,7 +158,6 @@ export function getIndexValues(
 		basicIndexes,
 		computeCompoundIndices(schema, { ...doc, ...basicIndexes }),
 	);
-	basicIndexes['@@@snapshot'] = JSON.stringify(doc);
 	return basicIndexes;
 }
 

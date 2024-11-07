@@ -1,23 +1,25 @@
-import { ReplicaType } from '@verdant-web/server';
 import {
+	ClientWithCollections,
 	createMigration,
 	Migration,
 	schema,
-	StorageDescriptor,
 } from '@verdant-web/store';
-import { expect, it, vitest } from 'vitest';
-import { waitForFileLoaded, waitForQueryResult } from '../lib/waits.js';
+import { expect, it, vi, vitest } from 'vitest';
+import {
+	waitForFileLoaded,
+	waitForMockCall,
+	waitForQueryResult,
+} from '../lib/waits.js';
 import { createTestFile } from '../lib/createTestFile.js';
+import { createTestClient } from '../lib/testClient.js';
 
-async function createTestClient({
+async function createClient({
 	schema,
 	migrations,
 	server,
 	library,
 	user,
-	type = ReplicaType.Realtime,
 	logId,
-	indexedDb = new IDBFactory(),
 	oldSchemas,
 }: {
 	schema: any;
@@ -25,31 +27,19 @@ async function createTestClient({
 	server?: { port: number };
 	library: string;
 	user: string;
-	type?: ReplicaType;
 	logId?: string;
-	indexedDb?: IDBFactory;
 	oldSchemas: any[];
-}): Promise<any> {
-	const desc = new StorageDescriptor({
+}): Promise<ClientWithCollections> {
+	const client = await createTestClient({
 		schema,
 		migrations,
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
-			: undefined,
-		indexedDb,
+		library,
+		user,
+		server,
+		logId,
 		oldSchemas,
 	});
-	const client = await desc.open();
-	return client;
+	return client as any;
 }
 
 it('can export data and import it even after a schema migration', async () => {
@@ -76,14 +66,16 @@ it('can export data and import it even after a schema migration', async () => {
 		migrations,
 		library: 'test',
 		user: 'a',
+		// logId: 'A',
 	};
 
-	let client = await createTestClient({
+	const onFileAdded = vi.fn();
+	let client = await createClient({
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
-		// logId: 'client1',
 	});
+	client.subscribe('fileSaved', onFileAdded);
 
 	const originalLocalReplicaInfo =
 		await client.__persistence.meta.getLocalReplica();
@@ -108,7 +100,11 @@ it('can export data and import it even after a schema migration', async () => {
 
 	await client.entities.flushAllBatches();
 
+	// wait for files to be saved to disk
+	await waitForMockCall(onFileAdded, 2);
+
 	const exported = await client.export();
+	expect(exported.fileData.length).toBe(2);
 	expect(exported.files.length).toBe(2);
 
 	await client.close();
@@ -158,7 +154,7 @@ it('can export data and import it even after a schema migration', async () => {
 
 	migrations.push(createMigration(v1Schema, v2Schema));
 
-	client = await createTestClient({
+	client = await createClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
@@ -186,16 +182,25 @@ it('can export data and import it even after a schema migration', async () => {
 	const itemsSubscriber = vitest.fn();
 	itemsQuery.subscribe(itemsSubscriber);
 
-	await waitForQueryResult(itemsQuery, (items) => {
-		return items?.length === 2;
-	});
+	await waitForQueryResult(
+		itemsQuery,
+		(items) => {
+			return items?.length === 2;
+		},
+		10000,
+		'list all items before import',
+	);
 
 	await client.import(exported);
 
-	await waitForQueryResult(itemsQuery, (items) => {
-		// console.log(items?.length);
-		return items?.length === 3;
-	});
+	await waitForQueryResult(
+		itemsQuery,
+		(items) => {
+			return items?.length === 3;
+		},
+		10000,
+		'list all items after import',
+	);
 
 	// lists should exist now (not throw)
 	await client.lists.findAll().resolved;
@@ -215,6 +220,7 @@ it('can export data and import it even after a schema migration', async () => {
 		}
 	}
 
+	// file contents are different in different persistence environments.
 	expect(items.map((item: any) => item.getSnapshot())).toEqual([
 		{
 			contents: 'hello',
@@ -227,11 +233,11 @@ it('can export data and import it even after a schema migration', async () => {
 			contents: 'world',
 			file: {
 				id: expect.any(String),
-				url: 'blob:text/plain:6',
+				url: process.env.SQLITE ? expect.any(String) : 'blob:text/plain:6',
 				name: 'test.txt',
 				type: 'text/plain',
 				remote: false,
-				file: expect.any(Blob),
+				file: process.env.SQLITE ? undefined : expect.any(Blob),
 			},
 			id: '2',
 			tags: ['a', 'b', 'c'],
@@ -241,11 +247,11 @@ it('can export data and import it even after a schema migration', async () => {
 			contents: 'foo',
 			file: {
 				id: expect.any(String),
-				url: 'blob:text/plain:23',
+				url: process.env.SQLITE ? expect.any(String) : 'blob:text/plain:23',
 				name: 'test.txt',
 				remote: false,
 				type: 'text/plain',
-				file: expect.any(Blob),
+				file: process.env.SQLITE ? undefined : expect.any(Blob),
 			},
 			id: '3',
 			tags: ['a', 'b'],

@@ -1,4 +1,5 @@
 import { roughSizeOfObject } from '@verdant-web/common';
+import { Context } from '../../internal.js';
 
 export const globalIDB =
 	typeof window !== 'undefined' ? window.indexedDB : (undefined as any);
@@ -182,38 +183,100 @@ export function createAbortableTransaction(
 }
 
 /**
- * Empties all data in a database without changing
- * its structure.
+ * Deletes any existing database with name `toName` and
+ * copies the index structure and all data
+ * from `from` to a new database.
+ *
+ * Does NOT run Verdant migrations. Use to copy existing
+ * data as-is.
  */
-export function emptyDatabase(db: IDBDatabase) {
-	const storeNames = Array.from(db.objectStoreNames);
-	const tx = db.transaction(storeNames, 'readwrite');
-	for (const storeName of storeNames) {
-		tx.objectStore(storeName).clear();
+export async function overwriteDatabase(
+	from: IDBDatabase,
+	toName: string,
+	ctx: Pick<Context, 'log'>,
+	indexedDB = window.indexedDB,
+) {
+	const databases = await getAllDatabaseNamesAndVersions(indexedDB);
+	if (databases.some((d) => d.name === toName)) {
+		await deleteDatabase(toName, indexedDB);
+		ctx.log('debug', 'Deleted existing database', toName);
 	}
-	return new Promise<void>((resolve, reject) => {
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
-}
 
-export async function copyDatabase(from: IDBDatabase, to: IDBDatabase) {
-	await emptyDatabase(to);
+	const to = await new Promise<IDBDatabase>((resolve, reject) => {
+		ctx.log('debug', 'Opening reset database', toName, 'at', from.version);
+		const openRequest = indexedDB.open(toName, from.version);
+		openRequest.onupgradeneeded = () => {
+			ctx.log(
+				'debug',
+				'Upgrading database',
+				toName,
+				'to version',
+				from.version,
+			);
+			// copy all indexes from original
+			const original = from;
+			const upgradeTx = openRequest.transaction;
+			if (!upgradeTx) {
+				throw new Error('No transaction');
+			}
+			for (const storeName of Array.from(original.objectStoreNames)) {
+				const originalObjectStore = original
+					.transaction(storeName)
+					.objectStore(storeName);
+				// create object store
+				upgradeTx.db.createObjectStore(storeName, {
+					keyPath: originalObjectStore.keyPath,
+					autoIncrement: originalObjectStore.autoIncrement,
+				});
+				const store = upgradeTx.objectStore(storeName);
+				const originalStore = original
+					.transaction(storeName)
+					.objectStore(storeName);
+				for (const index of Array.from(originalStore.indexNames)) {
+					const originalIndex = originalStore.index(index);
+					ctx.log('debug', 'Copying index', index);
+					store.createIndex(index, originalIndex.keyPath, {
+						unique: originalIndex.unique,
+						multiEntry: originalIndex.multiEntry,
+					});
+				}
+			}
+		};
+		openRequest.onsuccess = () => {
+			ctx.log('debug', 'Opened reset database', toName);
+			resolve(openRequest.result);
+		};
+		openRequest.onerror = () =>
+			reject(openRequest.error ?? new Error('Unknown database upgrade error'));
+	});
+
 	const records = await getAllFromObjectStores(
 		from,
 		Array.from(from.objectStoreNames),
 	);
-	const writeTx = to.transaction(Array.from(to.objectStoreNames), 'readwrite');
-	for (let i = 0; i < records.length; i++) {
-		const store = writeTx.objectStore(from.objectStoreNames[i]);
-		for (const record of records[i]) {
-			store.add(record);
+	await new Promise<void>((resolve, reject) => {
+		const writeTx = to.transaction(
+			Array.from(to.objectStoreNames),
+			'readwrite',
+		);
+		for (let i = 0; i < records.length; i++) {
+			const store = writeTx.objectStore(from.objectStoreNames[i]);
+			for (const record of records[i]) {
+				store.add(record);
+			}
 		}
-	}
-	return new Promise<void>((resolve, reject) => {
 		writeTx.oncomplete = () => resolve();
-		writeTx.onerror = () => reject(writeTx.error);
+		writeTx.onerror = (ev) => {
+			const err =
+				writeTx.error ??
+				(ev.target as any).transaction?.error ??
+				new Error('Unknown error');
+			ctx.log('critical', 'Error copying data', err);
+			reject(err);
+		};
 	});
+
+	await closeDatabase(to);
 }
 
 export function openDatabase(

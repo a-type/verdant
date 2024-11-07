@@ -1,9 +1,14 @@
 import { assert } from '@a-type/utils';
 import { EntityFile } from '@verdant-web/store';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { waitForEverythingToRebase } from '../lib/waits.js';
+import {
+	waitForCondition,
+	waitForEverythingToRebase,
+	waitForMockCall,
+} from '../lib/waits.js';
+import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
 	// serverLog: true,
@@ -12,15 +17,17 @@ const context = createTestContext({
 
 it('can store and cleanup local files', async () => {
 	const { server, createTestClient } = context;
-	const indexedDb = new IDBFactory();
+	const persistence = getPersistence();
 
+	const onFileSaved = vi.fn();
 	const clientA = await createTestClient({
 		server,
 		library: 'files-1',
 		user: 'User A',
-		indexedDb,
 		// logId: 'A',
+		persistence,
 	});
+	clientA.subscribe('fileSaved', onFileSaved);
 
 	const a_item = await clientA.items.put({
 		content: 'Apples',
@@ -38,7 +45,10 @@ it('can store and cleanup local files', async () => {
 
 	// wait for file to be stored... this is
 	// not ideal
-	await new Promise<void>((resolve) => setTimeout(resolve, 100));
+	await waitForMockCall(onFileSaved);
+
+	let stats = await clientA.stats();
+	expect(stats.files.size.count).toBe(1);
 
 	// file is persisted and can be recovered
 	// after a restart
@@ -48,8 +58,8 @@ it('can store and cleanup local files', async () => {
 		server,
 		library: 'files-1',
 		user: 'User A',
-		indexedDb,
 		// logId: 'A2',
+		persistence,
 	});
 
 	const a_item2 = await clientA2.items.get(a_item.get('id')).resolved;
@@ -65,12 +75,18 @@ it('can store and cleanup local files', async () => {
 	});
 	expect(file2.loading).toBe(false);
 	expect(file2.url).toBeTruthy();
-	expect(file2.url).toBe(file.url);
+	if (!process.env.SQLITE) {
+		// this only works in browsers where the url is the same
+		expect(file2.url).toBe(file.url);
+	}
 
 	// now try deleting the file
+	context.log('Deleting file');
 	a_item2.delete('image');
+	await clientA2.entities.flushAllBatches();
 
 	// rebase has to trigger to mark files for deletion
+	await clientA2.__manualRebase();
 	await waitForEverythingToRebase(clientA2);
 
 	// need to restart the client to trigger deleted cleanup
@@ -80,40 +96,22 @@ it('can store and cleanup local files', async () => {
 		server,
 		library: 'files-1',
 		user: 'User A',
-		indexedDb,
 		files: {
 			// immediately delete files
 			canCleanupDeletedFile: () => true,
 		},
 		// logId: 'A3',
+		persistence,
 	});
 
-	// wait for microtasks to run
-	await new Promise((resolve) => setTimeout(resolve, 0));
-
-	// file should be gone - check in indexeddb
-	// NOTE: this is brittle, relies on implementation details
-	const db = await new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDb.open('files-1_User A_meta');
-		request.onsuccess = () => resolve(request.result);
-		request.onerror = () => reject(request.error);
-		request.onupgradeneeded = (ev) => {
-			reject(
-				new Error(
-					`Test database usage needs the right meta db version (${ev.oldVersion})})`,
-				),
-			);
-		};
-	});
-
-	const tx = db.transaction('files', 'readonly');
-	const store = tx.objectStore('files');
-	const request = store.get(file.id);
-
-	await new Promise<void>((resolve, reject) => {
-		request.onsuccess = () => resolve();
-		request.onerror = () => reject(request.error);
-	});
-
-	expect(request.result).toBeUndefined();
+	// file should be gone - check in storage
+	// TODO: reimplement this without idb specifics
+	await waitForCondition(
+		async () => {
+			stats = await clientA3.stats();
+			return stats.files.size.count === 0;
+		},
+		3000,
+		'file deleted',
+	);
 });

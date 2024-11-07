@@ -12,6 +12,7 @@ import {
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
+import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
 	// testLog: true,
@@ -19,6 +20,8 @@ const ctx = createTestContext({
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {
+	const persistence = getPersistence();
+
 	const v1Item = collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -50,6 +53,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		migrations,
 		library: 'test',
 		user: 'a',
+		persistence,
 	};
 
 	const clientA = (await ctx.createTestClient({
@@ -64,6 +68,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		migrations,
 		library: 'test',
 		user: 'b',
+		persistence,
 	};
 
 	const clientB = (await ctx.createTestClient({
@@ -95,6 +100,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	// add some changes which will be invalid in v2
 	item1.get('tags').push('c');
 	item1.set('nested', { a: { b: 'c' } });
+	await clientA.entities.flushAllBatches();
 
 	const v2Item = collection({
 		name: 'item',
@@ -235,6 +241,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 			// debugger;
 		},
 	);
+	ctx.log('item 1 recovered');
 
 	// this should now recover after A2 migrates
 	await waitForQueryResult(getItem2, (v) => !!v, 2000, 'item 2 recovered');

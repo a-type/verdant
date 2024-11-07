@@ -24,6 +24,7 @@ import { attemptToRegisterBackgroundSync } from './background.js';
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
 	syncingChange: (syncing: boolean) => void;
+	synced: () => void;
 	/** When the server has lost data and re-requests data from the past */
 	serverReset: (since: string | null) => void;
 };
@@ -70,6 +71,7 @@ export interface Sync<Presence = any, Profile = any>
 	readonly isConnected: boolean;
 	readonly status: 'active' | 'paused';
 	readonly mode: SyncTransportMode;
+	readonly hasSynced: boolean;
 }
 
 export class NoSync<Presence = any, Profile = any>
@@ -77,6 +79,7 @@ export class NoSync<Presence = any, Profile = any>
 	implements Sync<Presence, Profile>
 {
 	readonly mode = 'pull';
+	readonly hasSynced = false;
 
 	public send(): void {}
 
@@ -204,6 +207,7 @@ export class ServerSync<Presence = any, Profile = any>
 	}) => Promise<void>;
 	private broadcastChannel: BroadcastChannel | null = null;
 	private _activelySyncing = false;
+	private _hasSynced = false;
 
 	readonly presence: PresenceManager<Profile, Presence>;
 
@@ -215,7 +219,6 @@ export class ServerSync<Presence = any, Profile = any>
 		{
 			authEndpoint,
 			fetchAuth,
-			fetch,
 			initialPresence,
 			automaticTransportSelection = true,
 			autoStart,
@@ -249,11 +252,13 @@ export class ServerSync<Presence = any, Profile = any>
 			updateBatchTimeout: presenceUpdateBatchTimeout,
 			ctx,
 		});
-		this.endpointProvider = new ServerSyncEndpointProvider({
-			authEndpoint,
-			fetchAuth,
-			fetch,
-		});
+		this.endpointProvider = new ServerSyncEndpointProvider(
+			{
+				authEndpoint,
+				fetchAuth,
+			},
+			ctx,
+		);
 
 		this.webSocketSync = new WebSocketSync({
 			endpointProvider: this.endpointProvider,
@@ -264,7 +269,6 @@ export class ServerSync<Presence = any, Profile = any>
 			endpointProvider: this.endpointProvider,
 			presence: this.presence,
 			interval: pullInterval,
-			fetch,
 			ctx,
 		});
 		this.fileSync = new FileSync({
@@ -346,6 +350,10 @@ export class ServerSync<Presence = any, Profile = any>
 		return this._activelySyncing;
 	}
 
+	get hasSynced() {
+		return this._hasSynced;
+	}
+
 	private handleBroadcastChannelMessage = (event: MessageEvent) => {
 		if (event.data.type === 'sync') {
 			this.handleMessage(event.data.message, { source: 'broadcastChannel' });
@@ -358,6 +366,9 @@ export class ServerSync<Presence = any, Profile = any>
 			source: 'network',
 		},
 	) => {
+		// cancel if client is shutting down
+		if (this.ctx.closing) return;
+
 		// TODO: move this into metadata
 		if (message.type === 'op-re' || message.type === 'sync-resp') {
 			for (const op of message.operations) {
@@ -395,6 +406,8 @@ export class ServerSync<Presence = any, Profile = any>
 				await this.ctx.meta.updateLastSynced(message.ackedTimestamp);
 				this._activelySyncing = false;
 				this.emit('syncingChange', false);
+				this._hasSynced = true;
+				this.emit('synced');
 				break;
 			case 'need-since':
 				this.emit('serverReset', message.since);

@@ -8,12 +8,15 @@ import {
 	IDBRequest,
 	IDBFactory,
 } from 'fake-indexeddb';
-window.IDBKeyRange = IDBKeyRange;
-window.IDBCursor = IDBCursor;
-window.IDBDatabase = IDBDatabase;
-window.IDBTransaction = IDBTransaction;
-window.IDBRequest = IDBRequest;
-window.IDBFactory = IDBFactory;
+
+if (typeof window !== 'undefined') {
+	window.IDBKeyRange = IDBKeyRange;
+	window.IDBCursor = IDBCursor;
+	window.IDBDatabase = IDBDatabase;
+	window.IDBTransaction = IDBTransaction;
+	window.IDBRequest = IDBRequest;
+	window.IDBFactory = IDBFactory;
+}
 
 // @ts-ignore
 global.WebSocket = WebSocket;

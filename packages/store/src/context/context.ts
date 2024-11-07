@@ -11,13 +11,14 @@ import {
 } from '@verdant-web/common';
 import { UndoHistory } from '../UndoHistory.js';
 import { Time } from './Time.js';
-import type { PersistenceQueries } from '../persistence/PersistenceQueries.js';
+import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
 import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
 import {
 	PersistedFileData,
 	PersistenceImplementation,
 } from '../persistence/interfaces.js';
+import { ShutdownHandler } from './ShutdownHandler.js';
 
 /**
  * Common components utilized across various client
@@ -33,7 +34,7 @@ export interface Context {
 	time: Time;
 
 	meta: PersistenceMetadata;
-	queries: PersistenceQueries;
+	documents: PersistenceDocuments;
 	files: PersistenceFiles;
 
 	undoHistory: UndoHistory;
@@ -55,7 +56,7 @@ export interface Context {
 		persistenceReset: () => void;
 		filesDeleted: (files: FileRef[]) => void;
 		fileAdded: (file: FileData) => void;
-		[ev: `fileUploaded:${string}`]: () => void;
+		[ev: `fileUploaded:${string}`]: (file: FileData) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**
@@ -83,16 +84,27 @@ export interface Context {
 		 * or stored data, but is useful for debugging and testing.
 		 */
 		rebase: () => void;
+		fileSaved: (file: FileData) => void;
 	}>;
 	weakRef<T extends object>(value: T): WeakRef<T>;
 	migrations: Migration<any>[];
 	closing: boolean;
+	/** If this is present, any attempt to close the client should await it first. */
+	closeLock?: Promise<void>;
+	pauseRebasing: boolean;
 	patchCreator: PatchCreator;
+	persistenceShutdownHandler: ShutdownHandler;
 
 	config: {
 		files?: FileConfig;
 		sync?: SyncConfig;
 		persistence?: PersistenceConfig;
+	};
+
+	environment: {
+		WebSocket: typeof WebSocket;
+		fetch: typeof fetch;
+		indexedDB: typeof indexedDB;
 	};
 
 	persistence: PersistenceImplementation;
@@ -197,4 +209,4 @@ export interface PersistenceConfig {
 	rebaseTimeout?: number;
 }
 
-export type InitialContext = Omit<Context, 'queries' | 'meta' | 'files'>;
+export type InitialContext = Omit<Context, 'documents' | 'meta' | 'files'>;

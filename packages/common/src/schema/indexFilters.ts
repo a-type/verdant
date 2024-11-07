@@ -5,6 +5,7 @@ import {
 	RangeCollectionIndexFilter,
 	SortIndexFilter,
 	StartsWithIndexFilter,
+	StorageCollectionSchema,
 } from './types.js';
 
 export function isMatchIndexFilter(
@@ -46,4 +47,34 @@ export function isSortIndexFilter(
 		!isStartsWithIndexFilter(filter) &&
 		(filter as any).order
 	);
+}
+
+export function isMultiValueIndex(
+	collectionSchema: StorageCollectionSchema,
+	indexName: string,
+): boolean {
+	const compound = collectionSchema.compounds?.[indexName];
+	if (compound) {
+		return compound.of.some((fieldOrIndexName) => {
+			return isMultiValueIndex(collectionSchema, fieldOrIndexName);
+		});
+	}
+	const index = collectionSchema.indexes?.[indexName];
+	if (index) {
+		if ('type' in index) {
+			return isMultiEntryIndexType(index.type);
+		}
+		if ('field' in index) {
+			const field = collectionSchema.fields[index.field];
+			if (!field) return false;
+			return isMultiEntryIndexType(field.type);
+		}
+	}
+	const field = collectionSchema.fields[indexName];
+	if (!field) return false;
+	return isMultiEntryIndexType(field.type);
+}
+
+function isMultiEntryIndexType(type: string) {
+	return type === 'array' || type.endsWith('[]');
 }

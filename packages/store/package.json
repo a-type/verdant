@@ -18,6 +18,11 @@
 			"development": "./src/sync/serviceWorker.ts",
 			"import": "./dist/esm/sync/serviceWorker.js",
 			"types": "./dist/esm/sync/serviceWorker.d.ts"
+		},
+		"./internal": {
+			"development": "./src/internal.ts",
+			"import": "./dist/esm/internal.js",
+			"types": "./dist/esm/internal.d.ts"
 		}
 	},
 	"publishConfig": {
@@ -33,6 +38,10 @@
 			"./serviceWorker": {
 				"import": "./dist/esm/sync/serviceWorker.js",
 				"types": "./dist/esm/sync/serviceWorker.d.ts"
+			},
+			"./internal": {
+				"import": "./dist/esm/internal.js",
+				"types": "./dist/esm/internal.d.ts"
 			}
 		},
 		"access": "public"

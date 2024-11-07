@@ -5,6 +5,7 @@ import { createTestClient } from '../lib/testClient.js';
 import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
+	waitForFileUpload,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
@@ -60,6 +61,7 @@ it('the server allows retrieving a document snapshot', async () => {
 		content: 'Apples',
 		image: createTestFile(),
 	});
+	await waitForFileUpload(a_apples.get('image')!, 5000);
 
 	// we want these in separate batches just for extra testing
 	clientA

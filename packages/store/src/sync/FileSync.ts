@@ -42,7 +42,7 @@ export class FileSync extends Disposable {
 		this.ctx.log('debug', 'Uploading file', data.id, data.name);
 		try {
 			await this.uploadFile(data);
-			this.ctx.internalEvents.emit(`fileUploaded:${data.id}`);
+			this.ctx.internalEvents.emit(`fileUploaded:${data.id}`, data);
 		} catch (e) {
 			this.ctx.log('error', 'File upload failed', e);
 		}
@@ -70,14 +70,17 @@ export class FileSync extends Disposable {
 		formData.append('file', file);
 
 		try {
-			const response = await fetch(fileEndpoint + `/${data.id}`, {
-				method: 'POST',
-				body: formData,
-				credentials: 'include',
-				headers: {
-					Authorization: `Bearer ${token}`,
+			const response = await this.ctx.environment.fetch(
+				fileEndpoint + `/${data.id}`,
+				{
+					method: 'POST',
+					body: formData,
+					credentials: 'include',
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
 				},
-			});
+			);
 
 			if (response.ok) {
 				this.ctx.log('info', 'File upload successful');
@@ -132,14 +135,17 @@ export class FileSync extends Disposable {
 			await this.endpointProvider.getEndpoints();
 
 		try {
-			const response = await fetch(fileEndpoint + `/${id}`, {
-				method: 'GET',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token}`,
+			const response = await this.ctx.environment.fetch(
+				fileEndpoint + `/${id}`,
+				{
+					method: 'GET',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+					},
 				},
-			});
+			);
 
 			if (response.ok) {
 				const data = await response.json();

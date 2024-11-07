@@ -14,19 +14,19 @@ import {
 } from '../lib/waits.js';
 import migrations from '../migrations/index.js';
 import schema from '../schema.js';
+import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
-	serverLog: true,
-	testLog: true,
+	// serverLog: true,
+	// testLog: true,
 });
 
 it('an offline client rebases everything', async () => {
-	const indexedDb = new IDBFactory();
 	const desc = new ClientDescriptor({
 		migrations,
 		namespace: 'offline_rebase',
-		indexedDb,
 		oldSchemas: [schema],
+		persistence: getPersistence(),
 		// log: (...args: any[]) => console.log('[offline_rebase]', ...args),
 	});
 	const client = await desc.open();
@@ -155,7 +155,7 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	const clientB = await context.createTestClient({
 		library: 'old-rebase-sync-1',
 		user: 'B',
-		logId: 'B',
+		// logId: 'B',
 	});
 
 	clientA.sync.start();

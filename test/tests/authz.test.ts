@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
-import { IDBFactory } from 'fake-indexeddb';
 import { authorization } from '@verdant-web/store';
 
 const ctx = createTestContext({
@@ -18,7 +17,6 @@ it('doesnt sync authorized docs to other users', async () => {
 	const userA2 = await ctx.createTestClient({
 		user: 'A',
 		library: 'authz',
-		indexedDb: new IDBFactory(),
 	});
 
 	const userB = await ctx.createTestClient({
@@ -72,7 +70,6 @@ it('doesnt sync authorized docs to other users', async () => {
 	const userA3 = await ctx.createTestClient({
 		user: 'A',
 		library: 'authz',
-		indexedDb: new IDBFactory(),
 	});
 	userA3.sync.start();
 

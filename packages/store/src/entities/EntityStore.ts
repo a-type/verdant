@@ -132,7 +132,7 @@ export class EntityStore extends Disposable {
 	};
 
 	empty = async () => {
-		await this.ctx.queries.reset();
+		await this.ctx.documents.reset();
 		this.events.resetAll.invoke(this);
 		this.cache.clear();
 	};
@@ -143,7 +143,7 @@ export class EntityStore extends Disposable {
 			return;
 		}
 		await this.ctx.meta.reset();
-		await this.ctx.queries.reset();
+		await this.ctx.documents.reset();
 		this.events.resetAll.invoke(this);
 	};
 
@@ -222,6 +222,10 @@ export class EntityStore extends Disposable {
 		// so that realtime is lower latency? What would happen
 		// if the storage failed?
 		await this.ctx.meta.insertData(data, abortOptions);
+		this.ctx.log(
+			'debug',
+			'Data processing complete, all data saved to metadata db.',
+		);
 
 		// recompute all affected documents for querying
 		const entities = await Promise.all(
@@ -240,7 +244,8 @@ export class EntityStore extends Disposable {
 			}),
 		);
 		try {
-			await this.ctx.queries.saveEntities(entities, abortOptions);
+			this.ctx.log('debug', 'Saving entities to queryable storage');
+			await this.ctx.documents.saveEntities(entities, abortOptions);
 		} catch (err) {
 			if (this.disposed) {
 				this.ctx.log(
@@ -439,6 +444,7 @@ export class EntityStore extends Disposable {
 	 * Constructs an entity from an OID, but does not load it.
 	 */
 	private constructEntity = (oid: string): Entity | null => {
+		assert(!!oid, 'Cannot construct entity without OID');
 		const { collection } = decomposeOid(oid);
 		const { schema, readonlyKeys } = this.getCollectionSchema(collection);
 

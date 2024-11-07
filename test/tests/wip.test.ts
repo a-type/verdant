@@ -1,62 +1,55 @@
 import {
 	Migration,
-	ReplicaType,
 	StorageSchema,
 	createMigration,
 	schema,
 } from '@verdant-web/common';
-import { ClientWithCollections, StorageDescriptor } from '@verdant-web/store';
+import {
+	ClientWithCollections,
+	PersistenceImplementation,
+} from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import defaultSchema from '../schema.js';
+import { createTestClient } from '../lib/testClient.js';
+import { getPersistence } from '../lib/persistence.js';
 
-const testLog = false;
+const testLog = true;
 function log(...args: any[]) {
 	if (testLog) {
 		console.log('🔺', ...args);
 	}
 }
 
-async function createTestClient({
+async function createClient({
 	schema,
 	migrations,
 	server,
 	library,
 	user,
-	type = ReplicaType.Realtime,
 	logId,
-	indexedDb,
 	oldSchemas,
+	persistence,
 }: {
 	schema: any;
 	migrations: Migration<any>[];
 	server?: { port: number };
 	library: string;
 	user: string;
-	type?: ReplicaType;
 	logId?: string;
-	indexedDb: IDBFactory;
 	oldSchemas: StorageSchema[];
+	persistence?: PersistenceImplementation;
 }): Promise<ClientWithCollections> {
-	const desc = new StorageDescriptor({
+	const client = await createTestClient({
 		schema,
 		migrations,
-		namespace: `${library}_${user}`,
-		sync: server
-			? {
-					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
-					initialPresence: {},
-					defaultProfile: {},
-					initialTransport: 'realtime',
-			  }
-			: undefined,
-		log: logId
-			? (...args: any[]) => console.log(`[${logId}]`, ...args)
-			: undefined,
-		indexedDb,
+		library,
+		user,
+		server,
+		logId,
 		oldSchemas,
+		persistence,
 	});
-	const client = await desc.open();
-	return client as ClientWithCollections;
+	return client as any as ClientWithCollections;
 }
 
 it('applies a WIP schema over an old schema and discards it once the new version is ready', async () => {
@@ -66,11 +59,11 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		library: 'wip-1',
 		migrations: [createMigration(defaultSchema)],
 		user: 'a',
-		// logId: 'A',
-		indexedDb: new IDBFactory(),
+		logId: 'A',
 		oldSchemas: [defaultSchema],
+		persistence: getPersistence(),
 	};
-	const client = await createTestClient(baseClientOptions);
+	const client = await createClient(baseClientOptions);
 
 	await client.items.put({
 		id: '1',
@@ -110,20 +103,24 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	});
 
 	log('opening wip client');
-	const wipClient = await createTestClient({
+	const wipClient = await createClient({
 		...baseClientOptions,
 		schema: wipSchema,
 		oldSchemas: [defaultSchema, wipSchema],
 		migrations: [
 			createMigration(defaultSchema),
 			createMigration(defaultSchema, wipSchema, async ({ migrate }) => {
-				await migrate('items', ({ comments, ...old }) => ({
-					...old,
-					// no idea what's up with this typing
-					comments: comments.map((c: any) => c.content) as unknown as never,
-				}));
+				await migrate('items', ({ comments, ...old }) => {
+					log('migrating item', old.id);
+					return {
+						...old,
+						// no idea what's up with this typing
+						comments: comments.map((c: any) => c.content) as unknown as never,
+					};
+				});
 			}),
 		],
+		logId: 'wip',
 	});
 
 	const wipItem = await wipClient.items.get('1').resolved;
@@ -143,7 +140,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	log('closed wip client');
 
 	// what happens when we open v1 again?
-	const client1Again = await createTestClient(baseClientOptions);
+	const client1Again = await createClient(baseClientOptions);
 	log('opened v1 client again');
 
 	const item1Again = await client1Again.items.get('1').resolved;
@@ -189,7 +186,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		},
 	});
 
-	const client2 = await createTestClient({
+	const client2 = await createClient({
 		...baseClientOptions,
 		schema: v2Schema,
 		oldSchemas: [defaultSchema, v2Schema],
@@ -244,13 +241,13 @@ it('can start a WIP schema from no pre-existing client', async () => {
 		wip: true,
 	});
 
-	const wipClient = await createTestClient({
+	const wipClient = await createClient({
 		library: 'wip-from-scratch',
 		user: 'A',
-		indexedDb: new IDBFactory(),
 		schema: wipSchema,
 		migrations: [createMigration(wipSchema)],
 		oldSchemas: [wipSchema],
+		// logId: 'A',
 	});
 
 	// make some changes
@@ -263,13 +260,13 @@ it('can start a WIP schema from no pre-existing client', async () => {
 	expect(await wipClient.categories.findAll().resolved).toHaveLength(1);
 
 	// then it can go to v1, which will have no data
-	const client = await createTestClient({
+	const client = await createClient({
 		library: 'wip-from-scratch',
 		user: 'A',
-		indexedDb: new IDBFactory(),
 		schema: defaultSchema,
 		oldSchemas: [defaultSchema],
 		migrations: [createMigration(defaultSchema)],
+		// logId: 'A v1',
 	});
 
 	expect(await client.items.findAll().resolved).toHaveLength(0);

@@ -9,14 +9,17 @@
 		"@types/ws": "^8.5.3",
 		"@verdant-web/cli": "workspace:*",
 		"@verdant-web/common": "workspace:*",
+		"@verdant-web/persistence-sqlite": "workspace:*",
 		"@verdant-web/server": "workspace:*",
 		"@verdant-web/store": "workspace:*",
 		"@whatwg-node/server": "^0.9.25",
+		"better-sqlite3": "^7.6.2",
 		"express": "^4.18.2",
 		"fake-indexeddb": "^5.0.1",
 		"get-port": "^7.0.0",
 		"itty-router": "^4.0.27",
 		"jsdom": "^20.0.0",
+		"kysely": "^0.27.4",
 		"tsx": "^4.16.2",
 		"typescript": "^5.4.2",
 		"vitest": "^2.0.5",
@@ -26,11 +29,18 @@
 		"pretest": "tsx ../packages/cli/src/bin/index.ts -s ./schema.ts -o ./client --select=publish --module=esm --javascript=false",
 		"test": "vitest",
 		"ci:test:integration": "vitest run",
+		"test:sqlite": "cross-env SQLITE=true vitest",
+		"ci:test:sqlite": "cross-env SQLITE=true vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
 		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"posttest": "node ./scripts/cleanupDbs.mjs"
 	},
 	"volta": {
 		"node": "18.13.0"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.0",
+		"cross-env": "7.0.3"
 	}
 }

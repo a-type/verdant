@@ -185,7 +185,6 @@ describe('all indexes', () => {
 			),
 		).toEqual({
 			foobar: 'foo' + COMPOUND_INDEX_SEPARATOR + 'foobar',
-			'@@@snapshot': JSON.stringify({ foo: 'foo' }),
 			foo: 'foo',
 			bar: 'foobar',
 		});

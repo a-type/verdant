@@ -14,7 +14,7 @@ import {
 	AuthorizationKey,
 } from '@verdant-web/common';
 import { OpenDocumentDbContext } from './types.js';
-import { IdbQueryDb } from '../IdbQueryDb.js';
+import { PersistenceDocumentDb, PersistenceNamespace } from '../interfaces.js';
 
 function getMigrationMutations({
 	migration,
@@ -61,14 +61,12 @@ function getMigrationMutations({
 function getMigrationQueries({
 	migration,
 	context,
-	queryDb,
+	documents,
 }: {
 	migration: Migration<any>;
 	context: OpenDocumentDbContext;
-	queryDb: IDBDatabase;
+	documents: PersistenceDocumentDb;
 }) {
-	const queries = new IdbQueryDb(queryDb, context);
-
 	return migration.oldCollections.reduce((acc, collectionName) => {
 		acc[collectionName] = {
 			get: async (id: string) => {
@@ -80,7 +78,7 @@ function getMigrationQueries({
 				return doc;
 			},
 			findOne: async (filter: CollectionFilter) => {
-				const oid = await queries.findOneOid({
+				const oid = await documents.findOneOid({
 					collection: collectionName,
 					index: filter,
 				});
@@ -92,7 +90,7 @@ function getMigrationQueries({
 				return doc;
 			},
 			findAll: async (filter: CollectionFilter) => {
-				const { result: oids } = await queries.findAllOids({
+				const { result: oids } = await documents.findAllOids({
 					collection: collectionName,
 					index: filter,
 				});
@@ -111,27 +109,36 @@ function getMigrationQueries({
 	}, {} as any);
 }
 
-export function getMigrationEngine({
+export async function getMigrationEngine({
 	migration,
 	context,
-	queryDb,
+	ns,
 }: {
 	log?: (...args: any[]) => void;
 	migration: Migration;
 	context: OpenDocumentDbContext;
-	queryDb: IDBDatabase;
-}): MigrationEngine {
+	ns: PersistenceNamespace;
+}): Promise<MigrationEngine> {
+	const migrationContext = {
+		...context,
+		schema: migration.oldSchema,
+	};
+	if (migration.oldSchema.version === 0) {
+		return getInitialMigrationEngine({ migration, context: migrationContext });
+	}
+
 	const newOids = new Array<ObjectIdentifier>();
 
+	const documents = await ns.openDocuments(migrationContext);
 	const queries = getMigrationQueries({
 		migration,
-		context,
-		queryDb,
+		context: migrationContext,
+		documents,
 	});
 	const mutations = getMigrationMutations({
 		migration,
 		newOids,
-		ctx: context,
+		ctx: migrationContext,
 	});
 	const deleteCollection = async (collection: string) => {
 		await context.meta.deleteCollection(collection);
@@ -143,6 +150,10 @@ export function getMigrationEngine({
 		deleteCollection,
 		migrate: async (collection, strategy) => {
 			const docs = await queries[collection].findAll();
+			context.log(
+				'debug',
+				`Migrating ${docs.length} documents in ${collection}`,
+			);
 
 			await Promise.all(
 				docs.filter(Boolean).map(async (doc: any) => {
@@ -190,11 +201,14 @@ export function getMigrationEngine({
 		queries,
 		mutations,
 		awaitables,
+		close: async () => {
+			await documents.close();
+		},
 	};
 	return engine;
 }
 
-export function getInitialMigrationEngine({
+function getInitialMigrationEngine({
 	migration,
 	context,
 }: {
@@ -232,6 +246,7 @@ export function getInitialMigrationEngine({
 		queries,
 		mutations,
 		awaitables: [],
+		close: () => Promise.resolve(),
 	};
 	return engine;
 }

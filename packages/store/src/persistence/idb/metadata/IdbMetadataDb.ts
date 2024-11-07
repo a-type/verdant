@@ -18,7 +18,6 @@ import {
 	PersistenceMetadataDb,
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
-import cuid from 'cuid';
 import { closeDatabase, getSizeOfObjectStore } from '../util.js';
 import { Context } from '../../../context/context.js';
 
@@ -34,24 +33,35 @@ export type StoredSchema = {
 	schema: string;
 };
 
-export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
+export class IdbMetadataDb
+	extends IdbService
+	implements PersistenceMetadataDb<IDBTransaction>
+{
 	constructor(
 		db: IDBDatabase,
 		private ctx: Pick<Context, 'log' | 'namespace'>,
 	) {
 		super(db, ctx);
-		this.addDispose(() => closeDatabase(db));
+		this.addDispose(() => {
+			this.ctx.log('info', `Closing metadata DB for`, this.ctx.namespace);
+			return closeDatabase(db);
+		});
 	}
 
-	transaction = (opts: {
-		mode?: 'readwrite' | 'readonly';
-		storeNames: string[];
-		abort?: AbortSignal;
-	}) => {
-		return this.createTransaction(opts.storeNames, {
+	transaction = async <T>(
+		opts: {
+			mode?: 'readwrite' | 'readonly';
+			storeNames: string[];
+			abort?: AbortSignal;
+		},
+		procedure: (tx: IDBTransaction) => Promise<T>,
+	) => {
+		const tx = this.createTransaction(opts.storeNames, {
 			mode: opts.mode,
 			abort: opts.abort,
 		});
+		const result = await procedure(tx);
+		return result;
 	};
 
 	getAckInfo = async (): Promise<AckInfo> => {
@@ -61,7 +71,6 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		} else {
 			return {
 				globalAckTimestamp: null,
-				type: 'ack',
 			};
 		}
 	};
@@ -74,62 +83,37 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		);
 	};
 
-	private _creatingLocalReplica: Promise<void> | undefined;
-	private cachedLocalReplica: LocalReplicaInfo | undefined;
-
 	getLocalReplica = async (
 		opts?: CommonQueryOptions,
-	): Promise<LocalReplicaInfo> => {
-		if (this.cachedLocalReplica) {
-			return this.cachedLocalReplica;
-		}
-
-		const lookup = await this.run<LocalReplicaInfo>(
+	): Promise<LocalReplicaInfo | undefined> => {
+		return this.run<LocalReplicaInfo | undefined>(
 			'info',
 			(store) => store.get('localReplicaInfo'),
-			this.convertOpts(opts),
+			opts,
 		);
-
-		// not cached, not in db, create it
-		if (!lookup) {
-			// prevent a race condition if get() is called again while we are
-			// creating the replica info
-			if (!this._creatingLocalReplica) {
-				this._creatingLocalReplica = (async () => {
-					// create our own replica info now
-					const replicaId = cuid();
-					const replicaInfo: LocalReplicaInfo = {
-						type: 'localReplicaInfo',
-						id: replicaId,
-						userId: undefined,
-						ackedLogicalTime: null,
-						lastSyncedLogicalTime: null,
-					};
-					await this.run('info', (store) => store.put(replicaInfo), {
-						mode: 'readwrite',
-					});
-					this.cachedLocalReplica = replicaInfo;
-				})();
-			}
-			await this._creatingLocalReplica;
-
-			return this.getLocalReplica(opts);
-		}
-
-		this.cachedLocalReplica = lookup;
-		return lookup;
 	};
 
 	updateLocalReplica = async (
-		data: Partial<LocalReplicaInfo>,
-		opts: CommonQueryOptions = writeOpts,
+		data: LocalReplicaInfo,
+		opts?: CommonQueryOptions,
 	): Promise<void> => {
-		const localReplicaInfo = await this.getLocalReplica(opts);
-		Object.assign(localReplicaInfo, data);
-		await this.run('info', (store) => store.put(localReplicaInfo), {
-			mode: 'readwrite',
-		});
-		this.cachedLocalReplica = localReplicaInfo;
+		try {
+			await this.run(
+				'info',
+				(store) =>
+					store.put({
+						...data,
+						type: 'localReplicaInfo',
+					}),
+				{
+					mode: 'readwrite',
+					transaction: opts?.transaction,
+				},
+			);
+		} catch (e) {
+			this.ctx.log('critical', 'Error updating local replica', data, e);
+			throw e;
+		}
 	};
 
 	iterateDocumentBaselines = async (
@@ -151,7 +135,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				];
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -170,7 +154,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				];
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -182,7 +166,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 			'baselines',
 			(store) => store.index('timestamp').openCursor(),
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -193,7 +177,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		return this.run<DocumentBaseline>(
 			'baselines',
 			(store) => store.get(oid),
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -204,7 +188,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		await this.runAll<any>(
 			'baselines',
 			(store) => baselines.map((b) => store.put(b)),
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -212,11 +196,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 		oid: string,
 		opts: CommonQueryOptions = writeOpts,
 	): Promise<void> => {
-		await this.run(
-			'baselines',
-			(store) => store.delete(oid),
-			this.convertOpts(opts),
-		);
+		await this.run('baselines', (store) => store.delete(oid), opts);
 	};
 
 	iterateDocumentOperations = (
@@ -237,7 +217,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				return index.openCursor(range);
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -262,14 +242,13 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				return store.openCursor(range);
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
-	consumeEntityOperations = (
+	deleteEntityOperations = (
 		oid: string,
-		iterator: Iterator<ClientOperation>,
-		opts: CommonQueryOptions & { to?: string | null } = writeOpts,
+		opts: CommonQueryOptions & { to: string | null },
 	): Promise<void> => {
 		return this.iterate<StoredClientOperation>(
 			'operations',
@@ -283,10 +262,9 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				return store.openCursor(range);
 			},
 			(op, store) => {
-				iterator(op);
 				store.delete(op.oid_timestamp);
 			},
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -304,7 +282,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				);
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -359,7 +337,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				return store.index('timestamp').openCursor(range, 'next');
 			},
 			iterator,
-			this.convertOpts(opts),
+			opts,
 		);
 	};
 
@@ -375,7 +353,7 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 					affected.add(getOidRoot(op.oid));
 					return store.put(this.addOperationIndexes(op));
 				}),
-			this.convertOpts(opts),
+			opts,
 		);
 		return Array.from(affected);
 	};
@@ -414,15 +392,27 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 				mode: 'readwrite',
 				transaction: tx,
 			});
+		} else {
+			const localInfo = await this.getLocalReplica({
+				transaction: tx,
+			});
+			if (localInfo) {
+				localInfo.ackedLogicalTime = null;
+				localInfo.lastSyncedLogicalTime = null;
+				await this.run(
+					'info',
+					(store) =>
+						store.put({
+							...localInfo,
+							type: 'localReplicaInfo',
+						}),
+					{
+						mode: 'readwrite',
+						transaction: tx,
+					},
+				);
+			}
 		}
-
-		const localInfo = await this.getLocalReplica();
-		localInfo.ackedLogicalTime = null;
-		localInfo.lastSyncedLogicalTime = null;
-		await this.run('info', (store) => store.put(localInfo), {
-			mode: 'readwrite',
-			transaction: tx,
-		});
 	};
 
 	private resetBaselines = async (tx: IDBTransaction) => {
@@ -441,18 +431,6 @@ export class IdbMetadataDb extends IdbService implements PersistenceMetadataDb {
 			oid_timestamp: createCompoundIndexValue(op.oid, op.timestamp) as string,
 			l_t: createCompoundIndexValue(op.isLocal, op.timestamp) as string,
 			d_t: createCompoundIndexValue(getOidRoot(op.oid), op.timestamp) as string,
-		};
-	};
-
-	private convertOpts = (opts?: CommonQueryOptions) => {
-		if (opts?.transaction && !(opts.transaction instanceof IDBTransaction)) {
-			throw new Error(
-				`Invalid IndexedDB transaction. You cannot mix persistence providers. ${typeof opts.transaction}`,
-			);
-		}
-		return {
-			mode: opts?.mode,
-			transaction: opts?.transaction as IDBTransaction | undefined,
 		};
 	};
 }

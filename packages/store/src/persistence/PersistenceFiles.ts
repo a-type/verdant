@@ -1,16 +1,13 @@
 import { FileData, FileRef } from '@verdant-web/common';
 import { Context, FileConfig } from '../context/context.js';
 import { PersistedFileData, PersistenceFileDb } from './interfaces.js';
-import { Disposable } from '../utils/Disposable.js';
 
-export class PersistenceFiles extends Disposable {
+export class PersistenceFiles {
 	constructor(
 		private db: PersistenceFileDb,
 		private context: Omit<Context, 'queries'>,
 	) {
-		super();
 		context.internalEvents.subscribe('filesDeleted', this.onFileRefsDeleted);
-		this.compose(this.db);
 		// on startup, try deleting old files.
 		this.cleanupDeletedFiles();
 	}
@@ -29,7 +26,7 @@ export class PersistenceFiles extends Disposable {
 
 	onServerReset = (since: string | null) =>
 		this.db.resetSyncedStatusSince(since);
-	add = async (file: FileData, options?: { downloadRemote?: boolean }) => {
+	add = async (file: FileData) => {
 		// this method accepts a FileData which refers to a remote
 		// file, as well as local files. in the case of a remote file,
 		// we actually re-download and upload the file again. this powers
@@ -37,16 +34,26 @@ export class PersistenceFiles extends Disposable {
 		// and re-upload to a new file ID. otherwise, when the cloned
 		// filedata was marked deleted, the original file would be deleted
 		// and the clone would refer to a missing file.
-		if (file.url && !file.file) {
+		if (file.url && !(file.localPath || file.file)) {
 			this.context.log(
 				'debug',
 				'Remote file added to an entity. This usually means an entity was cloned. Downloading remote file...',
 				file.id,
 			);
-			const blob = await this.context.files.downloadRemoteFile(file.url, 0, 3);
+			const blob = await this.loadFileContents(file, 0, 3);
 			// convert blob to file with name and type
 			file.file = new File([blob], file.name, { type: file.type });
-		} else if (!file.file) {
+			// remove the URL - it points to the original file's uploaded server version,
+			// but this file is a clone
+			delete file.url;
+			this.context.log(
+				'debug',
+				'Downloaded remote file',
+				file.id,
+				file.name,
+				'. Cleared its remote URL.',
+			);
+		} else if (!file.url && !file.file && !file.localPath) {
 			this.context.log(
 				'warn',
 				'File added without a file or URL. This file will not be available for use.',
@@ -54,19 +61,30 @@ export class PersistenceFiles extends Disposable {
 			);
 		}
 
+		// always reset remote status to false, this is a new file just created
+		// and must be uploaded, even if it is cloned from an uploaded file.
 		file.remote = false;
+
 		// fire event for processing immediately
 		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
-		await this.db.add(file, options);
+		await this.db.add(file);
+		this.context.globalEvents.emit('fileSaved', file);
 		this.context.log(
 			'debug',
 			'File added',
 			file.id,
 			file.name,
 			file.type,
-			file.file ? 'with binary file' : file.url ? 'with url' : 'with no data',
+			file.file
+				? 'with binary file'
+				: file.url
+				? 'with url'
+				: file.localPath
+				? 'with local path'
+				: 'with no data',
 		);
+		return file;
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);
 	get = this.db.get.bind(this.db);
@@ -78,22 +96,29 @@ export class PersistenceFiles extends Disposable {
 	private getFileExportName = (originalFileName: string, id: string) => {
 		return `${id}___${originalFileName}`;
 	};
-	export = async (downloadRemote = false) => {
+	export = async (downloadRemote = true) => {
 		const storedFiles = await this.getAll();
 		if (downloadRemote) {
 			for (const storedFile of storedFiles) {
 				// if it doesn't have a buffer, we need to read one from the server
-				if (!storedFile.file && storedFile.url) {
+				if (!storedFile.file && (storedFile.url || storedFile.localPath)) {
 					try {
-						const blob = await this.downloadRemoteFile(storedFile.url);
+						const blob = await this.loadFileContents(storedFile);
 						storedFile.file = blob;
 					} catch (err) {
 						this.context.log(
 							'error',
 							"Failed to download file to cache it locally. The file will still be available using its URL. Check the file server's CORS configuration.",
+							storedFile,
 							err,
 						);
 					}
+				} else if (!storedFile.file) {
+					this.context.log(
+						'warn',
+						`File ${storedFile.id} has no file or URL. It will be missing in the export.`,
+						storedFile,
+					);
 				}
 			}
 		}
@@ -163,41 +188,46 @@ export class PersistenceFiles extends Disposable {
 		return { id, originalFileName };
 	};
 
-	downloadRemoteFile = async (url: string, retries = 0, maxRetries = 0) => {
-		const resp = await fetch(url, {
-			method: 'GET',
-			credentials: 'include',
-		});
-		if (!resp.ok) {
+	private loadFileContents = async (
+		file: FileData,
+		retries = 0,
+		maxRetries = 0,
+	) => {
+		try {
+			return await this.db.loadFileContents(file, this.context);
+		} catch (err) {
 			if (retries < maxRetries) {
 				return new Promise<Blob>((resolve, reject) => {
 					setTimeout(() => {
-						this.downloadRemoteFile(url, retries + 1, maxRetries).then(
+						this.loadFileContents(file, retries + 1, maxRetries).then(
 							resolve,
 							reject,
 						);
 					}, 1000);
 				});
 			} else {
-				throw new Error(
-					`Failed to download file after ${maxRetries} retries (status: ${resp.status})`,
-				);
+				throw new Error(`Failed to download file after ${maxRetries} retries`, {
+					cause: err,
+				});
 			}
 		}
-		return await resp.blob();
 	};
 
 	cleanupDeletedFiles = async () => {
 		let count = 0;
 		let skipCount = 0;
-		await this.iterateOverPendingDelete((fileData, store) => {
+		const deletable: string[] = [];
+		await this.iterateOverPendingDelete((fileData) => {
 			if (this.config.canCleanupDeletedFile(fileData)) {
 				count++;
-				store.delete(fileData.id);
+				deletable.push(fileData.id);
 			} else {
 				skipCount++;
 			}
 		});
+		for (const id of deletable) {
+			await this.db.delete(id);
+		}
 
 		this.context.log(
 			'info',
@@ -206,14 +236,10 @@ export class PersistenceFiles extends Disposable {
 	};
 
 	private onFileRefsDeleted = async (fileRefs: FileRef[]) => {
-		const tx = this.db.transaction({
-			mode: 'readwrite',
-			storeNames: ['files'],
-		});
 		await Promise.all(
 			fileRefs.map(async (fileRef) => {
 				try {
-					await this.db.markPendingDelete(fileRef.id, { transaction: tx });
+					await this.db.markPendingDelete(fileRef.id);
 				} catch (err) {
 					this.context.log('error', 'Failed to mark file for deletion', err);
 				}

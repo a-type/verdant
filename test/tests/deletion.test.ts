@@ -2,7 +2,6 @@ import { it, expect } from 'vitest';
 import { createTestClient } from '../lib/testClient.js';
 import { waitForQueryResult } from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
-import { log } from '../lib/log.js';
 
 it('cleans up metadata after deletion but can still restore the document', async () => {
 	const client = await createTestClient({
@@ -25,6 +24,8 @@ it('cleans up metadata after deletion but can still restore the document', async
 	await client.items.deleteAll(['1', '2']);
 
 	await waitForQueryResult(client.items.findAll(), (val) => !val?.length);
+
+	await client.__manualRebase();
 
 	const stats = await client.stats();
 	expect(stats.collections.items.count).toBe(0);

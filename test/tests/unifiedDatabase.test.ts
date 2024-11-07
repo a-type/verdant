@@ -5,6 +5,7 @@ import { createTestClient } from '../lib/testClient.js';
 import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
+	waitForFileUpload,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
@@ -33,6 +34,7 @@ afterAll(async () => {
 	await server.cleanup();
 }, 30 * 1000);
 
+// NOTE: this test is similar/identical to serverSnapshot, just with disableSharding above.
 it('supports unified database for all libraries', async () => {
 	FileReader.prototype.readAsDataURL = () => {
 		return 'test';
@@ -64,6 +66,8 @@ it('supports unified database for all libraries', async () => {
 		content: 'Apples',
 		image: createTestFile(),
 	});
+
+	await waitForFileUpload(a_apples.get('image')!, 5000);
 
 	// we want these in separate batches just for extra testing
 	clientA

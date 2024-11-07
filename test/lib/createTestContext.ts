@@ -12,7 +12,7 @@ export function createTestContext({
 	disableSharding,
 	truancyMinutes,
 }: {
-	serverLog?: boolean;
+	serverLog?: boolean | ((...args: any[]) => void);
 	keepDb?: boolean;
 	testLog?: boolean;
 	disableRebasing?: boolean;

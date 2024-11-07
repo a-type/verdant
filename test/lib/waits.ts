@@ -31,6 +31,18 @@ export async function waitForOnline(
 	});
 }
 
+export async function waitForSync(client: Client | ClientWithCollections) {
+	return new Promise<void>((resolve) => {
+		if (client.sync.hasSynced) {
+			resolve();
+			return;
+		}
+		client.sync.subscribe('synced', () => {
+			resolve();
+		});
+	});
+}
+
 export function waitForPeerCount(
 	client: Client | ClientWithCollections,
 	count: number,
@@ -84,9 +96,15 @@ export async function waitForQueryResult(
 			}
 			console.error(
 				'Timed out query state',
+				query.key,
+				debug,
 				query.status,
 				'raw value',
-				query.__rawValue,
+				Array.isArray(query.__rawValue)
+					? `${query.__rawValue.length} items`
+					: !!query.__rawValue
+					? 'exists'
+					: 'null',
 			);
 			reject(new Error('Timed out waiting for query ' + (debug || query.key)));
 		}, timeoutMs);
@@ -104,12 +122,16 @@ export async function waitForQueryResult(
 }
 
 export async function waitForEverythingToRebase(client: Client) {
-	await waitForCondition(async () => {
-		if ((await client.stats()).meta.operationsSize.count === 0) {
-			return true;
-		}
-		return false;
-	});
+	await waitForCondition(
+		async () => {
+			if ((await client.stats()).meta.operationsSize.count === 0) {
+				return true;
+			}
+			return false;
+		},
+		5000,
+		'everything rebased',
+	);
 }
 
 export async function waitForBaselineCount(
@@ -200,7 +222,7 @@ export async function waitForEntityCondition<
 export async function waitForFileUpload(file: EntityFile, timeout = 5000) {
 	return new Promise<void>((resolve, reject) => {
 		const timer = setTimeout(() => {
-			reject(new Error('Timed out waiting for file upload'));
+			reject(new Error('Timed out waiting for file upload' + ' ' + file.id));
 		}, timeout);
 		if (file.isUploaded) {
 			clearTimeout(timer);

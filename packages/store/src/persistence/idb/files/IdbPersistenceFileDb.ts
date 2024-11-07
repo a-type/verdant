@@ -3,10 +3,10 @@ import {
 	AbstractTransaction,
 	PersistedFileData,
 	PersistenceFileDb,
-	QueryMode,
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import { getAllFromObjectStores, getSizeOfObjectStore } from '../util.js';
+import { Context } from '../../../internal.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
@@ -24,35 +24,11 @@ export class IdbPersistenceFileDb
 	extends IdbService
 	implements PersistenceFileDb
 {
-	transaction = (opts: {
-		mode?: QueryMode;
-		storeNames: string[];
-		abort?: AbortSignal;
-	}): AbstractTransaction => {
-		return this.createTransaction(opts.storeNames, {
-			mode: opts.mode,
-			abort: opts.abort,
-		});
-	};
-
 	add = async (
 		file: FileData,
-		options?: { transaction?: AbstractTransaction; downloadRemote?: boolean },
 	): Promise<void> => {
 		let buffer = file.file ? await fileToArrayBuffer(file.file) : undefined;
-		if (!buffer && options?.downloadRemote && file.url) {
-			try {
-				buffer = await fetch(file.url, {
-					method: 'GET',
-					credentials: 'include',
-				}).then((r) => r.arrayBuffer());
-			} catch (err) {
-				console.error(
-					"Failed to download file to cache it locally. The file will still be available using its URL. Check the file server's CORS configuration.",
-					err,
-				);
-			}
-		}
+
 		await this.run(
 			'files',
 			(store) => {
@@ -65,19 +41,16 @@ export class IdbPersistenceFileDb
 					type: file.type,
 					url: file.url,
 					buffer,
+					timestamp: file.timestamp,
 				} satisfies StoredFileData);
 			},
 			{
 				mode: 'readwrite',
-				transaction: options?.transaction as IDBTransaction,
 			},
 		);
 	};
-	markUploaded = async (
-		id: string,
-		options?: { transaction?: AbstractTransaction },
-	): Promise<void> => {
-		const current = await this.getFileRaw(id, options);
+	markUploaded = async (id: string): Promise<void> => {
+		const current = await this.getFileRaw(id);
 
 		if (!current) {
 			throw new Error('File is not in local database');
@@ -93,24 +66,17 @@ export class IdbPersistenceFileDb
 			},
 			{
 				mode: 'readwrite',
-				transaction: options?.transaction as IDBTransaction,
 			},
 		);
 	};
-	get = async (
-		fileId: string,
-		options?: { transaction?: AbstractTransaction },
-	): Promise<PersistedFileData | null> => {
-		const raw = await this.getFileRaw(fileId, options);
+	get = async (fileId: string): Promise<PersistedFileData | null> => {
+		const raw = await this.getFileRaw(fileId);
 		if (!raw) {
 			return null;
 		}
 		return this.hydrateFileData(raw);
 	};
-	delete = (
-		fileId: string,
-		options?: { transaction?: AbstractTransaction },
-	): Promise<void> => {
+	delete = (fileId: string): Promise<void> => {
 		return this.run<undefined>(
 			'files',
 			(store) => {
@@ -118,15 +84,11 @@ export class IdbPersistenceFileDb
 			},
 			{
 				mode: 'readwrite',
-				transaction: options?.transaction as IDBTransaction,
 			},
 		);
 	};
-	markPendingDelete = async (
-		fileId: string,
-		options?: { transaction?: AbstractTransaction },
-	): Promise<void> => {
-		const current = await this.getFileRaw(fileId, options);
+	markPendingDelete = async (fileId: string): Promise<void> => {
+		const current = await this.getFileRaw(fileId);
 
 		if (!current) {
 			throw new Error('File is not in local database');
@@ -142,29 +104,23 @@ export class IdbPersistenceFileDb
 			},
 			{
 				mode: 'readwrite',
-				transaction: options?.transaction as IDBTransaction,
 			},
 		);
 	};
-	listUnsynced = async (options?: {
-		transaction?: AbstractTransaction;
-	}): Promise<PersistedFileData[]> => {
+	listUnsynced = async (): Promise<PersistedFileData[]> => {
 		const raw = await this.run<StoredFileData[]>(
 			'files',
 			(store) => {
 				return store.index('remote').getAll('false');
 			},
-			{ mode: 'readonly', transaction: options?.transaction as IDBTransaction },
+			{ mode: 'readonly' },
 		);
 		return raw.map(this.hydrateFileData);
 	};
-	resetSyncedStatusSince = async (
-		since: string | null,
-		options?: { transaction?: AbstractTransaction },
-	): Promise<void> => {
-		const tx: IDBTransaction =
-			(options?.transaction as any) ??
-			this.createTransaction(['files'], { mode: 'readwrite' });
+	resetSyncedStatusSince = async (since: string | null): Promise<void> => {
+		const tx: IDBTransaction = this.createTransaction(['files'], {
+			mode: 'readwrite',
+		});
 		const raw = await this.run<StoredFileData[]>(
 			'files',
 			(store) => {
@@ -194,7 +150,6 @@ export class IdbPersistenceFileDb
 	};
 	iterateOverPendingDelete = (
 		iterator: (file: PersistedFileData, store: IDBObjectStore) => void,
-		options?: { transaction?: IDBTransaction },
 	): Promise<void> => {
 		return this.iterate<StoredFileData>(
 			'files',
@@ -208,7 +163,6 @@ export class IdbPersistenceFileDb
 			},
 			{
 				mode: 'readwrite',
-				transaction: options?.transaction as IDBTransaction,
 			},
 		);
 	};
@@ -223,6 +177,20 @@ export class IdbPersistenceFileDb
 			size: await getSizeOfObjectStore(this.db, 'files'),
 		};
 	};
+	loadFileContents = async (file: FileData, ctx: Context): Promise<Blob> => {
+		if (file.file) return file.file;
+		if (file.localPath) {
+			throw new Error('Local file paths are not supported in browser');
+		}
+		if (file.url) {
+			const response = await ctx.environment.fetch(file.url);
+			if (!response.ok) {
+				throw new Error(`Failed to download file: ${response.statusText}`);
+			}
+			return response.blob();
+		}
+		throw new Error('File is missing url, file, and localPath');
+	}
 
 	private hydrateFileData = (raw: StoredFileData): PersistedFileData => {
 		(raw as any).remote = raw.remote === 'true';

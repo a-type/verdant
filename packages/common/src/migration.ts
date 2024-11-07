@@ -8,12 +8,12 @@ import {
 	StorageDocumentInit,
 	removeExtraProperties,
 	assert,
-	hasOid,
 	assignOid,
 	getOid,
 	hasDefault,
 	validateEntity,
 	AuthorizationKey,
+	isMultiValueIndex,
 } from './index.js';
 
 /**@deprecated */
@@ -27,9 +27,9 @@ export interface PreservedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 	New extends StorageCollectionSchema<any, any, any>,
 > {
-	(
-		old: StorageDocument<Old>,
-	): StorageDocument<New> | Promise<StorageDocument<New>>;
+	(old: StorageDocument<Old>):
+		| StorageDocument<New>
+		| Promise<StorageDocument<New>>;
 }
 /** @deprecated */
 type MigrationStrategy<
@@ -182,6 +182,7 @@ export interface MigrationEngine {
 	/** Deletes all documents in a collection - used for removed collections */
 	deleteCollection: (collection: string) => Promise<void>;
 	log: (...messages: any[]) => void;
+	close: () => Promise<void>;
 }
 /** @deprecated */
 type DeprecatedMigrationProcedure<
@@ -367,9 +368,27 @@ export function migrate(
 
 export interface MigrationIndexDescription {
 	name: string;
+	/**
+	 * The index writes multiple entries. Any value which matches
+	 * a lookup on this index should return the associated document.
+	 */
 	multiEntry: boolean;
+	/**
+	 * Whether this index is a synthetic index. Synthetic indexes are
+	 * computed from other fields.
+	 */
 	synthetic: boolean;
+	/**
+	 * Whether this index is a compound index. Compound indexes are
+	 * created from multiple fields in the collection merged into one
+	 * value.
+	 */
 	compound: boolean;
+	/**
+	 * The base type of the values for this index. Multientry indexes
+	 * store multiple values of this type.
+	 */
+	type: 'string' | 'number' | 'boolean';
 }
 
 export interface Migration<
@@ -406,23 +425,35 @@ function getIndexes<Coll extends StorageCollectionSchema<any, any, any>>(
 	if (!collection) return [];
 
 	return [
-		...Object.keys(collection.indexes || {}).map((key) => ({
-			name: key,
-			multiEntry: ['array', 'string[]', 'number[]', 'boolean[]'].includes(
-				collection.indexes[key].type,
-			),
-			synthetic: true,
-			compound: false,
-		})),
+		...Object.keys(collection.indexes || {}).map((key) => {
+			// lookup name-based indexes to get type from original
+			// field.
+			const index = collection.indexes[key];
+			let indexType = index.type;
+			if (!indexType && index.field) {
+				indexType = collection.fields[index.field].type;
+			}
+			assert(
+				indexType,
+				`Could not determine type of index ${collection}.${key}. Index must have a type. Perhaps your schema is malformed?`,
+			);
+
+			const multiEntry = isMultiValueIndex(collection, key);
+
+			return {
+				name: key,
+				multiEntry,
+				synthetic: true,
+				compound: false,
+				type: indexType?.replace('[]', '') as any,
+			};
+		}),
 		...Object.keys(collection.compounds || {}).map((key) => ({
 			name: key,
-			multiEntry: collection.compounds[key].of.some(
-				(fieldName: string) =>
-					(collection.fields[fieldName] || collection.indexes[fieldName])
-						.type === 'array',
-			),
+			multiEntry: isMultiValueIndex(collection, key),
 			synthetic: false,
 			compound: true,
+			type: 'string' as const,
 		})),
 	];
 }

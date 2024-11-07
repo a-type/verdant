@@ -2,6 +2,7 @@ import {
 	debounce,
 	DocumentBaseline,
 	EventSubscriber,
+	FileData,
 	Operation,
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
@@ -56,6 +57,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * or stored data, but is useful for debugging and testing.
 	 */
 	rebase: () => void;
+	/**
+	 * Emitted when a file is stored locally. Used for test coordination right now.
+	 */
+	fileSaved: (fileData: FileData) => void;
 }> {
 	private _entities: EntityStore;
 	private _queryCache: QueryCache;
@@ -124,6 +129,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		});
 		this.context.globalEvents.subscribe('rebase', () => {
 			this.emit('rebase');
+		});
+		this.context.globalEvents.subscribe('fileSaved', (file) => {
+			this.emit('fileSaved', file);
 		});
 
 		// self-assign collection shortcuts. these are not typed
@@ -236,7 +244,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		if (this.disposed) {
 			return {} as any;
 		}
-		const collections = await this.context.queries.stats();
+		const collections = await this.context.documents.stats();
 		const meta = await this.context.meta.stats();
 		const storage =
 			typeof navigator !== 'undefined' &&
@@ -276,15 +284,16 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// NOTE: this happens after flushing or else flushed data
 		// won't be written to storage or synced.
 		this.context.closing = true;
-		this.context.files.dispose();
+		if (this.context.closeLock) {
+			await this.context.closeLock;
+		}
 		this.sync.stop();
 		this.sync.destroy();
 		// this step does have the potential to flush
 		// changes to storage, so don't close metadata db yet
 		await this._entities.destroy();
 
-		this.context.queries.dispose();
-		this.context.meta.dispose();
+		this.context.persistenceShutdownHandler.shutdown();
 
 		// the idea here is to flush the microtask queue -
 		// we may have queued tasks related to queries that
@@ -309,8 +318,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	): Promise<ExportedData> => {
 		this.context.log('info', 'Exporting data...');
 		const metaExport = await this.context.meta.export();
-		const { fileData, files } =
-			await this.context.files.export(downloadRemoteFiles);
+		const { fileData, files } = await this.context.files.export(
+			downloadRemoteFiles,
+		);
 		return {
 			data: metaExport,
 			fileData,
@@ -387,7 +397,15 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * rebasing rules. Rebases already happen automatically
 	 * during normal operation, so you probably don't need this.
 	 */
-	__manualRebase = () => this.context.meta.manualRebase();
+	__manualRebase = () => {
+		this.context.meta.manualRebase();
+		return new Promise<void>((resolve) => {
+			const unsub = this.subscribe('rebase', () => {
+				unsub();
+				resolve();
+			});
+		});
+	};
 
 	/**
 	 * WARNING: the internal functions of the persistence layer
@@ -397,7 +415,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	get __persistence() {
 		return {
 			meta: this.context.meta,
-			queries: this.context.queries,
+			queries: this.context.documents,
 			files: this.context.files,
 		};
 	}

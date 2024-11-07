@@ -12,11 +12,11 @@ import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
 import { deleteAllDatabases } from '../persistence/idb/util.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
-import { METADATA_VERSION_KEY } from './constants.js';
 import { Time } from '../context/Time.js';
 import { initializePersistence } from '../persistence/persistence.js';
 import { PersistenceImplementation } from '../persistence/interfaces.js';
 import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
+import { ShutdownHandler } from '../context/ShutdownHandler.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -26,8 +26,6 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	migrations: Migration<any>[];
 	/** Provide a sync config to turn on synchronization with a server */
 	sync?: ServerSyncOptions<Profile, Presence>;
-	/** Optionally override the IndexedDB implementation */
-	indexedDb?: IDBFactory;
 	/**
 	 * Namespaces are used to separate data from different clients in IndexedDB.
 	 */
@@ -64,6 +62,13 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	persistence?: PersistenceImplementation;
 
 	/**
+	 * Specify the environment dependencies needed for the client.
+	 * Normally these are provided by the browser, but in other
+	 * runtimes you may need to provide your own.
+	 */
+	environment?: InitialContext['environment'];
+
+	/**
 	 * Enables experimental WeakRef usage to cull documents
 	 * from cache that aren't being used. This is a performance
 	 * optimization which has been tested under all Verdant's test
@@ -71,9 +76,6 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * before turning it on.
 	 */
 	EXPERIMENTAL_weakRefs?: boolean;
-
-	// not for public use
-	[METADATA_VERSION_KEY]?: number;
 }
 
 /**
@@ -112,9 +114,9 @@ export class ClientDescriptor<
 	private initialize = async (init: ClientDescriptorOptions) => {
 		// if server-side and no alternative IndexedDB implementation was provided,
 		// we can't initialize the storage
-		if (typeof window === 'undefined' && !init.indexedDb) {
+		if (typeof window === 'undefined' && !init.environment) {
 			throw new Error(
-				'A Verdant client was initialized in an environment without IndexedDB. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of IDBFactory to the ClientDescriptor options.',
+				'A Verdant client was initialized in an environment without a global Window or `environment` configuration. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of the environment to the ClientDescriptor options.',
 			);
 		}
 
@@ -127,6 +129,7 @@ export class ClientDescriptor<
 				new HybridLogicalClockTimestampProvider(),
 				init.schema.version,
 			);
+			const environment = init.environment || defaultBrowserEnvironment;
 			let ctx: InitialContext = {
 				closing: false,
 				entityEvents: new EventSubscriber(),
@@ -153,8 +156,17 @@ export class ClientDescriptor<
 						rebaseTimeout: init.rebaseTimeout,
 					},
 				},
-				persistence: init.persistence || new IdbPersistence(init.indexedDb),
+				persistence:
+					init.persistence || new IdbPersistence(environment.indexedDB),
+				environment,
+				persistenceShutdownHandler: new ShutdownHandler(),
+				pauseRebasing: false,
 			};
+			ctx.log('info', 'Initializing client', {
+				namespace: ctx.namespace,
+				version: init.schema.version,
+				persistence: ctx.persistence.name,
+			});
 			const context = await initializePersistence(ctx);
 			const client = new Client(context) as ClientImpl;
 			this.resolveReady(client);
@@ -202,3 +214,9 @@ export class ClientDescriptor<
 		await deleteAllDatabases(this.namespace);
 	};
 }
+
+const defaultBrowserEnvironment = {
+	WebSocket: typeof WebSocket !== 'undefined' ? WebSocket : (undefined as any),
+	fetch: typeof window !== 'undefined' ? window.fetch.bind(window) : fetch!,
+	indexedDB: typeof indexedDB !== 'undefined' ? indexedDB : (undefined as any),
+};

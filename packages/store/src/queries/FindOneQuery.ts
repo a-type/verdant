@@ -23,7 +23,7 @@ export class FindOneQuery<T> extends BaseQuery<T | null> {
 	}
 
 	protected run = async () => {
-		const oid = await this.context.queries.findOneOid({
+		const oid = await this.context.documents.findOneOid({
 			collection: this.collection,
 			index: this.index,
 		});
