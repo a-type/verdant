@@ -14,6 +14,7 @@
     "@verdant-web/store": "4.0.0"
   },
   "changesets": [
+    "brown-dolls-crash",
     "six-deers-destroy"
   ]
 }
