@@ -63,7 +63,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this._failed = false;
 		this._fileData = fileData;
 		if (fileData.file) {
-			if (this._objectUrl) {
+			if (this._objectUrl && 'revokeObjectURL' in URL) {
 				URL.revokeObjectURL(this._objectUrl);
 			}
 			this.ctx.log('debug', 'Creating object URL for file', this.id);
