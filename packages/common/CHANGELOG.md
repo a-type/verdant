@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.7.0-alpha.0
+
+### Minor Changes
+
+- b5d15631: Beginning of support for alternative persistence implementations. This involves major internal refactoring and some undocumented internal-use-only library API changes.
+
 ## 2.6.0
 
 ### Minor Changes

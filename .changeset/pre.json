@@ -13,5 +13,7 @@
     "@verdant-web/server": "3.3.3",
     "@verdant-web/store": "4.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "six-deers-destroy"
+  ]
 }
