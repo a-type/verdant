@@ -1,5 +1,11 @@
 # @verdant-web/persistence-sqlite
 
+## 1.0.0-alpha.3
+
+### Patch Changes
+
+- 7bc6069f: remove references to node modules in sqlite libs
+
 ## 1.0.0-alpha.2
 
 ### Patch Changes
