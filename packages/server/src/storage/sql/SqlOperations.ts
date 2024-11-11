@@ -93,10 +93,10 @@ export class SqlOperations implements OperationStorage {
 		libraryId: string,
 		replicaId: string,
 		operations: Operation[],
-	): Promise<void> => {
+	): Promise<number> => {
 		// inserts all operations and updates server order
 		// FIXME: this whole thing is kinda sus
-		await this.db.transaction().execute(async (tx): Promise<void> => {
+		return await this.db.transaction().execute(async (tx): Promise<number> => {
 			let orderResult = await tx
 				.selectFrom('OperationHistory')
 				.select('serverOrder')
@@ -106,7 +106,8 @@ export class SqlOperations implements OperationStorage {
 				.executeTakeFirst();
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {
-				await tx
+				// utilizing returned serverOrder accommodates for conflicts
+				const result = await tx
 					.insertInto('OperationHistory')
 					.values({
 						libraryId,
@@ -114,7 +115,7 @@ export class SqlOperations implements OperationStorage {
 						data: JSON.stringify(item.data),
 						timestamp: item.timestamp,
 						replicaId,
-						serverOrder: ++currentServerOrder,
+						serverOrder: currentServerOrder + 1,
 						authz: item.authz,
 					})
 					.onConflict((cb) =>
@@ -122,8 +123,16 @@ export class SqlOperations implements OperationStorage {
 							.columns(['libraryId', 'replicaId', 'oid', 'timestamp'])
 							.doNothing(),
 					)
-					.execute();
+					.returning('serverOrder')
+					.executeTakeFirst();
+				if (result) {
+					currentServerOrder = result.serverOrder;
+				} else {
+					// on conflict, nothing is returned.
+					// this would mean an operation was synced twice
+				}
 			}
+			return currentServerOrder;
 		});
 	};
 

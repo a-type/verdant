@@ -3,7 +3,6 @@ import { createTestContext } from '../lib/createTestContext.js';
 import { ReplicaType } from '@verdant-web/server';
 import {
 	waitForCondition,
-	waitForOnline,
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
@@ -11,8 +10,8 @@ import { assert } from '@a-type/utils';
 
 const context = createTestContext({
 	// serverLog: true,
-	// keepDb: true,
 	// testLog: true,
+	// keepDb: true,
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {
@@ -80,16 +79,9 @@ it("doesn't receive back its own ops after pushing them", async () => {
 		assert(!!log);
 
 		expect(log[0].includes('\\"operations\\": []')).toBe(true);
-		// expect(log[0].includes('"baselines": []')).toBe(true);
 		logWatcher.mockClear();
 	}
 
-	// const log = logWatcher.mock.calls.find((args) =>
-	// 	args[0].includes('sync-resp'),
-	// );
-	// assert(!!log);
-	// should not receive info about Apples, which we created
-	// expect(!log[0].includes('Apples')).toBe(true);
 	logWatcher.mockClear();
 
 	await client.items.put({
@@ -112,7 +104,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 
 	client.sync.start();
 
-	await waitForOnline(client);
+	await waitForSync(client);
 	context.log('Client 1 online again');
 
 	context.log('Begin wait for no operations 2');
@@ -120,7 +112,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	context.log('End wait for no operations 2');
 
 	clientB.sync.start();
-	await waitForOnline(clientB);
+	await waitForSync(clientB);
 
 	// this seems to time out sometimes?
 	await waitForQueryResult(client.items.get(pears.get('id')));

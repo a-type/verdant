@@ -95,7 +95,7 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		replicas: [
 			{
 				ackedLogicalTime: expect.any(String),
-				ackedServerOrder: 0,
+				ackedServerOrder: 6,
 				id: expect.any(String),
 				profile: {
 					id: 'A',
@@ -114,7 +114,7 @@ it('migrates data from unified to sharded databases on launch', async () => {
 		replicas: [
 			{
 				ackedLogicalTime: expect.any(String),
-				ackedServerOrder: 0,
+				ackedServerOrder: 6,
 				id: expect.any(String),
 				profile: {
 					id: 'B',

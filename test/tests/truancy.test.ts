@@ -4,6 +4,7 @@ import {
 	waitForCondition,
 	waitForQueryResult,
 	waitForSync,
+	waitForTime,
 } from '../lib/waits.js';
 import { assert } from '@verdant-web/common';
 import { getPersistence } from '../lib/persistence.js';
@@ -18,14 +19,14 @@ const ctx = createTestContext({
 });
 
 it('should reset truant replicas upon their reconnection', async () => {
+	const library = 'truant';
 	const persistence = getPersistence();
 
 	const startTime = Date.now();
 	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
-		library: 'truant',
-		user: 'truant',
-		// logId: 'A',
+		library,
+		user: 'truant-1',
 		persistence,
 	});
 
@@ -66,8 +67,8 @@ it('should reset truant replicas upon their reconnection', async () => {
 	ctx.log('system time set to', startTime + 5 * 60 * 1000);
 
 	const currentClient = await ctx.createTestClient({
-		library: 'truant',
-		user: 'current',
+		library,
+		user: 'current-1',
 		persistence,
 		// logId: 'current',
 	});
@@ -109,14 +110,15 @@ it('should reset truant replicas upon their reconnection', async () => {
 });
 
 it('should not reset truant replicas with up to date server order', async () => {
+	const library = 'truant-up-to-date';
 	const persistence = getPersistence();
 
 	const startTime = Date.now();
 	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
-		library: 'truant-up-to-date',
-		user: 'truant',
-		// logId: 'A',
+		library,
+		user: 'truant-2',
+		// logId: 'truant',
 		persistence,
 	});
 
@@ -157,8 +159,8 @@ it('should not reset truant replicas with up to date server order', async () => 
 	ctx.log('system time set to', startTime + 5 * 60 * 1000);
 
 	const currentClient = await ctx.createTestClient({
-		library: 'truant-up-to-date',
-		user: 'current',
+		library,
+		user: 'current-2',
 		persistence,
 		// logId: 'current',
 	});
@@ -177,10 +179,21 @@ it('should not reset truant replicas with up to date server order', async () => 
 
 	const onReset = vi.fn();
 	truantClient.subscribe('resetToServer', onReset);
+
+	// push some preemptive changes before sync, to simulate the truant client immediately
+	// making changes on launch
+	const item3 = await truantClient.items.put({
+		content: 'item 3',
+	});
+	item3.set('content', 'item 3 updated');
+	await truantClient.entities.flushAllBatches();
+
 	await truantClient.sync.start();
 	await waitForSync(truantClient);
 
-	await waitForQueryResult(truantClient.items.findAll(), (r) => r.length === 2);
+	await waitForQueryResult(truantClient.items.findAll(), (r) => r.length === 3);
+
+	await waitForTime(300);
 	// this would indicate the replica was found truant and reset.
 	expect(onReset).not.toHaveBeenCalled();
 });

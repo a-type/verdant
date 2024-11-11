@@ -25,6 +25,7 @@ import {
 	LibraryInfo,
 	StoredDocumentBaseline,
 	StoredOperation,
+	StoredReplicaInfo,
 } from './types.js';
 
 export type ServerLibraryEvents = {
@@ -170,12 +171,26 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			message.operations,
 		);
 
-		// TODO: can we defer this and rebroadcast in parallel?
 		// insert patches into history
-		await this.storage.operations.insertAll(
+
+		// first, record the replica's serverOrder before insertion.
+		const replicaInfo = await this.storage.replicas.getOrCreate(
+			info.libraryId,
+			message.replicaId,
+			{
+				userId: info.userId,
+				type: info.type,
+			},
+		);
+		const newServerOrder = await this.storage.operations.insertAll(
 			info.libraryId,
 			message.replicaId,
 			message.operations,
+		);
+		this.preemptiveUpdateServerOrder(
+			replicaInfo.replicaInfo,
+			newServerOrder,
+			message.operations.length,
 		);
 
 		this.enqueueRebase(info.libraryId);
@@ -193,6 +208,35 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		);
 
 		this.emit(`changes`, info, message.operations, []);
+	};
+
+	/**
+	 * If a replica inserts operations when it's already
+	 * up to date, we can preemptively update its ackedServerOrder
+	 * to avoid a round trip.
+	 */
+	private preemptiveUpdateServerOrder = async (
+		replicaInfo: StoredReplicaInfo,
+		newServerOrder: number,
+		insertedOperationsCount: number,
+	) => {
+		if (
+			newServerOrder - replicaInfo.ackedServerOrder ===
+			insertedOperationsCount
+		) {
+			await this.storage.replicas.updateAckedServerOrder(
+				replicaInfo.libraryId,
+				replicaInfo.id,
+				newServerOrder,
+			);
+			this.log(
+				'debug',
+				'Preemptively updated ackedServerOrder for',
+				replicaInfo.id,
+				'to',
+				newServerOrder,
+			);
+		}
 	};
 
 	private rebroadcastOperations = async (
@@ -268,6 +312,10 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				await this.storage.operations.getLatestServerOrder(info.libraryId);
 			if (clientReplicaInfo.ackedServerOrder >= latestServerOrder) {
 				overrideTruant = true;
+				this.log(
+					'debug',
+					'Overriding truant reset; truant replica has up-to-date server order',
+				);
 			}
 		}
 
@@ -303,6 +351,7 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 			clientReplicaInfo.ackedServerOrder === 0 &&
 			ops.length === 0 &&
 			baselines.length === 0;
+
 		if (isEmptyLibrary) {
 			this.log('info', 'Received sync from new library', replicaId);
 
@@ -316,10 +365,12 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// don't reset replica if library is empty...
 		let overwriteReplicaData = replicaShouldReset && !isEmptyLibrary;
 
+		// EARLY RETURN --
 		// if the local library is empty and the replica is new to us,
 		// but the replica is providing a "since" timestamp, this
 		// suggests the local data is incomplete or gone. we request
-		// this replica should respond with a full history.
+		// this replica should respond with a full history. We will retry
+		// sync after replica has updated us with full history.
 		if (isEmptyLibrary && status === 'new' && message.since !== null) {
 			this.log(
 				'info',
@@ -371,10 +422,15 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				message.operations.length,
 				'operations',
 			);
-			await this.storage.operations.insertAll(
+			const newServerOrder = await this.storage.operations.insertAll(
 				info.libraryId,
 				replicaId,
 				message.operations,
+			);
+			this.preemptiveUpdateServerOrder(
+				clientReplicaInfo,
+				newServerOrder,
+				message.operations.length,
 			);
 			await this.storage.replicas.updateAcknowledgedLogicalTime(
 				info.libraryId,
@@ -403,7 +459,13 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		}
 
 		// create the nonce by encoding the server order of the last operation
-		const ackThisNonce = this.createAckNonce(ops);
+		const serverOrderToAck = ops.length
+			? ops[ops.length - 1].serverOrder
+			: undefined;
+		const ackThisNonce =
+			serverOrderToAck !== undefined
+				? this.createAckNonce(serverOrderToAck)
+				: undefined;
 
 		// respond to client
 
@@ -435,12 +497,8 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		});
 	};
 
-	private createAckNonce = (ops: StoredOperation[]): string | undefined => {
-		return ops.length
-			? Buffer.from(JSON.stringify(ops[ops.length - 1].serverOrder)).toString(
-					'base64',
-			  )
-			: undefined;
+	private createAckNonce = (serverOrder: number): string | undefined => {
+		return Buffer.from(JSON.stringify(serverOrder)).toString('base64');
 	};
 
 	private handleAck = async (

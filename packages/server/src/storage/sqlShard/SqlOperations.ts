@@ -91,11 +91,11 @@ export class SqlOperations implements OperationStorage {
 		libraryId: string,
 		replicaId: string,
 		operations: Operation[],
-	): Promise<void> => {
+	): Promise<number> => {
 		const db = await this.dbs.get(libraryId);
 		// inserts all operations and updates server order
 		// FIXME: this whole thing is kinda sus
-		await db.transaction().execute(async (tx): Promise<void> => {
+		return await db.transaction().execute(async (tx): Promise<number> => {
 			let orderResult = await tx
 				.selectFrom('OperationHistory')
 				.select('serverOrder')
@@ -104,21 +104,31 @@ export class SqlOperations implements OperationStorage {
 				.executeTakeFirst();
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {
-				await tx
+				// utilizing returned serverOrder accommodates for conflicts
+				const result = await tx
 					.insertInto('OperationHistory')
 					.values({
 						oid: item.oid,
 						data: JSON.stringify(item.data),
 						timestamp: item.timestamp,
 						replicaId,
-						serverOrder: ++currentServerOrder,
+						serverOrder: currentServerOrder + 1,
 						authz: item.authz,
 					})
 					.onConflict((cb) =>
 						cb.columns(['replicaId', 'oid', 'timestamp']).doNothing(),
 					)
-					.execute();
+					.returning('serverOrder')
+					.executeTakeFirst();
+				if (result) {
+					currentServerOrder = result.serverOrder;
+				} else {
+					// on conflict, nothing is returned.
+					// this would mean an operation was synced twice.
+				}
 			}
+
+			return currentServerOrder;
 		});
 	};
 

@@ -15,12 +15,14 @@ import { createMigration } from '@verdant-web/common';
 
 const ctx = createTestContext({
 	// testLog: true,
+	// serverLog: true,
 });
 
 async function connectAndSeedData(library = 'reset-1') {
 	const clientA = await ctx.createTestClient({
 		library,
 		user: 'User A',
+		// logId: 'A',
 	});
 	const clientB = await ctx.createTestClient({
 		library,
@@ -119,7 +121,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	const pearId = b_pear.get('id');
 
 	clientA.sync.start();
-	await waitForOnline(clientA);
+	await waitForSync(clientA);
 	ctx.log('Client A online');
 	// client A should now "win" and re-initialize server data
 
@@ -128,6 +130,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 
 	clientB.sync.start();
 	ctx.log('Waiting for client B to re-initialize');
+	await waitForSync(clientB);
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientB.items.get(a_banana.get('id')));

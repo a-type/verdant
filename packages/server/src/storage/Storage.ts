@@ -69,7 +69,7 @@ export interface OperationStorage {
 		libraryId: string,
 		replicaId: string,
 		operations: Operation[],
-	): Promise<void>;
+	): Promise<number>;
 	deleteAll(libraryId: string): Promise<void>;
 	delete(libraryId: string, operations: Operation[]): Promise<void>;
 }
