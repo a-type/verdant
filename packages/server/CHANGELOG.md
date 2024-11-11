@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.3.4-alpha.1
+
+### Patch Changes
+
+- d10665df: Improve replica server order record-keeping and avoid forcing a reset of truant replicas if their server order is still up to date.
+
 ## 3.3.4-alpha.0
 
 ### Patch Changes
