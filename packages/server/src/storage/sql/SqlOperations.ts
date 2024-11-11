@@ -99,10 +99,10 @@ export class SqlOperations implements OperationStorage {
 		await this.db.transaction().execute(async (tx): Promise<void> => {
 			let orderResult = await tx
 				.selectFrom('OperationHistory')
-				.select(({ fn, val }) =>
-					fn.coalesce(fn.max<number>('serverOrder'), val(0)).as('serverOrder'),
-				)
+				.select('serverOrder')
 				.where('libraryId', '=', libraryId)
+				.orderBy('serverOrder', 'desc')
+				.limit(1)
 				.executeTakeFirst();
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {

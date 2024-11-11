@@ -1,15 +1,11 @@
 import { Operation } from '@verdant-web/common';
 import { StoredOperation } from '../../types.js';
 import { OperationStorage } from '../Storage.js';
-import { Kysely } from 'kysely';
-import { Database, OperationHistoryRow } from './tables.js';
+import { OperationHistoryRow } from './tables.js';
 import { Databases } from './Databases.js';
 
 export class SqlOperations implements OperationStorage {
-	constructor(
-		private dbs: Databases,
-		private dialect: 'postgres' | 'sqlite',
-	) {}
+	constructor(private dbs: Databases, private dialect: 'postgres' | 'sqlite') {}
 
 	private hydrate = (row: OperationHistoryRow) => {
 		// avoiding extra allocation from .map by type-asserting here
@@ -66,16 +62,17 @@ export class SqlOperations implements OperationStorage {
 
 	getLatestServerOrder = async (libraryId: string): Promise<number> => {
 		const db = await this.dbs.get(libraryId);
-		return (
-			(
-				await db
-					.selectFrom('OperationHistory')
-					.orderBy('serverOrder', 'desc')
-					.select('serverOrder')
-					.limit(1)
-					.executeTakeFirst()
-			)?.serverOrder ?? 0
-		);
+		const result = await db
+			.selectFrom('OperationHistory')
+			.orderBy('serverOrder', 'desc')
+			.select('serverOrder')
+			.limit(1)
+			.executeTakeFirst();
+		if (result) {
+			return result.serverOrder;
+		}
+
+		return 0;
 	};
 
 	getCount = async (libraryId: string): Promise<number> => {
@@ -101,9 +98,9 @@ export class SqlOperations implements OperationStorage {
 		await db.transaction().execute(async (tx): Promise<void> => {
 			let orderResult = await tx
 				.selectFrom('OperationHistory')
-				.select(({ fn, val }) =>
-					fn.coalesce(fn.max<number>('serverOrder'), val(0)).as('serverOrder'),
-				)
+				.select('serverOrder')
+				.orderBy('serverOrder', 'desc')
+				.limit(1)
 				.executeTakeFirst();
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {

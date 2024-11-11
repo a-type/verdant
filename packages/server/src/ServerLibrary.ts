@@ -13,7 +13,6 @@ import {
 	applyOperations,
 	isFileRef,
 	isObjectRef,
-	omit,
 	rewriteAuthzOriginator,
 } from '@verdant-web/common';
 import { MessageSender } from './MessageSender.js';
@@ -256,12 +255,21 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const { status, replicaInfo: clientReplicaInfo } =
 			await this.storage.replicas.getOrCreate(info.libraryId, replicaId, info);
 
-		const changesSince =
-			status === 'existing' ? clientReplicaInfo.ackedLogicalTime : null;
 		this.log(
 			'info',
-			`Sync from ${replicaId} (user: ${info.userId}) [ackedLogicalTime: ${changesSince}, ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}, status: ${status}}]`,
+			`Sync from ${replicaId} (user: ${info.userId}) [ackedServerOrder: ${clientReplicaInfo.ackedServerOrder}, status: ${status}}]`,
 		);
+
+		// for truant replicas -- if their ackedServerOrder is up-to-date, that's fine,
+		// restore them.
+		let overrideTruant = false;
+		if (status === 'truant') {
+			const latestServerOrder =
+				await this.storage.operations.getLatestServerOrder(info.libraryId);
+			if (clientReplicaInfo.ackedServerOrder >= latestServerOrder) {
+				overrideTruant = true;
+			}
+		}
 
 		// lookup operations after the last ack the client gave us
 		const ops = await this.storage.operations.getAfterServerOrder(
@@ -272,7 +280,8 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		// new, unseen replicas should reset their existing storage
 		// to that of the server when joining a library.
 		// truant replicas should also reset their storage.
-		const replicaShouldReset = !!message.resyncAll || status !== 'existing';
+		const replicaShouldReset =
+			!!message.resyncAll || (!overrideTruant && status !== 'existing');
 
 		// only new replicas need baselines. by definition, a rebase only
 		// happens when all active replicas agree on history. every client
@@ -284,14 +293,16 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 
 		// We detect that a library is new by checking if it has any history.
 		// If there are no existing operations or baselines (and the requested
-		// history timerange was "everything", i.e. "from null"), then this is
+		// history timerange was "everything", i.e. "from server order 0"), then this is
 		// a fresh library which should receive the first client's history as its
 		// own. Otherwise, if the client requested a reset, we should send them
 		// the full history of the library.
 		// the definition of this field could be improved to be more explicit
 		// and not rely on seemingly unrelated data.
 		const isEmptyLibrary =
-			changesSince === null && ops.length === 0 && baselines.length === 0;
+			clientReplicaInfo.ackedServerOrder === 0 &&
+			ops.length === 0 &&
+			baselines.length === 0;
 		if (isEmptyLibrary) {
 			this.log('info', 'Received sync from new library', replicaId);
 
@@ -656,8 +667,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 				this.log('debug', 'Database not open, skipping cleanup');
 				return;
 			}
-			const pendingDelete =
-				await this.storage.fileMetadata.getPendingDelete(libraryId);
+			const pendingDelete = await this.storage.fileMetadata.getPendingDelete(
+				libraryId,
+			);
 			if (pendingDelete.length > 0) {
 				if (!this.fileStorage) {
 					throw new Error('File storage not configured, cannot delete files');
@@ -742,8 +754,9 @@ export class ServerLibrary extends EventSubscriber<ServerLibraryEvents> {
 		const data = {
 			id: libraryId,
 			replicas,
-			latestServerOrder:
-				await this.storage.operations.getLatestServerOrder(libraryId),
+			latestServerOrder: await this.storage.operations.getLatestServerOrder(
+				libraryId,
+			),
 			operationsCount: await this.storage.operations.getCount(libraryId),
 			baselinesCount: await this.storage.baselines.getCount(libraryId),
 			globalAck: (await this.storage.replicas.getGlobalAck(libraryId)) ?? null,
