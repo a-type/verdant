@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.1
+
+### Patch Changes
+
+- 21357127: fix cli old schemas index generation. fix WIP crash.
+
 ## 4.1.0-alpha.0
 
 ### Minor Changes
