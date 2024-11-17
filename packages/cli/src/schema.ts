@@ -1,4 +1,4 @@
-import { execSync, exec } from 'child_process';
+import { exec } from 'child_process';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as pathTools from 'path/posix';
@@ -264,14 +264,20 @@ export async function compareUserSchemaToCanonical({
 
 export async function writeSchemaVersionsIndex({
 	output,
+	tempOutput,
 	commonjs,
 }: {
 	output: string;
+	tempOutput: string;
 	commonjs?: boolean;
 }) {
 	// make it first if it doesn't exist
-	await makeDir(`${output}/schemaVersions`);
-	const schemaVersions = await fs.readdir(`${output}/schemaVersions`);
+	await makeDir(`${tempOutput}/schemaVersions`);
+	const historicalSchemaVersions = await fs.readdir(`${output}/schemaVersions`);
+	const newSchemaVersions = await fs.readdir(`${tempOutput}/schemaVersions`);
+	const schemaVersions = Array.from(
+		new Set([...historicalSchemaVersions, ...newSchemaVersions]),
+	);
 	const versions = schemaVersions
 		.filter((version) => version.endsWith('.js') && version !== 'index.js')
 		.map((version) => parseInt(version.replace('v', '').replace('.js', '')))

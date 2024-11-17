@@ -217,6 +217,81 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		  ],
 		}
 	`);
+
+	await client2.close();
+
+	// make a wip v3 over the confirmed v2
+	const wipSchema3 = schema({
+		...v2Schema,
+		version: 3,
+		wip: true,
+	});
+
+	const client3 = await createClient({
+		...baseClientOptions,
+		schema: wipSchema3,
+		oldSchemas: [defaultSchema, v2Schema, wipSchema3],
+		migrations: [
+			...baseClientOptions.migrations,
+			createMigration(v2Schema, wipSchema3, async () => {}),
+		],
+	});
+
+	// data is copied.
+	const item3 = await client3.items.get('1').resolved;
+	expect(item3.getSnapshot()).toMatchInlineSnapshot(`
+		{
+		  "categoryId": null,
+		  "comments": [
+		    {
+		      "authorId": "author-1",
+		      "content": "test comment",
+		      "id": "comment-1",
+		    },
+		  ],
+		  "content": "test item",
+		  "id": "1",
+		  "image": null,
+		  "purchased": false,
+		  "tags": [
+		    "a",
+		  ],
+		}
+	`);
+
+	// close and reopen to confirm it's still there
+	await client3.close();
+
+	const client3Again = await createClient({
+		...baseClientOptions,
+		schema: v2Schema,
+		oldSchemas: [defaultSchema, v2Schema, wipSchema3],
+		migrations: [
+			...baseClientOptions.migrations,
+			createMigration(v2Schema, wipSchema3, async () => {}),
+		],
+	});
+
+	const item3Again = await client3Again.items.get('1').resolved;
+	expect(item3Again.getSnapshot()).toMatchInlineSnapshot(`
+		{
+		  "categoryId": null,
+		  "comments": [
+		    {
+		      "authorId": "author-1",
+		      "content": "test comment",
+		      "id": "comment-1",
+		    },
+		  ],
+		  "content": "test item",
+		  "id": "1",
+		  "image": null,
+		  "purchased": false,
+		  "tags": [
+		    "a",
+		  ],
+		}
+	`);
 });
 
 it('can start a WIP schema from no pre-existing client', async () => {

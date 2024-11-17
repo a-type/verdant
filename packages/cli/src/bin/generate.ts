@@ -250,7 +250,8 @@ export async function generate({
 	}
 
 	await writeSchemaVersionsIndex({
-		output: tempOutput,
+		output,
+		tempOutput,
 		commonjs,
 	});
 	await generateClientCode({
