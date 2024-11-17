@@ -273,6 +273,7 @@ export async function writeSchemaVersionsIndex({
 }) {
 	// make it first if it doesn't exist
 	await makeDir(`${tempOutput}/schemaVersions`);
+	await makeDir(`${output}/schemaVersions`);
 	const historicalSchemaVersions = await fs.readdir(`${output}/schemaVersions`);
 	const newSchemaVersions = await fs.readdir(`${tempOutput}/schemaVersions`);
 	const schemaVersions = Array.from(
