@@ -1,10 +1,10 @@
 import { Context } from '../../context/context.js';
+import { Disposable } from '../../utils/Disposable.js';
 import {
 	createAbortableTransaction,
 	isAbortError,
 	storeRequestPromise,
 } from './util.js';
-import { Disposable } from '../../utils/Disposable.js';
 
 export class IdbService extends Disposable {
 	protected log?: Context['log'];
@@ -17,7 +17,15 @@ export class IdbService extends Disposable {
 		super();
 		this.log = log;
 		this.addDispose(() => {
-			this.globalAbortController.abort();
+			try {
+				this.globalAbortController.abort();
+			} catch (err) {
+				if (err instanceof Error && err.message.includes('invocation')) {
+					// Ignore
+					return;
+				}
+				console.error('Error aborting global controller', err);
+			}
 		});
 		this.db.addEventListener('versionchange', this.onVersionChange);
 		this.addDispose(() => {

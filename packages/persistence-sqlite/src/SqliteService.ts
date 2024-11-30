@@ -1,7 +1,6 @@
-import { Database, Tables } from './kysely.js';
 import { QueryMode } from '@verdant-web/store';
-import { Transaction } from './kysely.js';
 import { Disposable } from '@verdant-web/store/internal';
+import { Database, Tables, Transaction } from './kysely.js';
 
 export class SqliteService extends Disposable {
 	private globalAbortController = new AbortController();
@@ -9,7 +8,15 @@ export class SqliteService extends Disposable {
 	constructor(protected db: Database) {
 		super();
 		this.addDispose(() => {
-			this.globalAbortController.abort();
+			try {
+				this.globalAbortController.abort();
+			} catch (err) {
+				if (err instanceof Error && err.message.includes('invocation')) {
+					// Ignore
+					return;
+				}
+				console.error('Error aborting global controller', err);
+			}
 		});
 	}
 
