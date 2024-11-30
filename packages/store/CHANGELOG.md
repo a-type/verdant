@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.2
+
+### Patch Changes
+
+- 87aa284a: Ignore illegal invocation error from abort controller
+
 ## 4.1.0-alpha.1
 
 ### Patch Changes
