@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.9
+
+### Patch Changes
+
+- ddc1a25b: dont throw on blocked upgrade
+
 ## 4.1.0-alpha.8
 
 ### Patch Changes
