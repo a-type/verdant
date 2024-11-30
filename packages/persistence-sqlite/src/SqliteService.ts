@@ -9,10 +9,11 @@ export class SqliteService extends Disposable {
 		super();
 		const abortController = new AbortController();
 		this.globalAbortController = abortController;
+		const abort = abortController.abort.bind(abortController);
 		this.addDispose(function () {
 			if (abortController.signal.aborted) return;
 			try {
-				abortController.abort.call(abortController);
+				abort();
 			} catch (err) {
 				console.error('Error aborting global controller', err);
 			}
