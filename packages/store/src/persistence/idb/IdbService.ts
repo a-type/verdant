@@ -19,6 +19,7 @@ export class IdbService extends Disposable {
 		const abortController = new AbortController();
 		const abort = abortController.abort.bind(abortController);
 		this.globalAbortController = abortController;
+		// FIXME: replace with event? I can't get this to work.
 		// this.addDispose(abort);
 		this.db.addEventListener('versionchange', this.onVersionChange);
 		this.addDispose(() => {

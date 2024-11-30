@@ -120,7 +120,10 @@ export function getAllFromObjectStores(db: IDBDatabase, stores: string[]) {
 export async function closeDatabase(db: IDBDatabase) {
 	db.close();
 	// wait for microtask queue to clear
-	await new Promise<void>((resolve, reject) => {
+	await new Promise<void>((resolve) => {
+		resolve();
+	});
+	await new Promise<void>((resolve) => {
 		resolve();
 	});
 }

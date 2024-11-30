@@ -1,11 +1,11 @@
+import { Context } from '../../../../internal.js';
 import {
+	openDatabase as baseOpenDatabase,
+	closeDatabase,
+	getDocumentDbName,
 	globalIDB,
 	storeRequestPromise,
-	openDatabase as baseOpenDatabase,
-	getDocumentDbName,
-	closeDatabase,
 } from '../../util.js';
-import { Context } from '../../../../internal.js';
 
 /**
  * Upgrades the database to the given version, using the given upgrader function.
@@ -51,11 +51,6 @@ export async function upgradeDatabase(
 		};
 		request.onblocked = (event) => {
 			log?.('Database upgrade blocked!');
-			reject(
-				new Error(
-					'Database upgrade blocked. The app may be open in another tab?',
-				),
-			);
 		};
 	}
 	return new Promise<IDBDatabase>(openAndUpgrade);
