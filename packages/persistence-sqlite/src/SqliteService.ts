@@ -8,6 +8,7 @@ export class SqliteService extends Disposable {
 	constructor(protected db: Database) {
 		super();
 		this.addDispose(() => {
+			if (this.globalAbortController.signal.aborted) return;
 			try {
 				this.globalAbortController.abort();
 			} catch (err) {
