@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.7
+
+### Patch Changes
+
+- e0a6a919: Sometimes you think you know javascript, but
+
 ## 4.1.0-alpha.6
 
 ### Patch Changes
