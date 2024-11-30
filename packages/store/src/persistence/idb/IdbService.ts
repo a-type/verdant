@@ -19,7 +19,7 @@ export class IdbService extends Disposable {
 		this.addDispose(() => {
 			if (this.globalAbortController.signal.aborted) return;
 			try {
-				this.globalAbortController.abort();
+				this.globalAbortController.abort.call(this.globalAbortController);
 			} catch (err) {
 				if (err instanceof Error && err.message.includes('invocation')) {
 					// Ignore
