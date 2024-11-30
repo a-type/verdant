@@ -10,7 +10,7 @@ export class SqliteService extends Disposable {
 		const abortController = new AbortController();
 		const abort = abortController.abort.bind(abortController);
 		this.globalAbortController = abortController;
-		this.addDispose(abort);
+		// this.addDispose(abort);
 	}
 
 	transaction = async <T>(

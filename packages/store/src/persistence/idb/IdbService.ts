@@ -19,7 +19,7 @@ export class IdbService extends Disposable {
 		const abortController = new AbortController();
 		const abort = abortController.abort.bind(abortController);
 		this.globalAbortController = abortController;
-		this.addDispose(abort);
+		// this.addDispose(abort);
 		this.db.addEventListener('versionchange', this.onVersionChange);
 		this.addDispose(() => {
 			this.db.removeEventListener('versionchange', this.onVersionChange);
