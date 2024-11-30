@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/persistence-sqlite",
-	"version": "1.0.0-alpha.6",
+	"version": "1.0.0-alpha.7",
 	"type": "module",
 	"exports": {
 		".": {
@@ -29,7 +29,7 @@
 	},
 	"dependencies": {},
 	"peerDependencies": {
-		"@verdant-web/store": "^4.1.0-alpha.4",
+		"@verdant-web/store": "^4.1.0-alpha.5",
 		"kysely": "^0.7.0"
 	},
 	"devDependencies": {

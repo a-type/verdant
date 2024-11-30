@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.5
+
+### Patch Changes
+
+- 9fbf4166: Try a different approach
+
 ## 4.1.0-alpha.4
 
 ### Patch Changes
