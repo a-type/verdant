@@ -1,5 +1,13 @@
 # @verdant-web/persistence-sqlite
 
+## 1.0.0-alpha.6
+
+### Patch Changes
+
+- e3d304a8: Manually invoke abort controller
+- Updated dependencies [e3d304a8]
+  - @verdant-web/store@4.1.0-alpha.4
+
 ## 1.0.0-alpha.5
 
 ### Patch Changes
