@@ -17,16 +17,9 @@ export class IdbService extends Disposable {
 		super();
 		this.log = log;
 		const abortController = new AbortController();
-		this.globalAbortController = abortController;
 		const abort = abortController.abort.bind(abortController);
-		this.addDispose(function () {
-			if (abortController.signal.aborted) return;
-			try {
-				abort();
-			} catch (err) {
-				console.error('Error aborting global controller', err);
-			}
-		});
+		this.globalAbortController = abortController;
+		this.addDispose(abort);
 		this.db.addEventListener('versionchange', this.onVersionChange);
 		this.addDispose(() => {
 			this.db.removeEventListener('versionchange', this.onVersionChange);

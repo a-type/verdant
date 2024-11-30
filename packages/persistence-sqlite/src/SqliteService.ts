@@ -8,16 +8,9 @@ export class SqliteService extends Disposable {
 	constructor(protected db: Database) {
 		super();
 		const abortController = new AbortController();
-		this.globalAbortController = abortController;
 		const abort = abortController.abort.bind(abortController);
-		this.addDispose(function () {
-			if (abortController.signal.aborted) return;
-			try {
-				abort();
-			} catch (err) {
-				console.error('Error aborting global controller', err);
-			}
-		});
+		this.globalAbortController = abortController;
+		this.addDispose(abort);
 	}
 
 	transaction = async <T>(

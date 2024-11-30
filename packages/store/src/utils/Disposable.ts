@@ -4,7 +4,15 @@ export class Disposable {
 
 	dispose = async () => {
 		this.disposed = true;
-		await Promise.all(this._disposes.map((dispose) => dispose()));
+		await Promise.all(
+			this._disposes.map(async (dispose) => {
+				try {
+					await dispose();
+				} catch (err) {
+					console.error('Error disposing', err);
+				}
+			}),
+		);
 		this._disposes = [];
 	};
 
