@@ -1,5 +1,13 @@
 # @verdant-web/persistence-sqlite
 
+## 1.0.0-alpha.8
+
+### Patch Changes
+
+- 16243363: This is ridiculous!
+- Updated dependencies [16243363]
+  - @verdant-web/store@4.1.0-alpha.6
+
 ## 1.0.0-alpha.7
 
 ### Patch Changes

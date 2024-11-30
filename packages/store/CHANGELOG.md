@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.6
+
+### Patch Changes
+
+- 16243363: This is ridiculous!
+
 ## 4.1.0-alpha.5
 
 ### Patch Changes
