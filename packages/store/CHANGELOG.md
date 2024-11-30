@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.8
+
+### Patch Changes
+
+- 867d4cb6: Just stop aborting the thing I guess
+
 ## 4.1.0-alpha.7
 
 ### Patch Changes

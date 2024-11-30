@@ -1,5 +1,13 @@
 # @verdant-web/persistence-sqlite
 
+## 1.0.0-alpha.10
+
+### Patch Changes
+
+- 867d4cb6: Just stop aborting the thing I guess
+- Updated dependencies [867d4cb6]
+  - @verdant-web/store@4.1.0-alpha.8
+
 ## 1.0.0-alpha.9
 
 ### Patch Changes
