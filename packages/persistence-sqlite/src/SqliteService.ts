@@ -3,19 +3,17 @@ import { Disposable } from '@verdant-web/store/internal';
 import { Database, Tables, Transaction } from './kysely.js';
 
 export class SqliteService extends Disposable {
-	private globalAbortController = new AbortController();
+	private globalAbortController;
 
 	constructor(protected db: Database) {
 		super();
-		this.addDispose(() => {
-			if (this.globalAbortController.signal.aborted) return;
+		const abortController = new AbortController();
+		this.globalAbortController = abortController;
+		this.addDispose(function () {
+			if (abortController.signal.aborted) return;
 			try {
-				this.globalAbortController.abort.call(this.globalAbortController);
+				abortController.abort.call(abortController);
 			} catch (err) {
-				if (err instanceof Error && err.message.includes('invocation')) {
-					// Ignore
-					return;
-				}
 				console.error('Error aborting global controller', err);
 			}
 		});
