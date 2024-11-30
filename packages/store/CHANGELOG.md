@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.4
+
+### Patch Changes
+
+- e3d304a8: Manually invoke abort controller
+
 ## 4.1.0-alpha.3
 
 ### Patch Changes
