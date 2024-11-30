@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.0-alpha.3
+
+### Patch Changes
+
+- e319c589: Add extra check
+
 ## 4.1.0-alpha.2
 
 ### Patch Changes
