@@ -384,8 +384,8 @@ importers:
   packages/server:
     dependencies:
       '@a-type/kysely':
-        specifier: ^1.0.1
-        version: 1.0.1(kysely@0.27.3)
+        specifier: ^1.0.2
+        version: 1.0.2(kysely@0.27.5)
       '@verdant-web/common':
         specifier: workspace:*
         version: link:../common
@@ -393,8 +393,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       better-sqlite3:
-        specifier: ^7.6.2
-        version: 7.6.2
+        specifier: ^11.7.0
+        version: 11.7.0
       busboy:
         specifier: ^1.6.0
         version: 1.6.0
@@ -402,11 +402,11 @@ importers:
         specifier: ^8.5.1
         version: 8.5.1
       kysely:
-        specifier: 0.27.3
-        version: 0.27.3
+        specifier: 0.27.5
+        version: 0.27.5
       kysely-plugin-serialize:
         specifier: ^0.5.7
-        version: 0.5.7(kysely@0.27.3)
+        version: 0.5.7(kysely@0.27.5)
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
@@ -659,6 +659,11 @@ packages:
 
   '@a-type/kysely@1.0.1':
     resolution: {integrity: sha512-ZiLRXsFD+tYRXbb2TajkqHHI0EwiEWhuKltrIfarqjoDvvvOcypwvQfq811+HXatnLME5mA6D8yYMqmdYhpyoQ==}
+    peerDependencies:
+      kysely: ^0.27.2
+
+  '@a-type/kysely@1.0.2':
+    resolution: {integrity: sha512-5hbPrBgfIKWbJeovbWvg4FD5q4LZyA6Ir+Qj3sF2Sg2rrvMGJfFa6jXWjBtS1Hdbm2w7lXrUghP1dUUvFea1Gg==}
     peerDependencies:
       kysely: ^0.27.2
 
@@ -5161,6 +5166,9 @@ packages:
     resolution: {integrity: sha512-pbnl5XzGBdrFU/wT4jqmJVPn2B6UHPBOhzMQkY/SPUPB6QtUXtmBHBIwCbXJol93mOpGMnQyP/+BB19q04xj7g==}
     engines: {node: '>=4'}
 
+  better-sqlite3@11.7.0:
+    resolution: {integrity: sha512-mXpa5jnIKKHeoGzBrUJrc65cXFKcILGZpU3FXR0pradUEm9MA7UZz02qfEejaMcm9iXrSOCenwwYMJ/tZ1y5Ig==}
+
   better-sqlite3@7.6.2:
     resolution: {integrity: sha512-S5zIU1Hink2AH4xPsN0W43T1/AJ5jrPh7Oy07ocuW/AKYYY02GWzz9NH0nbSMn/gw6fDZ5jZ1QsHt1BXAwJ6Lg==}
 
@@ -7767,6 +7775,10 @@ packages:
     resolution: {integrity: sha512-dyNKv2KRvYOQPLCAOCjjQuCk4YFd33BvGdf/o5bC7FiW+BB6snA81Zt+2wT9QDFzKqxKa5rrOmvlK/anehCcgA==}
     engines: {node: '>=14.0.0'}
 
+  kysely@0.27.5:
+    resolution: {integrity: sha512-s7hZHcQeSNKpzCkHRm8yA+0JPLjncSWnjb+2TIElwS2JAqYr+Kv3Ess+9KFfJS0C1xcQ1i9NkNHpWwCYpHMWsA==}
+    engines: {node: '>=14.0.0'}
+
   latest-version@5.1.0:
     resolution: {integrity: sha512-weT+r0kTkRQdCdYCNtkMwWXQTMEswKrFBkm4ckQOMVhhqhIMI1UT2hMj+1iigIhgSZm5gTmrRXBNoGUgaTY1xA==}
     engines: {node: '>=8'}
@@ -7963,10 +7975,6 @@ packages:
   lowercase-keys@2.0.0:
     resolution: {integrity: sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==}
     engines: {node: '>=8'}
-
-  lru-cache@10.0.1:
-    resolution: {integrity: sha512-IJ4uwUTi2qCccrioU6g9g/5rvvVl13bsdczUUcqbciD9iLr095yj8DQKdObriEvuNSx325N1rV1O0sJFszx75g==}
-    engines: {node: 14 || >=16.14}
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -11375,6 +11383,15 @@ snapshots:
       - encoding
       - supports-color
 
+  '@a-type/kysely@1.0.2(kysely@0.27.5)':
+    dependencies:
+      '@paralleldrive/cuid2': 2.2.2
+      bcrypt: 5.1.1
+      kysely: 0.27.5
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
   '@a-type/utils@1.0.2': {}
 
   '@algolia/autocomplete-core@1.7.2':
@@ -12162,7 +12179,7 @@ snapshots:
       debug: 4.3.7
       lodash.debounce: 4.0.8
       resolve: 1.22.1
-      semver: 6.3.0
+      semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
 
@@ -12174,7 +12191,7 @@ snapshots:
       debug: 4.3.7
       lodash.debounce: 4.0.8
       resolve: 1.22.1
-      semver: 6.3.0
+      semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
 
@@ -15725,7 +15742,7 @@ snapshots:
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
-      semver: 7.5.4
+      semver: 7.6.0
       tar: 6.2.0
     transitivePeerDependencies:
       - encoding
@@ -18192,6 +18209,11 @@ snapshots:
     dependencies:
       is-windows: 1.0.2
 
+  better-sqlite3@11.7.0:
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.1
+
   better-sqlite3@7.6.2:
     dependencies:
       bindings: 1.5.0
@@ -20245,7 +20267,7 @@ snapshots:
       memfs: 3.4.8
       minimatch: 3.1.2
       schema-utils: 2.7.0
-      semver: 7.5.4
+      semver: 7.6.0
       tapable: 1.1.3
       typescript: 5.4.2
       webpack: 5.74.0
@@ -21410,15 +21432,17 @@ snapshots:
 
   ktx-parse@0.4.5: {}
 
-  kysely-plugin-serialize@0.5.7(kysely@0.27.3):
+  kysely-plugin-serialize@0.5.7(kysely@0.27.5):
     dependencies:
-      kysely: 0.27.3
+      kysely: 0.27.5
 
   kysely@0.26.3: {}
 
   kysely@0.27.3: {}
 
   kysely@0.27.4: {}
+
+  kysely@0.27.5: {}
 
   latest-version@5.1.0:
     dependencies:
@@ -21600,10 +21624,7 @@ snapshots:
 
   lowercase-keys@2.0.0: {}
 
-  lru-cache@10.0.1: {}
-
-  lru-cache@10.4.3:
-    optional: true
+  lru-cache@10.4.3: {}
 
   lru-cache@4.1.5:
     dependencies:
@@ -21641,7 +21662,7 @@ snapshots:
 
   make-dir@3.1.0:
     dependencies:
-      semver: 6.3.0
+      semver: 6.3.1
 
   map-obj@1.0.1: {}
 
@@ -21918,7 +21939,7 @@ snapshots:
 
   node-abi@3.24.0:
     dependencies:
-      semver: 7.5.4
+      semver: 7.6.0
 
   node-addon-api@5.1.0: {}
 
@@ -21960,14 +21981,14 @@ snapshots:
     dependencies:
       hosted-git-info: 4.1.0
       is-core-module: 2.11.0
-      semver: 7.5.4
+      semver: 7.6.0
       validate-npm-package-license: 3.0.4
 
   normalize-package-data@4.0.1:
     dependencies:
       hosted-git-info: 5.2.1
       is-core-module: 2.11.0
-      semver: 7.5.4
+      semver: 7.6.0
       validate-npm-package-license: 3.0.4
 
   normalize-path@3.0.0: {}
@@ -22217,7 +22238,7 @@ snapshots:
       got: 9.6.0
       registry-auth-token: 4.2.2
       registry-url: 5.1.0
-      semver: 6.3.0
+      semver: 6.3.1
 
   pako@1.0.11: {}
 
@@ -22307,7 +22328,7 @@ snapshots:
 
   path-scurry@1.10.1:
     dependencies:
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       minipass: 7.0.4
 
   path-scurry@1.11.1:
@@ -23641,7 +23662,7 @@ snapshots:
 
   semver-diff@3.1.1:
     dependencies:
-      semver: 6.3.0
+      semver: 6.3.1
 
   semver@5.7.1: {}
 

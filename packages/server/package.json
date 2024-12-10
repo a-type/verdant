@@ -45,13 +45,13 @@
 		"perf": "pnpm run build && cross-env VERDANT_LOG=false node ./perf/perf.mjs"
 	},
 	"dependencies": {
-		"@a-type/kysely": "^1.0.1",
+		"@a-type/kysely": "^1.0.2",
 		"@verdant-web/common": "workspace:*",
 		"async-lock": "^1.4.0",
-		"better-sqlite3": "^7.6.2",
+		"better-sqlite3": "^11.7.0",
 		"busboy": "^1.6.0",
 		"jsonwebtoken": "^8.5.1",
-		"kysely": "0.27.3",
+		"kysely": "0.27.5",
 		"kysely-plugin-serialize": "^0.5.7",
 		"minimist": "^1.2.8",
 		"ws": "^8.9.0"
