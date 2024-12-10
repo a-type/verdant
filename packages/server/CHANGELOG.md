@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.3.4-alpha.2
+
+### Patch Changes
+
+- f2511398: Update better-sqlite dependency for later Node compatibility
+
 ## 3.3.4-alpha.1
 
 ### Patch Changes
