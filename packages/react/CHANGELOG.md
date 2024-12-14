@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 40.1.0
+
+### Minor Changes
+
+- 9e1fb9fd: Upgrade to React 19
+
 ## 40.0.0
 
 ### Patch Changes
