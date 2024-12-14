@@ -1,5 +1,29 @@
 # @verdant-web/persistence-sqlite
 
+## 1.0.0
+
+### Patch Changes
+
+- 7bc6069f: remove references to node modules in sqlite libs
+- 9fbf4166: Try a different approach
+- e3d304a8: Manually invoke abort controller
+- 16243363: This is ridiculous!
+- 87aa284a: Ignore illegal invocation error from abort controller
+- 867d4cb6: Just stop aborting the thing I guess
+- e319c589: Add extra check
+- e0a6a919: Sometimes you think you know javascript, but
+- Updated dependencies [9fbf4166]
+- Updated dependencies [e3d304a8]
+- Updated dependencies [21357127]
+- Updated dependencies [16243363]
+- Updated dependencies [87aa284a]
+- Updated dependencies [867d4cb6]
+- Updated dependencies [ddc1a25b]
+- Updated dependencies [b5d15631]
+- Updated dependencies [e319c589]
+- Updated dependencies [e0a6a919]
+  - @verdant-web/store@4.1.0
+
 ## 1.0.0-alpha.10
 
 ### Patch Changes

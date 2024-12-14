@@ -1,5 +1,25 @@
 # @lo-fi/web
 
+## 4.1.0
+
+### Minor Changes
+
+- b5d15631: Beginning of support for alternative persistence implementations. This involves major internal refactoring and some undocumented internal-use-only library API changes.
+
+### Patch Changes
+
+- 9fbf4166: Try a different approach
+- e3d304a8: Manually invoke abort controller
+- 21357127: fix cli old schemas index generation. fix WIP crash.
+- 16243363: This is ridiculous!
+- 87aa284a: Ignore illegal invocation error from abort controller
+- 867d4cb6: Just stop aborting the thing I guess
+- ddc1a25b: dont throw on blocked upgrade
+- e319c589: Add extra check
+- e0a6a919: Sometimes you think you know javascript, but
+- Updated dependencies [b5d15631]
+  - @verdant-web/common@2.7.0
+
 ## 4.1.0-alpha.9
 
 ### Patch Changes

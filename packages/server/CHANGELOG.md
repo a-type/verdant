@@ -1,5 +1,14 @@
 # @lo-fi/server
 
+## 3.3.4
+
+### Patch Changes
+
+- f2511398: Update better-sqlite dependency for later Node compatibility
+- d10665df: Improve replica server order record-keeping and avoid forcing a reset of truant replicas if their server order is still up to date.
+- Updated dependencies [b5d15631]
+  - @verdant-web/common@2.7.0
+
 ## 3.3.4-alpha.2
 
 ### Patch Changes

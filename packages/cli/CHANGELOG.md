@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.7.1
+
+### Patch Changes
+
+- 21357127: fix cli old schemas index generation. fix WIP crash.
+
 ## 4.7.1-alpha.0
 
 ### Patch Changes
