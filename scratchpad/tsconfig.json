@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"noImplicitAny": true,
+		"noImplicitAny": false,
 		"noLib": false,
 		"target": "es2017",
 		"sourceMap": true,

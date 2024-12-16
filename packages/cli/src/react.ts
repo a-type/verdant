@@ -93,7 +93,12 @@ export interface GeneratedHooks<Presence, Profile> {
   useSyncStatus: () => boolean;
 	useWatch<T extends AnyEntity<any, any, any> | null>(
     entity: T,
-		options?: { deep?: boolean },
+		options?: {
+			/** Observes changes to all sub-objects */
+			deep?: boolean,
+			/** Disables performance enhancements that prevent re-renders if the changed keys aren't used in the component */
+			untracked?: boolean,
+		},
   ): EntityDestructured<T>;
 	useWatch<T extends EntityFile | null>(
 		file: T

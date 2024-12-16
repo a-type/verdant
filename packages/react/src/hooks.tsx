@@ -4,22 +4,22 @@ import {
 	StorageSchema,
 } from '@verdant-web/common';
 import {
-	Query,
-	SyncTransportMode,
-	StorageDescriptor,
-	UserInfo,
-	Entity,
-	ClientWithCollections,
-	EntityFile,
 	Client,
+	ClientWithCollections,
+	Entity,
+	EntityFile,
+	Query,
 	QueryStatus,
+	StorageDescriptor,
+	SyncTransportMode,
+	UserInfo,
 } from '@verdant-web/store';
 import {
 	ChangeEvent,
 	createContext,
-	HTMLAttributes,
 	HTMLProps,
 	ReactNode,
+	use,
 	useCallback,
 	useContext,
 	useEffect,
@@ -28,8 +28,8 @@ import {
 	useState,
 	useSyncExternalStore,
 } from 'react';
-import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
+import { useWatch } from './watch.js';
 
 function isQueryCurrentValid(query: Query<any>) {
 	return !(query.status === 'initial' || query.status === 'initializing');
@@ -37,7 +37,7 @@ function isQueryCurrentValid(query: Query<any>) {
 function useLiveQuery(liveQuery: Query<any> | null, disableSuspense = false) {
 	// suspend if the query doesn't have a valid result set yet.
 	if (!disableSuspense && liveQuery && !isQueryCurrentValid(liveQuery)) {
-		suspend(() => liveQuery.resolved, [liveQuery]);
+		use(liveQuery.resolved);
 	}
 	return useSyncExternalStore(
 		(callback) => {
@@ -98,40 +98,7 @@ export function createHooks<Presence = any, Profile = any>(
 		if (!ctx) {
 			throw new Error('No verdant provider was found');
 		}
-		return suspend(() => ctx.readyPromise, ['lofi_' + ctx.namespace]) as any;
-	}
-
-	function useWatch(
-		liveObject: Entity | EntityFile | null,
-		options?: { deep?: boolean },
-	) {
-		return useSyncExternalStore(
-			(handler) => {
-				if (liveObject) {
-					if ('isFile' in liveObject) {
-						return liveObject.subscribe('change', handler);
-					} else {
-						if (options?.deep) {
-							return liveObject.subscribe('change', handler);
-						} else {
-							return liveObject.subscribe('change', handler);
-						}
-					}
-				}
-				return () => {};
-			},
-			() => {
-				if (liveObject) {
-					if (liveObject instanceof EntityFile) {
-						return liveObject.url;
-					} else {
-						return liveObject.getAll();
-					}
-				}
-
-				return undefined;
-			},
-		);
+		return use(ctx.readyPromise) as ClientWithCollections;
 	}
 
 	function useOnChange(
@@ -203,7 +170,7 @@ export function createHooks<Presence = any, Profile = any>(
 					unsubs.forEach((unsub) => unsub());
 				};
 			},
-			() => (peerId ? storage.sync.presence.peers[peerId] ?? null : null),
+			() => (peerId ? (storage.sync.presence.peers[peerId] ?? null) : null),
 		);
 	}
 
@@ -418,8 +385,8 @@ export function createHooks<Presence = any, Profile = any>(
 				fieldSchema.type === 'boolean'
 					? key
 					: value === null || value === undefined
-					? ''
-					: `${value}`;
+						? ''
+						: `${value}`;
 			const props: HTMLProps<HTMLInputElement> = {
 				onChange: (e: ChangeEvent<HTMLInputElement>) => {
 					if (fieldSchema.type === 'number') {
@@ -598,11 +565,13 @@ export function createHooks<Presence = any, Profile = any>(
 			value,
 			children,
 			sync,
+			fallback,
 			...rest
 		}: {
 			children?: ReactNode;
 			value: StorageDescriptor;
 			sync?: boolean;
+			fallback?: ReactNode;
 		}) => {
 			// auto-open storage when used in provider
 			useMemo(() => {
@@ -756,7 +725,7 @@ export function createHooks<Presence = any, Profile = any>(
 								pageSize,
 								page: 0,
 								key: key || getAllPaginatedHookName,
-						  }),
+							}),
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery, suspend === false);
@@ -809,7 +778,7 @@ export function createHooks<Presence = any, Profile = any>(
 								index,
 								pageSize,
 								key: key || getAllInfiniteHookName,
-						  }),
+							}),
 				[index, skip, pageSize],
 			);
 			const data = useLiveQuery(liveQuery, suspend === false);

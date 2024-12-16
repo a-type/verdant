@@ -2,10 +2,12 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	test: {
-		environment: 'jsdom',
+		browser: {
+			provider: 'playwright',
+			enabled: true,
+			name: 'chromium'
+		},
 		clearMocks: true,
-
-		setupFiles: ['tests/setup/indexedDB.ts'],
 	},
 	resolve: {
 		conditions: ['development', 'default'],

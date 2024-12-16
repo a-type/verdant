@@ -31,7 +31,8 @@
 		"typescript": "^5.4.2"
 	},
 	"dependencies": {
-		"fake-indexeddb": "^5.0.1"
+		"fake-indexeddb": "^5.0.1",
+		"prettier": "^3.0.3"
 	},
 	"volta": {
 		"node": "18.17.0"
