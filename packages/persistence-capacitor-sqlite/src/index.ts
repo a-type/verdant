@@ -1,14 +1,14 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
+import { Directory, Filesystem } from '@capacitor/filesystem';
 import {
-	SqlitePersistence,
 	FilesystemImplementation,
+	SqlitePersistence,
 } from '@verdant-web/persistence-sqlite';
 import CapacitorSQLiteKyselyDialect from 'capacitor-sqlite-kysely';
 import { Kysely } from 'kysely';
-import { Directory, Filesystem } from '@capacitor/filesystem';
 
 function getKysely(databaseFile: string) {
-	return new Kysely({
+	return new Kysely<any>({
 		dialect: new CapacitorSQLiteKyselyDialect(
 			new SQLiteConnection(CapacitorSQLite),
 			{ name: databaseFile },

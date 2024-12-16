@@ -30,11 +30,11 @@
 	"dependencies": {},
 	"peerDependencies": {
 		"@verdant-web/store": "^4.1.0",
-		"kysely": "^0.7.0"
+		"kysely": "^0.27.5"
 	},
 	"devDependencies": {
 		"@verdant-web/store": "workspace:*",
-		"kysely": "0.27.4",
+		"kysely": "^0.27.5",
 		"vitest": "2.1.3"
 	}
 }
