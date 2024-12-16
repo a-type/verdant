@@ -2,62 +2,65 @@
 	"folders": [
 		{
 			"name": "🌿 Store",
-			"path": "packages/store"
+			"path": "packages/store",
 		},
 		{
 			"name": "💽 Server",
-			"path": "packages/server"
+			"path": "packages/server",
 		},
 		{
 			"name": "🪢 Common",
-			"path": "packages/common"
+			"path": "packages/common",
 		},
 		{
 			"name": "🧑‍💻 CLI",
-			"path": "packages/cli"
+			"path": "packages/cli",
 		},
 		{
 			"name": "⚛️ React",
-			"path": "packages/react"
+			"path": "packages/react",
 		},
 		{
 			"name": "🔗 Router",
-			"path": "packages/react-router"
+			"path": "packages/react-router",
 		},
 		{
 			"name": "📦 Create App",
-			"path": "packages/create-app"
+			"path": "packages/create-app",
 		},
 		{
 			"name": "🛢️ SQLite Persistence",
-			"path": "packages/persistence-sqlite"
+			"path": "packages/persistence-sqlite",
 		},
 		{
 			"name": "📱 Capacitor SQLite",
-			"path": "packages/persistence-capacitor-sqlite"
+			"path": "packages/persistence-capacitor-sqlite",
 		},
 		{
 			"name": "🗄️ S3 Files",
-			"path": "packages/file-storage-s3"
+			"path": "packages/file-storage-s3",
 		},
 		{
 			"name": "🧪 Tests",
-			"path": "test"
+			"path": "test",
 		},
 		{
 			"name": "📃 Docs",
-			"path": "docs"
+			"path": "docs",
 		},
 		{
 			"name": "📝 Scratchpad",
-			"path": "scratchpad"
+			"path": "scratchpad",
 		},
 		{
 			"name": "⚙️ Configs",
-			"path": "configs"
-		}
+			"path": "configs",
+		},
+		{
+			"path": ".github",
+		},
 	],
 	"settings": {
-		"vitest.workspaceConfig": "./configs/vitest.workspace.ts"
-	}
+		"vitest.workspaceConfig": "./configs/vitest.workspace.ts",
+	},
 }
