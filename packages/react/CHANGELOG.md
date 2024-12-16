@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 40.2.0
+
+### Minor Changes
+
+- cacc5b0: Observe accessed keys of watched entities and only re-render the component when accessed keys change
+
 ## 40.1.0
 
 ### Minor Changes

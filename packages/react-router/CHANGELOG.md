@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.7.1
+
+### Patch Changes
+
+- 8acc032: Fix react peer dep
+
 ## 0.7.0
 
 ### Minor Changes
