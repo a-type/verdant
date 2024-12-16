@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.7.2
+
+### Patch Changes
+
+- cacc5b0: Adds typings for new useWatch option to disable usage tracking
+
 ## 4.7.1
 
 ### Patch Changes
