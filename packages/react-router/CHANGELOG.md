@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.7.0
+
+### Minor Changes
+
+- 9e1fb9fd: Upgrade to React 19
+
 ## 0.6.5
 
 ### Patch Changes
