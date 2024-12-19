@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 40.2.1
+
+### Patch Changes
+
+- 541ee73: Revert to suspend-react due to hook errors with use(Promise)
+
 ## 40.2.0
 
 ### Minor Changes
