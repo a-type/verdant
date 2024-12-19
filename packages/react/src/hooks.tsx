@@ -28,16 +28,20 @@ import {
 	useState,
 	useSyncExternalStore,
 } from 'react';
+import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
 import { useWatch } from './watch.js';
 
-function isQueryCurrentValid(query: Query<any>) {
-	return !(query.status === 'initial' || query.status === 'initializing');
+function queryIsInitializing(query: Query<any>) {
+	return query.status === 'initial' || query.status === 'initializing';
 }
-function useLiveQuery(liveQuery: Query<any> | null, disableSuspense = false) {
+function useLiveQueryResult(
+	liveQuery: Query<any> | null,
+	disableSuspense = false,
+) {
 	// suspend if the query doesn't have a valid result set yet.
-	if (!disableSuspense && liveQuery && !isQueryCurrentValid(liveQuery)) {
-		use(liveQuery.resolved);
+	if (!disableSuspense && liveQuery && queryIsInitializing(liveQuery)) {
+		suspend(() => liveQuery.resolved, [liveQuery]);
 	}
 	return useSyncExternalStore(
 		(callback) => {
@@ -94,11 +98,14 @@ export function createHooks<Presence = any, Profile = any>(
 		createContext<StorageDescriptor<Presence, Profile> | null>(null);
 
 	function useStorage(): ClientWithCollections {
-		const ctx = useContext(Context);
+		const ctx = use(Context);
 		if (!ctx) {
 			throw new Error('No verdant provider was found');
 		}
-		return use(ctx.readyPromise) as ClientWithCollections;
+		return suspend(
+			() => ctx.readyPromise,
+			[`verdant_${ctx.namespace}`],
+		) as ClientWithCollections;
 	}
 
 	function useOnChange(
@@ -597,8 +604,8 @@ export function createHooks<Presence = any, Profile = any>(
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].get(id);
-			}, [id, skip]);
-			const data = useLiveQuery(liveQuery);
+			}, [id, skip, storage]);
+			const data = useLiveQueryResult(liveQuery);
 
 			return data;
 		};
@@ -609,8 +616,8 @@ export function createHooks<Presence = any, Profile = any>(
 			const storage = useStorage();
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].get(id);
-			}, [id, skip]);
-			const data = useLiveQuery(liveQuery, true);
+			}, [id, skip, storage]);
+			const data = useLiveQueryResult(liveQuery, true);
 			const status = useLiveQueryStatus(liveQuery);
 
 			return { data, status };
@@ -630,8 +637,8 @@ export function createHooks<Presence = any, Profile = any>(
 			const index = useStableIndex(unstableIndex);
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].findOne({ index, key });
-			}, [index, skip]);
-			const data = useLiveQuery(liveQuery);
+			}, [index, skip, storage, key]);
+			const data = useLiveQueryResult(liveQuery);
 			return data;
 		};
 		hooks[findOneHookName + 'Unsuspended'] = function useOneUnsuspended({
@@ -647,8 +654,8 @@ export function createHooks<Presence = any, Profile = any>(
 			const index = useStableIndex(unstableIndex);
 			const liveQuery = useMemo(() => {
 				return skip ? null : storage[pluralName].findOne({ index, key });
-			}, [index, skip]);
-			const data = useLiveQuery(liveQuery, true);
+			}, [index, skip, storage, key]);
+			const data = useLiveQueryResult(liveQuery, true);
 			const status = useLiveQueryStatus(liveQuery);
 
 			return { data, status };
@@ -670,9 +677,9 @@ export function createHooks<Presence = any, Profile = any>(
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
 				() => (skip ? null : storage[pluralName].findAll({ index, key })),
-				[index, skip],
+				[index, skip, storage, key],
 			);
-			const data = useLiveQuery(liveQuery);
+			const data = useLiveQueryResult(liveQuery);
 			return data || [];
 		};
 		hooks[getAllHookName + 'Unsuspended'] = function useAllUnsuspended({
@@ -690,9 +697,9 @@ export function createHooks<Presence = any, Profile = any>(
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
 				() => (skip ? null : storage[pluralName].findAll({ index, key })),
-				[index, skip],
+				[index, skip, storage, key],
 			);
-			const data = useLiveQuery(liveQuery, true) || [];
+			const data = useLiveQueryResult(liveQuery, true) || [];
 			const status = useLiveQueryStatus(liveQuery);
 
 			return { data, status };
@@ -726,9 +733,9 @@ export function createHooks<Presence = any, Profile = any>(
 								page: 0,
 								key: key || getAllPaginatedHookName,
 							}),
-				[index, skip, pageSize],
+				[index, skip, pageSize, storage, key],
 			);
-			const data = useLiveQuery(liveQuery, suspend === false);
+			const data = useLiveQueryResult(liveQuery, suspend === false);
 			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
@@ -779,9 +786,9 @@ export function createHooks<Presence = any, Profile = any>(
 								pageSize,
 								key: key || getAllInfiniteHookName,
 							}),
-				[index, skip, pageSize],
+				[index, skip, pageSize, storage, key],
 			);
-			const data = useLiveQuery(liveQuery, suspend === false);
+			const data = useLiveQueryResult(liveQuery, suspend === false);
 			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
