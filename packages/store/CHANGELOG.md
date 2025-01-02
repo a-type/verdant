@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.1.1
+
+### Patch Changes
+
+- be58ddf: Add 'main' field to store package
+
 ## 4.1.0
 
 ### Minor Changes
