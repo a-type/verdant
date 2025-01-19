@@ -8,8 +8,8 @@ import {
 import { Context } from '../../../context/context.js';
 import { PersistenceDocumentDb } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
-import { getRange } from './ranges.js';
 import { closeDatabase, getSizeOfObjectStore, isAbortError } from '../util.js';
+import { getRange } from './ranges.js';
 
 export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 	private ctx;
@@ -149,7 +149,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 			}),
 		};
 
-		await Promise.all(
+		const results = await Promise.allSettled(
 			entities.map(async (e) => {
 				const snapshot = e.getSnapshot();
 				try {
@@ -168,6 +168,26 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 				}
 			}),
 		);
+
+		const failures = results.filter((r) => r.status === 'rejected');
+		if (failures.length) {
+			// in the case of a failure to save a document, it doesn't quite make sense to cancel or rollback whatever is
+			// currently happening. when restoring imports, etc, this makes the app stuck. if only a few docs failed, maybe
+			// there's some data corruption somewhere, but we can just lose those without affecting the rest of the data.
+			if (failures.length === results.length) {
+				// but if ALL of them failed, that's trouble...
+				throw new Error(
+					'Failed to save any documents. Something must be quite wrong.',
+				);
+			}
+			this.ctx.log(
+				'error',
+				'Failed to save documents:',
+				failures,
+				". See logs above. This only affects querying these documents. Let's hope a future attempt will correct them...",
+			);
+		}
+
 		options.transaction.commit();
 	};
 
@@ -190,22 +210,27 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 	) => {
 		this.ctx.log('debug', `Saving document indexes for querying ${oid}`);
 		const { collection, id } = decomposeOid(oid);
-		if (!doc) {
-			await this.run(collection, (store) => store.delete(id), {
-				mode: 'readwrite',
-				transaction,
-			});
-			this.ctx.log('debug', `Deleted document indexes for querying ${oid}`);
-		} else {
-			const schema = this.ctx.schema.collections[collection];
-			// no need to validate before storing; the entity's snapshot is already validated.
-			const indexes = getIndexValues(schema, doc);
-			indexes['@@@snapshot'] = JSON.stringify(doc);
-			await this.run(collection, (store) => store.put(indexes), {
-				mode: 'readwrite',
-				transaction,
-			});
-			this.ctx.log('debug', `Save complete for ${oid}`, indexes);
+		try {
+			if (!doc) {
+				await this.run(collection, (store) => store.delete(id), {
+					mode: 'readwrite',
+					transaction,
+				});
+				this.ctx.log('debug', `Deleted document indexes for querying ${oid}`);
+			} else {
+				const schema = this.ctx.schema.collections[collection];
+				// no need to validate before storing; the entity's snapshot is already validated.
+				const indexes = getIndexValues(schema, doc);
+				indexes['@@@snapshot'] = JSON.stringify(doc);
+				await this.run(collection, (store) => store.put(indexes), {
+					mode: 'readwrite',
+					transaction,
+				});
+				this.ctx.log('debug', `Save complete for ${oid}`, indexes);
+			}
+		} catch (err) {
+			this.ctx.log('error', `Error saving document ${oid}`, err);
+			throw err;
 		}
 	};
 }
