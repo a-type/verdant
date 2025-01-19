@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 4.1.2
+
+### Patch Changes
+
+- 8db2e33: Remove unused dependencies
+- be750c7: Make document index saving a little more failure tolerant to prevent full app lock-outs due to single document corruption
+
 ## 4.1.1
 
 ### Patch Changes
