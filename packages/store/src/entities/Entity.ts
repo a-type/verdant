@@ -13,8 +13,8 @@ import {
 	getChildFieldSchema,
 	getDefault,
 	hasDefault,
-	isFileRef,
 	isFile,
+	isFileRef,
 	isNullable,
 	isObject,
 	isRef,
@@ -29,6 +29,8 @@ import { processValueFiles } from '../files/utils.js';
 import { EntityFile } from '../index.js';
 import { EntityCache } from './EntityCache.js';
 import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
+import { EntityStoreEventData, EntityStoreEvents } from './EntityStore.js';
+import { entityFieldSubscriber } from './entityFieldSubscriber.js';
 import {
 	BaseEntityValue,
 	DataFromInit,
@@ -39,8 +41,6 @@ import {
 	ListItemValue,
 	ObjectEntity,
 } from './types.js';
-import { EntityStoreEventData, EntityStoreEvents } from './EntityStore.js';
-import { entityFieldSubscriber } from './entityFieldSubscriber.js';
 
 export interface EntityInit {
 	oid: ObjectIdentifier;
@@ -657,6 +657,10 @@ export class Entity<
 				})
 			) {
 				if (hasDefault(fieldSchema)) {
+					// FIXME: this returns []/{} for arrays and objects, but the contract
+					// of this method should return an Entity for such object fields.
+					// I want to write a test case for this one before attempting to fix
+					// just to be sure the fix works.
 					return getDefault(fieldSchema);
 				}
 				if (isNullable(fieldSchema)) {
