@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Getting started with React
 
-Verdant has React hooks generation. To enable it, pass `--react` to the [CLI](./local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Call it to construct hooks for your Verdant storage.
+Verdant has React hooks generation. To enable it, pass `--react` to the [CLI](../local-storage/generate-client). A new module `react.js` will be emitted in the output directory. It exports one function, `createHooks`. Call it to construct hooks for your Verdant storage.
 
 ```ts
 import { ClientDescriptor, ServerSync } from './client/index.js';
