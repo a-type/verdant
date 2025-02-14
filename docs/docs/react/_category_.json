@@ -1,0 +1,8 @@
+{
+	"label": "React Bindings",
+	"position": 6,
+	"link": {
+		"type": "generated-index",
+		"description": "First-class React code generation and hooks for Verdant"
+	}
+}

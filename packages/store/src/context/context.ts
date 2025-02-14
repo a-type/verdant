@@ -10,15 +10,15 @@ import {
 	StorageSchema,
 } from '@verdant-web/common';
 import { UndoHistory } from '../UndoHistory.js';
-import { Time } from './Time.js';
-import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
-import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
+import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
+import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
 import {
 	PersistedFileData,
 	PersistenceImplementation,
 } from '../persistence/interfaces.js';
 import { ShutdownHandler } from './ShutdownHandler.js';
+import { Time } from './Time.js';
 
 /**
  * Common components utilized across various client
@@ -99,6 +99,7 @@ export interface Context {
 		files?: FileConfig;
 		sync?: SyncConfig;
 		persistence?: PersistenceConfig;
+		queries?: QueryConfig;
 	};
 
 	environment: {
@@ -207,6 +208,19 @@ export interface SyncConfig<Profile = any, Presence = any>
 export interface PersistenceConfig {
 	disableRebasing?: boolean;
 	rebaseTimeout?: number;
+}
+
+export interface QueryConfig {
+	/**
+	 * Milliseconds to hold a query in memory after it is unsubscribed before
+	 * disposing of it. Once a query is disposed, it must be loaded fresh again
+	 * on next use. Queries are cached based on their `key`, which you can
+	 * manually override. By default keys are determined by the parameters
+	 * passed to the query.
+	 *
+	 * Defaults to 5 seconds.
+	 */
+	evictionTime?: number;
 }
 
 export type InitialContext = Omit<Context, 'documents' | 'meta' | 'files'>;

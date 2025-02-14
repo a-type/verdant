@@ -10,12 +10,12 @@ import { DocumentManager } from '../entities/DocumentManager.js';
 import { EntityStore } from '../entities/EntityStore.js';
 import { FileManager } from '../files/FileManager.js';
 import { deleteAllDatabases } from '../persistence/idb/util.js';
-import { CollectionQueries } from '../queries/CollectionQueries.js';
-import { QueryCache } from '../queries/QueryCache.js';
-import { NoSync, ServerSync, Sync } from '../sync/Sync.js';
-import { getLatestVersion } from '../utils/versions.js';
 import { ExportedData } from '../persistence/interfaces.js';
 import { importPersistence } from '../persistence/persistence.js';
+import { CollectionQueries } from '../queries/CollectionQueries.js';
+import { PublicQueryCacheAPI, QueryCache } from '../queries/QueryCache.js';
+import { NoSync, ServerSync, Sync } from '../sync/Sync.js';
+import { getLatestVersion } from '../utils/versions.js';
 
 // not actually used below, but helpful for internal code which
 // might rely on this stuff...
@@ -91,7 +91,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				? new ServerSync<Presence, Profile>(this.context.config.sync, {
 						onData: this.addData,
 						ctx: this.context,
-				  })
+					})
 				: new NoSync<Presence, Profile>(this.context);
 		if (context.schema.wip && this.context.config.sync) {
 			context.log(
@@ -114,6 +114,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// FIXME: make this less fragile
 		this._queryCache = new QueryCache({
 			context,
+			evictionTime: context.config.queries?.evictionTime,
 		});
 		this._documentManager = new DocumentManager(this.schema, this._entities);
 
@@ -226,6 +227,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		return this.context.undoHistory;
 	}
 
+	get queries(): PublicQueryCacheAPI {
+		return this._queryCache;
+	}
+
 	/**
 	 * Batch multiple operations together to be executed in a single transaction.
 	 * The changes made will not be included in the same undo history step as
@@ -318,9 +323,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	): Promise<ExportedData> => {
 		this.context.log('info', 'Exporting data...');
 		const metaExport = await this.context.meta.export();
-		const { fileData, files } = await this.context.files.export(
-			downloadRemoteFiles,
-		);
+		const { fileData, files } =
+			await this.context.files.export(downloadRemoteFiles);
 		return {
 			data: metaExport,
 			fileData,

@@ -6,17 +6,17 @@ import {
 	StorageSchema,
 	noop,
 } from '@verdant-web/common';
-import { FileConfig, InitialContext } from '../context/context.js';
+import { FileConfig, InitialContext, QueryConfig } from '../context/context.js';
+import { ShutdownHandler } from '../context/ShutdownHandler.js';
+import { Time } from '../context/Time.js';
+import { FakeWeakRef } from '../FakeWeakRef.js';
+import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
+import { deleteAllDatabases } from '../persistence/idb/util.js';
+import { PersistenceImplementation } from '../persistence/interfaces.js';
+import { initializePersistence } from '../persistence/persistence.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
 import { UndoHistory } from '../UndoHistory.js';
 import { Client } from './Client.js';
-import { deleteAllDatabases } from '../persistence/idb/util.js';
-import { FakeWeakRef } from '../FakeWeakRef.js';
-import { Time } from '../context/Time.js';
-import { initializePersistence } from '../persistence/persistence.js';
-import { PersistenceImplementation } from '../persistence/interfaces.js';
-import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
-import { ShutdownHandler } from '../context/ShutdownHandler.js';
 
 export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/** The schema used to create this client */
@@ -76,6 +76,11 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * before turning it on.
 	 */
 	EXPERIMENTAL_weakRefs?: boolean;
+
+	/**
+	 * Customize querying behavior.
+	 */
+	queries?: QueryConfig;
 }
 
 /**
@@ -155,6 +160,7 @@ export class ClientDescriptor<
 						disableRebasing: init.disableRebasing,
 						rebaseTimeout: init.rebaseTimeout,
 					},
+					queries: init.queries,
 				},
 				persistence:
 					init.persistence || new IdbPersistence(environment.indexedDB),

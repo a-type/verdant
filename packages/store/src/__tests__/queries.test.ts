@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { createTestStorage } from './fixtures/testStorage.js';
-import type { ClientWithCollections } from '../index.js';
 import { assert } from '@verdant-web/common';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ClientWithCollections } from '../index.js';
+import { createTestStorage } from './fixtures/testStorage.js';
 
 async function addTestingItems(storage: ClientWithCollections) {
 	let items = [];
@@ -54,6 +54,10 @@ async function addTestingItems(storage: ClientWithCollections) {
 	}
 	return items;
 }
+
+afterEach(() => {
+	vi.useRealTimers();
+});
 
 describe('storage queries', () => {
 	it('can query synthetic indexes', async () => {
@@ -254,6 +258,69 @@ describe('storage queries', () => {
 			items[3].get('id'),
 			items[5].get('id'),
 		]);
+	});
+
+	it('disposes of unsubscribed queries after a period', async () => {
+		const storage = await createTestStorage();
+		const items = await addTestingItems(storage);
+
+		vi.useFakeTimers();
+
+		const query = storage.todos.findAll({
+			index: {
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+		});
+
+		expect(storage.queries.activeKeys).toContain(query.key);
+
+		// since the query is not subscribed, it should be disposed after a period (defaults 5s)
+		vi.advanceTimersByTime(5001);
+
+		expect(storage.queries.activeKeys).not.toContain(query.key);
+
+		vi.useRealTimers();
+	});
+
+	it('keeps unsubscribed queries alive when told to', async () => {
+		const storage = await createTestStorage();
+		const items = await addTestingItems(storage);
+
+		vi.useFakeTimers();
+
+		const query = storage.todos.findAll({
+			index: {
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+		});
+
+		expect(storage.queries.activeKeys).toContain(query.key);
+		storage.queries.keepAlive(query.key);
+
+		// since the query is not subscribed, it should be disposed after a period (defaults 5s)
+		// overshoot that to be sure
+		vi.advanceTimersByTime(10 * 1000);
+
+		expect(storage.queries.activeKeys).toContain(query.key);
+
+		// remove hold
+		storage.queries.dropKeepAlive(query.key);
+
+		// doesn't get disposed immediately
+		expect(storage.queries.activeKeys).toContain(query.key);
+
+		// should be disposed after the normal period
+		vi.advanceTimersByTime(5001);
+
+		expect(storage.queries.activeKeys).not.toContain(query.key);
 	});
 });
 

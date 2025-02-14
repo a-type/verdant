@@ -57,7 +57,9 @@ export abstract class BaseQuery<T> extends Disposable {
 		this.isListQuery = Array.isArray(initial);
 		this._events = new EventSubscriber<BaseQueryEvents>(
 			(event: keyof BaseQueryEvents) => {
-				if (event === 'change') this._allUnsubscribedHandler?.(this);
+				if (event === 'change') {
+					this._allUnsubscribedHandler?.(this);
+				}
 			},
 		);
 		this.context = context;

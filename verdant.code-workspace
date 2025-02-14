@@ -59,6 +59,9 @@
 		{
 			"path": ".github",
 		},
+		{
+			"path": "examples",
+		},
 	],
 	"settings": {
 		"vitest.workspaceConfig": "./configs/vitest.workspace.ts",

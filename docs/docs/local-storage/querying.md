@@ -131,7 +131,27 @@ Queries also have a `.status` field to indicate their current status. `'initial'
 
 Queries have a caching behavior, determined by a cache key. Some queries automatically deduplicate: `get`, `findOne`, and `findAll`. Other queries don't deduplicate and cache unless you provide a custom cache key.
 
-All cached queries are temporarily stored by default, so if you query the same thing twice in a matter of seconds it should only run once. Subscribed queries stay cached and update live until you unsubscribe all subscribers
+All cached queries are temporarily stored by default, so if you query the same thing twice in a matter of seconds it should only run once. Subscribed queries stay cached and update live until you unsubscribe all subscribers.
+
+You can use `client.queries.activeKeys` to see which query keys are cached at any moment.
+
+#### Cache key gotchas
+
+Automatic cache key generation for queries which use an index filter is specific not just to the index name, but also the supplied value. In some programming environments, like Verdant's React integration, this means that queries which dynamically alter the filtered value change their key and therefore their cached identity. For example, using a string from an input which the user is actively typing in to filter by an index value rapidly constructs and then discards queries, but these queries will still run to completion before being disposed.
+
+To prevent this waste, you should supply a custom query key to queries you expect to rapidly alter their input values.
+
+#### Query keep-alives
+
+Normally, if a query is not subscribed (by calling `.subscribe('change', ...)`) within 5 seconds, or 5 seconds after the last unsubscribe is called, it will be removed from the cache and garbage collected.
+
+To prevent this, you can place a 'keep alive' hold on a query by its key. Using custom keys for this is highly recommended.
+
+Call `client.queries.keepAlive(key)` to place a hold on a query.
+
+Call `client.queries.dropKeepAlive(key)` to remove a hold.
+
+Use `client.queries.keepAlives` to see which queries have a hold placed. This is a `Set`.
 
 ## Querying your indexes
 
