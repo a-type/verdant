@@ -73,7 +73,7 @@ export class Entity<
 	private entityFamily: EntityCache;
 	private metadataFamily;
 
-	private schema;
+	readonly schema;
 	private parent: Entity | undefined;
 	private ctx;
 	private files;

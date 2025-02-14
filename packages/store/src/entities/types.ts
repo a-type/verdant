@@ -1,19 +1,16 @@
 import { ObjectIdentifier, StorageFieldSchema } from '@verdant-web/common';
 import type { Entity } from './Entity.js';
 
-export type AccessibleEntityProperty<T> = T extends Array<any>
-	? number
-	: T extends object
-	? keyof T
-	: never;
+export type AccessibleEntityProperty<T> =
+	T extends Array<any> ? number : T extends object ? keyof T : never;
 
 export type DataFromInit<Init> = Init extends { [key: string]: any }
 	? {
 			[Key in keyof Init]: Init[Key];
-	  }
+		}
 	: Init extends Array<any>
-	? Init
-	: any;
+		? Init
+		: any;
 
 // reduces keys of an object to only ones with an optional
 // value
@@ -23,15 +20,11 @@ export type DeletableKeys<T> = keyof {
 type IfNullableThen<T, Out> = undefined extends T
 	? Out
 	: null extends T
-	? Out
-	: never;
+		? Out
+		: never;
 
-export type EntityShape<E extends Entity<any, any>> = E extends Entity<
-	infer Value,
-	any
->
-	? Value
-	: never;
+export type EntityShape<E extends Entity<any, any>> =
+	E extends Entity<infer Value, any> ? Value : never;
 
 export type BaseEntityValue = { [Key: string]: any } | any[];
 
@@ -73,21 +66,62 @@ export interface BaseEntity<
 		) => void,
 	): () => void;
 	get<Key extends keyof Value>(key: Key): Value[Key];
+	/**
+	 * Returns a plain object or array containing sub-Entities and their data.
+	 * Equivalent to "destructuring" the entity. Unlike getSnapshot, sub-level
+	 * data is still reactive.
+	 */
 	getAll(): Readonly<Value>;
+	/**
+	 * Returns a plain Javascript object representing the current state of the entity.
+	 */
 	getSnapshot(): Snapshot;
+	/**
+	 * Returns the schema for the entity as specified in your Verdant schema.
+	 * For root Documents, this will be an Object schema with properties
+	 * representing each field in the document.
+	 */
+	readonly schema: StorageFieldSchema;
+	/**
+	 * Returns the schema for a field in the entity as specified in
+	 * your Verdant schema.
+	 */
 	getFieldSchema<FieldName extends keyof Value>(
 		key: FieldName,
 	): StorageFieldSchema;
+	/**
+	 * Will be marked true after an entity has been deleted. Any attempt to
+	 * access the entity's data will result in an error.
+	 */
 	readonly deleted: boolean;
+	/**
+	 * A Unix Epoch timestamp representing the last time this entity was updated.
+	 */
 	readonly updatedAt: number;
+	/**
+	 * A Unix Epoch timestamp representing the last time this entity or any of its
+	 * sub-entities were updated.
+	 *
+	 * NOTE: reading this property requires a bit of computation, but the result
+	 * is cached. If an entity is being frequently updated and this is frequently
+	 * read, it may result in mild performance degradation.
+	 */
+	readonly deepUpdatedAt: number;
+	/** A unique, opaque key for this Entity in the system. */
 	readonly uid: string;
+	/** If true, this Entity has authorization rules applied to it. */
 	readonly isAuthorized: boolean;
+	/** The authorization configuration string applied to this entity. */
+	readonly access: string | undefined;
+	readonly invalid: boolean;
+	/** The Verdant store namespace which contains this object */
+	readonly namespace: string;
 }
 
 export type DeepPartial<T> = T extends object
 	? {
 			[P in keyof T]?: DeepPartial<T[P]>;
-	  }
+		}
 	: T;
 
 export interface ObjectEntity<
@@ -200,22 +234,21 @@ export type AnyEntity<
 	| ListEntity<Init, KeyValue, Snapshot>
 	| ObjectEntity<Init, KeyValue, Snapshot>;
 
-export type ListItemValue<KeyValue> = KeyValue extends Array<infer T>
-	? T
-	: never;
+export type ListItemValue<KeyValue> =
+	KeyValue extends Array<infer T> ? T : never;
 export type ListItemInit<Init> = Init extends Array<infer T> ? T : never;
 
 export type EntityDestructured<T extends AnyEntity<any, any, any> | null> =
 	| (T extends ListEntity<any, infer KeyValue, any>
 			? KeyValue
 			: T extends ObjectEntity<any, infer KeyValue, any>
-			? KeyValue
-			: never)
+				? KeyValue
+				: never)
 	| (T extends null ? null : never);
 
 export type EntityInit<T extends AnyEntity<any, any, any>> =
 	T extends ListEntity<infer Init, any, any>
 		? Init
 		: T extends ObjectEntity<infer Init, any, any>
-		? Init
-		: never;
+			? Init
+			: never;
