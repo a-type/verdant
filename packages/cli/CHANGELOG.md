@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.7.3
+
+### Patch Changes
+
+- ef5fa50: New Store feature: query keep-alives. Keep a query in memory based on its `key`. Also new in CLI, the Client is now generated with more JSDocs applied, and exposes the .queries property required to use the keep-alive feature.
+
 ## 4.7.2
 
 ### Patch Changes
