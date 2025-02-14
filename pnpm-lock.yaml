@@ -411,7 +411,7 @@ importers:
         specifier: ^1.4.0
         version: 1.4.1
       better-sqlite3:
-        specifier: ^11.8.1
+        specifier: 'catalog:'
         version: 11.8.1
       busboy:
         specifier: ^1.6.0
