@@ -6,3 +6,6 @@ packages:
   - 'scaleTest'
   - 'scratchpad'
   - 'configs'
+
+catalog:
+  better-sqlite3: ^11.8.1

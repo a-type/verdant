@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    better-sqlite3:
+      specifier: ^11.8.1
+      version: 11.8.1
+
 importers:
 
   .:
@@ -621,8 +627,8 @@ importers:
         specifier: ^0.9.25
         version: 0.9.63
       better-sqlite3:
-        specifier: ^7.6.2
-        version: 7.6.2
+        specifier: 'catalog:'
+        version: 11.8.1
       express:
         specifier: ^4.18.2
         version: 4.21.2
@@ -4784,9 +4790,6 @@ packages:
 
   better-sqlite3@11.8.1:
     resolution: {integrity: sha512-9BxNaBkblMjhJW8sMRZxnxVTRgbRmssZW0Oxc1MPBTfiR+WW21e2Mk4qu8CzrcZb1LwPCnFsfDEzq+SNcBU8eg==}
-
-  better-sqlite3@7.6.2:
-    resolution: {integrity: sha512-S5zIU1Hink2AH4xPsN0W43T1/AJ5jrPh7Oy07ocuW/AKYYY02GWzz9NH0nbSMn/gw6fDZ5jZ1QsHt1BXAwJ6Lg==}
 
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
@@ -16847,11 +16850,6 @@ snapshots:
       is-windows: 1.0.2
 
   better-sqlite3@11.8.1:
-    dependencies:
-      bindings: 1.5.0
-      prebuild-install: 7.1.1
-
-  better-sqlite3@7.6.2:
     dependencies:
       bindings: 1.5.0
       prebuild-install: 7.1.1
