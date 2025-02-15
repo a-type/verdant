@@ -46,7 +46,7 @@
 		"@verdant-web/store": "workspace:*",
 		"@vitest/browser": "^2.1.8",
 		"fake-indexeddb": "^5.0.1",
-		"playwright": "^1.49.1",
+		"playwright": "^1.50.1",
 		"prettier": "^3.0.3",
 		"react": "^19.0.0",
 		"typescript": "^5.4.2",
