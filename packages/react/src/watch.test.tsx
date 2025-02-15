@@ -80,8 +80,7 @@ it('should only re-render when observed keys change', async () => {
 		);
 	};
 
-	const screen = renderWithProvider(<ObserverTest />);
-
+	const screen = await renderWithProvider(<ObserverTest />);
 	await expect.element(screen.getByTestId('content')).toBeVisible();
 
 	// record initial render count
@@ -123,7 +122,7 @@ it('should support files', async () => {
 		);
 	};
 
-	const screen = renderWithProvider(<FileTest />);
+	const screen = await renderWithProvider(<FileTest />);
 	await expect.element(screen.getByTestId('file')).toHaveTextContent('blob:');
 });
 
@@ -145,7 +144,7 @@ it('should support deep watching', async () => {
 		);
 	};
 
-	const screen = renderWithProvider(<DeepTest />);
+	const screen = await renderWithProvider(<DeepTest />);
 
 	await expect
 		.element(screen.getByTestId('comments'))
@@ -170,7 +169,7 @@ it('should handle null entities', async () => {
 		);
 	};
 
-	const screen = renderWithProvider(<Test />);
+	const screen = await renderWithProvider(<Test />);
 	await expect.element(screen.getByTestId('content')).toBeEmptyDOMElement();
 });
 
