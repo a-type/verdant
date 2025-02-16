@@ -9,3 +9,5 @@ packages:
 
 catalog:
   better-sqlite3: ^11.8.1
+  typescript: 5.7.3
+  '@types/node': 22.13.4

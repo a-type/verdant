@@ -46,6 +46,7 @@
 	},
 	"dependencies": {
 		"@a-type/kysely": "^1.0.2",
+		"@fastify/busboy": "^3.1.1",
 		"@verdant-web/common": "workspace:*",
 		"async-lock": "^1.4.0",
 		"better-sqlite3": "catalog:",

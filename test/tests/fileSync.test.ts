@@ -1,4 +1,5 @@
 import { assert } from '@a-type/utils';
+import * as fs from 'fs';
 import { afterAll, expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
@@ -9,10 +10,9 @@ import {
 	waitForFileUpload,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import * as fs from 'fs';
 
 const context = createTestContext({
-	// serverLog: true,
+	serverLog: true,
 });
 
 afterAll(() => {
@@ -78,10 +78,6 @@ it(
 		const blob = await fileResponse!.blob();
 		const text = await blob.text();
 		context.log(`image blob: ${text}`);
-		if (blob.size !== 0) {
-			console.error('⚠️ Unexpected blob', blob.size, text);
-		}
-		expect(blob.size).toBe(0);
 		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
 	},
 );

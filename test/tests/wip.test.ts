@@ -9,11 +9,11 @@ import {
 	PersistenceImplementation,
 } from '@verdant-web/store';
 import { expect, it } from 'vitest';
-import defaultSchema from '../schema.js';
-import { createTestClient } from '../lib/testClient.js';
 import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
+import defaultSchema from '../schema.js';
 
-const testLog = true;
+const testLog = false;
 function log(...args: any[]) {
 	if (testLog) {
 		console.log('🔺', ...args);
@@ -59,7 +59,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		library: 'wip-1',
 		migrations: [createMigration(defaultSchema)],
 		user: 'a',
-		logId: 'A',
+		// logId: 'A',
 		oldSchemas: [defaultSchema],
 		persistence: getPersistence(),
 	};

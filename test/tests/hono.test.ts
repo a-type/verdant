@@ -1,14 +1,18 @@
+import { assert } from '@a-type/utils';
+import { serve } from '@hono/node-server';
 import {
 	LocalFileStorage,
 	ReplicaType,
 	Server,
 	TokenProvider,
 } from '@verdant-web/server';
+import { sqlStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';
-import { Router, error, json, text } from 'itty-router';
-import { createServerAdapter } from '@whatwg-node/server';
+import { Hono } from 'hono';
+import { Server as HttpServer } from 'http';
+import { error, json, text } from 'itty-router';
 import { describe, expect, it } from 'vitest';
-import { createServer } from 'http';
+import { createTestFile } from '../lib/createTestFile.js';
 import { createTestClient } from '../lib/testClient.js';
 import {
 	waitForCondition,
@@ -17,14 +21,11 @@ import {
 	waitForQueryResult,
 	waitForTime,
 } from '../lib/waits.js';
-import { createTestFile } from '../lib/createTestFile.js';
-import { assert } from '@a-type/utils';
-import { sqlStorage } from '@verdant-web/server/storage';
 
-async function createIttyServer() {
+async function createHonoServer() {
 	const port = await getPort();
 
-	const router = Router();
+	const router = new Hono();
 
 	const tokenProvider = new TokenProvider({
 		secret: 'notsecret',
@@ -40,11 +41,11 @@ async function createIttyServer() {
 				return { id: userId };
 			},
 		},
-		// log: (...args: any[]) =>
-		// 	console.log(
-		// 		'[SERVER]',
-		// 		...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
-		// 	),
+		log: (...args: any[]) =>
+			console.log(
+				'[SERVER]',
+				...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
+			),
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',
 			host: `http://localhost:${port}/files`,
@@ -52,11 +53,11 @@ async function createIttyServer() {
 	});
 
 	router
-		.get('/', () => 'Success!')
-		.get('/auth/:library', async (req) => {
-			const library = req.params.library;
-			const user = (req.query.user as string) || 'anonymous';
-			const type = (req.query.type as any) || ReplicaType.Realtime;
+		.get('/', (ctx) => ctx.text('Success!'))
+		.get('/auth/:library', async ({ req }) => {
+			const library = req.param('library');
+			const user = (req.query('user') as string) || 'anonymous';
+			const type = (req.query('type') as any) || ReplicaType.Realtime;
 			const token = tokenProvider.getToken({
 				libraryId: library,
 				userId: user,
@@ -67,31 +68,20 @@ async function createIttyServer() {
 				accessToken: token,
 			});
 		})
-		.all('/sync/files/:id', server.handleFileFetch)
-		.all('/sync', server.handleFetch)
+		.all('/sync/files/:id', async (ctx) => {
+			return server.handleFileFetch(ctx.req.raw);
+		})
+		.all('/sync', (ctx) => server.handleFetch(ctx.req.raw))
 		.all('/files/:path', async (req) => {
 			// fake the files...
 			return text('test');
 		})
 		.all('*', () => error(404));
 
-	const ittyServer = createServerAdapter((request) =>
-		router
-			.handle(request)
-			.catch((reason) => {
-				console.error(reason);
-				return error(reason);
-			})
-			.then((res) => {
-				if (res instanceof Response) return res;
-				return json(res);
-			}),
-	);
-
-	const httpServer = createServer(ittyServer);
+	const httpServer = serve({ fetch: router.fetch, port }) as HttpServer;
 	server.attach(httpServer, { httpPath: false });
 
-	httpServer.listen(port, () => {
+	httpServer.addListener('listening', () => {
 		console.log(`Server listening on port ${port}`);
 	});
 
@@ -103,12 +93,8 @@ async function createIttyServer() {
 }
 
 describe('the server', () => {
-	it('can run in a whatwg node environment (itty.router)', async () => {
-		FileReader.prototype.readAsDataURL = () => {
-			return 'test';
-		};
-
-		const { httpServer, port } = await createIttyServer();
+	it('can run in a ESM/Web server environment (Hono)', async () => {
+		const { httpServer, port } = await createHonoServer();
 
 		const clientA = await createTestClient({
 			library: 'itty',
@@ -116,6 +102,12 @@ describe('the server', () => {
 			server: {
 				port,
 			},
+			// onLog(msg) {
+			// 	if (msg.toLowerCase().includes('upload')) {
+			// 		console.log('A:', msg);
+			// 	}
+			// },
+			// logId: 'A',
 		});
 
 		const clientB = await createTestClient({
@@ -136,7 +128,7 @@ describe('the server', () => {
 		clientA.items.put({ content: 'item 2', id: '2' });
 		clientB.items.put({ content: 'item 3', id: '3' });
 
-		item1.set('image', createTestFile());
+		item1.set('image', createTestFile('test content'));
 
 		await waitForTime(1000);
 

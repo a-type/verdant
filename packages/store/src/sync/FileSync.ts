@@ -1,7 +1,7 @@
 import { FileData } from '@verdant-web/common';
-import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { Context } from '../context/context.js';
 import { Disposable } from '../utils/Disposable.js';
+import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 
 export interface FileUploadResult {
 	success: boolean;

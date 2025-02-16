@@ -68,7 +68,15 @@ export class LocalFileStorage implements FileStorage {
 	}
 
 	async delete(data: FileInfo): Promise<void> {
-		await fs.promises.unlink(this.getStorageLocation(data));
+		try {
+			await fs.promises.unlink(this.getStorageLocation(data));
+		} catch (e) {
+			if (e instanceof Error && e.message.includes('ENOENT')) {
+				// ignore
+			} else {
+				throw e;
+			}
+		}
 
 		const containingDirectory = path.dirname(
 			path.join(this.rootDirectory, this.getPath(data)),
