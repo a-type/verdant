@@ -57,6 +57,7 @@ export interface Context {
 		filesDeleted: (files: FileRef[]) => void;
 		fileAdded: (file: FileData) => void;
 		[ev: `fileUploaded:${string}`]: (file: FileData) => void;
+		fileUploaded: (file: FileData) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**

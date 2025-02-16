@@ -1,4 +1,5 @@
 import { FileData } from '@verdant-web/common';
+import { Context } from '../../../internal.js';
 import {
 	AbstractTransaction,
 	PersistedFileData,
@@ -6,7 +7,6 @@ import {
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import { getAllFromObjectStores, getSizeOfObjectStore } from '../util.js';
-import { Context } from '../../../internal.js';
 
 /**
  * When stored in IDB, replace the file blob with an array buffer
@@ -24,9 +24,7 @@ export class IdbPersistenceFileDb
 	extends IdbService
 	implements PersistenceFileDb
 {
-	add = async (
-		file: FileData,
-	): Promise<void> => {
+	add = async (file: FileData): Promise<void> => {
 		let buffer = file.file ? await fileToArrayBuffer(file.file) : undefined;
 
 		await this.run(
@@ -190,14 +188,14 @@ export class IdbPersistenceFileDb
 			return response.blob();
 		}
 		throw new Error('File is missing url, file, and localPath');
-	}
+	};
 
 	private hydrateFileData = (raw: StoredFileData): PersistedFileData => {
 		(raw as any).remote = raw.remote === 'true';
 		const buffer = raw.buffer;
 		delete raw.buffer;
 		(raw as unknown as FileData).file = buffer
-			? arrayBufferToBlob(buffer, raw.type)
+			? arrayBufferToBlob(buffer, raw.type, raw.name)
 			: undefined;
 		return raw as unknown as PersistedFileData;
 	};
@@ -220,8 +218,14 @@ export class IdbPersistenceFileDb
 	};
 }
 
-export function arrayBufferToBlob(buffer: ArrayBuffer, type: string) {
-	return new Blob([buffer], { type });
+export function arrayBufferToBlob(
+	buffer: ArrayBuffer,
+	type: string,
+	name?: string,
+) {
+	return new File([new Blob([buffer], { type })], name ?? 'blob', {
+		type,
+	});
 }
 
 function fileToArrayBuffer(file: File | Blob): Promise<ArrayBuffer> {

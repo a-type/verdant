@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import { createServer } from 'http';
 import { createReadStream } from 'fs';
+import { createServer } from 'http';
+import minimist from 'minimist';
 import { parse, URLSearchParams } from 'url';
 import {
 	LocalFileStorage,
+	ReplicaType,
 	Server,
 	TokenProvider,
-	ReplicaType,
 } from '../dist/esm/index.js';
 import { sqlStorage } from '../dist/esm/storage/index.js';
-import minimist from 'minimist';
 
 const argv = minimist(process.argv.slice(1));
 
@@ -39,7 +39,9 @@ const http = createServer((req, res) => {
 
 	// serve files on the /files path
 	if (url.pathname.startsWith('/files/')) {
-		const fileStream = createReadStream(`files/${url.pathname.slice(7)}`);
+		const file = decodeURIComponent(url.pathname.slice(7));
+		console.log('Serving file', file);
+		const fileStream = createReadStream(`files/${file}`);
 		fileStream.pipe(res);
 		fileStream.on('error', (err) => {
 			res.writeHead(404);

@@ -1,17 +1,25 @@
 import { FileData } from '@verdant-web/common';
 import { Context } from '../context/context.js';
+import { Disposable } from '../internal.js';
 import { Sync } from '../sync/Sync.js';
 import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
 
-export class FileManager {
+export class FileManager extends Disposable {
 	private sync;
 	private context;
 
 	private cache = new Map<string, EntityFile>();
 
 	constructor({ sync, context }: { sync: Sync; context: Context }) {
+		super();
 		this.sync = sync;
 		this.context = context;
+		this.addDispose(
+			this.context.internalEvents.subscribe(
+				'fileUploaded',
+				this.onFileUploaded,
+			),
+		);
 	}
 
 	add = async (file: FileData) => {
@@ -72,8 +80,8 @@ export class FileManager {
 
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
-					file[UPDATE](result.data);
 					await this.context.files.add(result.data);
+					file[UPDATE](result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
 					file[MARK_FAILED]();
@@ -83,5 +91,10 @@ export class FileManager {
 				file[MARK_FAILED]();
 			}
 		}
+	};
+
+	private onFileUploaded = (data: FileData) => {
+		this.context.log('debug', 'Marking file as uploaded', data.id);
+		this.context.files.onUploaded(data.id);
 	};
 }

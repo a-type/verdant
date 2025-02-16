@@ -236,7 +236,13 @@ export class Server extends EventEmitter implements MessageSender {
 	private getRequestToken = (req: IncomingMessage | Request) => {
 		if (isFetch(req)) {
 			const authHeader = req.headers.get('Authorization');
-			assert(authHeader, 'Token is required');
+			if (!authHeader) {
+				throw new VerdantError(
+					VerdantError.Code.NoToken,
+					undefined,
+					'Authorization header is required',
+				);
+			}
 			const [type, token] = authHeader.split(' ');
 			if (type === 'Bearer') {
 				return token;
@@ -262,7 +268,13 @@ export class Server extends EventEmitter implements MessageSender {
 		assert(req.url, 'Request URL is required');
 		const url = new URL(req.url, 'http://localhost');
 		const token = url.searchParams.get('token');
-		assert(token, 'Token is required');
+		if (!token) {
+			throw new VerdantError(
+				VerdantError.Code.NoToken,
+				undefined,
+				'Token query parameter is required',
+			);
+		}
 		return token;
 	};
 
@@ -436,6 +448,7 @@ export class Server extends EventEmitter implements MessageSender {
 	 * must be authenticated with a token to tie it to a library.
 	 */
 	handleFileRequest = async (req: IncomingMessage, res: ServerResponse) => {
+		this.log('info', 'Handling file request', req.url, req.method);
 		try {
 			const info = this.authorizeRequest(req);
 
@@ -458,7 +471,9 @@ export class Server extends EventEmitter implements MessageSender {
 					id,
 				});
 				this.log('info', 'File upload complete', id);
-				res.writeHead(200);
+				res.writeHead(200, {
+					'Content-Type': 'application/json',
+				});
 				res.write(JSON.stringify({ success: true }));
 				res.end();
 			} else if (req.method === 'GET') {
@@ -617,26 +632,6 @@ export class Server extends EventEmitter implements MessageSender {
 					this.log('info', 'File uploading', lofiFileInfo);
 				} catch (e) {
 					reject(e);
-				}
-			});
-			bb.on('field', (fieldName, value) => {
-				if (fieldName === 'file') {
-					if (this.__testMode) {
-						// this isn't right in the real world, but in testing it's
-						// the only way we get file data.
-						// we create a stream from the data and pass it as if it
-						// were a file stream
-						const stream = new Readable();
-						stream.push(value);
-						stream.push(null);
-						const fileInfo = {
-							filename: 'test.txt',
-							mimeType: 'text/plain',
-						};
-						bb.emit('file', fieldName, stream, fileInfo);
-					} else {
-						throw new Error('Invalid file upload');
-					}
 				}
 			});
 

@@ -42,7 +42,6 @@ export class FileSync extends Disposable {
 		this.ctx.log('debug', 'Uploading file', data.id, data.name);
 		try {
 			await this.uploadFile(data);
-			this.ctx.internalEvents.emit(`fileUploaded:${data.id}`, data);
 		} catch (e) {
 			this.ctx.log('error', 'File upload failed', e);
 		}
@@ -83,6 +82,8 @@ export class FileSync extends Disposable {
 			);
 
 			if (response.ok) {
+				this.ctx.internalEvents.emit(`fileUploaded:${data.id}`, data);
+				this.ctx.internalEvents.emit('fileUploaded', data);
 				this.ctx.log('info', 'File upload successful');
 				return {
 					success: true,
