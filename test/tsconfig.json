@@ -2,7 +2,8 @@
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"rootDir": ".",
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"lib": ["DOM"]
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
 }
