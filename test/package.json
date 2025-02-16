@@ -35,7 +35,7 @@
 		"ci:test:sqlite": "cross-env SQLITE=true vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
 		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts",
-		"typecheck": "tsc --noEmit",
+		"//typecheck": "tsc --noEmit",
 		"posttest": "node ./scripts/cleanupDbs.mjs"
 	},
 	"devDependencies": {

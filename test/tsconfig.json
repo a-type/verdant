@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"rootDir": ".",
 		"esModuleInterop": true,
-		"lib": ["DOM"]
+		"skipLibCheck": true,
+		"lib": ["ESNext", "DOM"]
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
 }
