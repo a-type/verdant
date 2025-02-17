@@ -85,7 +85,11 @@ function findScrollableParent(
 	const style = getComputedStyle(element);
 	const overflowY = style.overflowY || style.overflow;
 
-	if (overflowY !== 'visible' && overflowY !== 'hidden') {
+	if (
+		overflowY !== 'visible' &&
+		overflowY !== 'hidden' &&
+		element.scrollHeight > element.clientHeight
+	) {
 		return element;
 	}
 
