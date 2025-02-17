@@ -1,5 +1,12 @@
 # @lo-fi/web
 
+## 4.1.3
+
+### Patch Changes
+
+- 4312c3f: Server: fixed bug with demo server loading files with spaces in filenames. Store: Fixed a bug which caused files not immediately uploaded to end up on the server with a filename "blob" instead of the original filename.
+- ef5fa50: New Store feature: query keep-alives. Keep a query in memory based on its `key`. Also new in CLI, the Client is now generated with more JSDocs applied, and exposes the .queries property required to use the keep-alive feature.
+
 ## 4.1.2
 
 ### Patch Changes

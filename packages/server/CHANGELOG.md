@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 3.3.5
+
+### Patch Changes
+
+- 4312c3f: Server: fixed bug with demo server loading files with spaces in filenames. Store: Fixed a bug which caused files not immediately uploaded to end up on the server with a filename "blob" instead of the original filename.
+
 ## 3.3.4
 
 ### Patch Changes
