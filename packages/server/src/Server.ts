@@ -591,7 +591,7 @@ export class Server extends EventEmitter implements MessageSender {
 					});
 				})
 				.then(() => {
-					fs.put(
+					return fs.put(
 						new Readable({
 							read() {
 								this.push('test');

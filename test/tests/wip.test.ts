@@ -120,7 +120,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 				});
 			}),
 		],
-		logId: 'wip',
+		// logId: 'wip',
 	});
 
 	const wipItem = await wipClient.items.get('1').resolved;

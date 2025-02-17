@@ -1,13 +1,13 @@
-import 'fake-indexeddb/auto';
-import { WebSocket } from 'ws';
 import {
-	IDBKeyRange,
 	IDBCursor,
 	IDBDatabase,
-	IDBTransaction,
-	IDBRequest,
 	IDBFactory,
+	IDBKeyRange,
+	IDBRequest,
+	IDBTransaction,
 } from 'fake-indexeddb';
+import 'fake-indexeddb/auto';
+import { WebSocket } from 'ws';
 
 if (typeof window !== 'undefined') {
 	window.IDBKeyRange = IDBKeyRange;
@@ -35,7 +35,7 @@ process.env.VITEST = 'true';
 // FAIL LOUDLY on unhandled promise rejections / errors
 process.on('unhandledRejection', (reason) => {
 	// eslint-disable-next-line no-console
-	console.log(`FAILED TO HANDLE PROMISE REJECTION`, reason);
+	console.error(`❌ FAILED TO HANDLE PROMISE REJECTION`, reason);
 
 	throw reason;
 });

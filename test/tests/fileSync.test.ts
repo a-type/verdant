@@ -1,5 +1,5 @@
 import { assert } from '@a-type/utils';
-import * as fs from 'fs';
+import { rmSync } from 'fs';
 import { afterAll, expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
@@ -12,13 +12,15 @@ import {
 } from '../lib/waits.js';
 
 const context = createTestContext({
-	serverLog: true,
+	// serverLog: true,
+	// keepDb: true,
+	// testLog: true,
 });
 
 afterAll(() => {
 	// delete the ./test-files directory
 	try {
-		fs.rmSync('./test-files', { recursive: true });
+		rmSync('./test-files', { recursive: true });
 	} catch (e) {
 		// console.log(e);
 	}
@@ -70,10 +72,19 @@ it(
 		// this isn't the same as the original file, but it's good enough to know
 		// something was delivered...
 		let fileResponse: Response | null = null;
-		await waitForCondition(async () => {
-			fileResponse = await fetch(file.url!);
-			return fileResponse.status !== 404;
-		});
+		const fileUrl = `http://localhost:${context.server.port}/files/file-sync-1/${file.id}/test.txt`;
+		await waitForCondition(
+			async () => {
+				console.log('fetching', fileUrl);
+				fileResponse = await fetch(fileUrl);
+				return fileResponse.status !== 404;
+			},
+			5000,
+			async () => {
+				const text = await fileResponse!.text();
+				return `image fetch failed: ${text}`;
+			},
+		);
 		context.log('image fetched');
 		const blob = await fileResponse!.blob();
 		const text = await blob.text();

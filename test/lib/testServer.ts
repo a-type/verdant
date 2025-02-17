@@ -1,9 +1,14 @@
-import { Server, TokenProvider, ReplicaType } from '@verdant-web/server';
-import express from 'express';
-import { createServer } from 'http';
-import { LocalFileStorage } from '@verdant-web/server';
+import {
+	LocalFileStorage,
+	ReplicaType,
+	Server,
+	TokenProvider,
+} from '@verdant-web/server';
 import { sqlShardStorage, sqlStorage } from '@verdant-web/server/storage';
+import express from 'express';
 import getPort from 'get-port';
+import { createServer } from 'http';
+import * as path from 'path';
 
 const SECRET = 'notsecret';
 
@@ -30,6 +35,13 @@ export async function startTestServer({
 		? unifiedStorage(keepDb)
 		: shardedStorage(keepDb, importShardsFrom);
 
+	const finalLog = log
+		? typeof log === 'function'
+			? log
+			: (...args: any[]) =>
+					console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
+		: undefined;
+
 	const server = new Server({
 		disableRebasing,
 		storage,
@@ -39,15 +51,11 @@ export async function startTestServer({
 				return { id: userId };
 			},
 		},
-		log: log
-			? typeof log === 'function'
-				? log
-				: (...args: any[]) =>
-						console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
-			: undefined,
+		log: finalLog,
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',
 			host: `http://127.0.0.1:${port}/files`,
+			log: finalLog,
 		}),
 		replicaTruancyMinutes: truancyMinutes,
 	});
@@ -75,7 +83,19 @@ export async function startTestServer({
 	app.use('/lofi/files/:id', server.handleFileRequest);
 	app.use('/lofi', server.handleRequest);
 
-	app.use('/files', express.static('./test-files'));
+	app.get('/files/:library/:id/:filename', (req, res) => {
+		finalLog?.(
+			'info',
+			'Serving file',
+			`${req.params.library}/${req.params.id}/${req.params.filename}`,
+		);
+		res.sendFile(
+			path.resolve(
+				process.cwd(),
+				`./test-files/${req.params.library}/${req.params.id}/${req.params.filename}`,
+			),
+		);
+	});
 
 	await new Promise<void>((resolve, reject) => {
 		httpServer.listen(port, () => {

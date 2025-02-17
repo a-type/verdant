@@ -1,3 +1,8 @@
+import {
+	createClientBackup,
+	importClientBackup,
+	readBackupFile,
+} from '@verdant-web/store/backup';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
@@ -7,11 +12,6 @@ import {
 	waitForMockCall,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import {
-	createClientBackup,
-	importClientBackup,
-	readBackupFile,
-} from '@verdant-web/store/backup';
 
 const ctx = createTestContext({
 	// testLog: true,

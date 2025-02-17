@@ -299,6 +299,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		await this._entities.destroy();
 
 		this.context.persistenceShutdownHandler.shutdown();
+		this.context.internalEvents.disable();
+		this.context.entityEvents.disable();
 
 		// the idea here is to flush the microtask queue -
 		// we may have queued tasks related to queries that

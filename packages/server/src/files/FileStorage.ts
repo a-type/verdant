@@ -50,6 +50,7 @@ export class LocalFileStorage implements FileStorage {
 	};
 
 	async put(fileStream: Readable, data: FileInfo): Promise<void> {
+		this.log('debug', 'Saving file', data.id, data.fileName);
 		const filePath = this.getPath(data);
 		const containingDirectory = path.dirname(
 			path.join(this.rootDirectory, filePath),
@@ -59,8 +60,8 @@ export class LocalFileStorage implements FileStorage {
 		});
 		const location = this.getStorageLocation(data);
 		const dest = fs.createWriteStream(location);
-		fileStream.pipe(dest);
 		this.log('info', 'File saving to', location);
+		fileStream.pipe(dest);
 	}
 
 	getUrl(data: FileInfo): string {

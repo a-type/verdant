@@ -7,10 +7,12 @@ import {
 	TokenProvider,
 } from '@verdant-web/server';
 import { sqlStorage } from '@verdant-web/server/storage';
+import { readFileSync } from 'fs';
 import getPort from 'get-port';
 import { Hono } from 'hono';
 import { Server as HttpServer } from 'http';
-import { error, json, text } from 'itty-router';
+import { error, json } from 'itty-router';
+import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { createTestFile } from '../lib/createTestFile.js';
 import { createTestClient } from '../lib/testClient.js';
@@ -41,11 +43,11 @@ async function createHonoServer() {
 				return { id: userId };
 			},
 		},
-		log: (...args: any[]) =>
-			console.log(
-				'[SERVER]',
-				...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
-			),
+		// log: (...args: any[]) =>
+		// 	console.log(
+		// 		'[SERVER]',
+		// 		...args.map((arg) => JSON.stringify(arg).slice(0, 300)),
+		// 	),
 		fileStorage: new LocalFileStorage({
 			rootDirectory: './test-files',
 			host: `http://localhost:${port}/files`,
@@ -72,9 +74,18 @@ async function createHonoServer() {
 			return server.handleFileFetch(ctx.req.raw);
 		})
 		.all('/sync', (ctx) => server.handleFetch(ctx.req.raw))
-		.all('/files/:path', async (req) => {
+		.all('/files/:library/:id/:name', async (ctx) => {
 			// fake the files...
-			return text('test');
+			return ctx.body(
+				readFileSync(
+					join(
+						'./test-files',
+						ctx.req.param('library'),
+						ctx.req.param('id'),
+						ctx.req.param('name'),
+					),
+				),
+			);
 		})
 		.all('*', () => error(404));
 

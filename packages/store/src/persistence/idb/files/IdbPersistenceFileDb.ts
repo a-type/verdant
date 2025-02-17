@@ -48,6 +48,10 @@ export class IdbPersistenceFileDb
 		);
 	};
 	markUploaded = async (id: string): Promise<void> => {
+		if (this.disposed) {
+			return;
+		}
+
 		const current = await this.getFileRaw(id);
 
 		if (!current) {
@@ -183,7 +187,9 @@ export class IdbPersistenceFileDb
 		if (file.url) {
 			const response = await ctx.environment.fetch(file.url);
 			if (!response.ok) {
-				throw new Error(`Failed to download file: ${response.statusText}`);
+				throw new Error(
+					`Failed to download file ${file.url}: ${response.statusText}`,
+				);
 			}
 			return response.blob();
 		}
@@ -204,6 +210,9 @@ export class IdbPersistenceFileDb
 		id: string,
 		{ transaction }: { transaction?: AbstractTransaction } = {},
 	): Promise<StoredFileData | undefined> => {
+		if (this.disposed) {
+			return undefined;
+		}
 		const raw = await this.run<StoredFileData>(
 			'files',
 			(store) => {

@@ -65,10 +65,10 @@ export class PersistenceFiles {
 		// and must be uploaded, even if it is cloned from an uploaded file.
 		file.remote = false;
 
-		// fire event for processing immediately
-		this.context.internalEvents.emit('fileAdded', file);
 		// store in persistence db
 		await this.db.add(file);
+		// fire event for sync to pick up and upload the file
+		this.context.internalEvents.emit('fileAdded', file);
 		this.context.globalEvents.emit('fileSaved', file);
 		this.context.log(
 			'debug',
@@ -79,10 +79,10 @@ export class PersistenceFiles {
 			file.file
 				? 'with binary file'
 				: file.url
-				? 'with url'
-				: file.localPath
-				? 'with local path'
-				: 'with no data',
+					? 'with url'
+					: file.localPath
+						? 'with local path'
+						: 'with no data',
 		);
 		return file;
 	};
@@ -206,6 +206,11 @@ export class PersistenceFiles {
 					}, 1000);
 				});
 			} else {
+				this.context.log(
+					'error',
+					`Failed to download file after ${maxRetries} retries`,
+					err,
+				);
 				throw new Error(`Failed to download file after ${maxRetries} retries`, {
 					cause: err,
 				});

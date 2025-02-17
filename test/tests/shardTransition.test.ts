@@ -1,8 +1,8 @@
-import { afterAll, expect, it } from 'vitest';
-import { startTestServer } from '../lib/testServer.js';
-import { createTestClient } from '../lib/testClient.js';
-import { waitForQueryResult, waitForSync } from '../lib/waits.js';
 import { rm } from 'fs/promises';
+import { afterAll, expect, it } from 'vitest';
+import { createTestClient } from '../lib/testClient.js';
+import { startTestServer } from '../lib/testServer.js';
+import { waitForQueryResult, waitForSync } from '../lib/waits.js';
 
 let unifiedServer: ReturnType<typeof startTestServer> extends Promise<infer T>
 	? T
@@ -12,6 +12,7 @@ let shardedServer: ReturnType<typeof startTestServer> extends Promise<infer T>
 	: never;
 
 afterAll(async () => {
+	await new Promise((r) => setTimeout(r, 100));
 	try {
 		await unifiedServer.cleanup();
 		await rm(unifiedServer.databaseLocation, { recursive: true });

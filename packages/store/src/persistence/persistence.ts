@@ -1,12 +1,12 @@
 import { EventSubscriber, getOidRoot, VerdantError } from '@verdant-web/common';
 import { Context, InitialContext } from '../context/context.js';
+import { ShutdownHandler } from '../context/ShutdownHandler.js';
 import { getWipNamespace } from '../utils/wip.js';
 import { ExportedData } from './interfaces.js';
+import { migrate } from './migration/migrate.js';
 import { PersistenceFiles } from './PersistenceFiles.js';
 import { PersistenceMetadata } from './PersistenceMetadata.js';
 import { PersistenceDocuments } from './PersistenceQueries.js';
-import { migrate } from './migration/migrate.js';
-import { ShutdownHandler } from '../context/ShutdownHandler.js';
 
 export async function initializePersistence(
 	ctx: InitialContext,
@@ -130,6 +130,8 @@ export async function importPersistence(
 		originalNamespace: importedNamespace,
 		// no-op entity events -- don't need to inform queries of changes.
 		entityEvents: new EventSubscriber(),
+		internalEvents: new EventSubscriber(),
+		globalEvents: new EventSubscriber(),
 		config: {
 			...ctx.config,
 			persistence: {
