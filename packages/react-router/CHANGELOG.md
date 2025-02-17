@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.7.2
+
+### Patch Changes
+
+- 7ff0f6a: Adjust auto scroll restoration logic
+
 ## 0.7.1
 
 ### Patch Changes
