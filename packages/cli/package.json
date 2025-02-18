@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/cli",
-	"version": "4.7.3",
+	"version": "4.8.0",
 	"description": "Schema management tools for verdant",
 	"type": "module",
 	"bin": {
