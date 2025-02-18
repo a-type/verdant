@@ -109,6 +109,14 @@ Verdant CLI generates named type aliases for every field in your schema! This is
 
 As hinted above, even primitive fields are given named alias types. I recommend using these types to make it clear that a component is representing a particular field, even if it resolves to `string` or another primitive. Ultimately it will depend on how reusable that component is expected to be across different purposes!
 
+## Deep watching
+
+I've explained granular watching first because that's the encouraged approach. But yes, you can watch all deep changes in an entity and sub-fields.
+
+Just pass `{ deep: true }` as a second parameter to `useWatch`.
+
+This turns off the granular reactivity tracking mentioned in the tip above. Your component will now re-render for every change in every sub-level of the watched entity. Don't say I didn't warn you!
+
 ## Watching files
 
 File fields will lazily load their file contents, so they also require reactivity. If you pass a file entity to `useWatch`, it will return the URL of the file, or `null` if it's not yet ready. This differs from how loading is handled with Suspense in most of Verdant (whoops).
@@ -223,3 +231,19 @@ I think this second version is much cleaner, but it's not always worth it to bre
 ## Null handling works for root documents, too
 
 All of the above applies not just to nullable fields, but also missing documents. Single-value queries can return `null` if no document matches, and the Typescript typings reflect this fact. You can pass this maybe-null document to `useWatch` just like anything else.
+
+## Bypassing the React lifecycle
+
+Sometimes you may want to get a callback when an entity changes, but not re-render your component. Perhaps the change isn't part of the rendering, like a side effect. Or maybe it changes too frequently and you want more control (like in a 2D canvas).
+
+You can use `useOnChange` for that! It works just like `useWatch`, but the second parameter is a callback. The callback is called with a parameter `{ isLocal?: boolean }` which will tell you if the change originated from the local replica. To read the new data, you should just access the entity itself with `.get` and other methods.
+
+```ts
+hooks.useOnChange(person, () => {
+	console.log(person.get('name'));
+});
+```
+
+`useOnChange` doesn't have granular watching, so if you only want to respond to changes to a single field or subset of fields, you'll have to track those yourself. Alternatively, you can eject from these provided React hooks and build your own using the [vanilla reactivity](../local-storage/entities.md#subscribing-to-changes) events and `useEffect`.
+
+The third parameter of `useOnChange` is `{ deep?: boolean }`, which lets you watch deep changes with this hook, too.
