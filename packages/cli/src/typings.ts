@@ -194,6 +194,7 @@ function getTypings({
 			key,
 			type: fieldTypings.alias,
 			optional: fieldTypings.optional,
+			nullable: isNullable(field),
 		});
 		declarations += fieldTypings.declarations;
 	});
@@ -222,10 +223,7 @@ function getFieldTypings({
 		case 'string':
 			if (field.options) {
 				return {
-					alias: `(${
-						field.options.map((s) => `'${s}'`).join(' | ') +
-						(isNullable(field) ? ' | null' : '')
-					})`,
+					alias: `(${field.options.map((s) => `'${s}'`).join(' | ')})`,
 					optional,
 					declarations: '',
 				};
@@ -234,7 +232,7 @@ function getFieldTypings({
 		case 'boolean':
 		case 'any':
 			return {
-				alias: field.type + (isNullable(field) ? ' | null' : ''),
+				alias: field.type,
 				optional,
 				declarations: '',
 			};
@@ -246,7 +244,7 @@ function getFieldTypings({
 						: mode === 'destructured'
 							? 'EntityFile'
 							: 'EntityFileSnapshot'
-				}${field.nullable ? ' | null' : ''}`,
+				}`,
 				optional,
 				declarations: '',
 			};
@@ -268,6 +266,7 @@ function getFieldTypings({
 					key,
 					type: subfieldTypings.alias,
 					optional: subfieldTypings.optional,
+					nullable: isNullable(subfield),
 				});
 				declarations += subfieldTypings.declarations;
 			}
@@ -277,9 +276,7 @@ function getFieldTypings({
 				declarations:
 					declarations +
 					'\n' +
-					aliasBuilder(name + suffix, objBuilder.build())
-						.nullable(mode !== 'destructured' && !!field.nullable)
-						.build(),
+					aliasBuilder(name + suffix, objBuilder.build()).build(),
 			};
 		case 'array':
 			const itemName = `${name}Item`;
@@ -416,9 +413,7 @@ function getEntityFieldTypings({
 				name,
 				`ListEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
 				field.documentation,
-			)
-				.nullable(!!field.nullable)
-				.build();
+			).build();
 			return [baseList, itemTypings].join('\n');
 		case 'object':
 			const subtypes = new Array<string>();
@@ -433,17 +428,13 @@ function getEntityFieldTypings({
 					name,
 					`ObjectEntity<${name}Init, ${name}Destructured, ${name}Snapshot>`,
 					field.documentation,
-				)
-					.nullable(!!field.nullable)
-					.build(),
+				).build(),
 				...subtypes,
 			].join('\n');
 		case 'any':
 			return aliasBuilder(name, 'any', field.documentation).build();
 		case 'file':
-			return aliasBuilder(name, 'string', field.documentation)
-				.nullable(!!field.nullable)
-				.build();
+			return aliasBuilder(name, 'EntityFile', field.documentation).build();
 		case 'map':
 			const valueName = `${name}Value`;
 			const valueTypings = getEntityFieldTypings({

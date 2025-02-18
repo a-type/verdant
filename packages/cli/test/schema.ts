@@ -32,6 +32,15 @@ export const todo = schema.collection({
 				},
 			}),
 		}),
+		meta: schema.fields.object({
+			properties: {
+				comment: schema.fields.string(),
+			},
+			nullable: true,
+		}),
+		file: schema.fields.file({
+			nullable: true,
+		}),
 	},
 	indexes: {
 		example: {

@@ -172,6 +172,13 @@ export type TodoAttachmentsItem = ObjectEntity<
 >;
 export type TodoAttachmentsItemName = string;
 export type TodoAttachmentsItemTest = number;
+export type TodoMeta = ObjectEntity<
+  TodoMetaInit,
+  TodoMetaDestructured,
+  TodoMetaSnapshot
+>;
+export type TodoMetaComment = string;
+export type TodoFile = EntityFile;
 export type TodoInit = {
   id?: string;
   content?: string;
@@ -179,11 +186,14 @@ export type TodoInit = {
   tags?: TodoTagsInit;
   category?: string | null;
   attachments?: TodoAttachmentsInit;
+  meta?: TodoMetaInit | null;
+  file?: File | null;
 };
 
 export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
+export type TodoMetaInit = { comment: string };
 export type TodoDestructured = {
   id: string;
   content: string;
@@ -191,11 +201,14 @@ export type TodoDestructured = {
   tags: TodoTags;
   category: string | null;
   attachments: TodoAttachments;
+  meta: TodoMeta | null;
+  file: EntityFile | null;
 };
 
 export type TodoTagsDestructured = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemDestructured = { name: string; test: number };
 export type TodoAttachmentsDestructured = TodoAttachmentsItem[];
+export type TodoMetaDestructured = { comment: string };
 export type TodoSnapshot = {
   id: string;
   content: string;
@@ -203,11 +216,14 @@ export type TodoSnapshot = {
   tags: TodoTagsSnapshot;
   category: string | null;
   attachments: TodoAttachmentsSnapshot;
+  meta: TodoMetaSnapshot | null;
+  file: EntityFileSnapshot | null;
 };
 
 export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
+export type TodoMetaSnapshot = { comment: string };
 
 /** Index filters for Todo **/
 
@@ -506,6 +522,15 @@ var todo = schema.collection({
           })
         }
       })
+    }),
+    meta: schema.fields.object({
+      properties: {
+        comment: schema.fields.string()
+      },
+      nullable: true
+    }),
+    file: schema.fields.file({
+      nullable: true
     })
   },
   indexes: {
@@ -592,11 +617,14 @@ export type TodoSnapshot = {
   tags: TodoTagsSnapshot;
   category: string | null;
   attachments: TodoAttachmentsSnapshot;
+  meta: TodoMetaSnapshot | null;
+  file: EntityFileSnapshot | null;
 };
 
 export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
+export type TodoMetaSnapshot = { comment: string };
 export type TodoInit = {
   id?: string;
   content?: string;
@@ -604,11 +632,14 @@ export type TodoInit = {
   tags?: TodoTagsInit;
   category?: string | null;
   attachments?: TodoAttachmentsInit;
+  meta?: TodoMetaInit | null;
+  file?: File | null;
 };
 
 export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
+export type TodoMetaInit = { comment: string };
 
 export type PersonSnapshot = {
   id: string;

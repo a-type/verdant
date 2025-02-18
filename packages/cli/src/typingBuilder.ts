@@ -71,28 +71,33 @@ export function recordBuilder() {
 		key: string;
 		type: string;
 		optional: boolean;
+		nullable: boolean;
 	}>();
 	return {
 		withField({
 			key,
 			type,
 			optional,
+			nullable,
 		}: {
 			key: string;
 			type: string;
 			optional?: boolean;
+			nullable?: boolean;
 		}) {
 			fields.push({
 				key,
 				type,
 				optional: !!optional,
+				nullable: !!nullable,
 			});
 			return this;
 		},
 		build() {
 			return `{${fields
 				.map(
-					({ key, type, optional }) => `${key}${optional ? '?' : ''}: ${type}`,
+					({ key, type, optional, nullable }) =>
+						`${key}${optional ? '?' : ''}: ${type}${nullable ? ' | null' : ''}`,
 				)
 				.join(', ')}}`;
 		},
