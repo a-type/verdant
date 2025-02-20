@@ -13,11 +13,19 @@ To do more complex queries, you must create new indexes. Indexes are values that
 `indexes` are simple indexes which are computed from the data in a document. For example, if you want to index the field `done`, you could create an index for it:
 
 ```ts
-indexes: {
-	done: {
-		field: 'done';
+const items = schema.collection({
+	name: 'item',
+	primaryKey: 'id',
+	fields: {
+		id: schema.fields.id(),
+		done: schema.fields.boolean(),
+	},
+	indexes: {
+		done: {
+			field: 'done';
+		}
 	}
-}
+});
 ```
 
 ### Indexes with computation
@@ -85,12 +93,21 @@ For fuzzier text matching, you might be able to create a sort of flat trie struc
 
 Compound indexes are a special case of synthetic index with more structure and query options. You can use them to query on two or more fields at once. For example, if you had a compound index
 
-```
-compounds: {
-  done_details: {
-    of: ['done', 'details']
-  }
-}
+```ts
+const items = schema.collection({
+	name: 'item',
+	primaryKey: 'id',
+	fields: {
+		id: schema.fields.id(),
+		done: schema.fields.boolean(),
+		details: schema.fields.string(),
+	},
+	compounds: {
+		done_details: {
+			of: ['done', 'details'],
+		},
+	},
+});
 ```
 
 you can query for items which are done, in alphabetical order by their details. This may be faster than querying only by `indexableDone` and then sorting in-memory. You can also match values of multiple properties - you could query for incomplete items called "wash dishes," for example.

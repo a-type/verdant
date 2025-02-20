@@ -2,13 +2,15 @@
 sidebar_position: 1
 ---
 
-# Why have a schema?
+# Schema
+
+## Why have a schema?
 
 Verdant requires all data be defined in a schema. That may seem cumbersome, but knowing what data looks like is essential to changing the shape of that data over time as your app evolves. Data lives on user devices, not your servers, so getting migrations right is very important&mdash;data loss or corruption can be unrecoverable, and no backups exist.
 
 Take the time to think about how you model your data and define it in your schema. Mistakes in local-first apps are costly!
 
-# Creating a schema
+## Creating a schema
 
 The first step client-side is to define a schema of what kind of documents you are working with. A schema looks like this:
 
@@ -53,7 +55,7 @@ The TypeScript types for `collection` should enforce proper schema shape, but th
 
 > Note: for now I recommend you define collections at the top level, like shown above, or even split them into their own modules. There's a problem with TypeScript typings if you define collections inline inside `schema()`.
 
-## Requirements for a schema
+### Requirements for a schema
 
 Each schema needs a `version`. Whenever a change is made to the schema, the version must be incremented. Otherwise, Verdant will crash with an error.
 
@@ -61,7 +63,7 @@ Schemas also have a map of `collections`. These define what kinds of documents a
 
 Your schema can be multiple files, but the entry file (which you provide to the CLI) must have a default export which is a `schema()`.
 
-## Requirements for a collection
+### Requirements for a collection
 
 Each collection needs the following:
 
@@ -152,7 +154,13 @@ Other options:
 
 ## Indexing Fields
 
-In earlier versions of Verdant, you could index a field by adding `indexed: true` to it. To consolidate indexing, Verdant now requires all indexes to be specified in `indexes` or `compounds`. There's a new index definition to easily index a single field (with typechecking): `{ field: 'fieldName' }`, which you can use instead.
+Indexes are vital to querying documents based on something other than primary key. If you're used to SQL or other systems with advanced query languages, it make take some effort to adjust to an index-centric system like Verdant.
+
+Verdant's "after-the-fact" querying is actually quite constrained. It can only match against exact index values, or simple logic like "greater than" or "less than." You cannot, for example, query for posts whose title contains the word "local," _unless_ you define an index which lets you do that "ahead-of-time" in your schema.
+
+This means it's easiest to keep your schema WIP until you've explored your application's logic domain enough to determine what kinds of queries you will need to make to provide functionality. You don't have to use the WIP feature, but each addition of a new index will require a schema revision if you don't. I find the easiest workflow is to start in WIP, build out functionality, determine what indexes to create, add them to the schema, and then finalize the schema.
+
+For more information on how indexes work and how to define them, see [the indexes section of query docs](./querying.md#indexes).
 
 ## Recursive Fields
 
