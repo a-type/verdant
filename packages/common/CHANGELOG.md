@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.7.1
+
+### Patch Changes
+
+- 9e863cc: Support lazy initialization of nested field helpers so they can self-refer
+
 ## 2.7.0
 
 ### Minor Changes
