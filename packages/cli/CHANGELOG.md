@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.8.1
+
+### Patch Changes
+
+- 7b24c33: Support for recursive field definitions
+
 ## 4.8.0
 
 ### Minor Changes
