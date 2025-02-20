@@ -82,6 +82,19 @@ export const person = schema.collection({
 	},
 });
 
+const contentBase = schema.fields.object({
+	fields: {
+		type: schema.fields.string(),
+		content: schema.fields.any(),
+	},
+});
+const nestedContent = schema.fields.replaceObjectFields(contentBase, {
+	type: schema.fields.string(),
+	content: schema.fields.array({
+		items: contentBase,
+	}),
+});
+
 export const post = schema.collection({
 	name: 'post',
 	primaryKey: 'id',
@@ -94,9 +107,7 @@ export const post = schema.collection({
 			type: 'string',
 			indexed: true,
 		},
-		content: {
-			type: 'string',
-		},
+		content: nestedContent,
 	},
 });
 

@@ -2,10 +2,16 @@ import { createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
 import {
-	ClientWithCollections,
 	ClientDescriptor,
+	ClientWithCollections,
 	IdbPersistence,
 } from '../../index.js';
+
+const test = schema.fields.object({
+	fields: {
+		foo: schema.fields.string(),
+	},
+});
 
 export const todoCollection = schema.collection({
 	name: 'todo',

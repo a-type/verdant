@@ -204,6 +204,24 @@ function getTypings({
 	].join('\n');
 }
 
+type CyclicReference = {
+	$ref: string;
+};
+
+function cyclicToName(cyclic: CyclicReference) {
+	const parts = cyclic['$ref'].split('[').map((s) => s.replace(/]$/, ''));
+	// first 4 parts are $, collections, [name], fields
+	// from then on, it will alternate between a field name and the
+	// property of the field definition which indicates nesting,
+	// i.e. 'foo' -> 'fields' -> 'bar' -> 'items' ...
+	// so we can just take the odd parts and join them
+	return parts
+		.slice(4)
+		.filter((_, i) => i % 2 === 0)
+		.map((s) => pascalCase(s))
+		.join('');
+}
+
 function getFieldTypings({
 	name,
 	field,
@@ -212,11 +230,18 @@ function getFieldTypings({
 	mode,
 }: {
 	name: string;
-	field: StorageFieldSchema;
+	field: StorageFieldSchema | CyclicReference;
 	suffix: string;
 	childSuffix?: string;
 	mode: 'init' | 'snapshot' | 'destructured';
 }): { alias: string; optional?: boolean; declarations: string } {
+	if ('$ref' in field) {
+		return {
+			alias: cyclicToName(field) + suffix,
+			declarations: '',
+		};
+	}
+
 	const optionals = mode === 'init';
 	const optional = optionals && (isNullable(field) || hasDefault(field));
 	switch (field.type) {

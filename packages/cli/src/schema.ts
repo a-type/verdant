@@ -1,20 +1,21 @@
-import { exec } from 'child_process';
-import * as fs from 'fs/promises';
-import * as fsSync from 'fs';
-import * as pathTools from 'path/posix';
-import * as esbuild from 'esbuild';
 import { StorageSchema } from '@verdant-web/common';
-import { fileExists } from './fs/exists.js';
+import { exec } from 'child_process';
+import * as esbuild from 'esbuild';
+import * as fsSync from 'fs';
+import * as fs from 'fs/promises';
 import path from 'path';
+import * as pathTools from 'path/posix';
 import { compareObjects } from './compare.js';
+import { fileExists } from './fs/exists.js';
+import { makeDir } from './fs/makedir.js';
+import { posixify } from './fs/posixify.js';
 import { writeTS } from './fs/write.js';
+import { jsonDecycle } from './snippets.js';
 import {
 	getInitTypings,
 	getMigrationTypings,
 	getSnapshotTypings,
 } from './typings.js';
-import { posixify } from './fs/posixify.js';
-import { makeDir } from './fs/makedir.js';
 
 /**
  * Runs a simple Node script which imports the schema and logs
@@ -32,11 +33,17 @@ export async function readSchema({
 	const tempDir = await fs.mkdtemp('temp-');
 	// convert path relative to cwd to be relative to temp dir
 	path = pathTools.relative(tempDir, posixify(path));
-	const readFileContent = `import schema from '${path}';console.log(
+	const readFileContent = `import schema from '${path}';
+	${/* Inject JSON handler for cyclical references */ ''}
+	${jsonDecycle}
+
+	console.log(
 		JSON.stringify(
-			schema,
-			// convert all functions to "FUNCTION"
-			(key, value) => (typeof value === 'function' ? 'FUNCTION' : value),
+			decycle(
+				schema,
+				// convert all functions to "FUNCTION"
+				(value) => (typeof value === 'function' ? 'FUNCTION' : value),
+			)
 		)
 	); process.exit(0);`;
 	await fs.writeFile(`${tempDir}/readFile.ts`, readFileContent);

@@ -78,6 +78,7 @@ const schemaValidator = z.object({
 });
 
 export function validateSchema(schema: StorageSchema) {
+	console.log(JSON.stringify(schema));
 	schemaValidator.parse(schema);
 	// also validate:
 	for (const collection of Object.values(schema.collections)) {
