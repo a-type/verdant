@@ -13,32 +13,72 @@ import {
 	StorageStringFieldSchema,
 } from './types.js';
 
-const objectField = <Props extends StorageFieldsSchema>(args: {
-	properties: Props;
+type ObjectFieldArgs<Props extends StorageFieldsSchema> = {
+	/** @deprecated - use fields. renamed for more consistency with collection root. */
+	properties?: Props;
+	fields?: Props;
 	nullable?: boolean;
 	default?:
 		| ShapeFromFieldsWithDefaults<Props>
 		| (() => ShapeFromFieldsWithDefaults<Props>);
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
-}): StorageObjectFieldSchema<Props> => {
-	return {
-		type: 'object',
-		...args,
-	};
 };
 
-const arrayField = <T extends StorageFieldSchema>(args: {
+function objectField<Props extends StorageFieldsSchema>(
+	args: ObjectFieldArgs<Props>,
+): StorageObjectFieldSchema<Props> {
+	const { properties, fields, ...resolvedArgs } = args;
+	const props = properties || fields;
+	if (!props) {
+		throw new Error('objectField must be passed a properties object');
+	}
+	return {
+		type: 'object',
+		...resolvedArgs,
+		properties: props,
+	};
+}
+
+/**
+ * Used for recursively defined field schemas. Replaces the original properties
+ * of an object field with the provided fields. This will mutate the original field.
+ */
+function replaceObjectFields(
+	object: StorageObjectFieldSchema<any>,
+	fields: StorageFieldsSchema,
+): StorageObjectFieldSchema<any> {
+	object.properties = fields;
+	return object;
+}
+
+type ArrayFieldArgs<T extends StorageFieldSchema> = {
 	items: T;
 	nullable?: boolean;
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
-}): StorageArrayFieldSchema<T> => {
+};
+
+function arrayField<T extends StorageFieldSchema>(
+	args: ArrayFieldArgs<T>,
+): StorageArrayFieldSchema<T> {
 	return {
 		type: 'array',
 		...args,
 	};
-};
+}
+
+/**
+ * Used for recursively defined field schemas. Replaces the original items
+ * of an array field with the provided items. This will mutate the original field.
+ */
+function replaceArrayItems(
+	array: StorageArrayFieldSchema<any>,
+	items: StorageFieldSchema,
+): StorageArrayFieldSchema<any> {
+	array.items = items;
+	return array;
+}
 
 const stringField = (args?: {
 	nullable?: boolean;
@@ -88,16 +128,31 @@ const anyField = <TShape>(args?: {
 	};
 };
 
-const mapField = <T extends StorageFieldSchema>(args: {
+type MapFieldArgs<T extends StorageFieldSchema> = {
 	values: T;
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
-}): StorageMapFieldSchema<T> => {
+};
+function mapField<T extends StorageFieldSchema>(
+	args: MapFieldArgs<T>,
+): StorageMapFieldSchema<T> {
 	return {
 		type: 'map',
 		...args,
 	};
-};
+}
+
+/**
+ * Used for recursively defined field schemas. Replaces the original values
+ * of a map field with the provided values. This will mutate the original field.
+ */
+function replaceMapValues(
+	map: StorageMapFieldSchema<any>,
+	values: StorageFieldSchema,
+): StorageMapFieldSchema<any> {
+	map.values = values;
+	return map;
+}
 
 const fileField = (args?: {
 	nullable?: boolean;
@@ -125,11 +180,14 @@ const idField = (): StorageStringFieldSchema => {
 export const fields = {
 	object: objectField,
 	array: arrayField,
+	replaceObjectFields,
+	replaceArrayItems,
 	string: stringField,
 	number: numberField,
 	boolean: booleanField,
 	any: anyField,
 	map: mapField,
+	replaceMapValues,
 	file: fileField,
 	id: idField,
 };

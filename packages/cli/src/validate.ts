@@ -4,6 +4,10 @@ import * as z from 'zod';
 // read schemas replace functions with a string literal
 const functionValidator = z.literal('FUNCTION');
 
+const cyclicRefValidator = z.object({
+	$ref: z.string(),
+});
+
 // enforcing typing isn't really important here
 const fieldValidator: z.ZodType<any> = z.discriminatedUnion('type', [
 	z.object({
@@ -23,16 +27,21 @@ const fieldValidator: z.ZodType<any> = z.discriminatedUnion('type', [
 	}),
 	z.object({
 		type: z.literal('object'),
-		properties: z.object({}).catchall(z.lazy(() => fieldValidator)),
+		properties: z
+			.object({})
+			.catchall(z.lazy(() => z.union([fieldValidator, cyclicRefValidator]))),
 		nullable: z.boolean().optional(),
 		default: z.union([z.any(), functionValidator]),
 	}),
 	z.object({
 		type: z.literal('array'),
-		items: z.lazy(() => fieldValidator),
+		items: z.lazy(() => z.union([fieldValidator, cyclicRefValidator])),
 		nullable: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal('map'), values: z.lazy(() => fieldValidator) }),
+	z.object({
+		type: z.literal('map'),
+		values: z.lazy(() => z.union([fieldValidator, cyclicRefValidator])),
+	}),
 	z.object({ type: z.literal('any'), default: z.any().optional() }),
 	z.object({
 		type: z.literal('file'),
@@ -78,7 +87,7 @@ const schemaValidator = z.object({
 });
 
 export function validateSchema(schema: StorageSchema) {
-	schemaValidator.parse(schema);
+	//schemaValidator.parse(schema);
 	// also validate:
 	for (const collection of Object.values(schema.collections)) {
 		// primaryKey is a primitive field

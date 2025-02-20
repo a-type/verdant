@@ -1,13 +1,17 @@
-import { ClientDescriptor } from './.generated/index.js';
-import { describe, it, expect } from 'vitest';
-import { createHooks } from './.generated/react.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { describe, expect, it } from 'vitest';
+import { ClientDescriptor } from './.generated/index.js';
+import { createHooks } from './.generated/react.js';
 
 function makeClient() {
 	const desc = new ClientDescriptor({
 		namespace: 'test',
-		indexedDb: new IDBFactory(),
+		environment: {
+			indexedDB: new IDBFactory(),
+			fetch: fetch,
+			WebSocket: WebSocket,
+		},
 		sync: {
 			defaultProfile: { foo: 'bar' },
 			initialPresence: { baz: 1 },
@@ -74,6 +78,48 @@ describe('generated client', () => {
 		expect(item.get('attachments').getSnapshot()).toEqual([
 			{ name: 'new', test: 1 },
 		]);
+
+		// testing recursive nested post schema
+		client.posts.put({
+			title: 'test',
+			content: {
+				type: 'document',
+				content: [
+					{
+						type: 'blockquote',
+						content: [
+							{
+								type: 'paragraph',
+								text: "I'm a blockquote",
+							},
+						],
+					},
+				],
+			},
+		});
+
+		expect(
+			client.posts.put({
+				title: 'fails',
+				content: {
+					type: 'document',
+					content: [
+						{
+							type: 'blockquote',
+							content: [
+								{
+									type: 'paragraph',
+									// @ts-expect-error	- we expect a type error here
+									// which tells us that this shape is being typechecked
+									// correctly.
+									foo: 'Bar',
+								},
+							],
+						},
+					],
+				},
+			}),
+		).rejects.toThrowError();
 	});
 	it('should produce consistent output code', async () => {
 		expect(await readFile('.generated/client.js')).toMatchSnapshot();

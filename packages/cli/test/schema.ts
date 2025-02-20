@@ -1,4 +1,11 @@
-import { schema } from '@verdant-web/store';
+import {
+	schema,
+	StorageAnyFieldSchema,
+	StorageArrayFieldSchema,
+	StorageMapFieldSchema,
+	StorageObjectFieldSchema,
+	StorageStringFieldSchema,
+} from '@verdant-web/store';
 
 export const todo = schema.collection({
 	name: 'todo',
@@ -82,6 +89,30 @@ export const person = schema.collection({
 	},
 });
 
+const contentBase = schema.fields.object({
+	fields: {},
+});
+
+type NestedContentFieldSchema = StorageObjectFieldSchema<{
+	type: StorageStringFieldSchema;
+	attributes: StorageMapFieldSchema<StorageAnyFieldSchema>;
+	content: StorageArrayFieldSchema<NestedContentFieldSchema>;
+	text: StorageStringFieldSchema;
+}>;
+
+const nestedContent: NestedContentFieldSchema =
+	schema.fields.replaceObjectFields(contentBase, {
+		type: schema.fields.string(),
+		attributes: schema.fields.map({
+			values: schema.fields.any(),
+		}),
+		content: schema.fields.array({
+			items: contentBase,
+			nullable: true,
+		}),
+		text: schema.fields.string({ nullable: true }),
+	});
+
 export const post = schema.collection({
 	name: 'post',
 	primaryKey: 'id',
@@ -94,8 +125,12 @@ export const post = schema.collection({
 			type: 'string',
 			indexed: true,
 		},
-		content: {
+		content: nestedContent,
+	},
+	indexes: {
+		secondLevelContentText: {
 			type: 'string',
+			compute: (doc) => doc.content.content[0].text,
 		},
 	},
 });

@@ -6,6 +6,7 @@ import {
 	StorageFieldsSchema,
 	StorageSchema,
 	StorageSyntheticIndexSchema,
+	assert,
 	hasDefault,
 	isDirectSynthetic,
 	isNullable,
@@ -189,6 +190,7 @@ function getTypings({
 			suffix,
 			childSuffix,
 			mode,
+			collectionName: name,
 		});
 		builder.withField({
 			key,
@@ -204,19 +206,57 @@ function getTypings({
 	].join('\n');
 }
 
+type CyclicReference = {
+	$ref: string;
+};
+
+function cyclicToName(collectionName: string, cyclic: CyclicReference) {
+	// first 4 parts are $, collections, [name], fields
+	const parts = cyclic['$ref']
+		.split('[')
+		.map((s) => s.replace(/]$/, ''))
+		.slice(4);
+	let name = '';
+	for (let i = 0; i < parts.length; i++) {
+		// event parts are field names, odd parts are properties on the field schema
+		// used to indicate nesting (fields/items/values) -- but for 'items' and 'values'
+		// we must add to the name to match naming convention...
+		if (i % 2 === 0) {
+			name += pascalCase(parts[i]);
+		} else {
+			if (parts[i] === 'items') {
+				name += 'Item';
+			} else if (parts[i] === 'values') {
+				name += 'Value';
+			}
+		}
+	}
+	assert(name, 'Cyclic reference name is empty: ' + cyclic['$ref']);
+	return collectionName + name;
+}
+
 function getFieldTypings({
 	name,
 	field,
 	suffix,
 	childSuffix = suffix,
 	mode,
+	collectionName,
 }: {
 	name: string;
-	field: StorageFieldSchema;
+	field: StorageFieldSchema | CyclicReference;
 	suffix: string;
 	childSuffix?: string;
 	mode: 'init' | 'snapshot' | 'destructured';
+	collectionName: string;
 }): { alias: string; optional?: boolean; declarations: string } {
+	if ('$ref' in field) {
+		return {
+			alias: cyclicToName(collectionName, field) + suffix,
+			declarations: '',
+		};
+	}
+
 	const optionals = mode === 'init';
 	const optional = optionals && (isNullable(field) || hasDefault(field));
 	switch (field.type) {
@@ -261,6 +301,7 @@ function getFieldTypings({
 					suffix,
 					childSuffix,
 					mode,
+					collectionName,
 				});
 				objBuilder.withField({
 					key,
@@ -286,6 +327,7 @@ function getFieldTypings({
 				suffix,
 				childSuffix,
 				mode,
+				collectionName,
 			});
 			const baseList = aliasBuilder(
 				name + suffix,
@@ -306,6 +348,7 @@ function getFieldTypings({
 				suffix,
 				childSuffix,
 				mode,
+				collectionName,
 			});
 			const baseMap = recordBuilder()
 				.withField({
@@ -390,6 +433,9 @@ function getEntityFieldTypings({
 	name: string;
 	field: StorageFieldSchema;
 }): string {
+	if ('$ref' in field) {
+		return '';
+	}
 	switch (field.type) {
 		case 'string':
 			if (field.options) {
