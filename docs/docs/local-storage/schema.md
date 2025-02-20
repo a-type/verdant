@@ -153,3 +153,71 @@ Other options:
 ## Indexing Fields
 
 In earlier versions of Verdant, you could index a field by adding `indexed: true` to it. To consolidate indexing, Verdant now requires all indexes to be specified in `indexes` or `compounds`. There's a new index definition to easily index a single field (with typechecking): `{ field: 'fieldName' }`, which you can use instead.
+
+## Recursive Fields
+
+It is currently possible to create recursive field schemas. Support is still experimental and the syntax for doing so is rather tedious, but once done, fields should be properly typed and validated.
+
+To define recursive schema structures, you must first define a 'base' schema field assigned to a variable, then modify that field to assign its own reference to one of its nested structures. This two-step process is necessary because otherwise we'd encounter a "used before it was defined" type of error.
+
+```ts
+const contentBase = schema.fields.object({
+	// NOTE: it doesn't matter what you put here, as this will be replaced
+	// with the proceeding use of replaceObjectFields
+	fields: {},
+});
+
+// a manual typing of the field is required as Typescript cannot
+// infer recursive types. These "Storage__FieldSchema" types can all be
+// imported from '@verdant-web/store'.
+type NestedContentFieldSchema = StorageObjectFieldSchema<{
+	type: StorageStringFieldSchema;
+	content: StorageArrayFieldSchema<NestedContentFieldSchema>;
+}>;
+
+const nestedContent: NestedContentFieldSchema =
+	schema.fields.replaceObjectFields(contentBase, {
+		content: schema.fields.array({
+			// our recursive reference. use the original 'base' variable.
+			items: contentBase,
+		}),
+		// other fields should be added here as well.
+		type: schema.fields.string(),
+	});
+// you can now assign `nestedContent` to a collection field in your schema.
+const post = schema.collection({
+	name: 'post',
+	primaryKey: 'id',
+	fields: {
+		id: schema.fields.id(),
+		body: nestedContent,
+	},
+});
+```
+
+The call to `replaceObjectFields` reassigns the `fields` of the object field schema and updates the typing to reflect the recursion. The returned schema from this function has an `any` applied type; you must manually typecast the returned variable using a custom defined field schema type as shown (Typescript cannot infer this for you).
+
+Once this is done, typings should still work when accessing recursive fields for index computation, and the CLI should generate appropriately defined named types for fields. For example, from the above code, a named alias type for `PostBodyContent` would be created which would be defined as `PostBody[]`.
+
+### Available `replace` field helpers for recursion
+
+Helpers are available not just for object fields, but all field types which nest and can therefore produce recursion:
+
+- `replaceObjectFields(objSchema, newFieldsSchema)`
+- `replaceArrayItems(arraySchema, newItemSchema)`
+- `replaceMapValues(mapSchema, newValueSchema)`
+
+### Limitations
+
+You must not reuse a recursive field schema for multiple fields! When detecting cyclical references in the schema, only the first reference is captured as 'canonical,' so multiple reuses will all point to the first detected use. This will result in odd or incorrect generated typings from the CLI.
+
+Instead, you must define each recursive field schema as a separate declaration. If you want identical field schemas for multiple fields, consider making a helper function which constructs your recursive field structure and then calling that multiple times to assign to new variables.
+
+```ts
+const postBody = makeNestedContentField();
+const commentBody = makeNestedContentField();
+```
+
+### Troubleshooting recursive fields
+
+- When referencing a recursive field in `indexes` in my schema, I get `Type instantiation is excessively deep and possibly infinite`: You probably forgot to assign a manually crafted field schema type to the returned value of `replaceObjectFields`/`replaceArrayItems`/`replaceMapValues`.

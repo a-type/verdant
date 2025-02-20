@@ -393,12 +393,69 @@ export type PersonFilter =
 export type Post = ObjectEntity<PostInit, PostDestructured, PostSnapshot>;
 export type PostId = string;
 export type PostTitle = string;
-export type PostContent = string;
-export type PostInit = { id?: string; title: string; content: string };
+export type PostContent = ObjectEntity<
+  PostContentInit,
+  PostContentDestructured,
+  PostContentSnapshot
+>;
+export type PostContentType = string;
+export type PostContentAttributes = ObjectEntity<
+  PostContentAttributesInit,
+  PostContentAttributesDestructured,
+  PostContentAttributesSnapshot
+>;
+export type PostContentAttributesValue = any;
+export type PostContentContent = ListEntity<
+  PostContentContentInit,
+  PostContentContentDestructured,
+  PostContentContentSnapshot
+>;
 
-export type PostDestructured = { id: string; title: string; content: string };
+export type PostContentText = string;
+export type PostInit = { id?: string; title: string; content: PostContentInit };
 
-export type PostSnapshot = { id: string; title: string; content: string };
+export type PostContentAttributesInit = {
+  [key: string]: PostContentAttributesValueInit;
+};
+export type PostContentContentInit = PostContentInit[] | null;
+export type PostContentInit = {
+  type: string;
+  attributes?: PostContentAttributesInit;
+  content?: PostContentContentInit | null;
+  text?: string | null;
+};
+export type PostDestructured = {
+  id: string;
+  title: string;
+  content: PostContent;
+};
+
+export type PostContentAttributesDestructured = {
+  [key: string]: PostContentAttributesValue | undefined;
+};
+export type PostContentContentDestructured = PostContentDestructured[];
+export type PostContentDestructured = {
+  type: string;
+  attributes: PostContentAttributes;
+  content: PostContentContent | null;
+  text: string | null;
+};
+export type PostSnapshot = {
+  id: string;
+  title: string;
+  content: PostContentSnapshot;
+};
+
+export type PostContentAttributesSnapshot = {
+  [key: string]: PostContentAttributesValueSnapshot;
+};
+export type PostContentContentSnapshot = PostContentSnapshot[] | null;
+export type PostContentSnapshot = {
+  type: string;
+  attributes: PostContentAttributesSnapshot;
+  content: PostContentContentSnapshot | null;
+  text: string | null;
+};
 
 /** Index filters for Post **/
 
@@ -421,6 +478,28 @@ export interface PostTitleRangeFilter {
 }
 export interface PostTitleStartsWithFilter {
   where: "title";
+  startsWith: string;
+  order?: "asc" | "desc";
+}
+export interface PostSecondLevelContentTextSortFilter {
+  where: "secondLevelContentText";
+  order: "asc" | "desc";
+}
+export interface PostSecondLevelContentTextMatchFilter {
+  where: "secondLevelContentText";
+  equals: string;
+  order?: "asc" | "desc";
+}
+export interface PostSecondLevelContentTextRangeFilter {
+  where: "secondLevelContentText";
+  gte?: string;
+  gt?: string;
+  lte?: string;
+  lt?: string;
+  order?: "asc" | "desc";
+}
+export interface PostSecondLevelContentTextStartsWithFilter {
+  where: "secondLevelContentText";
   startsWith: string;
   order?: "asc" | "desc";
 }
@@ -451,6 +530,10 @@ export type PostFilter =
   | PostTitleMatchFilter
   | PostTitleRangeFilter
   | PostTitleStartsWithFilter
+  | PostSecondLevelContentTextSortFilter
+  | PostSecondLevelContentTextMatchFilter
+  | PostSecondLevelContentTextRangeFilter
+  | PostSecondLevelContentTextStartsWithFilter
   | PostTitleSortFilter
   | PostTitleMatchFilter
   | PostTitleRangeFilter
@@ -490,7 +573,9 @@ exports[`generated client > should produce consistent output code 4`] = `
 "/** @generated - do not modify this file. */
 
 // test/schema.ts
-import { schema } from "@verdant-web/store";
+import {
+  schema
+} from "@verdant-web/store";
 var todo = schema.collection({
   name: "todo",
   primaryKey: "id",
@@ -571,6 +656,20 @@ var person = schema.collection({
     }
   }
 });
+var contentBase = schema.fields.object({
+  fields: {}
+});
+var nestedContent = schema.fields.replaceObjectFields(contentBase, {
+  type: schema.fields.string(),
+  attributes: schema.fields.map({
+    values: schema.fields.any()
+  }),
+  content: schema.fields.array({
+    items: contentBase,
+    nullable: true
+  }),
+  text: schema.fields.string({ nullable: true })
+});
 var post = schema.collection({
   name: "post",
   primaryKey: "id",
@@ -583,8 +682,12 @@ var post = schema.collection({
       type: "string",
       indexed: true
     },
-    content: {
-      type: "string"
+    content: nestedContent
+  },
+  indexes: {
+    secondLevelContentText: {
+      type: "string",
+      compute: (doc) => doc.content.content[0].text
     }
   }
 });
@@ -652,8 +755,34 @@ export type PersonInit = { id?: string; name: string; posts?: PersonPostsInit };
 
 export type PersonPostsInit = string[];
 
-export type PostSnapshot = { id: string; title: string; content: string };
-export type PostInit = { id?: string; title: string; content: string };
+export type PostSnapshot = {
+  id: string;
+  title: string;
+  content: PostContentSnapshot;
+};
+
+export type PostContentAttributesSnapshot = {
+  [key: string]: PostContentAttributesValueSnapshot;
+};
+export type PostContentContentSnapshot = PostContentSnapshot[] | null;
+export type PostContentSnapshot = {
+  type: string;
+  attributes: PostContentAttributesSnapshot;
+  content: PostContentContentSnapshot | null;
+  text: string | null;
+};
+export type PostInit = { id?: string; title: string; content: PostContentInit };
+
+export type PostContentAttributesInit = {
+  [key: string]: PostContentAttributesValueInit;
+};
+export type PostContentContentInit = PostContentInit[] | null;
+export type PostContentInit = {
+  type: string;
+  attributes?: PostContentAttributesInit;
+  content?: PostContentContentInit | null;
+  text?: string | null;
+};
 
 export type MigrationTypes = {
   todos: { init: TodoInit; snapshot: TodoSnapshot };

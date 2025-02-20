@@ -6,11 +6,11 @@ import * as fs from 'fs/promises';
 import path from 'path';
 import * as pathTools from 'path/posix';
 import { compareObjects } from './compare.js';
+import { jsonDecycle } from './cyclics.js';
 import { fileExists } from './fs/exists.js';
 import { makeDir } from './fs/makedir.js';
 import { posixify } from './fs/posixify.js';
 import { writeTS } from './fs/write.js';
-import { jsonDecycle } from './snippets.js';
 import {
 	getInitTypings,
 	getMigrationTypings,
@@ -77,7 +77,8 @@ export async function readSchema({
 		});
 	});
 	await fs.rm(tempDir, { recursive: true });
-	return JSON.parse(result);
+	const decycled = JSON.parse(result);
+	return decycled;
 }
 
 export async function writeSchema({
