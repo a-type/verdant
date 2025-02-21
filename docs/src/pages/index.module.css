@@ -165,6 +165,7 @@ strong {
 	font-family: Cormorant, serif;
 	font-style: italic;
 	font-size: 1.25em;
+	font-weight: 600;
 }
 
 .explanation {
@@ -285,4 +286,8 @@ summary > span {
 	.heroCodeMobile.heroCodeMobile {
 		display: flex;
 	}
+}
+
+code {
+	tab-size: 2ch;
 }

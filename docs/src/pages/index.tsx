@@ -1,7 +1,7 @@
-import React from 'react';
-import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import clsx from 'clsx';
+import React, { JSX } from 'react';
 
 import styles from './index.module.css';
 

@@ -1,0 +1,90 @@
+{
+	"name": "@verdant-web/tiptap",
+	"version": "0.1.0",
+	"access": "public",
+	"type": "module",
+	"main": "dist/esm/index.js",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/esm/index.d.ts"
+		},
+		"./react": {
+			"development": "./src/react.ts",
+			"import": "./dist/esm/react.js",
+			"types": "./dist/esm/react.d.ts"
+		}
+	},
+	"publishConfig": {
+		"exports": {
+			".": {
+				"import": "./dist/esm/index.js",
+				"types": "./dist/esm/index.d.ts"
+			},
+			"./react": {
+				"import": "./dist/esm/react.js",
+				"types": "./dist/esm/react.d.ts"
+			}
+		},
+		"access": "public"
+	},
+	"files": [
+		"dist/",
+		"src/"
+	],
+	"scripts": {
+		"test": "vitest",
+		"ci:test:unit": "vitest run",
+		"build": "tsc -p tsconfig.json",
+		"prepublish": "pnpm run build",
+		"link": "pnpm link --global",
+		"typecheck": "tsc --noEmit",
+		"demo:generate": "verdant -s ./demo/store/schema.ts -o ./demo/store/.generated -r --select=publish --module=esm",
+		"demo:dev": "vite --config ./demo/vite.config.ts ./demo",
+		"demo:server": "verdant-server"
+	},
+	"peerDependencies": {
+		"@tiptap/core": "^2.11.5",
+		"@tiptap/pm": "^2.11.5",
+		"@tiptap/react": "^2.11.5",
+		"@verdant-web/react": "workspace:*",
+		"@verdant-web/store": "workspace:*",
+		"react": "^19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@verdant-web/react": {
+			"optional": true
+		},
+		"react": {
+			"optional": true
+		},
+		"@tiptap/react": {
+			"optional": true
+		}
+	},
+	"dependencies": {
+		"@verdant-web/common": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"@tiptap/core": "^2.11.5",
+		"@tiptap/pm": "^2.11.5",
+		"@tiptap/react": "^2.11.5",
+		"@tiptap/starter-kit": "^2.11.5",
+		"react": "catalog:",
+		"@types/react": "catalog:",
+		"@verdant-web/react": "workspace:*",
+		"@verdant-web/store": "workspace:*",
+		"vitest-browser-react": "catalog:",
+		"@vitest/browser": "catalog:",
+		"playwright": "catalog:",
+		"vite": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"@verdant-web/cli": "workspace:*",
+		"react-dom": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@verdant-web/server": "workspace:*"
+	}
+}

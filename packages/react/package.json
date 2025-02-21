@@ -41,16 +41,16 @@
 		"use-sync-external-store": "^1.2.0"
 	},
 	"devDependencies": {
-		"@types/react": "^19.0.1",
+		"@types/react": "catalog:",
 		"@types/use-sync-external-store": "^0.0.6",
 		"@verdant-web/store": "workspace:*",
-		"@vitest/browser": "^2.1.8",
+		"@vitest/browser": "catalog:",
 		"fake-indexeddb": "^5.0.1",
-		"playwright": "^1.50.1",
+		"playwright": "catalog:",
 		"prettier": "^3.0.3",
-		"react": "^19.0.0",
-		"typescript": "^5.4.2",
-		"vitest": "^2.1.8",
-		"vitest-browser-react": "^0.0.4"
+		"react": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"vitest-browser-react": "catalog:"
 	}
 }

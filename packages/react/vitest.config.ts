@@ -5,8 +5,12 @@ export default defineConfig({
 		browser: {
 			provider: 'playwright',
 			enabled: true,
-			name: 'chromium',
-			headless: true,
+			instances: [
+				{
+					browser: 'chromium',
+					headless: true,
+				},
+			],
 		},
 		clearMocks: true,
 	},

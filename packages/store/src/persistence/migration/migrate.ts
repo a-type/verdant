@@ -1,10 +1,10 @@
 import { Migration } from '@verdant-web/common';
-import { getMigrationPath } from './paths.js';
-import { OpenDocumentDbContext } from './types.js';
+import { ShutdownHandler } from '../../context/ShutdownHandler.js';
+import { PersistenceNamespace } from '../interfaces.js';
 import { getMigrationEngine } from './engine.js';
 import { finalizeMigration } from './finalize.js';
-import { PersistenceNamespace } from '../interfaces.js';
-import { ShutdownHandler } from '../../context/ShutdownHandler.js';
+import { getMigrationPath } from './paths.js';
+import { OpenDocumentDbContext } from './types.js';
 
 export async function migrate({
 	context,
@@ -79,7 +79,7 @@ export async function runMigrations({
 		const migrationContext = {
 			...context,
 			schema: migration.oldSchema,
-			shutdownHandler: new ShutdownHandler(),
+			shutdownHandler: new ShutdownHandler(context.log),
 		};
 		// this will only write to our metadata store via operations!
 		const engine = await getMigrationEngine({

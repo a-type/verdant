@@ -1,6 +1,12 @@
 export class ShutdownHandler {
 	private consumed = false;
 	private readonly handlers: (() => Promise<void>)[] = [];
+	constructor(
+		private log?: (
+			level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
+			...args: any[]
+		) => void,
+	) {}
 
 	register(handler: () => Promise<void>) {
 		this.handlers.push(handler);
@@ -8,7 +14,7 @@ export class ShutdownHandler {
 
 	async shutdown() {
 		if (this.consumed) {
-			console.warn('ShutdownHandler already consumed');
+			this.log?.('warn', 'ShutdownHandler already consumed');
 		}
 
 		this.consumed = true;

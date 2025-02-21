@@ -139,7 +139,7 @@ export async function importPersistence(
 				disableRebasing: true,
 			},
 		},
-		persistenceShutdownHandler: new ShutdownHandler(),
+		persistenceShutdownHandler: new ShutdownHandler(ctx.log),
 	});
 	// load imported data into persistence
 	await importedContext.meta.resetFrom(exportedData.data);
@@ -176,7 +176,7 @@ export async function importPersistence(
 		const currentSchema = ctx.schema;
 		const upgradedContext = await initializePersistence({
 			...importedContext,
-			persistenceShutdownHandler: new ShutdownHandler(),
+			persistenceShutdownHandler: new ShutdownHandler(ctx.log),
 			schema: currentSchema,
 		});
 

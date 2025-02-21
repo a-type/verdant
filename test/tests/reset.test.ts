@@ -1,5 +1,8 @@
+import { createMigration } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
+import { createTestClient } from '../lib/testClient.js';
+import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForCondition,
 	waitForOnline,
@@ -7,18 +10,15 @@ import {
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
-import { startTestServer } from '../lib/testServer.js';
-import { createTestClient } from '../lib/testClient.js';
-import schema from '../schema.js';
 import migrations from '../migrations/index.js';
-import { createMigration } from '@verdant-web/common';
+import schema from '../schema.js';
 
 const ctx = createTestContext({
 	// testLog: true,
 	// serverLog: true,
 });
 
-async function connectAndSeedData(library = 'reset-1') {
+async function connectAndSeedData(library: string) {
 	const clientA = await ctx.createTestClient({
 		library,
 		user: 'User A',
@@ -98,7 +98,7 @@ function compareSortContent(a: any, b: any) {
 
 it('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
-		await connectAndSeedData();
+		await connectAndSeedData('reset-1');
 
 	clientA.sync.stop();
 	clientB.sync.stop();
@@ -120,20 +120,32 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	});
 	const pearId = b_pear.get('id');
 
-	clientA.sync.start();
+	await clientA.sync.start();
 	await waitForSync(clientA);
 	ctx.log('Client A online');
 	// client A should now "win" and re-initialize server data
 
 	await waitForQueryResult(clientA.items.get(a_unknownItem.get('id')));
-	await waitForQueryResult(clientA.items.get(a_banana.get('id')));
+	await waitForQueryResult(
+		clientA.items.get(a_banana.get('id')),
+		undefined,
+		15000,
+		'A confirms banana',
+	);
+	// A should not have pear
+	expect(await clientA.items.get(pearId).resolved).toBe(null);
 
-	clientB.sync.start();
+	await clientB.sync.start();
 	ctx.log('Waiting for client B to re-initialize');
 	await waitForSync(clientB);
 
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
-	await waitForQueryResult(clientB.items.get(a_banana.get('id')));
+	await waitForQueryResult(
+		clientB.items.get(a_banana.get('id')),
+		undefined,
+		15000,
+		'B receives banana',
+	);
 	const b_pearQuery = clientB.items.get(pearId);
 	await waitForQueryResult(b_pearQuery, (val) => {
 		return !val;

@@ -37,15 +37,15 @@
 		"path-to-regexp": "^6.2.1"
 	},
 	"devDependencies": {
-		"@types/react": "^19.0.1",
-		"@types/react-dom": "^19.0.2",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
 		"@types/use-sync-external-store": "^0.0.6",
-		"@vitejs/plugin-react-swc": "^3.3.0",
+		"@vitejs/plugin-react": "catalog:",
 		"jsdom": "^20.0.0",
-		"react": "19.0.0",
-		"react-dom": "19.0.0",
-		"typescript": "^5.4.2",
-		"vite": "^4.2.1",
-		"vitest": "^2.0.5"
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	}
 }

@@ -1,19 +1,19 @@
 import {
-	stableStringify,
-	StorageCollectionSchema,
-	StorageSchema,
 	addFieldDefaults,
-	StorageDocument,
-	CollectionFilter,
-	StorageDocumentInit,
-	removeExtraProperties,
 	assert,
 	assignOid,
-	getOid,
-	hasDefault,
-	validateEntity,
 	AuthorizationKey,
+	CollectionFilter,
+	getOid,
 	isMultiValueIndex,
+	isRequired,
+	removeExtraProperties,
+	stableStringify,
+	StorageCollectionSchema,
+	StorageDocument,
+	StorageDocumentInit,
+	StorageSchema,
+	validateEntity,
 } from './index.js';
 
 /**@deprecated */
@@ -27,9 +27,9 @@ export interface PreservedCollectionMigrationStrategy<
 	Old extends StorageCollectionSchema<any, any, any>,
 	New extends StorageCollectionSchema<any, any, any>,
 > {
-	(old: StorageDocument<Old>):
-		| StorageDocument<New>
-		| Promise<StorageDocument<New>>;
+	(
+		old: StorageDocument<Old>,
+	): StorageDocument<New> | Promise<StorageDocument<New>>;
 }
 /** @deprecated */
 type MigrationStrategy<
@@ -109,7 +109,7 @@ type StrategyFor<
 	? PreservedCollectionMigrationStrategy<
 			Old['collections'][Key],
 			New['collections'][Key]
-	  >
+		>
 	: DroppedCollectionMigrationStrategy<Old['collections'][Key]>;
 
 /** @deprecated */
@@ -476,7 +476,7 @@ export function createDefaultMigration(
 		: {
 				version: 0,
 				collections: {},
-		  };
+			};
 	return migrate(oldSchema, newSchema || schema, async ({ migrate, info }) => {
 		if ((newSchema || schema).version === 1) return;
 
@@ -697,7 +697,9 @@ function getMigrationInfo(oldSchema: StorageSchema, newSchema: StorageSchema) {
 		// a new default was added - we can auto-migrate it
 		if (
 			Object.keys(newFields).some(
-				(key) => !hasDefault(oldFields[key]) && hasDefault(newFields[key]),
+				(key) =>
+					(!oldFields[key] || isRequired(oldFields[key])) &&
+					!isRequired(newFields[key]),
 			)
 		) {
 			autoMigratedCollections.add(collection);

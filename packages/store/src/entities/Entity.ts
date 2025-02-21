@@ -11,7 +11,7 @@ import {
 	createFileRef,
 	createRef,
 	getChildFieldSchema,
-	getDefault,
+	getFieldDefault,
 	hasDefault,
 	isFile,
 	isFileRef,
@@ -199,7 +199,7 @@ export class Entity<
 		if (viewIsWrongType) {
 			// this will cover lists and maps, too.
 			if (hasDefault(this.schema)) {
-				return getDefault(this.schema);
+				return getFieldDefault(this.schema);
 			}
 			// force null - invalid - will require parent prune
 			return null as any;
@@ -656,17 +656,11 @@ export class Entity<
 					requireDefaults: true,
 				})
 			) {
-				if (hasDefault(fieldSchema)) {
-					// FIXME: this returns []/{} for arrays and objects, but the contract
-					// of this method should return an Entity for such object fields.
-					// I want to write a test case for this one before attempting to fix
-					// just to be sure the fix works.
-					return getDefault(fieldSchema);
-				}
-				if (isNullable(fieldSchema)) {
-					return null as any;
-				}
-				return undefined as any;
+				// FIXME: this returns []/{} for arrays and objects, but the contract
+				// of this method should return an Entity for such object fields.
+				// I want to write a test case for this one before attempting to fix
+				// just to be sure the fix works.
+				return getFieldDefault(fieldSchema);
 			}
 			return child as KeyValue[Key];
 		}
@@ -890,13 +884,20 @@ export class Entity<
 			merge = true,
 			replaceSubObjects = false,
 			preserveUndefined = false,
+			dangerouslyDisableMerge = false,
 		}: {
 			replaceSubObjects?: boolean;
 			merge?: boolean;
 			preserveUndefined?: boolean;
+			dangerouslyDisableMerge?: boolean;
 		} = {},
 	): void => {
-		if (!merge && this.schema.type !== 'any' && this.schema.type !== 'map') {
+		if (
+			!merge &&
+			!dangerouslyDisableMerge &&
+			this.schema.type !== 'any' &&
+			this.schema.type !== 'map'
+		) {
 			throw new Error(
 				'Cannot use .update without merge if the field has a strict schema type. merge: false is only available on "any" or "map" types.',
 			);

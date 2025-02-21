@@ -1,8 +1,8 @@
 import { LEGACY_OID_KEY, OID_KEY } from '../oidsLegacy.js';
 import { isObject } from '../utils.js';
 import type {
-	StorageFieldSchema,
 	StorageCollectionSchema,
+	StorageFieldSchema,
 	StorageFieldsSchema,
 } from './types.js';
 
@@ -20,25 +20,8 @@ export function hasDefault(field: StorageFieldSchema | undefined) {
 	return field.default !== undefined;
 }
 
-export function getDefault(field: StorageFieldSchema | undefined) {
-	if (!field || !hasDefault(field)) return undefined;
-	if (field.type === 'file') {
-		if (isNullable(field)) return null;
-		return undefined;
-	}
-	if (field.type === 'map') return {};
-	if (field.type === 'array') {
-		if (isNullable(field)) return null;
-		return [];
-	}
-	if (field.type === 'object') {
-		if (isNullable(field)) return null;
-		return undefined;
-	}
-	if (typeof field.default === 'function') {
-		return field.default();
-	}
-	return field.default;
+export function isRequired(field: StorageFieldSchema) {
+	return !isNullable(field) && !hasDefault(field);
 }
 
 export function isPrunePoint(field: StorageFieldSchema) {
@@ -96,44 +79,39 @@ export function traverseCollectionFieldsAndApplyDefaults(
 	}
 }
 
-export function getFieldDefault(field: StorageFieldSchema) {
-	if (
-		field.type === 'string' ||
-		field.type === 'number' ||
-		field.type === 'boolean' ||
-		field.type === 'any'
-	) {
-		if (field.default && typeof field.default === 'function') {
-			return field.default();
-		} else if (field.default !== undefined) {
-			// TODO: structuredClone?
-			return JSON.parse(JSON.stringify(field.default));
+export function getFieldDefault(field: StorageFieldSchema): any {
+	if ('default' in field) {
+		const val =
+			typeof field.default === 'function' ? field.default() : field.default;
+		if (val === null) return val;
+
+		const cloned = structuredClone(val);
+
+		if (field.type === 'object') {
+			// objects also apply defaults of sub-fields over top of the default object
+			for (const [key, property] of Object.entries(
+				field.properties as StorageFieldsSchema,
+			)) {
+				if (cloned[key] === undefined) {
+					cloned[key] = getFieldDefault(property);
+				}
+			}
 		}
+		return cloned;
 	}
+
+	if (isNullable(field)) {
+		return null;
+	}
+
 	if (field.type === 'array') {
 		return [];
 	}
+
 	if (field.type === 'map') {
 		return {};
 	}
-	if (field.type !== 'any' && field.nullable) {
-		return null;
-	}
-	if (field.type === 'object' && field.default) {
-		const defaultValue =
-			// @ts-ignore
-			typeof field.default === 'function'
-				? field.default()
-				: JSON.parse(JSON.stringify(field.default));
-		for (const [key, property] of Object.entries(
-			field.properties as StorageFieldsSchema,
-		)) {
-			if (defaultValue[key] === undefined) {
-				defaultValue[key] = getFieldDefault(property);
-			}
-		}
-		return defaultValue;
-	}
+
 	return undefined;
 }
 

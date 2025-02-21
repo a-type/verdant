@@ -165,7 +165,7 @@ export class ClientDescriptor<
 				persistence:
 					init.persistence || new IdbPersistence(environment.indexedDB),
 				environment,
-				persistenceShutdownHandler: new ShutdownHandler(),
+				persistenceShutdownHandler: new ShutdownHandler(init.log),
 				pauseRebasing: false,
 			};
 			ctx.log('info', 'Initializing client', {

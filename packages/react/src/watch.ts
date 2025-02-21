@@ -1,5 +1,11 @@
-import { Entity, EntityFile } from '@verdant-web/store';
-import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { AnyEntity, Entity, EntityFile } from '@verdant-web/store';
+import {
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useSyncExternalStore,
+} from 'react';
 
 const OBSERVATION_INFO = Symbol('OBSERVATION_INFO');
 
@@ -10,10 +16,10 @@ type ObservationInfo = {
 
 // largely inspired by Valtio (https://github.com/pmndrs/valtio/blob/main/src/react.ts)
 export function useWatch(
-	entity: Entity | EntityFile | null,
+	entity: AnyEntity<any, any, any> | EntityFile | null,
 	options?: { deep?: boolean; untracked?: boolean },
 ) {
-	const lastSnapshot = useRef<ProxiedDestructure | null>(null);
+	const lastSnapshot = useRef<any | null>(null);
 	const observationInfo = useMemo(
 		() => ({ accessedKeys: new Set<string>(), accessedIndex: false }),
 		[entity],
@@ -132,10 +138,39 @@ function hasObservedChanged(
 
 	// otherwise, compare values of accessed keys.
 	for (const key of observationInfo.accessedKeys) {
-		if (prev[key] !== next[key]) {
+		if (prev?.[key] !== next?.[key]) {
 			return true;
 		}
 	}
 
 	return false;
+}
+
+export function useOnChange(
+	liveObject: Entity | EntityFile | null,
+	handler: (info: { isLocal?: boolean; target?: Entity }) => void,
+	options?: { deep?: boolean },
+) {
+	const handlerRef = useRef(handler);
+	handlerRef.current = handler;
+
+	return useEffect(() => {
+		if (!liveObject) return;
+
+		if ('isFile' in liveObject) {
+			return liveObject?.subscribe('change', () => {
+				handlerRef.current({});
+			});
+		} else {
+			if (options?.deep) {
+				return liveObject?.subscribe('changeDeep', (target, info) => {
+					handlerRef.current({ ...info, target: target as Entity });
+				});
+			}
+			return liveObject?.subscribe('change', (info) => {
+				info.isLocal ??= false;
+				handlerRef.current(info);
+			});
+		}
+	}, [liveObject, handlerRef]);
 }

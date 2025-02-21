@@ -25,6 +25,7 @@ export type StorageArrayFieldSchema<TItems extends StorageFieldSchema> = {
 	type: 'array';
 	items: TItems;
 	nullable?: boolean;
+	default?: any[] | (() => any[]);
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
 };
@@ -45,6 +46,7 @@ export type StorageAnyFieldSchema<TShape = any> = {
 export type StorageMapFieldSchema<V extends StorageFieldSchema> = {
 	type: 'map';
 	values: V;
+	default?: Record<string, any> | (() => Record<string, any>);
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
 };

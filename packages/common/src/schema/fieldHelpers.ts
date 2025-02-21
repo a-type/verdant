@@ -1,6 +1,7 @@
 import cuid from 'cuid';
 import {
 	ShapeFromFieldsWithDefaults,
+	ShapeFromProperty,
 	StorageAnyFieldSchema,
 	StorageArrayFieldSchema,
 	StorageBooleanFieldSchema,
@@ -55,6 +56,7 @@ function replaceObjectFields(
 type ArrayFieldArgs<T extends StorageFieldSchema> = {
 	items: T;
 	nullable?: boolean;
+	default?: ShapeFromProperty<T>[] | (() => ShapeFromProperty<T>[]);
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
 };
@@ -130,6 +132,9 @@ const anyField = <TShape>(args?: {
 
 type MapFieldArgs<T extends StorageFieldSchema> = {
 	values: T;
+	default?:
+		| Record<string, ShapeFromProperty<T>>
+		| (() => Record<string, ShapeFromProperty<T>>);
 	/** Add some docs to your field which will annotate the generated typing */
 	documentation?: string;
 };

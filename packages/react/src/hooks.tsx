@@ -7,7 +7,6 @@ import {
 	Client,
 	ClientWithCollections,
 	Entity,
-	EntityFile,
 	Query,
 	QueryStatus,
 	StorageDescriptor,
@@ -30,7 +29,7 @@ import {
 } from 'react';
 import { suspend } from 'suspend-react';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector.js';
-import { useWatch } from './watch.js';
+import { useOnChange, useWatch } from './watch.js';
 
 function queryIsInitializing(query: Query<any>) {
 	return query.status === 'initial' || query.status === 'initializing';
@@ -106,35 +105,6 @@ export function createHooks<Presence = any, Profile = any>(
 			() => ctx.readyPromise,
 			[`verdant_${ctx.namespace}`],
 		) as ClientWithCollections;
-	}
-
-	function useOnChange(
-		liveObject: Entity | EntityFile | null,
-		handler: (info: { isLocal?: boolean; target?: Entity }) => void,
-		options?: { deep?: boolean },
-	) {
-		const handlerRef = useRef(handler);
-		handlerRef.current = handler;
-
-		return useEffect(() => {
-			if (!liveObject) return;
-
-			if ('isFile' in liveObject) {
-				return liveObject?.subscribe('change', () => {
-					handlerRef.current({});
-				});
-			} else {
-				if (options?.deep) {
-					return liveObject?.subscribe('changeDeep', (target, info) => {
-						handlerRef.current({ ...info, target: target as Entity });
-					});
-				}
-				return liveObject?.subscribe('change', (info) => {
-					info.isLocal ??= false;
-					handlerRef.current(info);
-				});
-			}
-		}, [liveObject, handlerRef]);
 	}
 
 	function useSelf() {

@@ -163,6 +163,13 @@ export interface ObjectEntity<
 			 * Default: true
 			 */
 			merge?: boolean;
+			/**
+			 * If set to true, bypasses the restrictions around merge: false for
+			 * object fields. This means you can accidentally erase required fields
+			 * on this object or a sub-object. Unless you are certain your passed
+			 * data conforms to the expected schema, you should not use this option.
+			 */
+			dangerouslyDisableMerge?: boolean;
 		},
 	): void;
 	/**
