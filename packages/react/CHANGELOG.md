@@ -1,5 +1,14 @@
 # @lo-fi/react
 
+## 40.2.3
+
+### Patch Changes
+
+- 8466924: [React] useWatch and useOnChange are now exported bare from the library, allowing use without calling createHooks(). [Store/Common] Field defaults for array and map fields are now partially supported. Typescript does not like them.
+- Updated dependencies [8466924]
+  - @verdant-web/common@2.7.2
+  - @verdant-web/store@4.1.5
+
 ## 40.2.2
 
 ### Patch Changes
