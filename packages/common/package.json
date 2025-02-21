@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/common",
-	"version": "2.7.1",
+	"version": "2.7.2",
 	"access": "public",
 	"type": "module",
 	"exports": {
