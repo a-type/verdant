@@ -11,10 +11,8 @@ const NodeIdPlugin = new Plugin({
 		// force replacement of any duplicates, too
 		const usedIds = new Set<string>();
 		newState.doc.descendants((node, pos) => {
-			console.log(node);
 			if (!node.isText && (!node.attrs.id || usedIds.has(node.attrs.id))) {
 				const nodeId = id();
-				console.log('adding node id', nodeId);
 				tr.setNodeMarkup(pos, null, {
 					...node.attrs,
 					id: nodeId,
