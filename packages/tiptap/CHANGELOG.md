@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 0.1.2
+
+### Patch Changes
+
+- fcf4f31: Remove logs from plugin
+
 ## 0.1.1
 
 ### Patch Changes
