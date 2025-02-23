@@ -252,7 +252,7 @@ function getFieldTypings({
 }): { alias: string; optional?: boolean; declarations: string } {
 	if ('$ref' in field) {
 		return {
-			alias: cyclicToName(collectionName, field) + suffix,
+			alias: cyclicToName(collectionName, field) + childSuffix,
 			declarations: '',
 		};
 	}

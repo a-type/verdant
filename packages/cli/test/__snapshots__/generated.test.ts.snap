@@ -433,7 +433,7 @@ export type PostDestructured = {
 export type PostContentAttributesDestructured = {
   [key: string]: PostContentAttributesValue | undefined;
 };
-export type PostContentContentDestructured = PostContentDestructured[];
+export type PostContentContentDestructured = PostContent[];
 export type PostContentDestructured = {
   type: string;
   attributes: PostContentAttributes;
