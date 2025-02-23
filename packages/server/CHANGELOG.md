@@ -1,5 +1,12 @@
 # @lo-fi/server
 
+## 3.3.8
+
+### Patch Changes
+
+- Updated dependencies [005cf3d]
+  - @verdant-web/common@2.7.3
+
 ## 3.3.7
 
 ### Patch Changes

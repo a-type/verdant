@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 4.8.2
+
+### Patch Changes
+
+- 8db254a: Fix typings of lists with recursive field items
+
 ## 4.8.1
 
 ### Patch Changes

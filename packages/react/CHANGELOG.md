@@ -1,5 +1,13 @@
 # @lo-fi/react
 
+## 40.2.4
+
+### Patch Changes
+
+- Updated dependencies [005cf3d]
+  - @verdant-web/common@2.7.3
+  - @verdant-web/store@4.1.6
+
 ## 40.2.3
 
 ### Patch Changes

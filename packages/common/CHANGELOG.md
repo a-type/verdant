@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.7.3
+
+### Patch Changes
+
+- 005cf3d: Fix migrations of recursive fields
+
 ## 2.7.2
 
 ### Patch Changes
