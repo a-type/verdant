@@ -1,6 +1,6 @@
+import hash from 'object-hash';
 import { v4 } from 'uuid';
 import { assignOid, maybeGetOid } from './oids.js';
-import hash from 'object-hash';
 
 export function take<T extends object, Keys extends keyof T>(
 	obj: T,
@@ -45,7 +45,7 @@ export function getSortedIndex<T>(
 	return low;
 }
 
-function orderedReplacer(_: any, v: any) {
+function orderedReplacer(k: any, v: any) {
 	if (typeof v !== 'object' || v === null || Array.isArray(v)) {
 		return v;
 	}
@@ -58,7 +58,17 @@ function orderedReplacer(_: any, v: any) {
  * of key insertion order
  */
 export function stableStringify(obj: any) {
-	return JSON.stringify(obj, orderedReplacer);
+	const seen = new WeakMap();
+	let cyclicCount = 0;
+	return JSON.stringify(obj, (k, v) => {
+		if (typeof v === 'object' && v !== null) {
+			if (seen.has(v)) {
+				return { $ref: seen.get(v) };
+			}
+			seen.set(v, `cyclic-ref:${cyclicCount++}`);
+		}
+		return orderedReplacer(k, v);
+	});
 }
 
 /**

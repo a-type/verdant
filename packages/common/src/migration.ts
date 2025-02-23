@@ -654,7 +654,8 @@ export function createMigration(
 				);
 				if (unmigrated.length > 0) {
 					// TODO: does this deserve a full-on error?
-					console.error(
+					engine.log(
+						'error',
 						`Unmigrated changed collections from version ${oldSchema.version} to version ${newSchema.version}:`,
 						unmigrated,
 					);
