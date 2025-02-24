@@ -168,4 +168,4 @@ Also, when doing websocket-based sync, there are special cases for sending realt
 
 ## License and Usage
 
-Since 6/19/2024, Verdant is licensed under AGPL, which means you are free to use it in open-source projects, including commercially. However, if you plan to use Verdant in a closed-source project, including SaaS, please get in touch about negotiating an alternative license.
+Verdant's license is MIT. Use it in any project, private or commercial.
