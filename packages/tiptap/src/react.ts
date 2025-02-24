@@ -61,7 +61,6 @@ export function useSyncedEditor<
 			if (!value) {
 				parent.set(cachedOptions.current.fieldName as any, newData);
 			} else {
-				console.log('new data', newData);
 				value.update(newData, {
 					merge: false,
 					dangerouslyDisableMerge: true,
