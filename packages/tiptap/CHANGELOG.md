@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 0.1.4
+
+### Patch Changes
+
+- 7481df8: Remove another stray log
+
 ## 0.1.3
 
 ### Patch Changes
