@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 0.1.5
+
+### Patch Changes
+
+- a489ddb: Remove editor dependency default
+
 ## 0.1.4
 
 ### Patch Changes
