@@ -47,29 +47,26 @@ export function useSyncedEditor<
 	const live = useWatch(parent);
 	const field = live[fieldName] as ObjectEntity<any, any>;
 	const updatingRef = useRef(false);
-	const update = useCallback(
-		(editor: Editor) => {
-			if (updatingRef.current) {
-				return;
-			}
+	const update = useStableCallback((editor: Editor) => {
+		if (updatingRef.current) {
+			return;
+		}
 
-			const newData = editor.getJSON();
-			const value = parent.get(cachedOptions.current.fieldName) as ObjectEntity<
-				any,
-				any
-			> | null;
-			if (!value) {
-				parent.set(cachedOptions.current.fieldName as any, newData);
-			} else {
-				value.update(newData, {
-					merge: false,
-					dangerouslyDisableMerge: true,
-					replaceSubObjects: false,
-				});
-			}
-		},
-		[parent],
-	);
+		const newData = editor.getJSON();
+		const value = parent.get(cachedOptions.current.fieldName) as ObjectEntity<
+			any,
+			any
+		> | null;
+		if (!value) {
+			parent.set(cachedOptions.current.fieldName as any, newData);
+		} else {
+			value.update(newData, {
+				merge: false,
+				dangerouslyDisableMerge: true,
+				replaceSubObjects: false,
+			});
+		}
+	});
 
 	const cachedInitialContent = useRef(
 		ensureDocShape(getFieldSnapshot(field, nullDocumentDefault, fieldName)),
@@ -83,7 +80,7 @@ export function useSyncedEditor<
 				extraOptions?.onUpdate?.(ctx);
 			},
 		},
-		[update, ...(editorDependencies ?? [])],
+		editorDependencies,
 	);
 
 	useEffect(() => {
@@ -140,4 +137,10 @@ function getFieldSnapshot(
 		field schema non-null and specify a default document there.`);
 	}
 	return content;
+}
+
+function useStableCallback<T extends (...args: any[]) => any>(callback: T) {
+	const ref = useRef(callback);
+	ref.current = callback;
+	return useCallback((...args: Parameters<T>) => ref.current(...args), []);
 }
