@@ -39,12 +39,13 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		.commit();
 
 	// wait for the sync to complete
+	const lib = await ctx.server.core.get('superseding');
 	await waitForCondition(async () => {
-		return !!(await ctx.server.server.getLibraryInfo('superseding'));
+		return !!(await lib.getInfo());
 	});
 
 	ctx.log('checking server library');
-	let stats = await ctx.server.server.getLibraryInfo('superseding');
+	let stats = await lib.getInfo();
 	expect(stats?.operationsCount).toBe(1);
 
 	await clientA
@@ -61,11 +62,11 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		.commit();
 
 	await waitForCondition(async () => {
-		stats = await ctx.server.server.getLibraryInfo('superseding');
+		stats = await lib.getInfo();
 		return stats?.operationsCount === 3;
 	});
 
-	stats = await ctx.server.server.getLibraryInfo('superseding');
+	stats = await lib.getInfo();
 	// +1 for write of categoryId, +1 for write of purchased
 	expect(stats?.operationsCount).toBe(3);
 });

@@ -1,20 +1,17 @@
+import { assert } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
+import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForCondition,
 	waitForQueryResult,
 	waitForSync,
 	waitForTime,
 } from '../lib/waits.js';
-import { assert } from '@verdant-web/common';
-import { getPersistence } from '../lib/persistence.js';
 
-const onServerLog = vi.fn((...args) => {
-	// console.log('[server]', ...args);
-});
 const ctx = createTestContext({
 	truancyMinutes: 10,
-	serverLog: onServerLog,
+	// serverLog: true,
 	// testLog: true,
 });
 
@@ -22,12 +19,16 @@ it('should reset truant replicas upon their reconnection', async () => {
 	const library = 'truant';
 	const persistence = getPersistence();
 
+	const onServerChange = vi.fn();
+	ctx.server.core.events.subscribe('changes', onServerChange);
+
 	const startTime = Date.now();
 	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
 		library,
 		user: 'truant-1',
 		persistence,
+		// logId: 'truant',
 	});
 
 	await truantClient.sync.start();
@@ -47,13 +48,10 @@ it('should reset truant replicas upon their reconnection', async () => {
 	await waitForCondition(
 		() => {
 			return (
-				onServerLog.mock.calls.length > 0 &&
-				onServerLog.mock.calls.some((call) =>
+				onServerChange.mock.calls.length > 0 &&
+				onServerChange.mock.calls.some((call) =>
 					call.some((arg) => {
-						if (typeof arg !== 'string') {
-							return false;
-						}
-						return arg?.includes('item 2 updated');
+						return JSON.stringify(arg).includes('item 2 updated');
 					}),
 				)
 			);
@@ -113,6 +111,9 @@ it('should not reset truant replicas with up to date server order', async () => 
 	const library = 'truant-up-to-date';
 	const persistence = getPersistence();
 
+	const onServerChange = vi.fn();
+	ctx.server.core.events.subscribe('changes', onServerChange);
+
 	const startTime = Date.now();
 	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
@@ -139,13 +140,10 @@ it('should not reset truant replicas with up to date server order', async () => 
 	await waitForCondition(
 		() => {
 			return (
-				onServerLog.mock.calls.length > 0 &&
-				onServerLog.mock.calls.some((call) =>
+				onServerChange.mock.calls.length > 0 &&
+				onServerChange.mock.calls.some((call) =>
 					call.some((arg) => {
-						if (typeof arg !== 'string') {
-							return false;
-						}
-						return arg?.includes('item 2 updated');
+						return JSON.stringify(arg).includes('item 2 updated');
 					}),
 				)
 			);

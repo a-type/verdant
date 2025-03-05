@@ -1,5 +1,5 @@
 import { assert } from '@a-type/utils';
-import { rmSync } from 'fs';
+import { rmSync } from 'node:fs';
 import { afterAll, expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
@@ -13,7 +13,6 @@ import {
 
 const context = createTestContext({
 	// serverLog: true,
-	// keepDb: true,
 	// testLog: true,
 });
 
@@ -65,6 +64,7 @@ it(
 		const file = b_item.get('image')!;
 		await waitForFileLoaded(file);
 		context.log('image loaded');
+		expect(file.error).toBeNull();
 		expect(file.failed).toBe(false);
 		expect(file.url).toBeTruthy();
 

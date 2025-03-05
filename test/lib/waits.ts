@@ -20,7 +20,7 @@ export async function waitForOnline(
 	client: Client | ClientWithCollections,
 	online = true,
 ) {
-	return new Promise<void>((resolve) => {
+	return new Promise<void>((resolve, reject) => {
 		if (client.sync.isConnected === online) {
 			resolve();
 			return;
@@ -28,6 +28,13 @@ export async function waitForOnline(
 		client.sync.subscribe('onlineChange', (isOnline) => {
 			if (isOnline === online) resolve();
 		});
+		setTimeout(() => {
+			reject(
+				new Error(
+					`Timed out waiting for online=${online} (isOnline=${client.sync.isConnected})`,
+				),
+			);
+		}, 10000);
 	});
 }
 

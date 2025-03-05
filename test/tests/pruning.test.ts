@@ -1,5 +1,3 @@
-import { it } from 'vitest';
-import { createTestContext } from '../lib/createTestContext.js';
 import {
 	Migration,
 	collection,
@@ -7,16 +5,18 @@ import {
 	schema,
 } from '@verdant-web/common';
 import { ClientWithCollections } from '@verdant-web/store';
+import { it } from 'vitest';
+import { createTestContext } from '../lib/createTestContext.js';
+import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForEntitySnapshot,
 	waitForPeerCount,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
-	// testLog: true,
-	// serverLog: true,
+	testLog: true,
+	serverLog: true,
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {
@@ -75,7 +75,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		...clientBInit,
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
-		// logId: 'B1',
+		logId: 'B1',
 	})) as any as ClientWithCollections;
 
 	const item1 = await clientA.items.put({

@@ -112,8 +112,8 @@ it('the server allows retrieving a document snapshot', async () => {
 	);
 
 	// now we can get a snapshot of the document
-	const snapshot = await server.server.getDocumentSnapshot(
-		library,
+	const serverLib = await server.core.get(library);
+	const snapshot = await serverLib.getDocumentSnapshot(
 		'items',
 		a_apples.get('id'),
 	);

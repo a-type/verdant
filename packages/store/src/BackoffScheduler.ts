@@ -37,13 +37,14 @@ export class Backoff {
 	private readonly max: number;
 	private readonly factor: number;
 
-	constructor(max: number, factor: number) {
+	constructor(initial: number, max: number, factor: number) {
+		this.current = initial;
 		this.max = max;
 		this.factor = factor;
 	}
 
 	next = () => {
-		this.current = Math.min(this.max, this.current * this.factor);
+		this.current = Math.min(this.max, Math.max(1, this.current) * this.factor);
 	};
 
 	reset = () => {

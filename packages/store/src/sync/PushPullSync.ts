@@ -7,11 +7,11 @@ import {
 	isVerdantErrorResponse,
 	throttle,
 } from '@verdant-web/common';
-import { PresenceManager } from './PresenceManager.js';
+import { Context } from '../context/context.js';
 import { Heartbeat } from './Heartbeat.js';
+import { PresenceManager } from './PresenceManager.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
-import { Context } from '../context/context.js';
 
 export class PushPullSync
 	extends EventSubscriber<SyncTransportEvents>
@@ -98,12 +98,7 @@ export class PushPullSync
 				}
 				await handlePromise;
 			} else {
-				this.ctx.log(
-					'error',
-					'Sync request failed',
-					response.status,
-					await response.text(),
-				);
+				this.ctx.log('error', 'Sync request failed', host, response.status);
 
 				if (this._isConnected) {
 					this._isConnected = false;
@@ -116,6 +111,8 @@ export class PushPullSync
 					if (json.code === VerdantErrorCode.TokenExpired) {
 						this.endpointProvider.clearCache();
 						this.heartbeat.keepAlive();
+					} else {
+						this.ctx.log('error', 'Server error', json);
 					}
 				}
 

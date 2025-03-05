@@ -1,9 +1,10 @@
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { waitForQueryResult, waitForTime } from '../lib/waits.js';
+import { waitForQueryResult } from '../lib/waits.js';
 
 const context = createTestContext({
-	// testLog: true,
+	testLog: true,
+	serverLog: true,
 });
 
 it('can use syncOnce to manually sync an offline client', async () => {
@@ -29,7 +30,7 @@ it('can use syncOnce to manually sync an offline client', async () => {
 		server,
 		library: 'syncOnce-1',
 		user: 'B',
-		// logId: 'offline',
+		logId: 'offline',
 	});
 
 	onlineClient.sync.start();

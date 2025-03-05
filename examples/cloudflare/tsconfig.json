@@ -1,0 +1,9 @@
+{
+	"compilerOptions": {
+		"lib": ["ESNext"],
+		"declaration": false,
+		"customConditions": ["development"],
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["src"]
+}

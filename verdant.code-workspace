@@ -9,6 +9,10 @@
 			"path": "packages/server",
 		},
 		{
+			"name": "☁️ Cloudflare",
+			"path": "packages/cloudflare",
+		},
+		{
 			"name": "🪢 Common",
 			"path": "packages/common",
 		},

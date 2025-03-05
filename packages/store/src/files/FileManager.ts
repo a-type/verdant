@@ -88,11 +88,11 @@ export class FileManager extends Disposable {
 					file[UPDATE](result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
-					file[MARK_FAILED]();
+					file[MARK_FAILED](result.error?.toString());
 				}
 			} catch (err) {
 				this.context.log('error', 'Failed to load file', err);
-				file[MARK_FAILED]();
+				file[MARK_FAILED](err instanceof Error ? err.message : String(err));
 			}
 		}
 	};

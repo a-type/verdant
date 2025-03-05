@@ -24,6 +24,9 @@ catalogs:
     better-sqlite3:
       specifier: ^11.8.1
       version: 11.8.1
+    kysely:
+      specifier: 0.27.5
+      version: 0.27.5
     playwright:
       specifier: 1.52.0
       version: 1.52.0
@@ -119,6 +122,15 @@ importers:
         specifier: 'catalog:'
         version: 5.7.3
 
+  examples/cloudflare:
+    dependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250224.0
+        version: 4.20250224.0
+      '@verdant-web/server':
+        specifier: 'workspace:'
+        version: link:../../packages/server
+
   packages/cli:
     dependencies:
       '@clack/prompts':
@@ -176,6 +188,34 @@ importers:
       vitest:
         specifier: ^2.0.5
         version: 2.1.8(@types/node@22.13.4)(@vitest/browser@2.1.8)(jsdom@20.0.3)(msw@2.7.3(@types/node@22.13.4)(typescript@5.7.2))(terser@5.37.0)
+
+  packages/cloudflare:
+    dependencies:
+      '@verdant-web/common':
+        specifier: workspace:*
+        version: link:../common
+      '@verdant-web/server':
+        specifier: workspace:*
+        version: link:../server
+      kysely:
+        specifier: 'catalog:'
+        version: 0.27.5
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250224.0
+        version: 4.20250224.0
+      '@hono/node-server':
+        specifier: ^1.13.8
+        version: 1.13.8(hono@4.7.2)
+      cross-env:
+        specifier: 7.0.3
+        version: 7.0.3
+      hono:
+        specifier: ^4.7.2
+        version: 4.7.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.7.3
 
   packages/common:
     dependencies:
@@ -384,7 +424,7 @@ importers:
         specifier: ^8.5.1
         version: 8.5.1
       kysely:
-        specifier: 0.27.5
+        specifier: 'catalog:'
         version: 0.27.5
       kysely-plugin-serialize:
         specifier: ^0.5.7
@@ -396,6 +436,12 @@ importers:
         specifier: ^8.9.0
         version: 8.18.0
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250224.0
+        version: 4.20250224.0
+      '@hono/node-server':
+        specifier: ^1.13.8
+        version: 1.13.8(hono@4.7.2)
       '@types/async-lock':
         specifier: ^1.3.0
         version: 1.4.2
@@ -417,6 +463,9 @@ importers:
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
+      hono:
+        specifier: ^4.7.2
+        version: 4.7.2
       typescript:
         specifier: ^5.4.2
         version: 5.7.2
@@ -1646,6 +1695,9 @@ packages:
     resolution: {integrity: sha512-qkaher9atkx4Sw+Ti1q05tc9ZvkmXNqBTYn6lf/xbD9lW4qZcGn8Nr6I66zGmhE2SpiyN878b9LWcSJShnRnYA==}
     bundledDependencies:
       - is-unicode-supported
+
+  '@cloudflare/workers-types@4.20250224.0':
+    resolution: {integrity: sha512-j6ZwQ5G2moQRaEtGI2u5TBQhVXv/XwOS5jfBAheZHcpCM07zm8j0i8jZHHLq/6VA8e6VRjKohOyj5j6tZ1KHLQ==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -5011,10 +5063,6 @@ packages:
   cross-fetch@3.1.5:
     resolution: {integrity: sha512-lvb1SBsI0Z7GDwmuid+mU3kWVBwTVUbe7S0H52yaaAdQOXq2YktTCZdlAcNKFzE6QtRz0snpw9bNiPeOIkkQvw==}
 
-  cross-spawn@7.0.3:
-    resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
-    engines: {node: '>= 8'}
-
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
@@ -6075,6 +6123,10 @@ packages:
 
   hono@4.7.1:
     resolution: {integrity: sha512-V3eWoPkBxoNgFCkSc5Y5rpLF6YoQQx1pkYO4qrF6YfOw8RZbujUNlJLZCxh0z9gZct70+je2Ih7Zrdpv21hP9w==}
+    engines: {node: '>=16.9.0'}
+
+  hono@4.7.2:
+    resolution: {integrity: sha512-8V5XxoOF6SI12jkHkzX/6aLBMU5GEF5g387EjVSQipS0DlxWgWGSMeEayY3CRBjtTUQYwLHx9JYouWqKzy2Vng==}
     engines: {node: '>=16.9.0'}
 
   hono@4.7.5:
@@ -11326,6 +11378,8 @@ snapshots:
       picocolors: 1.1.1
       sisteransi: 1.0.5
 
+  '@cloudflare/workers-types@4.20250224.0': {}
+
   '@colors/colors@1.5.0':
     optional: true
 
@@ -12803,6 +12857,10 @@ snapshots:
   '@hono/node-server@1.13.8(hono@4.7.1)':
     dependencies:
       hono: 4.7.1
+
+  '@hono/node-server@1.13.8(hono@4.7.2)':
+    dependencies:
+      hono: 4.7.2
 
   '@hono/node-server@1.14.0(hono@4.7.5)':
     dependencies:
@@ -15366,19 +15424,13 @@ snapshots:
 
   cross-env@7.0.3:
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
 
   cross-fetch@3.1.5:
     dependencies:
       node-fetch: 2.6.7
     transitivePeerDependencies:
       - encoding
-
-  cross-spawn@7.0.3:
-    dependencies:
-      path-key: 3.1.1
-      shebang-command: 2.0.0
-      which: 2.0.2
 
   cross-spawn@7.0.6:
     dependencies:
@@ -16696,6 +16748,8 @@ snapshots:
       react-is: 16.13.1
 
   hono@4.7.1: {}
+
+  hono@4.7.2: {}
 
   hono@4.7.5: {}
 

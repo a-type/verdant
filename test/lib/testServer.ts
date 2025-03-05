@@ -1,14 +1,18 @@
+import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import {
+	createVerdant,
 	LocalFileStorage,
 	ReplicaType,
-	Server,
 	TokenProvider,
+	VerdantCore,
 } from '@verdant-web/server';
-import { sqlShardStorage, sqlStorage } from '@verdant-web/server/storage';
-import express from 'express';
+import { createHonoRouter } from '@verdant-web/server/hono';
+import { createNodeWebsocketHandler } from '@verdant-web/server/node';
+import { sqlShardStorage, StorageOptions } from '@verdant-web/server/storage';
 import getPort from 'get-port';
-import { createServer } from 'http';
-import * as path from 'path';
+import { Hono } from 'hono';
+import { Server } from 'http';
 
 const SECRET = 'notsecret';
 
@@ -16,24 +20,19 @@ export async function startTestServer({
 	log = false,
 	disableRebasing = false,
 	keepDb = false,
-	disableSharding,
-	importShardsFrom,
 	truancyMinutes,
 }: {
 	log?: boolean | ((...args: any[]) => void);
 	disableRebasing?: boolean;
 	keepDb?: boolean;
-	disableSharding?: boolean;
-	importShardsFrom?: string;
 	truancyMinutes?: number;
 } = {}) {
 	const port = await getPort();
-	const app = express();
-	const httpServer = createServer(app);
+	const app = new Hono();
 
-	const { storage, databaseLocation } = disableSharding
-		? unifiedStorage(keepDb)
-		: shardedStorage(keepDb, importShardsFrom);
+	const { storage, databaseLocation } = shardedStorage(keepDb, {
+		replicaTruancyMinutes: truancyMinutes,
+	});
 
 	const finalLog = log
 		? typeof log === 'function'
@@ -42,7 +41,8 @@ export async function startTestServer({
 					console.log('[SERVER]', ...args.map((arg) => JSON.stringify(arg)))
 		: undefined;
 
-	const server = new Server({
+	const core: VerdantCore = createVerdant({
+		__testMode: true,
 		disableRebasing,
 		storage,
 		tokenSecret: SECRET,
@@ -57,51 +57,62 @@ export async function startTestServer({
 			host: `http://127.0.0.1:${port}/files`,
 			log: finalLog,
 		}),
-		replicaTruancyMinutes: truancyMinutes,
 	});
-	server.attach(httpServer, { httpPath: false });
+	const subApp = createHonoRouter(core);
+	app.route('/lofi', subApp as any);
 
 	const tokenProvider = new TokenProvider({
 		secret: SECRET,
 	});
 
-	app.get('/auth/:library', async (req, res) => {
-		const library = req.params.library;
-		const user = (req.query.user as string) || 'anonymous';
-		const type = (req.query.type as any) || ReplicaType.Realtime;
+	app.get('/auth/:library', async (ctx) => {
+		finalLog?.('info', 'Auth request', {
+			library: ctx.req.param('library'),
+			user: ctx.req.query('user'),
+			type: ctx.req.query('type'),
+		});
+		const library = ctx.req.param('library');
+		const user = (ctx.req.query('user') as string) || 'anonymous';
+		const type = (ctx.req.query('type') as any) || ReplicaType.Realtime;
 		const token = tokenProvider.getToken({
 			libraryId: library,
 			userId: user,
 			syncEndpoint: `http://127.0.0.1:${port}/lofi`,
 			type,
 		});
-		res.json({
+		return ctx.json({
 			accessToken: token,
 		});
 	});
 
-	app.use('/lofi/files/:id', server.handleFileRequest);
-	app.use('/lofi', server.handleRequest);
+	app.get(
+		'/files/*',
+		async (ctx, next) => {
+			finalLog?.('info', 'Serving file', ctx.req.path);
+			return next();
+		},
+		serveStatic({
+			root: 'test-files',
+			onNotFound: (path) => {
+				finalLog?.('warn', 'File not found:', path);
+			},
+			rewriteRequestPath: (path) => path.replace('/files/', ''),
+		}),
+	);
 
-	app.get('/files/:library/:id/:filename', (req, res) => {
-		finalLog?.(
-			'info',
-			'Serving file',
-			`${req.params.library}/${req.params.id}/${req.params.filename}`,
-		);
-		res.sendFile(
-			path.resolve(
-				process.cwd(),
-				`./test-files/${req.params.library}/${req.params.id}/${req.params.filename}`,
-			),
-		);
-	});
-
-	await new Promise<void>((resolve, reject) => {
-		httpServer.listen(port, () => {
-			console.log(`Test server listening on port ${port}`);
-			resolve();
-		});
+	const socketHandler = createNodeWebsocketHandler(core);
+	const server = await new Promise<Server>((resolve) => {
+		const server = serve(
+			{
+				fetch: app.fetch,
+				port,
+			},
+			() => {
+				finalLog?.('info', `Test server listening on port ${port}`);
+				resolve(server);
+			},
+		) as Server;
+		server.on('upgrade', socketHandler);
 	});
 
 	server.on('error', (err) => {
@@ -111,6 +122,7 @@ export async function startTestServer({
 	return {
 		port,
 		server,
+		core,
 		databaseLocation,
 		cleanup: async () => {
 			try {
@@ -122,20 +134,7 @@ export async function startTestServer({
 	};
 }
 
-function unifiedStorage(keepDb: boolean) {
-	const dbFileName = keepDb
-		? `./.databases/test-db-${Math.random().toString(36).slice(2, 9)}.sqlite`
-		: ':memory:';
-	if (keepDb) console.log(`Using database file ${dbFileName}`);
-	return {
-		storage: sqlStorage({
-			databaseFile: dbFileName,
-		}),
-		databaseLocation: dbFileName,
-	};
-}
-
-function shardedStorage(keepDb: boolean, importShardsFrom?: string) {
+function shardedStorage(keepDb: boolean, options: StorageOptions) {
 	const databasesDirectory = keepDb
 		? `./.databases/test-${Math.random().toString(36).slice(2, 9)}`
 		: ':memory:';
@@ -143,7 +142,7 @@ function shardedStorage(keepDb: boolean, importShardsFrom?: string) {
 	return {
 		storage: sqlShardStorage({
 			databasesDirectory,
-			transferFromUnifiedDatabaseFile: importShardsFrom,
+			...options,
 		}),
 		databaseLocation: databasesDirectory,
 	};

@@ -105,7 +105,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	clientB.sync.stop();
 
 	// reset server
-	ctx.server.server.evictLibrary('reset-1');
+	await ctx.server.core.evict('reset-1');
 
 	// add more data offline with A and B
 	const a_banana = await clientA.items.put({
@@ -200,7 +200,7 @@ it('can re-initialize in realtime when replicas are still connected', async () =
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(library);
 
-	ctx.server.server.evictLibrary(library);
+	await ctx.server.core.evict(library);
 	await waitForOnline(clientA, false);
 	await waitForOnline(clientA, true);
 
@@ -255,7 +255,7 @@ it('resets from replica over http sync', async () => {
 	clientA.sync.stop();
 	clientB.sync.stop();
 
-	ctx.server.server.evictLibrary(library);
+	await ctx.server.core.evict(library);
 
 	clientA.sync.setMode('pull');
 	clientA.sync.start();

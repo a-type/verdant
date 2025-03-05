@@ -1,22 +1,21 @@
+import { DocumentBaseline, Ref, applyPatch } from '@verdant-web/common';
 import { Kysely } from 'kysely';
+import { HydratedDocumentBaseline, StoredOperation } from '../../types.js';
 import { BaselineStorage } from '../Storage.js';
 import { Database, DocumentBaselineRow } from './tables.js';
-import { DocumentBaseline, Ref, applyPatch } from '@verdant-web/common';
-import { HydratedDocumentBaseline, StoredOperation } from '../../types.js';
-import { Databases } from './Databases.js';
 
 export class SqlBaselines implements BaselineStorage {
 	constructor(
-		private dbs: Databases,
+		private db: Kysely<Database>,
+		private libraryId: string,
 		private dialect: 'postgres' | 'sqlite',
 	) {}
 
 	get = async (
-		libraryId: string,
 		oid: string,
 		{ tx }: { tx?: Kysely<Database> } = {},
 	): Promise<HydratedDocumentBaseline | null> => {
-		const db = tx ?? (await this.dbs.get(libraryId));
+		const db = tx ?? this.db;
 		const raw =
 			(await db
 				.selectFrom('DocumentBaseline')
@@ -28,8 +27,8 @@ export class SqlBaselines implements BaselineStorage {
 		return raw as any;
 	};
 
-	getAll = async (libraryId: string) => {
-		const db = await this.dbs.get(libraryId);
+	getAll = async () => {
+		const db = this.db;
 		const raw = await db
 			.selectFrom('DocumentBaseline')
 			.orderBy('timestamp', 'asc')
@@ -42,7 +41,6 @@ export class SqlBaselines implements BaselineStorage {
 	};
 
 	set = async (
-		libraryId: string,
 		baseline: DocumentBaseline,
 		{
 			tx,
@@ -50,7 +48,7 @@ export class SqlBaselines implements BaselineStorage {
 			tx?: Kysely<Database>;
 		},
 	) => {
-		const db = tx ?? (await this.dbs.get(libraryId));
+		const db = tx ?? this.db;
 		if (!baseline.snapshot) {
 			await db
 				.deleteFrom('DocumentBaseline')
@@ -77,11 +75,11 @@ export class SqlBaselines implements BaselineStorage {
 			.execute();
 	};
 
-	insertAll = async (libraryId: string, baselines: DocumentBaseline[]) => {
-		const db = await this.dbs.get(libraryId);
+	insertAll = async (baselines: DocumentBaseline[]) => {
+		const db = this.db;
 		await db.transaction().execute(async (tx) => {
 			for (const baseline of baselines) {
-				await this.set(libraryId, baseline, { tx });
+				await this.set(baseline, { tx });
 			}
 		});
 	};
@@ -92,23 +90,22 @@ export class SqlBaselines implements BaselineStorage {
 	};
 
 	applyOperations = async (
-		libraryId: string,
 		oid: string,
 		operations: StoredOperation[],
 		deletedRefs?: Ref[],
 	) => {
 		if (operations.length === 0) return;
 
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 
 		await db.transaction().execute(async (tx) => {
-			let baseline = await this.get(libraryId, oid, { tx });
+			let baseline = await this.get(oid, { tx });
 			if (!baseline) {
 				baseline = {
 					oid,
 					snapshot: {},
 					timestamp: operations[0].timestamp,
-					libraryId,
+					libraryId: this.libraryId,
 					authz: operations[0].authz,
 				};
 			}
@@ -123,17 +120,17 @@ export class SqlBaselines implements BaselineStorage {
 				}
 			}
 			baseline.timestamp = operations[operations.length - 1].timestamp;
-			await this.set(libraryId, baseline, { tx });
+			await this.set(baseline, { tx });
 		});
 	};
 
-	deleteAll = async (libraryId: string) => {
-		const db = await this.dbs.get(libraryId);
+	deleteAll = async () => {
+		const db = this.db;
 		await db.deleteFrom('DocumentBaseline').execute();
 	};
 
-	getCount = async (libraryId: string) => {
-		const db = await this.dbs.get(libraryId);
+	getCount = async () => {
+		const db = this.db;
 		return (
 			(
 				await db

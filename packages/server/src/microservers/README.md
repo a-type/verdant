@@ -1,0 +1,1 @@
+When pivoting to support Durable Objects, I've opted to restructure the single-node server use of Verdant to mimic the architecture of Durable Objects on a small scale by creating this abstraction that encapsulates the connection and communication aspects of a single Library the same way a DO does.

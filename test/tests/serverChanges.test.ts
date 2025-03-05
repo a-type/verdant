@@ -10,7 +10,7 @@ it('notifies of changes on the server', async () => {
 		user: 'A',
 	});
 	const changeHandler = vitest.fn();
-	ctx.server.server.on('changes', changeHandler);
+	ctx.server.core.events.subscribe('changes', changeHandler);
 
 	clientA.sync.start();
 	await waitForOnline(clientA, true);

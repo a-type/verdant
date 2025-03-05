@@ -1,22 +1,23 @@
 import { Operation } from '@verdant-web/common';
+import { Kysely } from 'kysely';
 import { StoredOperation } from '../../types.js';
 import { OperationStorage } from '../Storage.js';
-import { OperationHistoryRow } from './tables.js';
-import { Databases } from './Databases.js';
+import { Database, OperationHistoryRow } from './tables.js';
 
 export class SqlOperations implements OperationStorage {
-	constructor(private dbs: Databases, private dialect: 'postgres' | 'sqlite') {}
+	constructor(
+		private db: Kysely<Database>,
+		private libraryId: string,
+		private dialect: 'postgres' | 'sqlite',
+	) {}
 
 	private hydrate = (row: OperationHistoryRow) => {
 		// avoiding extra allocation from .map by type-asserting here
 		row.data = JSON.parse(row.data);
 	};
 
-	getAll = async (
-		libraryId: string,
-		oid: string,
-	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
+	getAll = async (oid: string): Promise<StoredOperation[]> => {
+		const db = this.db;
 		const raw = await db
 			.selectFrom('OperationHistory')
 			.where('oid', '=', oid)
@@ -29,10 +30,9 @@ export class SqlOperations implements OperationStorage {
 	};
 
 	getBeforeServerOrder = async (
-		libraryId: string,
 		beforeServerOrder: number,
 	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		const raw = await db
 			.selectFrom('OperationHistory')
 			.where('serverOrder', '<', beforeServerOrder)
@@ -45,10 +45,9 @@ export class SqlOperations implements OperationStorage {
 	};
 
 	getAfterServerOrder = async (
-		libraryId: string,
 		afterServerOrder: number,
 	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		const raw = await db
 			.selectFrom('OperationHistory')
 			.where('serverOrder', '>', afterServerOrder)
@@ -60,8 +59,8 @@ export class SqlOperations implements OperationStorage {
 		return raw as unknown as StoredOperation[];
 	};
 
-	getLatestServerOrder = async (libraryId: string): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+	getLatestServerOrder = async (): Promise<number> => {
+		const db = this.db;
 		const result = await db
 			.selectFrom('OperationHistory')
 			.orderBy('serverOrder', 'desc')
@@ -75,8 +74,8 @@ export class SqlOperations implements OperationStorage {
 		return 0;
 	};
 
-	getCount = async (libraryId: string): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+	getCount = async (): Promise<number> => {
+		const db = this.db;
 		return (
 			(
 				await db
@@ -88,11 +87,10 @@ export class SqlOperations implements OperationStorage {
 	};
 
 	insertAll = async (
-		libraryId: string,
 		replicaId: string,
 		operations: Operation[],
 	): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		// inserts all operations and updates server order
 		// FIXME: this whole thing is kinda sus
 		return await db.transaction().execute(async (tx): Promise<number> => {
@@ -132,15 +130,12 @@ export class SqlOperations implements OperationStorage {
 		});
 	};
 
-	deleteAll = async (libraryId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+	deleteAll = async (): Promise<void> => {
+		const db = this.db;
 		await db.deleteFrom('OperationHistory').execute();
 	};
-	delete = async (
-		libraryId: string,
-		operations: Operation[],
-	): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+	delete = async (operations: Operation[]): Promise<void> => {
+		const db = this.db;
 		await db.transaction().execute(async (tx) => {
 			for (const item of operations) {
 				await tx

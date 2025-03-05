@@ -164,25 +164,35 @@ export function createAbortableTransaction(
 	abortSignal?: AbortSignal,
 	log?: (...args: any[]) => void,
 ) {
-	const tx = db.transaction(storeNames, mode);
-	if (abortSignal) {
-		const abort = () => {
-			log?.('debug', 'aborting transaction');
-			try {
-				tx.abort();
-			} catch (e) {
-				log?.('debug', 'aborting transaction failed', e);
-			}
-		};
-		abortSignal.addEventListener('abort', abort);
-		tx.addEventListener('error', () => {
-			abortSignal.removeEventListener('abort', abort);
-		});
-		tx.addEventListener('complete', () => {
-			abortSignal.removeEventListener('abort', abort);
-		});
+	try {
+		const tx = db.transaction(storeNames, mode);
+		if (abortSignal) {
+			const abort = () => {
+				log?.('debug', 'aborting transaction');
+				try {
+					tx.abort();
+				} catch (e) {
+					log?.('debug', 'aborting transaction failed', e);
+				}
+			};
+			abortSignal.addEventListener('abort', abort);
+			tx.addEventListener('error', () => {
+				abortSignal.removeEventListener('abort', abort);
+			});
+			tx.addEventListener('complete', () => {
+				abortSignal.removeEventListener('abort', abort);
+			});
+		}
+		return tx;
+	} catch (err) {
+		if (err instanceof Error && err.name === 'InvalidStateError') {
+			// database is probably closing. it's ok, what can you do?
+			log?.('error', 'Failed to create transaction, database is closing');
+			return {} as any;
+		} else {
+			throw err;
+		}
 	}
-	return tx;
 }
 
 /**

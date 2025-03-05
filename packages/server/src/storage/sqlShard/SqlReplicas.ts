@@ -1,13 +1,13 @@
+import { ReplicaType, VerdantError } from '@verdant-web/common';
+import { Kysely, sql } from 'kysely';
 import { StoredReplicaInfo } from '../../types.js';
 import { ReplicaStorage } from '../Storage.js';
-import { sql, type Kysely } from 'kysely';
 import { Database, ReplicaInfoRow } from './tables.js';
-import { ReplicaType, VerdantError } from '@verdant-web/common';
-import { Databases } from './Databases.js';
 
 export class SqlReplicas implements ReplicaStorage {
 	constructor(
-		private dbs: Databases,
+		private db: Kysely<Database>,
+		private libraryId: string,
 		private readonly replicaTruancyMinutes: number,
 		private readonly dialect: 'sqlite' | 'postgres',
 	) {}
@@ -16,36 +16,32 @@ export class SqlReplicas implements ReplicaStorage {
 		return Date.now() - this.replicaTruancyMinutes * 60 * 1000;
 	}
 
-	private attachLibraryId = (libraryId: string, row: ReplicaInfoRow) => {
-		(row as any).libraryId = libraryId;
+	private attachLibraryId = (row: ReplicaInfoRow) => {
+		(row as any).libraryId = this.libraryId;
 		return row as StoredReplicaInfo;
 	};
 
-	get = async (
-		libraryId: string,
-		replicaId: string,
-	): Promise<StoredReplicaInfo | null> => {
-		const db = await this.dbs.get(libraryId);
+	get = async (replicaId: string): Promise<StoredReplicaInfo | null> => {
+		const db = this.db;
 		const row =
 			(await db
 				.selectFrom('ReplicaInfo')
 				.where('id', '=', replicaId)
 				.selectAll()
 				.executeTakeFirst()) ?? null;
-		if (row) return this.attachLibraryId(libraryId, row);
+		if (row) return this.attachLibraryId(row);
 		return row;
 	};
 	getOrCreate = async (
-		libraryId: string,
 		replicaId: string,
 		info: { userId: string; type: ReplicaType },
 	): Promise<{
 		status: 'new' | 'existing' | 'truant';
 		replicaInfo: StoredReplicaInfo;
 	}> => {
-		const existing = await this.get(libraryId, replicaId);
+		const existing = await this.get(replicaId);
 		if (!existing) {
-			const db = await this.dbs.get(libraryId);
+			const db = this.db;
 			const created = await db
 				.insertInto('ReplicaInfo')
 				.values({
@@ -65,12 +61,12 @@ export class SqlReplicas implements ReplicaStorage {
 			}
 			return {
 				status: 'new',
-				replicaInfo: this.attachLibraryId(libraryId, created),
+				replicaInfo: this.attachLibraryId(created),
 			};
 		}
 
 		if (existing.type !== info.type) {
-			const db = await this.dbs.get(libraryId);
+			const db = this.db;
 			// type should be updated if a new token changes it
 			await db
 				.updateTable('ReplicaInfo')
@@ -99,27 +95,21 @@ export class SqlReplicas implements ReplicaStorage {
 	};
 
 	getAll = async (
-		libraryId: string,
 		options?: { omitTruant: boolean } | undefined,
 	): Promise<StoredReplicaInfo[]> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		let builder = db.selectFrom('ReplicaInfo');
 
 		if (options?.omitTruant) {
 			builder = builder.where('lastSeenWallClockTime', '>', this.truantCutoff);
 		}
 
-		return (await builder.selectAll().execute()).map(
-			this.attachLibraryId.bind(this, libraryId),
-		);
+		return (await builder.selectAll().execute()).map(this.attachLibraryId);
 	};
 
-	updateLastSeen = async (
-		libraryId: string,
-		replicaId: string,
-	): Promise<void> => {
+	updateLastSeen = async (replicaId: string): Promise<void> => {
 		const clockTime = Date.now();
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		await db
 			.updateTable('ReplicaInfo')
 			.set({ lastSeenWallClockTime: clockTime })
@@ -128,12 +118,11 @@ export class SqlReplicas implements ReplicaStorage {
 	};
 
 	updateAckedServerOrder = async (
-		libraryId: string,
 		replicaId: string,
 		serverOrder: number,
 	): Promise<void> => {
 		const max = this.dialect === 'postgres' ? 'GREATEST' : 'MAX';
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		await db
 			.updateTable('ReplicaInfo')
 			.set(
@@ -146,11 +135,10 @@ export class SqlReplicas implements ReplicaStorage {
 	};
 
 	updateAcknowledgedLogicalTime = async (
-		libraryId: string,
 		replicaId: string,
 		timestamp: string,
 	): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		await db
 			.updateTable('ReplicaInfo')
 			.set({ ackedLogicalTime: timestamp })
@@ -158,8 +146,8 @@ export class SqlReplicas implements ReplicaStorage {
 			.execute();
 	};
 
-	getEarliestAckedServerOrder = async (libraryId: string): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+	getEarliestAckedServerOrder = async (): Promise<number> => {
+		const db = this.db;
 		// gets earliest acked server order of all non-truant replicas.
 		const res = await db
 			.selectFrom('ReplicaInfo')
@@ -171,12 +159,11 @@ export class SqlReplicas implements ReplicaStorage {
 	};
 
 	acknowledgeOperation = async (
-		libraryId: string,
 		replicaId: string,
 		timestamp: string,
 	): Promise<void> => {
 		if (!timestamp) return;
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		// when acking an operation, we also set the replica's server order
 		// to that operation's server order, if it's greater.
 		const max = this.dialect === 'postgres' ? 'GREATEST' : 'MAX';
@@ -201,10 +188,9 @@ export class SqlReplicas implements ReplicaStorage {
 	};
 
 	getGlobalAck = async (
-		libraryId: string,
 		onlineReplicaIds?: string[] | undefined,
 	): Promise<string | null> => {
-		const nonTruant = await this.getAll(libraryId, { omitTruant: true });
+		const nonTruant = await this.getAll({ omitTruant: true });
 		if (nonTruant.length === 0) return null;
 		const globalAckEligible = nonTruant.filter(
 			(replica) => replica.type < 2 || onlineReplicaIds?.includes(replica.id),
@@ -219,19 +205,16 @@ export class SqlReplicas implements ReplicaStorage {
 			null as string | null,
 		);
 	};
-	delete = async (libraryId: string, replicaId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+	delete = async (replicaId: string): Promise<void> => {
+		const db = this.db;
 		await db.deleteFrom('ReplicaInfo').where('id', '=', replicaId).execute();
 	};
-	deleteAll = async (libraryId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+	deleteAll = async (): Promise<void> => {
+		const db = this.db;
 		await db.deleteFrom('ReplicaInfo').execute();
 	};
-	deleteAllForUser = async (
-		libraryId: string,
-		userId: string,
-	): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
+	deleteAllForUser = async (userId: string): Promise<void> => {
+		const db = this.db;
 		await db.deleteFrom('ReplicaInfo').where('clientId', '=', userId).execute();
 	};
 }

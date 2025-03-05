@@ -4,11 +4,11 @@ import {
 	ServerMessage,
 } from '@verdant-web/common';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
+import { Context } from '../context/context.js';
 import { Heartbeat } from './Heartbeat.js';
 import { PresenceManager } from './PresenceManager.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
-import { Context } from '../context/context.js';
 
 export class WebSocketSync
 	extends EventSubscriber<SyncTransportEvents>
@@ -34,7 +34,7 @@ export class WebSocketSync
 	private heartbeat = new Heartbeat();
 
 	private reconnectScheduler = new BackoffScheduler(
-		new Backoff(60 * 1000, 1.5),
+		new Backoff(2_000, 60_000, 1.5),
 	);
 
 	constructor({
@@ -77,7 +77,6 @@ export class WebSocketSync
 		}
 		this.ctx.log('debug', 'Sync connected');
 		this.onOnlineChange(true);
-		this.reconnectScheduler.reset();
 	};
 
 	private onOnlineChange = async (online: boolean) => {
@@ -106,6 +105,7 @@ export class WebSocketSync
 	};
 
 	private onMessage = async (event: MessageEvent) => {
+		this.reconnectScheduler.reset();
 		if (this._ignoreIncoming) {
 			this.ctx.log(
 				'warn',

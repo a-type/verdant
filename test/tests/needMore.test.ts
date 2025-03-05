@@ -4,7 +4,8 @@ import { createTestFile } from '../lib/createTestFile.js';
 import { waitForCondition, waitForFileUpload } from '../lib/waits.js';
 
 const ctx = createTestContext({
-	// serverLog: true,
+	serverLog: true,
+	testLog: true,
 });
 
 it('supports the server requesting more history if it has lost data', async () => {
@@ -15,7 +16,7 @@ it('supports the server requesting more history if it has lost data', async () =
 	const client = await ctx.createTestClient({
 		library: 'need-more',
 		user: 'A',
-		// logId: 'A',
+		logId: 'A',
 	});
 
 	client.sync.start();
@@ -25,24 +26,31 @@ it('supports the server requesting more history if it has lost data', async () =
 		id: 'a',
 		content: 'A',
 	});
+	ctx.log('Created item A');
 
 	// including files
 	const file = createTestFile();
 	itemA.set('image', file);
 	const image = itemA.get('image')!;
+	ctx.log('Set image on item A');
 
-	await waitForFileUpload(image);
+	await client.entities.flushAllBatches();
+	ctx.log('Flushed changes');
+
+	await waitForFileUpload(image, 5_000);
 
 	client.sync.stop();
 
-	const fileData = await ctx.server.server.getFileData('need-more', image.id);
+	const library = await ctx.server.core.get('need-more');
+	const fileData = await library.getFileInfo(image.id);
 	expect(fileData).not.toBeNull();
 
-	await ctx.server.server.evictLibrary('need-more');
+	await ctx.server.core.evict('need-more');
 
 	await waitForCondition(
 		async () => {
-			return (await ctx.server.server.getLibraryInfo('need-more')) === null;
+			const lib = await ctx.server.core.get('need-more');
+			return (await lib.getInfo()) === null;
 		},
 		5000,
 		() => {
@@ -73,7 +81,8 @@ it('supports the server requesting more history if it has lost data', async () =
 
 	await waitForCondition(
 		async () => {
-			return !!(await ctx.server.server.getLibraryInfo('need-more'));
+			const lib = await ctx.server.core.get('need-more');
+			return !!(await lib.getInfo());
 		},
 		5000,
 		'library restored',

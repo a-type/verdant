@@ -16,6 +16,21 @@
 			"development": "./src/storage/index.ts",
 			"import": "./dist/esm/storage/index.js",
 			"types": "./dist/esm/storage/index.d.ts"
+		},
+		"./internals": {
+			"development": "./src/internals.ts",
+			"import": "./dist/esm/internals.js",
+			"types": "./dist/esm/internals.d.ts"
+		},
+		"./node": {
+			"development": "./src/adapters/node/index.ts",
+			"import": "./dist/esm/adapters/node/index.js",
+			"types": "./dist/esm/adapters/node/index.d.ts"
+		},
+		"./hono": {
+			"development": "./src/adapters/hono/index.ts",
+			"import": "./dist/esm/adapters/hono/index.js",
+			"types": "./dist/esm/adapters/hono/index.d.ts"
 		}
 	},
 	"publishConfig": {
@@ -27,6 +42,10 @@
 			"./storage": {
 				"import": "./dist/esm/storage/index.js",
 				"types": "./dist/esm/storage/index.d.ts"
+			},
+			"./internals": {
+				"import": "./dist/esm/internals.js",
+				"types": "./dist/esm/internals.d.ts"
 			}
 		},
 		"access": "public"
@@ -44,6 +63,18 @@
 		"ci:test:unit": "vitest run",
 		"perf": "pnpm run build && cross-env VERDANT_LOG=false node ./perf/perf.mjs"
 	},
+	"peerDependencies": {
+		"hono": "^4.7.2",
+		"@hono/node-server": "^1.13.8"
+	},
+	"peerDependenciesMeta": {
+		"hono": {
+			"optional": true
+		},
+		"@hono/node-server": {
+			"optional": true
+		}
+	},
 	"dependencies": {
 		"@a-type/kysely": "^1.0.2",
 		"@fastify/busboy": "^3.1.1",
@@ -52,7 +83,7 @@
 		"better-sqlite3": "catalog:",
 		"busboy": "^1.6.0",
 		"jsonwebtoken": "^8.5.1",
-		"kysely": "0.27.5",
+		"kysely": "catalog:",
 		"kysely-plugin-serialize": "^0.5.7",
 		"minimist": "^1.2.8",
 		"ws": "^8.9.0"
@@ -66,6 +97,9 @@
 		"@types/ws": "^8.5.3",
 		"cross-env": "7.0.3",
 		"typescript": "^5.4.2",
-		"vitest": "^2.0.5"
+		"vitest": "^2.0.5",
+		"hono": "^4.7.2",
+		"@hono/node-server": "^1.13.8",
+		"@cloudflare/workers-types": "^4.20250224.0"
 	}
 }

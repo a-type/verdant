@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig((c) => ({
+export default defineConfig({
 	test: {
 		// environment: process.env.SQLITE ? 'node' : 'jsdom',
 		environment: 'jsdom',
@@ -13,4 +13,4 @@ export default defineConfig((c) => ({
 	resolve: {
 		conditions: ['development', 'default'],
 	},
-}));
+});

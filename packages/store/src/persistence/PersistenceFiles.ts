@@ -66,6 +66,7 @@ export class PersistenceFiles {
 		file.remote = false;
 
 		// store in persistence db
+		this.context.log('debug', 'Adding file to persistence', file);
 		await this.db.add(file);
 		// fire event for sync to pick up and upload the file
 		this.context.internalEvents.emit('fileAdded', file);

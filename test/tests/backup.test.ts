@@ -64,7 +64,7 @@ it('can backup to file', async () => {
 	const file = bBananas.current!.get('image')!;
 	await waitForFileLoaded(file);
 
-	await waitForMockCall(onFileSaved, 2);
+	await waitForMockCall(onFileSaved, 2, 'file saved');
 
 	ctx.log('Backing up from B');
 	const backupFile = await createClientBackup(clientB as any);
