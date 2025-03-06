@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 0.1.6
+
+### Patch Changes
+
+- 35cd259: Make node ID plugin safer
+
 ## 0.1.5
 
 ### Patch Changes
