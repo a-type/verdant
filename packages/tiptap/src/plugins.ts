@@ -11,13 +11,21 @@ const NodeIdPlugin = new Plugin({
 		// force replacement of any duplicates, too
 		const usedIds = new Set<string>();
 		newState.doc.descendants((node, pos) => {
-			if (!node.isText && (!node.attrs.id || usedIds.has(node.attrs.id))) {
+			if (
+				!node.isText &&
+				(!node.attrs.id || usedIds.has(node.attrs.id)) &&
+				node !== newState.doc
+			) {
 				const nodeId = id();
-				tr.setNodeMarkup(pos, null, {
-					...node.attrs,
-					id: nodeId,
-				});
-				usedIds.add(nodeId);
+				try {
+					tr.setNodeMarkup(pos, null, {
+						...node.attrs,
+						id: nodeId,
+					});
+					usedIds.add(nodeId);
+				} catch (err) {
+					console.error('Error assigning node ID', err);
+				}
 			} else if (node.attrs?.id) {
 				usedIds.add(node.attrs.id);
 			}

@@ -79,6 +79,9 @@ export function useSyncedEditor<
 				update(ctx.editor);
 				extraOptions?.onUpdate?.(ctx);
 			},
+			onContentError(props) {
+				console.error('Content error:', props.error);
+			},
 		},
 		editorDependencies,
 	);
