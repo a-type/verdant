@@ -157,7 +157,9 @@ export const VerdantExtension = Extension.create<
 				'VerdantOidExtension requires a nullDocumentDefault for a nullable document field',
 			);
 		}
-
+	},
+	onCreate() {
+		const { parent, fieldName, nullDocumentDefault } = this.options;
 		// subscribe to field changes
 		let unsubscribe: (() => void) | null = null;
 		const updateFromField = (field: ObjectEntity<any, any> | null) => {

@@ -345,3 +345,56 @@ it('should support TipTap undo and redo', async () => {
 		text: null,
 	});
 });
+
+it('should initialize from an existing document', async () => {
+	const testPost = await client.posts.put({
+		requiredBody: {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [
+						{
+							type: 'text',
+							text: 'Hello, world!',
+						},
+					],
+				},
+			],
+		},
+	});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const TipTapTest = () => {
+		const editor = useSyncedEditor(testPost, 'requiredBody', {
+			editorOptions: {
+				extensions: [StarterKit.configure({ history: false })],
+			},
+		});
+
+		return (
+			<div>
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+			</div>
+		);
+	};
+
+	const screen = await renderWithProvider(<TipTapTest />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+
+	const editor = screen.getByTestId('editor').getByRole('textbox');
+	await expect.element(editor).toHaveTextContent('');
+	await expect.element(editor).toHaveTextContent('Hello, world!');
+});
