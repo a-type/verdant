@@ -1,12 +1,8 @@
 import { DocumentBaseline } from './baseline.js';
 import { FileRef, isFileRef } from './files.js';
 import {
-	areOidsRelated,
 	assignOid,
 	assignOidsToAllSubObjects,
-	createRef,
-	createSubOid,
-	ensureOid,
 	getOid,
 	getOidRoot,
 	maybeGetOid,
@@ -14,7 +10,6 @@ import {
 	ObjectIdentifier,
 	removeOid,
 } from './oids.js';
-import { isOidKey } from './oidsLegacy.js';
 import { compareRefs, isRef } from './refs.js';
 import { assert, cloneDeep, findLastIndex, isObject } from './utils.js';
 
@@ -159,371 +154,6 @@ export type Operation = {
 	authz?: string;
 };
 
-function isDiffableObject(val: any) {
-	return isObject(val) && !isRef(val);
-}
-
-function compareNonDiffable(a: any, b: any) {
-	if (a === b) return true;
-	if (isRef(a) && isRef(b)) return compareRefs(a, b);
-	return false;
-}
-
-export function diffToPatches<T extends { [key: string]: any } | any[]>(
-	from: T,
-	to: T,
-	getNow: () => string,
-	createSubId?: () => string,
-	patches: Operation[] = [],
-	options?: {
-		/**
-		 * If an object is merged with another and the new one does not
-		 * have an OID assigned, assume it is the same identity as previous
-		 */
-		mergeUnknownObjects?: boolean;
-		/**
-		 * If an incoming value is not assigned on the new object, use the previous value.
-		 * If false, undefined properties will erase the previous value.
-		 */
-		defaultUndefined?: boolean;
-		/**
-		 * Authorization to apply to all created operations
-		 */
-		authz?: string;
-	},
-): Operation[] {
-	const authz = options?.authz;
-	const oid = getOid(from);
-
-	// FIXME: allocating this function inline seems wasteful.
-	function diffItems(
-		key: string | number,
-		value: any,
-		oldValue: any,
-		isList: boolean,
-	) {
-		if (!isDiffableObject(value)) {
-			// for primitive fields, we can use plain sets and
-			// do not need to recurse, of course
-			if (!compareNonDiffable(value, oldValue)) {
-				if (isList) {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid,
-								timestamp: getNow(),
-								data: {
-									op: 'list-set',
-									index: key as number,
-									value,
-								},
-							},
-							authz,
-						),
-					);
-				} else {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid,
-								timestamp: getNow(),
-								data: {
-									op: 'set',
-									name: key,
-									value,
-								},
-							},
-							authz,
-						),
-					);
-				}
-			}
-		} else {
-			const oldValueOid = maybeGetOid(oldValue);
-			let valueOid = maybeGetOid(value);
-			// the user supplied an object which was already assigned an OID,
-			// but that OID is from a separate entity: this object must
-			// be cloned to a new identity.
-			if (valueOid && !areOidsRelated(oid, valueOid)) {
-				value = cloneDeep(value, false);
-				valueOid = createSubOid(oid, createSubId);
-				assignOid(value, valueOid);
-			} else if (!options?.mergeUnknownObjects) {
-				valueOid = ensureOid(value, oid, createSubId);
-			} else {
-				// if merge unknown objects is requested, we copy the previous value's oid
-				// to any mirrored new value if it doesn't have one assigned already.
-				if (!valueOid && oldValueOid) {
-					assignOid(value, oldValueOid);
-					valueOid = oldValueOid;
-				} else {
-					valueOid = ensureOid(value, oid, createSubId);
-				}
-			}
-			assert(
-				!!valueOid,
-				'Error: no value OID was resolved during diff. This is a bug in Verdant.',
-			);
-			assert(
-				areOidsRelated(oid, valueOid),
-				`Error: value OID ${valueOid} is not related to parent OID ${oid}. This is a bug in Verdant.`,
-			);
-
-			if (oldValue === undefined || valueOid !== oldValueOid) {
-				// first case: previous value exists but the OIDs are different,
-				// meaning the object identity has changed
-				// we add the whole new object and also update the reference on this
-				// key of the parent to point to the new object
-				initialToPatches(value, valueOid, getNow, createSubId, patches);
-				patches.push(
-					addAuthzToOp(
-						{
-							oid,
-							timestamp: getNow(),
-							data: {
-								op: 'set',
-								name: key,
-								value: createRef(valueOid),
-							},
-						},
-						authz,
-					),
-				);
-				// if there was an old value, we need to delete it altogether.
-				if (oldValueOid !== undefined) {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid: oldValueOid,
-								timestamp: getNow(),
-								data: {
-									op: 'delete',
-								},
-							},
-							authz,
-						),
-					);
-				}
-			} else {
-				// third case: OIDs are the same, meaning the identity is the same,
-				// and we must diff the objects
-				diffToPatches(oldValue, value, getNow, createSubId, patches, options);
-			}
-		}
-	}
-
-	if (Array.isArray(from) && Array.isArray(to)) {
-		// diffing is more naive than native array operations.
-		// we can only look at each element and decide if it should
-		// be replaced or removed - no moves or pushes, etc.
-		for (let i = 0; i < to.length; i++) {
-			const value = to[i];
-			const oldValue = from[i];
-			diffItems(i, value, oldValue, true);
-		}
-		// remove any remaining items at the end of the array
-		const deletedItemsAtEnd = from.length - to.length;
-		if (deletedItemsAtEnd > 0) {
-			// if sub-items were objects, we need to delete them all
-			for (let i = to.length; i < from.length; i++) {
-				const value = from[i];
-				const valueOid = maybeGetOid(value);
-				if (valueOid) {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid: valueOid,
-								timestamp: getNow(),
-								data: {
-									op: 'delete',
-								},
-							},
-							authz,
-						),
-					);
-				}
-			}
-			// push the list-delete for the deleted items
-			patches.push(
-				addAuthzToOp(
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-delete',
-							index: to.length,
-							count: deletedItemsAtEnd,
-						},
-					},
-					authz,
-				),
-			);
-		}
-	} else if (Array.isArray(from) || Array.isArray(to)) {
-		throw new Error('Cannot diff an array with an object');
-	} else if (isDiffableObject(from) && isDiffableObject(to)) {
-		const oldKeys = new Set(Object.keys(from));
-		for (const [key, value] of Object.entries(to)) {
-			if (value === undefined && options?.defaultUndefined) continue;
-
-			oldKeys.delete(key);
-
-			if (isOidKey(key)) continue;
-
-			const oldValue = from[key];
-
-			diffItems(key, value, oldValue, false);
-		}
-
-		// this set now only contains keys which were not in the new object
-		if (!options?.defaultUndefined) {
-			for (const key of oldKeys) {
-				if (isOidKey(key)) continue;
-				// push the delete for the property
-				patches.push(
-					addAuthzToOp(
-						{
-							oid,
-							timestamp: getNow(),
-							data: {
-								op: 'remove',
-								name: key,
-							},
-						},
-						authz,
-					),
-				);
-			}
-		}
-	}
-
-	return patches;
-}
-
-export function shallowDiffToPatches(
-	from: any,
-	to: any,
-	getNow: () => string,
-	patches: Operation[] = [],
-	options?: { authz?: string },
-) {
-	const oid = getOid(from);
-	const authz = options?.authz;
-
-	function diffItems(
-		key: string | number,
-		value: any,
-		oldValue: any,
-		isList: boolean,
-	) {
-		if (!isDiffableObject(value)) {
-			// for primitive fields, we can use plain sets and
-			// do not need to recurse, of course
-			if (!compareNonDiffable(value, oldValue)) {
-				if (isList) {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid,
-								timestamp: getNow(),
-								data: {
-									op: 'list-set',
-									index: key as number,
-									value,
-								},
-							},
-							authz,
-						),
-					);
-				} else {
-					patches.push(
-						addAuthzToOp(
-							{
-								oid,
-								timestamp: getNow(),
-								data: {
-									op: 'set',
-									name: key,
-									value,
-								},
-							},
-							authz,
-						),
-					);
-				}
-			}
-		} else {
-			throw new Error(
-				'Shallow diff was given a nested object. This is an error in verdant!',
-			);
-		}
-	}
-
-	if (Array.isArray(from) && Array.isArray(to)) {
-		// diffing is more naive than native array operations.
-		// we can only look at each element and decide if it should
-		// be replaced or removed - no moves or pushes, etc.
-		for (let i = 0; i < to.length; i++) {
-			const value = to[i];
-			const oldValue = from[i];
-			diffItems(i, value, oldValue, true);
-		}
-		// remove any remaining items at the end of the array
-		const deletedItemsAtEnd = from.length - to.length;
-		if (deletedItemsAtEnd > 0) {
-			// push the list-delete for the deleted items
-			patches.push(
-				addAuthzToOp(
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-delete',
-							index: to.length,
-							count: deletedItemsAtEnd,
-						},
-					},
-					authz,
-				),
-			);
-		}
-	} else if (Array.isArray(from) || Array.isArray(to)) {
-		throw new Error('Cannot diff an array with an object');
-	} else if (isDiffableObject(from) && isDiffableObject(to)) {
-		const oldKeys = new Set(Object.keys(from));
-		for (const [key, value] of Object.entries(to)) {
-			oldKeys.delete(key);
-
-			if (isOidKey(key)) continue;
-
-			const oldValue = from[key];
-
-			diffItems(key, value, oldValue, false);
-		}
-
-		// this set now only contains keys which were not in the new object
-		for (const key of oldKeys) {
-			if (isOidKey(key)) continue;
-			// push the delete for the property
-			patches.push(
-				addAuthzToOp(
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'remove',
-							name: key,
-						},
-					},
-					authz,
-				),
-			);
-		}
-	}
-
-	return patches;
-}
-
 /**
  * Takes a basic object and constructs a patch list to create it and
  * all of its nested objects.
@@ -575,7 +205,7 @@ export function shallowInitialToPatches(
 
 // saves a bit of network traffic by not attaching authz
 // key at all if not present
-function addAuthzToOp(op: Operation, authz?: string) {
+export function addAuthzToOp(op: Operation, authz?: string) {
 	if (authz) {
 		op.authz = authz;
 	}
@@ -875,6 +505,14 @@ export function substituteFirstLevelObjectsWithRefs<
 	if (Array.isArray(base)) {
 		for (let i = 0; i < base.length; i++) {
 			const item = base[i];
+			// special handling of file refs, which are treated like primitives
+			if (isFileRef(item)) {
+				continue;
+			}
+			assert(
+				!isRef(item),
+				'An object with refs was passed to substituteFirstLevelObjectsWithRefs, this is not allowed',
+			);
 			if (isObject(item)) {
 				const oid = getOid(item);
 				base[i] = {
@@ -886,6 +524,14 @@ export function substituteFirstLevelObjectsWithRefs<
 		}
 	} else {
 		for (const [key, value] of Object.entries(base)) {
+			// special handling of file refs, which are treated like primitives
+			if (isFileRef(value)) {
+				continue;
+			}
+			assert(
+				!isRef(value),
+				'An object with refs was passed to substituteFirstLevelObjectsWithRefs, this is not allowed',
+			);
 			if (isObject(value)) {
 				base[key] = {
 					'@@type': 'ref',
@@ -898,6 +544,26 @@ export function substituteFirstLevelObjectsWithRefs<
 	}
 
 	return refObjects;
+}
+
+/**
+ * Takes a snapshot with applied OIDs and deconstructs it entirely
+ * into individual objects with ref fields. Populates the supplied
+ * map with the final objects.
+ */
+export function deconstructSnapshotToRefs(
+	snapshot: any,
+	refTargets: Map<ObjectIdentifier, any>,
+) {
+	if (typeof snapshot !== 'object') {
+		return;
+	}
+	refTargets.set(getOid(snapshot), snapshot);
+	const thisLevelOfTargets = substituteFirstLevelObjectsWithRefs(snapshot);
+	for (const [oid, obj] of thisLevelOfTargets.entries()) {
+		refTargets.set(oid, obj);
+		deconstructSnapshotToRefs(obj, refTargets);
+	}
 }
 
 export function operationSupersedes(op: Operation): PropertyName | boolean {

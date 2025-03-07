@@ -1,4 +1,5 @@
 import {
+	AuthorizationKey,
 	CollectionFilter,
 	Migration,
 	MigrationEngine,
@@ -11,10 +12,9 @@ import {
 	diffToPatches,
 	getOid,
 	removeOidPropertiesFromAllSubObjects,
-	AuthorizationKey,
 } from '@verdant-web/common';
-import { OpenDocumentDbContext } from './types.js';
 import { PersistenceDocumentDb, PersistenceNamespace } from '../interfaces.js';
+import { OpenDocumentDbContext } from './types.js';
 
 function getMigrationMutations({
 	migration,
@@ -184,7 +184,14 @@ export async function getMigrationEngine({
 							undefined,
 							[],
 							{
+								// incoming unknown objects are assumed to be the same
+								// as any pre-existing object.
 								mergeUnknownObjects: true,
+								// if a field is undefined in the new value, it should be
+								// erased. this is the only way to allow users to remove
+								// entries in maps during migrations. it is a little
+								// dangerous for other types, though.
+								defaultUndefined: false,
 								authz,
 							},
 						);

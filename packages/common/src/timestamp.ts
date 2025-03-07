@@ -1,5 +1,4 @@
 import cuid from 'cuid';
-import { v4 } from 'uuid';
 
 export interface TimestampProvider {
 	now(version: number): string;
@@ -37,6 +36,10 @@ export class NaiveTimestampProvider implements TimestampProvider {
 	getWallClockTime = (timestamp: string) => {
 		return parseInt(timestamp.slice(VERSION_BLOCK_LENGTH).split('-')[0], 10);
 	};
+
+	reset() {
+		this.counter = 0;
+	}
 }
 
 export class HybridLogicalClockTimestampProvider implements TimestampProvider {

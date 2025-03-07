@@ -9,7 +9,10 @@ const clientSqliteDir = path.join(dirname, '..', '.client-sqlite');
 const files = await fs.readdir(clientSqliteDir);
 for (const file of files) {
 	if (file === '.gitkeep') continue;
-	await fs.unlink(path.join(clientSqliteDir, file));
+	try {
+		await fs.unlink(path.join(clientSqliteDir, file));
+	} finally {
+	}
 }
 
 // remove all .sqlite, .sqlite-shm, and .sqlite-wal files from root directory
@@ -21,6 +24,9 @@ for (const file of rootFiles) {
 		file.endsWith('.sqlite-shm') ||
 		file.endsWith('.sqlite-wal')
 	) {
-		await fs.unlink(path.join(rootDir, file));
+		try {
+			await fs.unlink(path.join(rootDir, file));
+		} finally {
+		}
 	}
 }

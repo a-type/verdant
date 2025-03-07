@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { createFileRef, FileRef } from './files.js';
+import { FileRef } from './files.js';
 import {
 	assignOid,
 	assignOidsToAllSubObjects,
 	createRef,
 	getOid,
+	ObjectIdentifier,
 } from './oids.js';
 import {
-	applyPatch,
 	applyOperations,
-	diffToPatches,
+	applyPatch,
+	deconstructSnapshotToRefs,
 	initialToPatches,
-	substituteRefsWithObjects,
 	ObjectRef,
+	substituteRefsWithObjects,
 } from './operation.js';
 
 function createClock(init = 0) {
@@ -26,212 +27,7 @@ function createClock(init = 0) {
 	return clock;
 }
 
-describe('creating diff patch operations', () => {
-	describe('on flat objects', () => {
-		it('generates and applies set and remove operations', () => {
-			const from = { foo: 'bar', baz: 'qux', zing: 1 };
-			assignOid(from, 'test/a');
-			const to = { foo: 'bar', baz: 'pop' };
-			assignOid(to, 'test/a');
-			const ops = diffToPatches(from, to, createClock());
-			expect(ops).toMatchInlineSnapshot(`
-				[
-				  {
-				    "data": {
-				      "name": "baz",
-				      "op": "set",
-				      "value": "pop",
-				    },
-				    "oid": "test/a",
-				    "timestamp": "0",
-				  },
-				  {
-				    "data": {
-				      "name": "zing",
-				      "op": "remove",
-				    },
-				    "oid": "test/a",
-				    "timestamp": "1",
-				  },
-				]
-			`);
-			const result = applyOperations(from, ops);
-			expect(result).toEqual(to);
-		});
-	});
-	describe('on nested objects', () => {
-		it('replaces whole nested objects', () => {
-			const from = assignOid(
-				{
-					foo: 'bar',
-					baz: assignOid({ qux: 'corge' }, 'test/a:0'),
-				},
-				'test/a',
-			);
-			const to = assignOid(
-				{
-					foo: 'bar',
-					baz: assignOid({ qux: 'grault' }, 'test/a:1'),
-				},
-				'test/a',
-			);
-			const patches = diffToPatches(from, to, createClock());
-			expect(patches).toMatchInlineSnapshot(`
-				[
-				  {
-				    "data": {
-				      "op": "initialize",
-				      "value": {
-				        "qux": "grault",
-				      },
-				    },
-				    "oid": "test/a:1",
-				    "timestamp": "0",
-				  },
-				  {
-				    "data": {
-				      "name": "baz",
-				      "op": "set",
-				      "value": {
-				        "@@type": "ref",
-				        "id": "test/a:1",
-				      },
-				    },
-				    "oid": "test/a",
-				    "timestamp": "1",
-				  },
-				  {
-				    "data": {
-				      "op": "delete",
-				    },
-				    "oid": "test/a:0",
-				    "timestamp": "2",
-				  },
-				]
-			`);
-		});
-		it('replaces whole nested objects with different ids even if fields are the same', () => {
-			const from = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(from, 'test/a');
-			assignOid(from.baz, 'test/a:0');
-			const to = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(to, 'test/a');
-			assignOid(to.baz, 'test/a:1');
-			const patches = diffToPatches(from, to, createClock());
-			expect(patches).toMatchInlineSnapshot(`
-				[
-				  {
-				    "data": {
-				      "op": "initialize",
-				      "value": {
-				        "qux": "corge",
-				      },
-				    },
-				    "oid": "test/a:1",
-				    "timestamp": "0",
-				  },
-				  {
-				    "data": {
-				      "name": "baz",
-				      "op": "set",
-				      "value": {
-				        "@@type": "ref",
-				        "id": "test/a:1",
-				      },
-				    },
-				    "oid": "test/a",
-				    "timestamp": "1",
-				  },
-				  {
-				    "data": {
-				      "op": "delete",
-				    },
-				    "oid": "test/a:0",
-				    "timestamp": "2",
-				  },
-				]
-			`);
-		});
-		it('does not replace objects with the same identity and same fields', () => {
-			const from = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(from, 'test/a');
-			assignOid(from.baz, 'test/a:0');
-			const to = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(to, 'test/a');
-			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock());
-			expect(patches).toEqual([]);
-		});
-		it('patches sub-objects with same identity', () => {
-			const from = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(from, 'test/a');
-			assignOid(from.baz, 'test/a:0');
-			const to = {
-				foo: 'bar',
-				baz: { qux: 'fig' },
-			};
-			assignOid(to, 'test/a');
-			assignOid(to.baz, 'test/a:0');
-			const patches = diffToPatches(from, to, createClock());
-			expect(patches).toMatchInlineSnapshot(`
-				[
-				  {
-				    "data": {
-				      "name": "qux",
-				      "op": "set",
-				      "value": "fig",
-				    },
-				    "oid": "test/a:0",
-				    "timestamp": "0",
-				  },
-				]
-			`);
-		});
-		it('retains keys which are undefined in new object if defaultUndefined is set', () => {
-			const from = {
-				foo: 'bar',
-				baz: { qux: 'corge' },
-			};
-			assignOid(from, 'test/a');
-			assignOid(from.baz, 'test/a:0');
-			const to = {
-				foo: 'bip',
-			};
-			assignOid(to, 'test/a');
-			const patches = diffToPatches(from, to, createClock(), undefined, [], {
-				defaultUndefined: true,
-				mergeUnknownObjects: true,
-			});
-			expect(patches).toMatchInlineSnapshot(`
-				[
-				  {
-				    "data": {
-				      "name": "foo",
-				      "op": "set",
-				      "value": "bip",
-				    },
-				    "oid": "test/a",
-				    "timestamp": "0",
-				  },
-				]
-			`);
-		});
-	});
+describe('applying operations', () => {
 	describe('on lists of primitives', () => {
 		it('pushes items', async () => {
 			expect(
@@ -247,422 +43,83 @@ describe('creating diff patch operations', () => {
 				]),
 			).toEqual(assignOid(['foo', 'bar', 'baz'], 'test/a'));
 		});
-		it.todo('sets items');
-		it.todo('inserts items');
-		it.todo('removes items by index');
-		it.todo('removes items by value');
-		it.todo('moves items by index');
-		it.todo('moves items by value');
-	});
-	describe.todo('on lists of objects', () => {
-		it.todo('pushes items');
-		it.todo('moves objects by identity');
-		it.todo('removes objects by identity');
+		it('sets items', () => {
+			expect(
+				applyOperations(assignOid(['foo', 'bar'], 'test/a'), [
+					{
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-set',
+							index: 1,
+							value: 'baz',
+						},
+					},
+				]),
+			).toEqual(assignOid(['foo', 'baz'], 'test/a'));
+		});
+		it('inserts items', () => {
+			expect(
+				applyOperations(assignOid(['foo', 'bar'], 'test/a'), [
+					{
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-insert',
+							index: 1,
+							values: ['baz'],
+						},
+					},
+				]),
+			).toEqual(assignOid(['foo', 'baz', 'bar'], 'test/a'));
+		});
+		it('removes items by index', () => {
+			expect(
+				applyOperations(assignOid(['foo', 'bar'], 'test/a'), [
+					{
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-delete',
+							index: 1,
+							count: 1,
+						},
+					},
+				]),
+			).toEqual(assignOid(['foo'], 'test/a'));
+		});
+		it('removes items by value', () => {
+			expect(
+				applyOperations(assignOid(['bar', 'foo', 'bar'], 'test/a'), [
+					{
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-remove',
+							value: 'bar',
+						},
+					},
+				]),
+			).toEqual(assignOid(['foo'], 'test/a'));
+		});
+		it('moves items by index', () => {
+			expect(
+				applyOperations(assignOid(['foo', 'bar', 'baz'], 'test/a'), [
+					{
+						oid: 'test/a',
+						timestamp: 'meh',
+						data: {
+							op: 'list-move-by-index',
+							from: 2,
+							to: 0,
+						},
+					},
+				]),
+			).toEqual(assignOid(['baz', 'foo', 'bar'], 'test/a'));
+		});
 	});
 	describe.todo('on lists of lists', () => {
 		it.todo('rejects operations by value or identity');
-	});
-	it('should work for complex nested arrays and objects', () => {
-		const from = {
-			foo: {
-				bar: [1, 2, 3],
-			},
-			baz: [
-				{
-					corge: true,
-				},
-			],
-		};
-		assignOid(from, 'test/a');
-		assignOid(from.foo, 'test/a:1');
-		assignOid(from.foo.bar, 'test/a:2');
-		assignOid(from.baz, 'test/a:3');
-		assignOid(from.baz[0], 'test/a:4');
-
-		const to = {
-			foo: {
-				bar: [1, 2],
-				bop: [0],
-			},
-			baz: [
-				{
-					corge: false,
-				},
-				{
-					corge: false,
-				},
-			],
-		};
-		assignOid(to, 'test/a');
-		assignOid(to.foo, 'test/a:1');
-		assignOid(to.foo.bar, 'test/a:2');
-		assignOid(to.foo.bop, 'test/a:6');
-		assignOid(to.baz, 'test/a:3');
-		assignOid(to.baz[0], 'test/a:4');
-		assignOid(to.baz[1], 'test/a:5');
-		expect(diffToPatches(from, to, createClock())).toMatchInlineSnapshot(`
-			[
-			  {
-			    "data": {
-			      "count": 1,
-			      "index": 2,
-			      "op": "list-delete",
-			    },
-			    "oid": "test/a:2",
-			    "timestamp": "0",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": [
-			        0,
-			      ],
-			    },
-			    "oid": "test/a:6",
-			    "timestamp": "1",
-			  },
-			  {
-			    "data": {
-			      "name": "bop",
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:6",
-			      },
-			    },
-			    "oid": "test/a:1",
-			    "timestamp": "2",
-			  },
-			  {
-			    "data": {
-			      "name": "corge",
-			      "op": "set",
-			      "value": false,
-			    },
-			    "oid": "test/a:4",
-			    "timestamp": "3",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": {
-			        "corge": false,
-			      },
-			    },
-			    "oid": "test/a:5",
-			    "timestamp": "4",
-			  },
-			  {
-			    "data": {
-			      "name": 1,
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:5",
-			      },
-			    },
-			    "oid": "test/a:3",
-			    "timestamp": "5",
-			  },
-			]
-		`);
-	});
-
-	it('should try to merge unknown objects if specified to do so', () => {
-		const from = {
-			foo: {
-				bar: [1, 2, 3],
-			},
-			baz: [
-				{
-					corge: true,
-				},
-			],
-		};
-		assignOid(from, 'test/a');
-		assignOidsToAllSubObjects(from, createClock());
-
-		const to = {
-			foo: {
-				bar: [1, 2],
-				bop: [0],
-			},
-			baz: [
-				{
-					corge: false,
-				},
-				{
-					corge: false,
-				},
-			],
-		};
-		expect(
-			diffToPatches(from, to, createClock(), createClock(5), [], {
-				mergeUnknownObjects: true,
-			}),
-		).toMatchInlineSnapshot(`
-			[
-			  {
-			    "data": {
-			      "count": 1,
-			      "index": 2,
-			      "op": "list-delete",
-			    },
-			    "oid": "test/a:1",
-			    "timestamp": "0",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": [
-			        0,
-			      ],
-			    },
-			    "oid": "test/a:5",
-			    "timestamp": "1",
-			  },
-			  {
-			    "data": {
-			      "name": "bop",
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:5",
-			      },
-			    },
-			    "oid": "test/a:0",
-			    "timestamp": "2",
-			  },
-			  {
-			    "data": {
-			      "name": "corge",
-			      "op": "set",
-			      "value": false,
-			    },
-			    "oid": "test/a:3",
-			    "timestamp": "3",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": {
-			        "corge": false,
-			      },
-			    },
-			    "oid": "test/a:6",
-			    "timestamp": "4",
-			  },
-			  {
-			    "data": {
-			      "name": 1,
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:6",
-			      },
-			    },
-			    "oid": "test/a:2",
-			    "timestamp": "5",
-			  },
-			]
-		`);
-	});
-
-	it('should not diff file refs', () => {
-		const from = {
-			foo: {
-				file: createFileRef('abc123'),
-			},
-			bar: [createFileRef('def456'), createFileRef('ghi789')],
-		};
-		assignOid(from, 'test/a');
-		assignOidsToAllSubObjects(from, createClock());
-
-		const to = {
-			foo: {
-				file: createFileRef('abc456'),
-			},
-			bar: [createFileRef('def456')],
-		};
-		expect(
-			diffToPatches(from, to, createClock(), createClock(5), [], {
-				mergeUnknownObjects: true,
-			}),
-		).toMatchInlineSnapshot(`
-			[
-			  {
-			    "data": {
-			      "name": "file",
-			      "op": "set",
-			      "value": {
-			        "@@type": "file",
-			        "id": "abc456",
-			      },
-			    },
-			    "oid": "test/a:0",
-			    "timestamp": "0",
-			  },
-			  {
-			    "data": {
-			      "count": 1,
-			      "index": 1,
-			      "op": "list-delete",
-			    },
-			    "oid": "test/a:1",
-			    "timestamp": "1",
-			  },
-			]
-		`);
-	});
-
-	it('should assign a new OID to objects which had an incompatible existing OID', () => {
-		const from = {
-			foo: {
-				bar: [1, 2, 3],
-			},
-		};
-		assignOid(from, 'test/a');
-		assignOidsToAllSubObjects(from, createClock());
-		const to = {
-			foo: {
-				bar: [1, 2],
-			},
-		};
-		assignOid(to, 'test/a');
-		assignOid(to.foo, 'uff/b');
-		assignOidsToAllSubObjects(to.foo, createClock());
-		expect(
-			diffToPatches(from, to, createClock(), createClock(5), [], {
-				mergeUnknownObjects: true,
-			}),
-		).toMatchInlineSnapshot(`
-			[
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": [
-			        1,
-			        2,
-			      ],
-			    },
-			    "oid": "test/a:6",
-			    "timestamp": "0",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": {
-			        "bar": {
-			          "@@type": "ref",
-			          "id": "test/a:6",
-			        },
-			      },
-			    },
-			    "oid": "test/a:5",
-			    "timestamp": "1",
-			  },
-			  {
-			    "data": {
-			      "name": "foo",
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:5",
-			      },
-			    },
-			    "oid": "test/a",
-			    "timestamp": "2",
-			  },
-			  {
-			    "data": {
-			      "op": "delete",
-			    },
-			    "oid": "test/a:0",
-			    "timestamp": "3",
-			  },
-			]
-		`);
-	});
-
-	// an edge case - if a subobject which contains nested objects changes identity,
-	// this gets written as a new init patch tree - we want to ensure all init subobjects
-	// in that tree have compatible OIDs.
-	it('should assign a new OID to objects which have an incompatible OID when parent identity changes', () => {
-		const from = {
-			bar: [],
-		};
-		assignOid(from, 'test/a');
-		assignOid(from.bar, 'test/random');
-		const to = {
-			bar: [{ baz: 1 }, { baz: 2 }],
-		};
-		assignOid(to, 'test/a');
-		assignOidsToAllSubObjects(to, createClock());
-		assignOid(to.bar[0], 'uff/b');
-		expect(
-			diffToPatches(from, to, createClock(), createClock(5), [], {
-				mergeUnknownObjects: true,
-			}),
-		).toMatchInlineSnapshot(`
-			[
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": {
-			        "baz": 1,
-			      },
-			    },
-			    "oid": "test/a:5",
-			    "timestamp": "0",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": {
-			        "baz": 2,
-			      },
-			    },
-			    "oid": "test/a:2",
-			    "timestamp": "1",
-			  },
-			  {
-			    "data": {
-			      "op": "initialize",
-			      "value": [
-			        {
-			          "@@type": "ref",
-			          "id": "test/a:5",
-			        },
-			        {
-			          "@@type": "ref",
-			          "id": "test/a:2",
-			        },
-			      ],
-			    },
-			    "oid": "test/a:0",
-			    "timestamp": "2",
-			  },
-			  {
-			    "data": {
-			      "name": "bar",
-			      "op": "set",
-			      "value": {
-			        "@@type": "ref",
-			        "id": "test/a:0",
-			      },
-			    },
-			    "oid": "test/a",
-			    "timestamp": "3",
-			  },
-			  {
-			    "data": {
-			      "op": "delete",
-			    },
-			    "oid": "test/random",
-			    "timestamp": "4",
-			  },
-			]
-		`);
 	});
 });
 
@@ -837,6 +294,74 @@ describe('substituting refs with objects', () => {
 	});
 
 	it.todo('substitutes arrays of arrays of objects');
+});
+
+describe('substituting objects with refs', () => {
+	it('deconstructs nested objects and arrays properly', () => {
+		const snapshot = assignOid(
+			{
+				foo: {
+					bar: {
+						baz: [{ corge: 'qux' }, { grault: 'garply' }],
+					},
+					prim: 'hi',
+				},
+				cat: {
+					percol: 'simmi',
+				},
+			},
+			'test/a',
+		);
+		assignOidsToAllSubObjects(snapshot, createClock());
+		const deconstructed = new Map<ObjectIdentifier, any>();
+		deconstructSnapshotToRefs(snapshot, deconstructed);
+		expect(deconstructed).toMatchInlineSnapshot(`
+			Map {
+			  "test/a" => {
+			    "cat": {
+			      "@@type": "ref",
+			      "id": "test/a:5",
+			    },
+			    "foo": {
+			      "@@type": "ref",
+			      "id": "test/a:0",
+			    },
+			  },
+			  "test/a:0" => {
+			    "bar": {
+			      "@@type": "ref",
+			      "id": "test/a:1",
+			    },
+			    "prim": "hi",
+			  },
+			  "test/a:1" => {
+			    "baz": {
+			      "@@type": "ref",
+			      "id": "test/a:2",
+			    },
+			  },
+			  "test/a:2" => [
+			    {
+			      "@@type": "ref",
+			      "id": "test/a:3",
+			    },
+			    {
+			      "@@type": "ref",
+			      "id": "test/a:4",
+			    },
+			  ],
+			  "test/a:3" => {
+			    "corge": "qux",
+			  },
+			  "test/a:4" => {
+			    "grault": "garply",
+			  },
+			  "test/a:5" => {
+			    "percol": "simmi",
+			  },
+			}
+		`);
+	});
 });
 
 describe('creating patches from initial state', () => {

@@ -3,10 +3,10 @@
  */
 
 import { AuthorizationKey } from './authz.js';
+import { diffToPatches } from './diffing.js';
 import { FileRef } from './files.js';
 import { createRef, createSubOid, ObjectIdentifier } from './oids.js';
 import {
-	diffToPatches,
 	initialToPatches,
 	ObjectRef,
 	Operation,
@@ -17,8 +17,8 @@ import { isObject } from './utils.js';
 
 export class PatchCreator {
 	constructor(
-		private getNow: () => string,
-		private createSubId?: () => string,
+		readonly getNow: () => string,
+		readonly createSubId?: () => string,
 	) {}
 
 	isPrimitive = (value: any) => {
@@ -52,6 +52,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		key: PropertyName,
 		value: any,
+		authz?: string,
 	): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
@@ -65,6 +66,7 @@ export class PatchCreator {
 						name: key,
 						value,
 					},
+					authz,
 				},
 			];
 		} else {
@@ -72,7 +74,16 @@ export class PatchCreator {
 			return [
 				// since we're setting a complex nested object, we can initialize it wholesale.
 				// no diffing to do.
-				...initialToPatches(value, itemOid, this.getNow),
+				...initialToPatches(
+					value,
+					itemOid,
+					this.getNow,
+					this.createSubId,
+					undefined,
+					{
+						authz,
+					},
+				),
 				// then set the reference to the object
 				{
 					oid,
@@ -82,12 +93,17 @@ export class PatchCreator {
 						value: createRef(itemOid),
 						name: key,
 					},
+					authz,
 				},
 			];
 		}
 	};
 
-	createRemove = (oid: ObjectIdentifier, key: PropertyName): Operation[] => {
+	createRemove = (
+		oid: ObjectIdentifier,
+		key: PropertyName,
+		authz?: string,
+	): Operation[] => {
 		return [
 			{
 				oid,
@@ -96,6 +112,7 @@ export class PatchCreator {
 					op: 'remove',
 					name: key,
 				},
+				authz,
 			},
 		];
 	};
@@ -104,6 +121,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		value: any,
+		authz?: string,
 	): Operation[] => {
 		if (this.isPrimitive(value)) {
 			return [
@@ -115,12 +133,22 @@ export class PatchCreator {
 						index,
 						value,
 					},
+					authz,
 				},
 			];
 		} else {
 			const itemOid = createSubOid(oid, this.createSubId);
 			return [
-				...initialToPatches(value, itemOid, this.getNow),
+				...initialToPatches(
+					value,
+					itemOid,
+					this.getNow,
+					this.createSubId,
+					undefined,
+					{
+						authz,
+					},
+				),
 				{
 					oid,
 					timestamp: this.getNow(),
@@ -129,12 +157,17 @@ export class PatchCreator {
 						index,
 						value: createRef(itemOid),
 					},
+					authz,
 				},
 			];
 		}
 	};
 
-	createListPush = (oid: ObjectIdentifier, value: any): Operation[] => {
+	createListPush = (
+		oid: ObjectIdentifier,
+		value: any,
+		authz?: string,
+	): Operation[] => {
 		if (this.isPrimitive(value)) {
 			return [
 				{
@@ -144,12 +177,15 @@ export class PatchCreator {
 						op: 'list-push',
 						value,
 					},
+					authz,
 				},
 			];
 		} else {
 			const itemOid = createSubOid(oid, this.createSubId);
 			return [
-				...initialToPatches(value, itemOid, this.getNow),
+				...initialToPatches(value, itemOid, this.getNow, undefined, undefined, {
+					authz,
+				}),
 				{
 					oid,
 					timestamp: this.getNow(),
@@ -157,12 +193,17 @@ export class PatchCreator {
 						op: 'list-push',
 						value: createRef(itemOid),
 					},
+					authz,
 				},
 			];
 		}
 	};
 
-	createListAdd = (oid: ObjectIdentifier, value: any): Operation[] => {
+	createListAdd = (
+		oid: ObjectIdentifier,
+		value: any,
+		authz?: string,
+	): Operation[] => {
 		if (!this.isPrimitive(value)) {
 			return [
 				{
@@ -172,6 +213,7 @@ export class PatchCreator {
 						op: 'list-add',
 						value: createRef(value),
 					},
+					authz,
 				},
 			];
 		} else {
@@ -183,6 +225,7 @@ export class PatchCreator {
 						op: 'list-add',
 						value,
 					},
+					authz,
 				},
 			];
 		}
@@ -192,6 +235,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		value: any,
+		authz?: string,
 	): Operation[] => {
 		if (this.isPrimitive(value)) {
 			return [
@@ -203,12 +247,15 @@ export class PatchCreator {
 						value,
 						index,
 					},
+					authz,
 				},
 			];
 		} else {
 			const itemOid = createSubOid(oid, this.createSubId);
 			return [
-				...initialToPatches(value, itemOid, this.getNow),
+				...initialToPatches(value, itemOid, this.getNow, undefined, undefined, {
+					authz,
+				}),
 				{
 					oid,
 					timestamp: this.getNow(),
@@ -217,6 +264,7 @@ export class PatchCreator {
 						value: createRef(itemOid),
 						index,
 					},
+					authz,
 				},
 			];
 		}
@@ -226,6 +274,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		value: any,
 		only?: 'first' | 'last',
+		authz?: string,
 	): Operation[] => {
 		return [
 			{
@@ -236,6 +285,7 @@ export class PatchCreator {
 					value,
 					only,
 				},
+				authz,
 			},
 		];
 	};
@@ -244,6 +294,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		count: number = 1,
+		authz?: string,
 	): Operation[] => {
 		return [
 			{
@@ -254,6 +305,7 @@ export class PatchCreator {
 					index,
 					count,
 				},
+				authz,
 			},
 		];
 	};
@@ -262,6 +314,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		value: ObjectRef | FileRef,
 		index: number,
+		authz?: string,
 	): Operation[] => {
 		return [
 			{
@@ -272,6 +325,7 @@ export class PatchCreator {
 					value,
 					index,
 				},
+				authz,
 			},
 		];
 	};
@@ -280,6 +334,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		fromIndex: number,
 		toIndex: number,
+		authz?: string,
 	): Operation[] => {
 		return [
 			{
@@ -290,11 +345,12 @@ export class PatchCreator {
 					from: fromIndex,
 					to: toIndex,
 				},
+				authz,
 			},
 		];
 	};
 
-	createDelete = (oid: ObjectIdentifier): Operation[] => {
+	createDelete = (oid: ObjectIdentifier, authz?: string): Operation[] => {
 		return [
 			{
 				oid,
@@ -302,6 +358,7 @@ export class PatchCreator {
 				data: {
 					op: 'delete',
 				},
+				authz,
 			},
 		];
 	};

@@ -190,14 +190,27 @@ function getUndoOperation(
 				},
 			];
 		case 'list-set':
+			if (initial[data.index]) {
+				return [
+					{
+						oid,
+						timestamp: getNow(),
+						data: {
+							op: 'list-set',
+							index: data.index,
+							value: initial[data.index],
+						},
+					},
+				];
+			}
 			return [
 				{
 					oid,
 					timestamp: getNow(),
 					data: {
-						op: 'list-set',
+						op: 'list-delete',
 						index: data.index,
-						value: initial[data.index],
+						count: 1,
 					},
 				},
 			];

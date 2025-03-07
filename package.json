@@ -28,7 +28,8 @@
 		"@types/node": "20.10.5",
 		"tsx": "^3.12.1",
 		"turbo": "^2.0.11",
-		"typescript": "^5.4.2"
+		"typescript": "^5.4.2",
+		"vitest": "catalog:"
 	},
 	"dependencies": {
 		"fake-indexeddb": "^5.0.1",

@@ -1,8 +1,7 @@
-import { Editor } from '@tiptap/core';
 import { useEditor, UseEditorOptions } from '@tiptap/react';
-import { useWatch } from '@verdant-web/react';
-import { AnyEntity, ObjectEntity } from '@verdant-web/store';
-import { useCallback, useEffect, useRef } from 'react';
+import { AnyEntity } from '@verdant-web/store';
+import { useRef, useState } from 'react';
+import { VerdantOidExtension } from './plugins.js';
 
 type AllowedKey<Ent extends AnyEntity<any, any, any>> = Ent extends never
 	? string
@@ -34,6 +33,8 @@ export function useSyncedEditor<
 		editorOptions?: UseEditorOptions;
 		editorDependencies?: any[];
 		nullDocumentDefault?: EntitySnapshot<Ent, Key>;
+		// TODO: use editor undo instead of Verdant. will require somehow getting
+		// a Store reference from here
 	} = {},
 ) {
 	const cachedOptions = useRef({
@@ -44,106 +45,25 @@ export function useSyncedEditor<
 		nullDocumentDefault,
 		fieldName,
 	};
-	const live = useWatch(parent);
-	const field = live[fieldName] as ObjectEntity<any, any>;
-	const updatingRef = useRef(false);
-	const update = useStableCallback((editor: Editor) => {
-		if (updatingRef.current) {
-			return;
-		}
-
-		const newData = editor.getJSON();
-		const value = parent.get(cachedOptions.current.fieldName) as ObjectEntity<
-			any,
-			any
-		> | null;
-		if (!value) {
-			parent.set(cachedOptions.current.fieldName as any, newData);
-		} else {
-			value.update(newData, {
-				merge: false,
-				dangerouslyDisableMerge: true,
-				replaceSubObjects: false,
-			});
-		}
-	});
-
-	const cachedInitialContent = useRef(
-		ensureDocShape(getFieldSnapshot(field, nullDocumentDefault, fieldName)),
+	// create a configured version of the Verdant extension, which handles
+	// the actual syncing of the editor content to the field
+	const [extension] = useState(() =>
+		VerdantOidExtension.configure({
+			parent,
+			fieldName: fieldName as string | number,
+			nullDocumentDefault,
+		}),
 	);
 	const editor = useEditor(
 		{
 			...extraOptions,
-			content: cachedInitialContent.current,
-			onUpdate: (ctx) => {
-				update(ctx.editor);
-				extraOptions?.onUpdate?.(ctx);
-			},
 			onContentError(props) {
 				console.error('Content error:', props.error);
 			},
+			extensions: [extension, ...(extraOptions?.extensions ?? [])],
 		},
 		editorDependencies,
 	);
 
-	useEffect(() => {
-		function updateFromField() {
-			if (editor && !editor.isDestroyed) {
-				updatingRef.current = true;
-				const { from, to } = editor.state.selection;
-				editor.commands.setContent(
-					ensureDocShape(
-						getFieldSnapshot(
-							field,
-							cachedOptions.current.nullDocumentDefault,
-							cachedOptions.current.fieldName,
-						),
-					),
-					false,
-				);
-				editor.commands.setTextSelection({ from, to });
-				updatingRef.current = false;
-			}
-		}
-
-		updateFromField();
-
-		return field?.subscribe('changeDeep', (target, info) => {
-			if (!info.isLocal || target === field) {
-				updateFromField();
-			}
-		});
-	}, [field, editor, cachedOptions]);
-
 	return editor;
-}
-
-// since the schema doesn't enforce this shape but it's
-// needed for the editor to work, we'll ensure it here
-function ensureDocShape(json: any) {
-	for (const node of json.content ?? []) {
-		// remove undefined nodes
-		node.content = node.content.filter((n: any) => !!n).map(ensureDocShape);
-	}
-	return json;
-}
-
-function getFieldSnapshot(
-	field: ObjectEntity<any, any> | undefined | null,
-	nullDocumentDefault: any,
-	fieldName: string | symbol | number,
-) {
-	const content = field ? field.getSnapshot() : (nullDocumentDefault ?? null);
-	if (content === null) {
-		throw new Error(`The provided field "${String(fieldName)}" is null and a default document was not provided.
-		Please provide a default document or ensure the field is not null when calling useSyncedEditor, or make your
-		field schema non-null and specify a default document there.`);
-	}
-	return content;
-}
-
-function useStableCallback<T extends (...args: any[]) => any>(callback: T) {
-	const ref = useRef(callback);
-	ref.current = callback;
-	return useCallback((...args: Parameters<T>) => ref.current(...args), []);
 }

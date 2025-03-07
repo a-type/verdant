@@ -39,17 +39,11 @@ export function createTipTapFieldSchema(options: {
 			'createTiptapFieldSchema requires a default value. Specify "null" to make the field nullable.',
 		);
 	}
+
 	const baseField = schema.fields.object({
 		fields: {},
-		default: () => {
-			if (options.default === null) {
-				return null;
-			}
-			return structuredClone(options.default);
-		},
-		nullable: options.default === null,
 	});
-	return schema.fields.replaceObjectFields(baseField, {
+	const nestedContent = schema.fields.replaceObjectFields(baseField, {
 		type: schema.fields.string(),
 		from: schema.fields.number({ nullable: true }),
 		to: schema.fields.number({ nullable: true }),
@@ -64,4 +58,31 @@ export function createTipTapFieldSchema(options: {
 			items: baseField,
 		}),
 	});
+
+	const rootField = schema.fields.object({
+		fields: {
+			type: schema.fields.string(),
+			from: schema.fields.number({ nullable: true }),
+			to: schema.fields.number({ nullable: true }),
+			attrs: schema.fields.map({
+				values: schema.fields.any(),
+			}),
+			content: schema.fields.array({
+				items: nestedContent,
+			}),
+			text: schema.fields.string({ nullable: true }),
+			marks: schema.fields.array({
+				items: nestedContent,
+			}),
+		},
+		default: () => {
+			if (options.default === null) {
+				return null;
+			}
+			return structuredClone(options.default);
+		},
+		nullable: options.default === null,
+	});
+
+	return rootField as any;
 }
