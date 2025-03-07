@@ -85,6 +85,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 	constructor(private context: Context) {
 		super();
+		context.getClient = () => this;
 		this.collectionNames = Object.keys(context.schema.collections);
 		this._sync =
 			this.context.config.sync && !context.schema.wip

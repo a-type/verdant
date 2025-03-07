@@ -26,12 +26,13 @@ import {
 import { Context } from '../context/context.js';
 import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';
-import { EntityFile } from '../index.js';
+import { ClientWithCollections, EntityFile } from '../index.js';
 import { EntityCache } from './EntityCache.js';
 import { EntityFamilyMetadata, EntityMetadataView } from './EntityMetadata.js';
 import { EntityStoreEventData, EntityStoreEvents } from './EntityStore.js';
 import { entityFieldSubscriber } from './entityFieldSubscriber.js';
 import {
+	AnyEntity,
 	BaseEntityValue,
 	DataFromInit,
 	EntityChange,
@@ -56,6 +57,8 @@ export interface EntityInit {
 	deleteSelf: () => void;
 }
 
+const PRIVATE_ENTITY_CONTEXT_KEY = Symbol('private entity context key');
+
 export class Entity<
 		Init = any,
 		KeyValue extends BaseEntityValue = any,
@@ -78,6 +81,10 @@ export class Entity<
 	private ctx;
 	private files;
 	private storeEvents;
+
+	get [PRIVATE_ENTITY_CONTEXT_KEY]() {
+		return this.ctx;
+	}
 
 	// an internal representation of this Entity.
 	// if present, this is the cached, known value. If null,
@@ -1125,4 +1132,12 @@ function assertNotSymbol<T>(key: T): asserts key is Exclude<T, symbol> {
 function assertNumber(key: unknown): asserts key is number {
 	if (typeof key !== 'number')
 		throw new Error('Only number keys are supported in list entities');
+}
+
+export function getEntityClient(
+	entity: AnyEntity<any, any, any>,
+): ClientWithCollections {
+	return (entity as Entity)[
+		PRIVATE_ENTITY_CONTEXT_KEY
+	].getClient() as ClientWithCollections;
 }

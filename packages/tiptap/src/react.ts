@@ -1,27 +1,16 @@
 import { useEditor, UseEditorOptions } from '@tiptap/react';
 import { AnyEntity } from '@verdant-web/store';
 import { useRef, useState } from 'react';
-import { VerdantOidExtension } from './plugins.js';
-
-type AllowedKey<Ent extends AnyEntity<any, any, any>> = Ent extends never
-	? string
-	: Ent extends AnyEntity<any, any, infer Shape>
-		? keyof Shape
-		: never;
-
-type EntitySnapshot<
-	Ent extends AnyEntity<any, any, any>,
-	Key extends AllowedKey<Ent>,
-> =
-	Ent extends AnyEntity<any, any, infer Snap>
-		? Key extends keyof Snap
-			? Snap[Key]
-			: any
-		: never;
+import {
+	VerdantExtension,
+	VerdantExtensionOptions,
+	type EntitySnapshot,
+	type ValidEntityKey,
+} from './plugins.js';
 
 export function useSyncedEditor<
 	Ent extends AnyEntity<any, any, any>,
-	Key extends AllowedKey<Ent>,
+	Key extends ValidEntityKey<Ent>,
 >(
 	parent: Ent,
 	fieldName: Key,
@@ -29,12 +18,12 @@ export function useSyncedEditor<
 		editorOptions: extraOptions,
 		editorDependencies,
 		nullDocumentDefault,
+		extensionOptions,
 	}: {
 		editorOptions?: UseEditorOptions;
 		editorDependencies?: any[];
 		nullDocumentDefault?: EntitySnapshot<Ent, Key>;
-		// TODO: use editor undo instead of Verdant. will require somehow getting
-		// a Store reference from here
+		extensionOptions?: Partial<VerdantExtensionOptions>;
 	} = {},
 ) {
 	const cachedOptions = useRef({
@@ -48,10 +37,11 @@ export function useSyncedEditor<
 	// create a configured version of the Verdant extension, which handles
 	// the actual syncing of the editor content to the field
 	const [extension] = useState(() =>
-		VerdantOidExtension.configure({
+		VerdantExtension.configure({
 			parent,
 			fieldName: fieldName as string | number,
 			nullDocumentDefault,
+			...extensionOptions,
 		}),
 	);
 	const editor = useEditor(

@@ -10,6 +10,7 @@ import {
 	StorageSchema,
 } from '@verdant-web/common';
 import { UndoHistory } from '../UndoHistory.js';
+import type { Client } from '../client/Client.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
 import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
@@ -110,6 +111,12 @@ export interface Context {
 	};
 
 	persistence: PersistenceImplementation;
+
+	/**
+	 * Must be defined by the Client once it exists. Attempts to use this before
+	 * it's ready will rightfully throw an error.
+	 */
+	getClient: () => Client;
 }
 
 export interface FileConfig {

@@ -193,3 +193,155 @@ it('should support nullable tiptap schema fields with a specified default doc', 
 		text: null,
 	});
 });
+
+it('should support Verdant undo and redo', async () => {
+	const testPost = await client.posts.put({});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const TipTapTest = () => {
+		const editor = useSyncedEditor(testPost, 'requiredBody', {
+			editorOptions: {
+				extensions: [
+					StarterKit.configure({
+						// using Verdant history.
+						history: false,
+					}),
+				],
+			},
+			// NOTE: this config is not required in regular usage, I'm tweaking batching
+			// to be sure it captures the entire testing change in one batch for undo to
+			// make the test predictable.
+			extensionOptions: {
+				batchConfig: {
+					// capture up to 100 changes in the batch.
+					max: 100,
+					timeout: null,
+					batchName: 'tiptap',
+					undoable: true,
+				},
+			},
+		});
+
+		return (
+			<div>
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+			</div>
+		);
+	};
+
+	const screen = await renderWithProvider(<TipTapTest />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+
+	const editor = screen.getByTestId('editor').getByRole('textbox');
+	await expect.element(editor).toHaveTextContent('');
+
+	// send keystrokes to the editor
+	await userEvent.type(editor, 'Hello, world!');
+	await expect.element(editor).toHaveTextContent('Hello, world!');
+
+	await client.entities.flushAllBatches();
+
+	expect(client.undoHistory.undoLength).toBe(1);
+	await client.undoHistory.undo();
+
+	expect(testPost.get('requiredBody').getSnapshot()).toEqual({
+		type: 'doc',
+		attrs: {},
+		from: null,
+		to: null,
+		content: [],
+		marks: [],
+		text: null,
+	});
+});
+
+it('should support TipTap undo and redo', async () => {
+	const testPost = await client.posts.put({});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const TipTapTest = () => {
+		const editor = useSyncedEditor(testPost, 'requiredBody', {
+			editorOptions: {
+				extensions: [StarterKit],
+			},
+			extensionOptions: {
+				batchConfig: {
+					undoable: false,
+				},
+			},
+		});
+
+		return (
+			<div>
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+				<button data-testid="undo" onClick={() => editor!.commands.undo()}>
+					Undo
+				</button>
+			</div>
+		);
+	};
+
+	const screen = await renderWithProvider(<TipTapTest />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+
+	const editor = screen.getByTestId('editor').getByRole('textbox');
+	await expect.element(editor).toHaveTextContent('');
+
+	// send keystrokes to the editor
+	await userEvent.type(editor, 'Hello, world!');
+	await expect.element(editor).toHaveTextContent('Hello, world!');
+
+	await client.entities.flushAllBatches();
+
+	// Verdant did not capture the change in undo history.
+	expect(client.undoHistory.undoLength).toBe(0);
+
+	await userEvent.click(screen.getByTestId('undo'));
+	await expect.element(editor).toHaveTextContent('');
+
+	// notably, TipTap history doesn't seem to remove the paragraph node,
+	// but to the user this behaves as expected.
+	expect(testPost.get('requiredBody').getSnapshot()).toEqual({
+		type: 'doc',
+		attrs: {},
+		from: null,
+		to: null,
+		content: [
+			{
+				attrs: {},
+				content: [],
+				from: null,
+				marks: [],
+				text: null,
+				to: null,
+				type: 'paragraph',
+			},
+		],
+		marks: [],
+		text: null,
+	});
+});

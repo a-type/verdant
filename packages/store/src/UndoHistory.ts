@@ -13,6 +13,13 @@ export class UndoHistory extends EventSubscriber<{ change: () => void }> {
 		return this._undone.length > 0;
 	}
 
+	get undoLength() {
+		return this._undoable.length;
+	}
+	get redoLength() {
+		return this._undone.length;
+	}
+
 	undo = async () => {
 		const next = this._undoable.pop();
 		if (next) {

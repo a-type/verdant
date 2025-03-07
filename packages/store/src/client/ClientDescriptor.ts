@@ -4,6 +4,7 @@ import {
 	Migration,
 	PatchCreator,
 	StorageSchema,
+	VerdantError,
 	noop,
 } from '@verdant-web/common';
 import { FileConfig, InitialContext, QueryConfig } from '../context/context.js';
@@ -167,6 +168,13 @@ export class ClientDescriptor<
 				environment,
 				persistenceShutdownHandler: new ShutdownHandler(init.log),
 				pauseRebasing: false,
+				getClient() {
+					throw new VerdantError(
+						VerdantError.Code.Unexpected,
+						undefined,
+						'Client not yet initialized. This is a Verdant bug, please report it.',
+					);
+				},
 			};
 			ctx.log('info', 'Initializing client', {
 				namespace: ctx.namespace,

@@ -1,7 +1,12 @@
 import { Extension, JSONContent } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { assignOid, cloneDeep, maybeGetOid } from '@verdant-web/common';
-import { AnyEntity, id, ObjectEntity } from '@verdant-web/store';
+import {
+	AnyEntity,
+	getEntityClient,
+	id,
+	ObjectEntity,
+} from '@verdant-web/store';
 
 const NodeIdPlugin = new Plugin({
 	key: new PluginKey('node-ids'),
@@ -66,22 +71,34 @@ export const NodeIdExtension = Extension.create({
 	},
 });
 
-const verdantOidAttribute = 'data-verdant-oid';
-export const VerdantOidExtension = Extension.create<
-	{
-		parent: AnyEntity<any, any, any>;
-		fieldName: string | number;
-		nullDocumentDefault?: any;
-		types?: string[];
-	},
+export const verdantIdAttribute = 'data-verdant-oid';
+export interface VerdantExtensionOptions {
+	parent: AnyEntity<any, any, any>;
+	fieldName: string | number;
+	nullDocumentDefault?: any;
+	batchConfig?: {
+		undoable?: boolean;
+		batchName?: string;
+		max?: number | null;
+		timeout?: number | null;
+	};
+}
+export const VerdantExtension = Extension.create<
+	VerdantExtensionOptions,
 	{ updating: boolean; unsubscribe: (() => void) | null }
 >({
-	name: 'verdantOid',
+	name: 'verdant',
 	addOptions() {
 		return {
 			parent: null as any,
 			fieldName: '',
 			nullDocumentDefault: null,
+			batchConfig: {
+				undoable: true,
+				batchName: 'tiptap',
+				max: null,
+				timeout: 600,
+			},
 		};
 	},
 	addStorage() {
@@ -100,14 +117,14 @@ export const VerdantOidExtension = Extension.create<
 			{
 				types: nodeTypes,
 				attributes: {
-					[verdantOidAttribute]: {
+					[verdantIdAttribute]: {
 						default: null,
 						keepOnSplit: false,
-						parseHTML: (element) => element.getAttribute(verdantOidAttribute),
+						parseHTML: (element) => element.getAttribute(verdantIdAttribute),
 						renderHTML: (attributes) => {
-							if (!attributes[verdantOidAttribute]) return {};
+							if (!attributes[verdantIdAttribute]) return {};
 							return {
-								[verdantOidAttribute]: attributes[verdantOidAttribute],
+								[verdantIdAttribute]: attributes[verdantIdAttribute],
 							};
 						},
 					},
@@ -135,7 +152,7 @@ export const VerdantOidExtension = Extension.create<
 				`VerdantOidExtension requires an object field for the document, ${fieldName} is a ${fieldSchema.type}`,
 			);
 		}
-		if (fieldSchema.nullable && !nullDocumentDefault) {
+		if (fieldSchema.nullable && !fieldSchema.default && !nullDocumentDefault) {
 			throw new Error(
 				'VerdantOidExtension requires a nullDocumentDefault for a nullable document field',
 			);
@@ -193,10 +210,13 @@ export const VerdantOidExtension = Extension.create<
 			// against existing data
 			consumeOidsAndAssignToSnapshots(newData);
 			// printAllOids(newData);
-			value.update(newData, {
-				merge: false,
-				dangerouslyDisableMerge: true,
-				replaceSubObjects: false,
+			const client = getEntityClient(value);
+			client.batch(this.options.batchConfig).run(() => {
+				value.update(newData, {
+					merge: false,
+					dangerouslyDisableMerge: true,
+					replaceSubObjects: false,
+				});
 			});
 		}
 	},
@@ -205,10 +225,47 @@ export const VerdantOidExtension = Extension.create<
 	},
 });
 
+export type ValidEntityKey<Ent extends AnyEntity<any, any, any>> =
+	Ent extends never
+		? string
+		: Ent extends AnyEntity<any, any, infer Shape>
+			? keyof Shape
+			: never;
+
+export type EntitySnapshot<
+	Ent extends AnyEntity<any, any, any>,
+	Key extends ValidEntityKey<Ent>,
+> =
+	Ent extends AnyEntity<any, any, infer Snap>
+		? Key extends keyof Snap
+			? Snap[Key]
+			: any
+		: never;
+
+export function createVerdantExtension<
+	TEnt extends AnyEntity<any, any, any>,
+	Key extends ValidEntityKey<TEnt>,
+>(
+	parent: TEnt,
+	fieldName: Key,
+	options?: Omit<
+		VerdantExtensionOptions,
+		'parent' | 'fieldName' | 'nullDocumentDefault'
+	> & {
+		nullDocumentDefault?: EntitySnapshot<TEnt, Key>;
+	},
+) {
+	return VerdantExtension.configure({
+		parent,
+		fieldName: fieldName as string | number,
+		...options,
+	});
+}
+
 function consumeOidsAndAssignToSnapshots(doc: JSONContent) {
-	if (doc.attrs?.[verdantOidAttribute] !== undefined) {
-		assignOid(doc, doc.attrs[verdantOidAttribute]);
-		delete doc.attrs[verdantOidAttribute];
+	if (doc.attrs?.[verdantIdAttribute] !== undefined) {
+		assignOid(doc, doc.attrs[verdantIdAttribute]);
+		delete doc.attrs[verdantIdAttribute];
 	}
 	if (doc.content) {
 		doc.content.forEach(consumeOidsAndAssignToSnapshots);
@@ -246,7 +303,7 @@ function addOidAttrs(doc: JSONContent) {
 	const oid = maybeGetOid(doc);
 	if (oid) {
 		doc.attrs = doc.attrs ?? {};
-		doc.attrs[verdantOidAttribute] = oid;
+		doc.attrs[verdantIdAttribute] = oid;
 	}
 	if (doc.content) {
 		doc.content.forEach(addOidAttrs);
