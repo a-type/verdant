@@ -180,7 +180,7 @@ export const VerdantExtension = Extension.create<
 			const field = parent.get(fieldName) as ObjectEntity<any, any> | null;
 			if (field) {
 				unsubscribe = field.subscribe('changeDeep', (target, info) => {
-					if (!info.isLocal || target === field) {
+					if (!field.deleted && (!info.isLocal || target === field)) {
 						updateFromField(field);
 					}
 				});
@@ -210,7 +210,7 @@ export const VerdantExtension = Extension.create<
 		} else {
 			// re-assign oids to data objects so they can be diffed more effectively
 			// against existing data
-			consumeOidsAndAssignToSnapshots(newData);
+			formatSnapshotForVerdantAndAssignOids(newData);
 			// printAllOids(newData);
 			const client = getEntityClient(value);
 			client.batch(this.options.batchConfig).run(() => {
@@ -264,13 +264,29 @@ export function createVerdantExtension<
 	});
 }
 
-function consumeOidsAndAssignToSnapshots(doc: JSONContent) {
+function formatSnapshotForVerdantAndAssignOids(doc: JSONContent) {
 	if (doc.attrs?.[verdantIdAttribute] !== undefined) {
 		assignOid(doc, doc.attrs[verdantIdAttribute]);
 		delete doc.attrs[verdantIdAttribute];
 	}
+	// make sure all fields are present, even if null.
+	if (doc.from === undefined) {
+		doc.from = null;
+	}
+	if (doc.to === undefined) {
+		doc.to = null;
+	}
+	if (doc.text === undefined) {
+		doc.text = null as any;
+	}
+	if (doc.attrs === undefined) {
+		doc.attrs = {};
+	}
+	if (doc.marks === undefined) {
+		doc.marks = [];
+	}
 	if (doc.content) {
-		doc.content.forEach(consumeOidsAndAssignToSnapshots);
+		doc.content.forEach(formatSnapshotForVerdantAndAssignOids);
 	}
 }
 

@@ -11,9 +11,10 @@ import {
 	ObjectRef,
 	Operation,
 	PropertyName,
+	shallowInitialToPatches,
 } from './operation.js';
 import { isRef } from './refs.js';
-import { isObject } from './utils.js';
+import { assert, isObject } from './utils.js';
 
 export class PatchCreator {
 	constructor(
@@ -37,7 +38,17 @@ export class PatchCreator {
 		obj: any,
 		oid: ObjectIdentifier,
 		authz?: AuthorizationKey,
+		shallow?: boolean,
 	) => {
+		if (shallow) {
+			return shallowInitialToPatches(
+				obj,
+				oid,
+				this.getNow,
+				undefined,
+				authz ? { authz } : undefined,
+			);
+		}
 		return initialToPatches(
 			obj,
 			oid,
@@ -123,6 +134,7 @@ export class PatchCreator {
 		value: any,
 		authz?: string,
 	): Operation[] => {
+		assert(index >= 0, 'List index must be non-negative');
 		if (this.isPrimitive(value)) {
 			return [
 				{
@@ -237,6 +249,7 @@ export class PatchCreator {
 		value: any,
 		authz?: string,
 	): Operation[] => {
+		assert(index >= 0, 'List index must be non-negative');
 		if (this.isPrimitive(value)) {
 			return [
 				{
@@ -253,9 +266,18 @@ export class PatchCreator {
 		} else {
 			const itemOid = createSubOid(oid, this.createSubId);
 			return [
-				...initialToPatches(value, itemOid, this.getNow, undefined, undefined, {
-					authz,
-				}),
+				...initialToPatches(
+					value,
+					itemOid,
+					this.getNow,
+					this.createSubId,
+					undefined,
+					authz
+						? {
+								authz,
+							}
+						: undefined,
+				),
 				{
 					oid,
 					timestamp: this.getNow(),
@@ -268,6 +290,44 @@ export class PatchCreator {
 				},
 			];
 		}
+	};
+
+	createListInsertMany = (
+		oid: ObjectIdentifier,
+		index: number,
+		values: any[],
+		authz?: string,
+	): Operation[] => {
+		assert(index >= 0, 'List index must be non-negative');
+		const operations: Operation[] = [];
+		const refs = values.map((value) => {
+			if (this.isPrimitive(value)) return value;
+			const subOid = createSubOid(oid, this.createSubId);
+			operations.push(
+				...initialToPatches(
+					value,
+					subOid,
+					this.getNow,
+					this.createSubId,
+					undefined,
+					{
+						authz,
+					},
+				),
+			);
+			return createRef(subOid);
+		});
+		operations.push({
+			oid,
+			timestamp: this.getNow(),
+			data: {
+				op: 'list-insert',
+				values: refs,
+				index,
+			},
+			authz,
+		});
+		return operations;
 	};
 
 	createListRemove = (
@@ -296,6 +356,8 @@ export class PatchCreator {
 		count: number = 1,
 		authz?: string,
 	): Operation[] => {
+		assert(index >= 0, 'List index must be non-negative');
+		assert(count > 0, 'Count must be positive and non-zero');
 		return [
 			{
 				oid,
@@ -316,6 +378,7 @@ export class PatchCreator {
 		index: number,
 		authz?: string,
 	): Operation[] => {
+		assert(index >= 0, 'List index must be non-negative');
 		return [
 			{
 				oid,
@@ -336,6 +399,8 @@ export class PatchCreator {
 		toIndex: number,
 		authz?: string,
 	): Operation[] => {
+		assert(fromIndex >= 0, 'List move from index must be non-negative');
+		assert(toIndex >= 0, 'List move to index must be non-negative');
 		return [
 			{
 				oid,

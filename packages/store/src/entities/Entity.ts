@@ -466,7 +466,12 @@ export class Entity<
 
 	// change management methods (internal use only)
 	private addPendingOperations = (operations: Operation[]) => {
-		this.ctx.log('debug', 'Entity: adding pending operations', this.oid);
+		this.ctx.log(
+			'debug',
+			'Entity: adding pending operations',
+			this.oid,
+			operations,
+		);
 
 		// apply authz to all operations
 		if (this.access) {

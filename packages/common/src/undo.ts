@@ -1,5 +1,8 @@
+import { AuthorizationKey } from './authz.js';
 import { ObjectIdentifier } from './oids.js';
 import { applyPatch, Operation } from './operation.js';
+import { PatchCreator } from './patch.js';
+import { isRef } from './refs.js';
 import { cloneDeep } from './utils.js';
 
 export function getUndoOperations(
@@ -7,7 +10,10 @@ export function getUndoOperations(
 	initial: any,
 	operations: Operation[],
 	getNow: () => string,
+	getSubId?: () => string,
+	authz?: AuthorizationKey,
 ): Operation[] {
+	const patchCreator = new PatchCreator(getNow, getSubId);
 	if (initial === undefined || initial === null) {
 		// if the initial state is nothing, then the undo is to delete everything.
 		// there's nothing else to worry about!
@@ -18,6 +24,7 @@ export function getUndoOperations(
 				data: {
 					op: 'delete',
 				},
+				authz,
 			},
 		];
 	}
@@ -27,7 +34,7 @@ export function getUndoOperations(
 	let state = cloneDeep(initial);
 	const undoOperations: Operation[] = [];
 	for (const operation of operations) {
-		const undo = getUndoOperation(oid, state, operation, getNow);
+		const undo = getUndoOperation(oid, state, operation, patchCreator, authz);
 		undoOperations.unshift(...undo);
 		applyPatch(state, operation.data);
 	}
@@ -38,195 +45,114 @@ function getUndoOperation(
 	oid: ObjectIdentifier,
 	initial: any,
 	operation: Operation,
-	getNow: () => string,
+	patchCreator: PatchCreator,
+	authz?: AuthorizationKey,
 ): Operation[] {
 	const data = operation.data;
 	switch (data.op) {
 		case 'set':
+			if (initial[data.name] === undefined) {
+				return patchCreator.createRemove(oid, data.name, authz);
+			}
+			return patchCreator.createSet(oid, data.name, initial[data.name], authz);
 		case 'remove':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'set',
-						name: data.name,
-						value: initial[data.name],
-					},
-				},
-			];
+			if (initial[data.name] === undefined) {
+				return [];
+			}
+			return patchCreator.createSet(oid, data.name, initial[data.name], authz);
 		case 'list-insert':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-delete',
-						index: data.index,
-						count: 1,
-					},
-				},
-			];
+			if (data.value === undefined && data.values?.length === 0) return [];
+			return patchCreator.createListDelete(
+				oid,
+				data.index,
+				data.value ? 1 : data.values?.length || 0,
+				authz,
+			);
 		case 'list-delete':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-insert',
-						index: data.index,
-						values: initial.slice(data.index, data.count),
-					},
-				},
-			];
+			return patchCreator.createListInsertMany(
+				oid,
+				data.index,
+				initial.slice(data.index, data.index + data.count),
+				authz,
+			);
 		case 'list-move-by-ref':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-move-by-ref',
-						value: data.value,
-						index: initial.indexOf(data.value),
-					},
-				},
-			];
+			return patchCreator.createListMoveByRef(
+				oid,
+				data.value,
+				initial.indexOf(data.value),
+				authz,
+			);
 		case 'list-move-by-index':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-move-by-index',
-						from: data.to,
-						to: data.from,
-					},
-				},
-			];
+			return patchCreator.createListMoveByIndex(oid, data.to, data.from, authz);
 		case 'delete':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'initialize',
-						value: initial,
-					},
-				},
-			];
+			return patchCreator.createInitialize(initial, oid, authz, true);
 		case 'list-push':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-remove',
-						value: data.value,
-						// best heuristic here - remove the last instance of the item.
-						only: 'last',
-					},
-				},
-			];
+			return patchCreator.createListRemove(oid, data.value, 'last', authz);
 		case 'list-remove':
 			if (data.only === 'last') {
-				const index = initial.lastIndexOf(data.value);
-				return [
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-insert',
-							index,
-							values: [data.value],
-						},
-					},
-				];
+				const index = findItemRefIndex(initial, data.value, 0, 'backward');
+				if (index === -1) {
+					// if the value isn't in the list, then there's nothing to undo.
+					return [];
+				}
+				return patchCreator.createListInsert(oid, index, data.value, authz);
 			} else if (data.only === 'first') {
-				const index = initial.indexOf(data.value);
-				return [
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-insert',
-							index,
-							values: [data.value],
-						},
-					},
-				];
+				const index = findItemRefIndex(initial, data.value);
+				if (index === -1) {
+					// if the value isn't in the list, then there's nothing to undo.
+					return [];
+				}
+				return patchCreator.createListInsert(oid, index, data.value, authz);
 			} else {
 				// find all instances of value and restore them at their
 				// original index
 				const indexesOfValue = [];
-				let index = initial.indexOf(data.value);
+				let index = findItemRefIndex(initial, data.value);
 				while (index !== -1) {
 					indexesOfValue.push(index);
-					index = initial.indexOf(data.value, index + 1);
+					index = findItemRefIndex(initial, data.value, index + 1);
 				}
-				return indexesOfValue.map((index) => ({
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-insert',
-						index,
-						value: data.value,
-					},
-				}));
+				return indexesOfValue.flatMap((index) =>
+					patchCreator.createListInsert(oid, index, data.value, authz),
+				);
 			}
 		case 'list-add':
 			// this one is kind of ambiguous. in theory the set may have
 			// already included the value and so no change happened. but
 			// basically we infer the intent is to remove what was meant
 			// to be added by this change.
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-remove',
-						value: data.value,
-						only: 'last',
-					},
-				},
-			];
+			return patchCreator.createListRemove(oid, data.value, 'last', authz);
 		case 'list-set':
-			if (initial[data.index]) {
-				return [
-					{
-						oid,
-						timestamp: getNow(),
-						data: {
-							op: 'list-set',
-							index: data.index,
-							value: initial[data.index],
-						},
-					},
-				];
+			if (initial[data.index] !== undefined) {
+				return patchCreator.createListSet(
+					oid,
+					data.index,
+					initial[data.index],
+					authz,
+				);
 			}
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'list-delete',
-						index: data.index,
-						count: 1,
-					},
-				},
-			];
+			return patchCreator.createListDelete(oid, data.index, 1, authz);
 		case 'initialize':
-			return [
-				{
-					oid,
-					timestamp: getNow(),
-					data: {
-						op: 'delete',
-					},
-				},
-			];
+			return patchCreator.createDelete(oid, authz);
 		case 'touch':
 			return [];
 		default:
 			throw new Error(`Cannot undo operation type: ${(data as any).op}`);
 	}
+}
+
+function findItemRefIndex(
+	list: any[],
+	item: any,
+	from: number = 0,
+	dir: 'forward' | 'backward' = 'forward',
+) {
+	const method = dir === 'forward' ? 'findIndex' : 'findLastIndex';
+	// for object items, attempt to find the matching item by OID.
+	if (isRef(item)) {
+		return list[method](
+			(i, idx) => isRef(i) && i.id === item.id && idx >= from,
+		);
+	}
+	return list[method]((i, idx) => i === item && idx >= from);
 }

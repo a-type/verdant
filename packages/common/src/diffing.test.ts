@@ -88,6 +88,27 @@ describe('generating diff operations', () => {
 			`);
 			expectDiffProducesResult(from, ops, to);
 		});
+
+		it('handles null values properly', () => {
+			const from = { foo: 'bar', baz: null };
+			assignOid(from, 'test/a');
+			const to = { foo: null, baz: null };
+			assignOid(to, 'test/a');
+			const ops = diffToPatches(from, to, createClock());
+			expect(ops).toEqual([
+				{
+					authz: undefined,
+					data: {
+						name: 'foo',
+						op: 'set',
+						value: null,
+					},
+					oid: 'test/a',
+					timestamp: '0',
+				},
+			]);
+			expectDiffProducesResult(from, ops, to);
+		});
 	});
 	describe('on nested objects', () => {
 		it('replaces whole nested objects', () => {

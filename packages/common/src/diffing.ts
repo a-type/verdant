@@ -38,6 +38,9 @@ export type DiffContext = {
  */
 function areTheSameIdentity(a: any, b: any) {
 	if (a === b) return true;
+	// special case: Verdant doesn't distinguish nil values in entities
+	if ((a === undefined && b === null) || (a === null && b === undefined))
+		return true;
 	if (isRef(a) && isRef(b)) return compareRefs(a, b);
 	const aOid = maybeGetOid(a);
 	const bOid = maybeGetOid(b);
@@ -70,18 +73,10 @@ function enforceAssignedOid(
 			assignOid(newObject, existingObjectOid);
 		}
 		// NOTE: new OID assignments are done in patchCreator.
-		// else {
-		// 	assignOid(
-		// 		newObject,
-		// 		createSubOid(parentOid, ctx.patchCreator.createSubId),
-		// 	);
-		// }
 	} else if (!areOidsRelated(parentOid, oid)) {
 		// when there's any doubt, clone the whole object. false -> do not copy OIDs
 		const clone = cloneDeep(newObject, false);
 		// NOTE: new OID assignments are done in patchCreator.
-		// const cloneOid = createSubOid(parentOid, ctx.patchCreator.createSubId);
-		// assignOid(clone, cloneOid);
 		return clone;
 	}
 	return newObject;

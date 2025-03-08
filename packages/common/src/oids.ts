@@ -2,7 +2,7 @@ import { v4 } from 'uuid';
 import { isFileRef } from './files.js';
 import { isObjectRef, ObjectRef } from './operation.js';
 import { isRef } from './refs.js';
-import { isObject, assert } from './utils.js';
+import { assert, isObject } from './utils.js';
 
 /**
  * OIDs
@@ -420,4 +420,26 @@ function migrateForeignOid(parentOid: ObjectIdentifier, child: any) {
 			createSubOid(parentOid, () => subId || id),
 		);
 	}
+}
+
+/**
+ * Returns a list of all OIDs assigned to this object
+ * and all sub-objects.
+ */
+export function getAllOids(root: any) {
+	const oids = new Set<ObjectIdentifier>();
+	const stack = [root];
+	while (stack.length) {
+		const obj = stack.pop();
+		const oid = maybeGetOid(obj);
+		if (oid) {
+			oids.add(oid);
+		}
+		if (Array.isArray(obj)) {
+			stack.push(...obj);
+		} else if (isObject(obj)) {
+			stack.push(...Object.values(obj));
+		}
+	}
+	return Array.from(oids);
 }

@@ -11,8 +11,8 @@ import {
 	operationSupersedes,
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
-import type { EntityStore } from './EntityStore.js';
 import { Entity } from './Entity.js';
+import type { EntityStore } from './EntityStore.js';
 
 const DEFAULT_BATCH_KEY = '@@default';
 
@@ -257,7 +257,11 @@ export class OperationBatcher {
 		return Promise.all(this.batcher.flushAll());
 	};
 
-	private createUndo = async (data: { ops: Operation[]; source?: Entity }) => {
+	private createUndo = async (data: {
+		ops: Operation[];
+		source?: Entity;
+		isRedo?: boolean;
+	}) => {
 		// this can't be done on-demand because we rely on the current
 		// state of the entities to calculate the inverse operations.
 		const inverseOps = await this.getInverseOperations(data);
@@ -268,11 +272,21 @@ export class OperationBatcher {
 			const redo = await this.createUndo({
 				ops: inverseOps,
 				source: data.source,
+				isRedo: true,
 			});
 			// set time to now for all undo operations, they're happening now.
 			for (const op of inverseOps) {
 				op.timestamp = this.ctx.time.now;
 			}
+
+			this.ctx.log(
+				'debug',
+				data.isRedo ? 'Redo' : 'Undo',
+				inverseOps,
+				'\n was \n',
+				data.ops,
+			);
+
 			await this.commitOperations(
 				inverseOps,
 				// undos should not generate their own undo operations

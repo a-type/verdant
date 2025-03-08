@@ -26,6 +26,15 @@ export type TipTapFieldInitializer = Pick<
 > &
 	Partial<ShapeFromProperty<TiptapFieldSchema>>;
 
+const otherDefaults = {
+	content: [],
+	marks: [],
+	attrs: {},
+	from: null,
+	to: null,
+	text: null,
+};
+
 /**
  * Creates a generic TipTap schema field. You must invoke this and assign it
  * individually to every TipTap document field in your schema, DO NOT reuse
@@ -79,7 +88,7 @@ export function createTipTapFieldSchema(options: {
 			if (options.default === null) {
 				return null;
 			}
-			return structuredClone(options.default);
+			return { ...otherDefaults, ...structuredClone(options.default) };
 		},
 		nullable: options.default === null,
 	});

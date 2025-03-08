@@ -5,15 +5,39 @@ export default defineConfig({
 		browser: {
 			provider: 'playwright',
 			enabled: true,
-			headless: true,
+			// headless: true,
 			instances: [
 				{
 					browser: 'chromium',
-					headless: true,
 				},
 			],
 		},
+		deps: {
+			optimizer: {
+				web: {
+					exclude: [
+						'@verdant-web/store',
+						'@verdant-web/common',
+						'@verdant-web/react',
+					],
+				},
+				ssr: {
+					exclude: [
+						'@verdant-web/store',
+						'@verdant-web/common',
+						'@verdant-web/react',
+					],
+				},
+			},
+		},
 		clearMocks: true,
+	},
+	optimizeDeps: {
+		exclude: [
+			'@verdant-web/store',
+			'@verdant-web/common',
+			'@verdant-web/react',
+		],
 	},
 	resolve: {
 		conditions: ['development', 'default'],

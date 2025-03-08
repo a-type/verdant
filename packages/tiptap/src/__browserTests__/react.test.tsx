@@ -32,6 +32,19 @@ const testSchema = schema({
 
 const hooks = createHooks(testSchema);
 
+function safeLogger(level: string, ...args: any[]) {
+	try {
+		if (args.some((arg) => typeof arg === 'string' && arg.includes('Redo')))
+			console.debug(
+				...args.map((arg) =>
+					typeof arg === 'object' ? JSON.stringify(arg, undefined, ' ') : arg,
+				),
+			);
+	} catch (err) {
+		console.debug(...args);
+	}
+}
+
 let clientDesc: ClientDescriptor;
 let client: ClientWithCollections;
 beforeAll(async () => {
@@ -40,6 +53,7 @@ beforeAll(async () => {
 		oldSchemas: [testSchema],
 		migrations: [createMigration(testSchema)],
 		namespace: 'tiptatp-test',
+		// log: safeLogger,
 	});
 	client = await (clientDesc.open() as Promise<ClientWithCollections>);
 });
@@ -397,4 +411,102 @@ it('should initialize from an existing document', async () => {
 	const editor = screen.getByTestId('editor').getByRole('textbox');
 	await expect.element(editor).toHaveTextContent('');
 	await expect.element(editor).toHaveTextContent('Hello, world!');
+});
+
+function testLog(...args: any[]) {
+	console.debug('[TEST]', ...args);
+}
+
+it('should withstand multiple edits, undo, and redo consistently', async () => {
+	const testPost = await client.posts.put({
+		requiredBody: {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [
+						{
+							type: 'text',
+							text: 'Hello, world!',
+						},
+					],
+				},
+			],
+		},
+	});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const TipTapTest = () => {
+		const editor = useSyncedEditor(testPost, 'requiredBody', {
+			editorOptions: {
+				extensions: [StarterKit.configure({ history: false })],
+			},
+		});
+
+		return (
+			<div>
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+			</div>
+		);
+	};
+
+	const screen = await renderWithProvider(<TipTapTest />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+
+	const editor = screen.getByTestId('editor').getByRole('textbox');
+	await expect.element(editor).toHaveTextContent('');
+	await expect.element(editor).toHaveTextContent('Hello, world!');
+
+	await userEvent.type(editor, '[pageDown]');
+	await userEvent.type(editor, '\nLine 2!');
+
+	await client.entities.flushAllBatches();
+
+	await userEvent.type(editor, '\nLine 3!');
+
+	await client.entities.flushAllBatches();
+
+	expect(client.undoHistory.canUndo).toBe(true);
+
+	await client.undoHistory.undo();
+	await client.entities.flushAllBatches();
+
+	await expect.element(editor).toHaveTextContent(/^Hello, world!Line 2!$/);
+
+	await client.undoHistory.redo();
+	await client.entities.flushAllBatches();
+
+	await expect
+		.element(editor)
+		.toHaveTextContent(/^Hello, world!Line 2!Line 3!$/);
+
+	await client.undoHistory.undo();
+	await client.entities.flushAllBatches();
+
+	await expect.element(editor).toHaveTextContent(/^Hello, world!Line 2!$/);
+
+	// I've noticed some strangeness when restoring a deleted block
+	// when the editor is not on the same line as the deletion,
+	// not sure if this is actually related to cursor position but
+	// testing anyway.
+	await userEvent.type(editor, '[arrowUp]');
+
+	await client.undoHistory.redo();
+	await client.entities.flushAllBatches();
+
+	await expect
+		.element(editor)
+		.toHaveTextContent(/^Hello, world!Line 2!Line 3!$/);
 });
