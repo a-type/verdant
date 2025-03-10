@@ -79,7 +79,7 @@ function getUndoOperation(
 			return patchCreator.createListMoveByRef(
 				oid,
 				data.value,
-				initial.indexOf(data.value),
+				findItemRefIndex(initial, data.value),
 				authz,
 			);
 		case 'list-move-by-index':

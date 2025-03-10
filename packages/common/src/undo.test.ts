@@ -78,4 +78,23 @@ describe('undo', () => {
 		clock.reset();
 		expect(undos).toEqual(patchCreator.createDelete(oid));
 	});
+	it('undoes an object move by ref', () => {
+		const clock = createClock();
+		const patchCreator = new PatchCreator(clock, createClock());
+		const initial = assignOid(
+			[createRef('test/a:1'), createRef('test/a:2'), createRef('test/a:3')],
+			'test/a',
+		);
+		const operations = patchCreator.createListMoveByRef(
+			'test/a',
+			initial[1],
+			0,
+		);
+		clock.reset();
+		const undos = getUndoOperations('test/a', initial, operations, clock);
+		clock.reset();
+		expect(undos).toEqual(
+			patchCreator.createListMoveByRef('test/a', initial[1], 1),
+		);
+	});
 });

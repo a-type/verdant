@@ -11,6 +11,7 @@ import {
 	ObjectRef,
 	Operation,
 	PropertyName,
+	PropertyValue,
 	shallowInitialToPatches,
 } from './operation.js';
 import { isRef } from './refs.js';
@@ -338,7 +339,7 @@ export class PatchCreator {
 
 	createListRemove = (
 		oid: ObjectIdentifier,
-		value: ObjectRef | FileRef | string | number | boolean | null,
+		value: PropertyValue,
 		only?: 'first' | 'last',
 		authz?: AuthorizationKey,
 	): Operation[] => {
