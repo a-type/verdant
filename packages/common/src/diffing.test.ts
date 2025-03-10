@@ -443,38 +443,50 @@ describe('generating diff operations', () => {
 			const from = assignOid([1, 2, 4, 5, 6, 7], 'test/a');
 			const to = assignOid([1, 2, 3, 5, 8], 'test/a');
 			const patches = diffToPatches(from, to, createClock());
-			expect(patches).toEqual([
-				{
-					authz: undefined,
-					data: {
-						op: 'list-set',
-						value: 3,
-						index: 2,
-					},
-					oid: 'test/a',
-					timestamp: '0',
-				},
-				{
-					authz: undefined,
-					data: {
-						op: 'list-insert',
-						value: 8,
-						index: 4,
-					},
-					oid: 'test/a',
-					timestamp: '1',
-				},
-				{
-					authz: undefined,
-					data: {
-						op: 'list-delete',
-						index: 5,
-						count: 2,
-					},
-					oid: 'test/a',
-					timestamp: '2',
-				},
-			] satisfies Operation[]);
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-set",
+				      "value": 3,
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 4,
+				      "op": "list-insert",
+				      "value": 8,
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": 7,
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": 6,
+				    },
+				    "oid": "test/a",
+				    "timestamp": "3",
+				  },
+				]
+			`);
 			expectDiffProducesResult(from, patches, to);
 		});
 	});
@@ -527,11 +539,839 @@ describe('generating diff operations', () => {
 			`);
 			expectDiffProducesResult(from, patches, to);
 		});
-		it.todo('moves objects by identity');
-		it.todo('removes objects by identity');
+		it('deletes one item from a list', () => {
+			// this replicates a bug I found while testing pruning canonization
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{},
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid(
+						{
+							id: '1',
+							value: 'Item one',
+						},
+						'test/a:0',
+					),
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "op": "delete",
+				    },
+				    "oid": "test/a:2",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('moves an item from the start to the end of the list', () => {
+			// FIXME: the operations end up very inefficient for this. each
+			// other item in the list gets moved before the target item is
+			// moved to the end. can this be improved?
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{ id: '3', value: 'Item three' },
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '3', value: 'Item three' }, 'test/a:2'),
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+					assignOid({ id: '1', value: 'Item one' }, 'test/a:0'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 0,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:0",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "3",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('moves an item from the end to the start of a list', () => {
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{ id: '3', value: 'Item three' },
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+					assignOid({ id: '1', value: 'Item one' }, 'test/a:0'),
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '3', value: 'Item three' }, 'test/a:2'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 0,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:0",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "3",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('swaps two items by reference', () => {
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{ id: '3', value: 'Item three' },
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid({ id: '1', value: 'Item one' }, 'test/a:0'),
+					assignOid({ id: '3', value: 'Item three' }, 'test/a:2'),
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('swaps a lot of items by reference', () => {
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{ id: '3', value: 'Item three' },
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid({ id: '1', value: 'Item one' }, 'test/a:0'),
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '3', value: 'Item three' }, 'test/a:2'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('produces changes which are resilient to intervening item moves', () => {
+			const from = assignOid(
+				[
+					{ id: '1', value: 'Item one' },
+					{ id: '2', value: 'Item two' },
+					{ id: '3', value: 'Item three' },
+					{ id: '4', value: 'Item four' },
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					assignOid({ id: '1', value: 'Item one' }, 'test/a:0'),
+					assignOid({ id: '4', value: 'Item four' }, 'test/a:3'),
+					assignOid({ id: '2', value: 'Item two' }, 'test/a:1'),
+					assignOid({ id: '3', value: 'Item three' }, 'test/a:2'),
+				],
+				'test/a',
+			);
+			const patchClock = createClock(10); // 'the future'
+			const patches = diffToPatches(from, to, patchClock, createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "10",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "11",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-move-by-ref",
+				      "value": {
+				        "@@type": "ref",
+				        "id": "test/a:2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "12",
+				  },
+				]
+			`);
+			// in the meantime, suppose a user manipulates the list...
+			const interveningClock = createClock(0);
+			const interveningChanges: Operation[] = [
+				{
+					oid: 'test/a',
+					data: {
+						op: 'list-move-by-index',
+						from: 1,
+						to: 2,
+					},
+					timestamp: interveningClock(),
+				},
+				{
+					oid: 'test/a',
+					data: {
+						op: 'list-delete',
+						index: 0,
+						count: 1,
+					},
+					timestamp: interveningClock(),
+				},
+				{
+					oid: 'test/a:x',
+					data: {
+						op: 'initialize',
+						value: {
+							id: 'x',
+							value: 'Item x',
+						},
+					},
+					timestamp: interveningClock(),
+				},
+				{
+					oid: 'test/a',
+					data: {
+						op: 'list-push',
+						value: {
+							'@@type': 'ref',
+							id: 'test/a:x',
+						},
+					},
+					timestamp: interveningClock(),
+				},
+			];
+			expectDiffProducesResult(
+				from,
+				[...interveningChanges, ...patches],
+				[
+					{ id: '4', value: 'Item four' },
+					{ id: '2', value: 'Item two' },
+					{ id: 'x', value: 'Item x' },
+					{ id: '3', value: 'Item three' },
+				],
+			);
+		});
 	});
-	describe.todo('on lists of lists', () => {
-		it.todo('rejects operations by value or identity');
+	describe('on lists of files', () => {
+		// FIXME: file refs should work the same as object refs
+		it('pushes items', () => {
+			const from = assignOid(
+				[createFileRef('file-1'), createFileRef('file-2')],
+				'test/a',
+			);
+			const to = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(2));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "op": "list-push",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('deletes one item from a list', () => {
+			const from = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			const to = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-insert",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('moves an item from the start to the end of the list', () => {
+			// FIXME: the operations end up very inefficient for this. each
+			// other item in the list gets moved before the target item is
+			// moved to the end. can this be improved?
+			const from = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+					createFileRef('file-1'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 0,
+				      "op": "list-set",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-2",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-set",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 2,
+				      "op": "list-set",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-set",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-1",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "3",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('moves an item from the end to the start of a list', () => {
+			const from = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					createFileRef('file-4'),
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 0,
+				      "op": "list-insert",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('swaps two items by reference', () => {
+			const from = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-3'),
+					createFileRef('file-2'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-insert",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 3,
+				      "op": "list-insert",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "2",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-3",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "3",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
+		it('swaps a lot of items by reference', () => {
+			const from = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+					createFileRef('file-4'),
+				],
+				'test/a',
+			);
+			assignOidsToAllSubObjects(from, createClock());
+			const to = assignOid(
+				[
+					createFileRef('file-1'),
+					createFileRef('file-4'),
+					createFileRef('file-2'),
+					createFileRef('file-3'),
+				],
+				'test/a',
+			);
+			const patches = diffToPatches(from, to, createClock(), createClock(4));
+			expect(patches).toMatchInlineSnapshot(`
+				[
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "index": 1,
+				      "op": "list-insert",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "0",
+				  },
+				  {
+				    "authz": undefined,
+				    "data": {
+				      "only": "last",
+				      "op": "list-remove",
+				      "value": {
+				        "@@type": "file",
+				        "id": "file-4",
+				      },
+				    },
+				    "oid": "test/a",
+				    "timestamp": "1",
+				  },
+				]
+			`);
+			expectDiffProducesResult(from, patches, to);
+		});
 	});
 	it('should work for complex nested arrays and objects', () => {
 		const from = {
@@ -577,9 +1417,9 @@ describe('generating diff operations', () => {
 			  {
 			    "authz": undefined,
 			    "data": {
-			      "count": 1,
-			      "index": 2,
-			      "op": "list-delete",
+			      "only": "last",
+			      "op": "list-remove",
+			      "value": 3,
 			    },
 			    "oid": "test/a:2",
 			    "timestamp": "0",
@@ -680,9 +1520,9 @@ describe('generating diff operations', () => {
 			  {
 			    "authz": undefined,
 			    "data": {
-			      "count": 1,
-			      "index": 2,
-			      "op": "list-delete",
+			      "only": "last",
+			      "op": "list-remove",
+			      "value": 3,
 			    },
 			    "oid": "test/a:1",
 			    "timestamp": "0",
@@ -784,9 +1624,12 @@ describe('generating diff operations', () => {
 			  {
 			    "authz": undefined,
 			    "data": {
-			      "count": 1,
-			      "index": 1,
-			      "op": "list-delete",
+			      "only": "last",
+			      "op": "list-remove",
+			      "value": {
+			        "@@type": "file",
+			        "id": "ghi789",
+			      },
 			    },
 			    "oid": "test/a:1",
 			    "timestamp": "1",

@@ -1,7 +1,8 @@
-import { isFile, isFileData } from '../files.js';
+import { isFile, isFileData, isFileRef } from '../files.js';
 import { OID_KEY } from '../oidsLegacy.js';
+import { isObjectRef } from '../operation.js';
 import { isObject } from '../utils.js';
-import { getFieldDefault, hasDefault, isNullable } from './fields.js';
+import { hasDefault, isNullable } from './fields.js';
 import { StorageFieldSchema, StorageFieldsSchema } from './types.js';
 
 export function validateEntity(
@@ -47,17 +48,29 @@ export function validateEntityField({
 	fieldPath = [],
 	depth,
 	requireDefaults,
+	expectRefs,
+	hasPassedFirstLevel,
 }: {
 	field: StorageFieldSchema;
 	value: any;
 	fieldPath: (string | number)[];
 	depth?: number;
 	requireDefaults?: boolean;
+	/**
+	 * Run validation expecting refs, not nested objects. For validating
+	 * views (as opposed to inits/snapshots). Recommended to use depth 2
+	 * or no depth specified.
+	 */
+	expectRefs?: boolean;
+	hasPassedFirstLevel?: boolean;
 }): EntityValidationProblem | undefined {
+	// we only _actually_ start expecting refs after the first validation level.
+	// TODO: something more... elegant?
+	const actuallyExpectRefs = expectRefs && hasPassedFirstLevel;
 	if (depth !== undefined && depth <= 0) return;
 
-	if (isNullable(field) && value === null) return;
-	if (value === null) {
+	if (isNullable(field) && (value === null || value === undefined)) return;
+	if (value === null || value === undefined) {
 		if (requireDefaults || !hasDefault(field)) {
 			return {
 				type: 'no-default',
@@ -68,77 +81,126 @@ export function validateEntityField({
 	}
 
 	if (field.type === 'object') {
-		if (!isObject(value)) {
-			return {
-				type: 'invalid-type',
-				fieldPath,
-				message: `Expected object ${
-					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
-			};
-		}
-		for (const [key, subField] of Object.entries(
-			field.properties as StorageFieldsSchema,
-		)) {
-			// legacy -- old objects sometimes accidentally include this key
-			if (key === OID_KEY) continue;
-			if (value[key]) {
-				validateEntityField({
+		if (actuallyExpectRefs) {
+			if (!isObjectRef(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected ref for field ${formatField(
+						fieldPath,
+					)}, got ${safeStringify(value)}`,
+				};
+			}
+		} else {
+			if (!isObject(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected object ${
+						field.nullable ? 'or null ' : ''
+					}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
+				};
+			}
+			for (const [key, subField] of Object.entries(
+				field.properties as StorageFieldsSchema,
+			)) {
+				// legacy -- old objects sometimes accidentally include this key
+				if (key === OID_KEY) continue;
+				const error = validateEntityField({
 					field: subField,
 					value: value[key],
 					fieldPath: [...fieldPath, key],
 					depth: depth !== undefined ? depth - 1 : undefined,
+					expectRefs,
+					hasPassedFirstLevel: true,
 				});
+				if (error) {
+					return error;
+				}
 			}
-		}
-		// check for unexpected keys
-		for (const key of Object.keys(value)) {
-			if (!field.properties[key]) {
-				return {
-					type: 'invalid-key',
-					fieldPath: [...fieldPath, key],
-					message: `Invalid unexpected field "${key}" on value ${formatField(
-						fieldPath,
-					)}`,
-				};
+			// check for unexpected keys
+			for (const key of Object.keys(value)) {
+				if (!field.properties[key]) {
+					return {
+						type: 'invalid-key',
+						fieldPath: [...fieldPath, key],
+						message: `Invalid unexpected field "${key}" on value ${formatField(
+							fieldPath,
+						)}`,
+					};
+				}
 			}
 		}
 	} else if (field.type === 'array') {
-		if (!Array.isArray(value)) {
-			if (value === null && field.nullable) return;
-			return {
-				type: 'invalid-value',
-				fieldPath,
-				message: `Expected array ${
-					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
-			};
-		}
-		for (const item of value) {
-			validateEntityField({
-				field: field.items,
-				value: item,
-				fieldPath: [...fieldPath, '[]'],
-				depth: depth !== undefined ? depth - 1 : undefined,
-			});
+		if (actuallyExpectRefs) {
+			if (!isObjectRef(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected ref for field ${formatField(
+						fieldPath,
+					)}, got ${safeStringify(value)}`,
+				};
+			}
+		} else {
+			if (!Array.isArray(value)) {
+				if (value === null && field.nullable) return;
+				return {
+					type: 'invalid-value',
+					fieldPath,
+					message: `Expected array ${
+						field.nullable ? 'or null ' : ''
+					}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
+				};
+			}
+			for (const item of value) {
+				const error = validateEntityField({
+					field: field.items,
+					value: item,
+					fieldPath: [...fieldPath, '[]'],
+					depth: depth !== undefined ? depth - 1 : undefined,
+					expectRefs,
+					hasPassedFirstLevel: true,
+				});
+				if (error) {
+					return error;
+				}
+			}
 		}
 	} else if (field.type === 'map') {
-		if (!isObject(value)) {
-			return {
-				type: 'invalid-type',
-				fieldPath,
-				message: `Expected map for field ${formatField(
+		if (actuallyExpectRefs) {
+			if (!isObjectRef(value)) {
+				return {
+					type: 'invalid-type',
 					fieldPath,
-				)}, got ${value}`,
-			};
-		}
-		for (const [key, item] of Object.entries(value)) {
-			validateEntityField({
-				field: field.values,
-				value: item,
-				fieldPath: [...fieldPath, key],
-				depth: depth !== undefined ? depth - 1 : undefined,
-			});
+					message: `Expected ref for field ${formatField(
+						fieldPath,
+					)}, got ${safeStringify(value)}`,
+				};
+			}
+		} else {
+			if (!isObject(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected map for field ${formatField(
+						fieldPath,
+					)}, got ${safeStringify(value)}`,
+				};
+			}
+			for (const [key, item] of Object.entries(value)) {
+				const error = validateEntityField({
+					field: field.values,
+					value: item,
+					fieldPath: [...fieldPath, key],
+					depth: depth !== undefined ? depth - 1 : undefined,
+					expectRefs,
+					hasPassedFirstLevel: true,
+				});
+				if (error) {
+					return error;
+				}
+			}
 		}
 	} else if (field.type === 'string') {
 		if (typeof value !== 'string') {
@@ -147,7 +209,7 @@ export function validateEntityField({
 				fieldPath,
 				message: `Expected string ${
 					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
+				}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
 			};
 		}
 		if (field.options && !field.options.includes(value)) {
@@ -156,7 +218,7 @@ export function validateEntityField({
 				fieldPath,
 				message: `Expected one of ${field.options.join(
 					', ',
-				)} for field ${formatField(fieldPath)}, got ${value}`,
+				)} for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
 			};
 		}
 	} else if (field.type === 'boolean') {
@@ -166,7 +228,7 @@ export function validateEntityField({
 				fieldPath,
 				message: `Expected boolean ${
 					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
+				}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
 			};
 		}
 	} else if (field.type === 'number') {
@@ -176,19 +238,40 @@ export function validateEntityField({
 				fieldPath,
 				message: `Expected number ${
 					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
+				}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
 			};
 		}
 	} else if (field.type === 'file') {
-		if (!isFile(value) && !isFileData(value)) {
-			return {
-				type: 'invalid-type',
-				fieldPath,
-				message: `Expected file ${
-					field.nullable ? 'or null ' : ''
-				}for field ${formatField(fieldPath)}, got ${value}`,
-			};
+		if (actuallyExpectRefs) {
+			if (!isFileRef(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected file ref for field ${formatField(
+						fieldPath,
+					)}, got ${safeStringify(value)}`,
+				};
+			}
+		} else {
+			if (!isFile(value) && !isFileData(value)) {
+				return {
+					type: 'invalid-type',
+					fieldPath,
+					message: `Expected file ${
+						field.nullable ? 'or null ' : ''
+					}for field ${formatField(fieldPath)}, got ${safeStringify(value)}`,
+				};
+			}
 		}
+	}
+}
+
+function safeStringify(value: any) {
+	try {
+		return JSON.stringify(value);
+	} catch (err) {
+		// for example, recursive objects can't be stringified
+		return String(value);
 	}
 }
 

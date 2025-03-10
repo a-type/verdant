@@ -1,21 +1,21 @@
-import { it, expect } from 'vitest';
 import {
-	schema,
-	Migration,
 	ClientWithCollections,
 	createMigration,
+	Migration,
 	PersistenceImplementation,
+	schema,
 } from '@verdant-web/store';
+import { expect, it } from 'vitest';
 // @ts-ignore
+import { Operation } from '@verdant-web/common';
+import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
 import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
-import { Operation } from '@verdant-web/common';
-import { createTestClient } from '../lib/testClient.js';
-import { getPersistence } from '../lib/persistence.js';
 
 async function createClient({
 	schema,
@@ -165,6 +165,7 @@ it(
 			schema: v2Schema,
 			oldSchemas: [v1Schema, v2Schema],
 			...clientInit,
+			logId: 'A',
 		});
 
 		log('📈 Version 2 client created');

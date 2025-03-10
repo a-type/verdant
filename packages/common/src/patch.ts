@@ -29,7 +29,13 @@ export class PatchCreator {
 	createDiff = (
 		from: any,
 		to: any,
-		options: { mergeUnknownObjects?: boolean; defaultUndefined?: boolean } = {},
+		options: {
+			mergeUnknownObjects?: boolean;
+			/** @deprecated use the equivalent 'merge' */
+			defaultUndefined?: boolean;
+			merge?: boolean;
+			authz?: AuthorizationKey;
+		} = {},
 	) => {
 		return diffToPatches(from, to, this.getNow, this.createSubId, [], options);
 	};
@@ -63,7 +69,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		key: PropertyName,
 		value: any,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		// incoming value must be normalized. if it's not a primitive, it and all sub-objects
 		// must be created
@@ -113,7 +119,7 @@ export class PatchCreator {
 	createRemove = (
 		oid: ObjectIdentifier,
 		key: PropertyName,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		return [
 			{
@@ -132,7 +138,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		value: any,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(index >= 0, 'List index must be non-negative');
 		if (this.isPrimitive(value)) {
@@ -178,7 +184,7 @@ export class PatchCreator {
 	createListPush = (
 		oid: ObjectIdentifier,
 		value: any,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		if (this.isPrimitive(value)) {
 			return [
@@ -214,7 +220,7 @@ export class PatchCreator {
 	createListAdd = (
 		oid: ObjectIdentifier,
 		value: any,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		if (!this.isPrimitive(value)) {
 			return [
@@ -247,7 +253,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		value: any,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(index >= 0, 'List index must be non-negative');
 		if (this.isPrimitive(value)) {
@@ -296,7 +302,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		values: any[],
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(index >= 0, 'List index must be non-negative');
 		const operations: Operation[] = [];
@@ -332,9 +338,9 @@ export class PatchCreator {
 
 	createListRemove = (
 		oid: ObjectIdentifier,
-		value: any,
+		value: ObjectRef | FileRef | string | number | boolean | null,
 		only?: 'first' | 'last',
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		return [
 			{
@@ -354,7 +360,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		index: number,
 		count: number = 1,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(index >= 0, 'List index must be non-negative');
 		assert(count > 0, 'Count must be positive and non-zero');
@@ -376,7 +382,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		value: ObjectRef | FileRef,
 		index: number,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(index >= 0, 'List index must be non-negative');
 		return [
@@ -397,7 +403,7 @@ export class PatchCreator {
 		oid: ObjectIdentifier,
 		fromIndex: number,
 		toIndex: number,
-		authz?: string,
+		authz?: AuthorizationKey,
 	): Operation[] => {
 		assert(fromIndex >= 0, 'List move from index must be non-negative');
 		assert(toIndex >= 0, 'List move to index must be non-negative');
@@ -415,7 +421,10 @@ export class PatchCreator {
 		];
 	};
 
-	createDelete = (oid: ObjectIdentifier, authz?: string): Operation[] => {
+	createDelete = (
+		oid: ObjectIdentifier,
+		authz?: AuthorizationKey,
+	): Operation[] => {
 		return [
 			{
 				oid,

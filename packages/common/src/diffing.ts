@@ -1,7 +1,9 @@
+import { AuthorizationKey } from './authz.js';
 import { VerdantError } from './error.js';
 import {
 	areOidsRelated,
 	assignOid,
+	createRef,
 	getOid,
 	maybeGetOid,
 	ObjectIdentifier,
@@ -27,7 +29,7 @@ export type DiffContext = {
 	/**
 	 * Authorization to apply to all created operations
 	 */
-	authz?: string;
+	authz?: AuthorizationKey;
 	patchCreator: PatchCreator;
 };
 
@@ -38,9 +40,6 @@ export type DiffContext = {
  */
 function areTheSameIdentity(a: any, b: any) {
 	if (a === b) return true;
-	// special case: Verdant doesn't distinguish nil values in entities
-	if ((a === undefined && b === null) || (a === null && b === undefined))
-		return true;
 	if (isRef(a) && isRef(b)) return compareRefs(a, b);
 	const aOid = maybeGetOid(a);
 	const bOid = maybeGetOid(b);
@@ -97,7 +96,7 @@ export function diffToPatches(
 		merge?: boolean;
 		/** @deprecated - use 'merge' */
 		defaultUndefined?: boolean;
-		authz?: string;
+		authz?: AuthorizationKey;
 	},
 ) {
 	const ctx: DiffContext = {
@@ -136,7 +135,17 @@ export function diffLists(from: any[], to: any[], ctx: DiffContext) {
 	// from object must be registered with an OID.
 	const oid = getOid(from);
 	// this copy will be mutated to align with inserts, making things easier to compare.
-	const fromCopy = [...from];
+	const fromCopy = [];
+	// while iterating from, also collect some metadata.
+	const oidsInFrom = new Set();
+	for (let i = 0; i < from.length; i++) {
+		const value = from[i];
+		fromCopy[i] = value;
+		const oid = maybeGetOid(value);
+		if (oid) {
+			oidsInFrom.add(oid);
+		}
+	}
 
 	// first, normalize incoming data according to OID rules. this is done early
 	// so future equality checks are according to configuration like mergeUnknownObjects.
@@ -152,12 +161,17 @@ export function diffLists(from: any[], to: any[], ctx: DiffContext) {
 	// track whether the new list has gaps in it. a gap
 	// means we can no longer use list-push for new items.
 	let noGaps = true;
+	// track any items we move by reference, so we remember to
+	// not delete them later.
+	const movedItems = new Set<ObjectIdentifier>();
+	const overwrittenItems = new Set<ObjectIdentifier>();
 	for (let i = 0; i < to.length; i++) {
 		const value = to[i];
 		const oldValue = fromCopy[i];
 		if (value === undefined) {
 			noGaps = false;
 		}
+		const itemOid = maybeGetOid(value);
 
 		// we decide if this item is being added to the end of the list if:
 		// - there were no empty spaces before it in the new list
@@ -168,14 +182,49 @@ export function diffLists(from: any[], to: any[], ctx: DiffContext) {
 		// accidentally 'push' into a gap, which would put the item in the wrong place.
 		const isEndOfList = noGaps && i >= fromCopy.length;
 
-		if (isEndOfList) {
+		// this branch exclusively deals with object references.
+		if (itemOid && oidsInFrom.has(itemOid)) {
+			// this item was in the old list, so no matter what we want to
+			// preserve its identity. the rest of the branches here all
+			// assume the item is new and initialize it.
+			if (areTheSameIdentity(value, oldValue)) {
+				// the item hasn't moved. we just diff it in place.
+				diff(oldValue, value, ctx);
+			} else {
+				// the item has moved. we are currently visiting its new index,
+				// so we can move it by reference now
+				ctx.patches.push(
+					...ctx.patchCreator.createListMoveByRef(
+						oid,
+						createRef(itemOid),
+						i,
+						ctx.authz,
+					),
+				);
+				// the problem is, a move by ref is not the same as what
+				// we really observed here, since it's more like an insertion
+				// and not an overwrite. to complicate this, the replaced item
+				// at this index might actually have moved, not been replaced.
+				// we mark the item that was at this index previously, and if
+				// we don't see it later, we'll delete it.
+				const fromOid = maybeGetOid(oldValue);
+				if (fromOid) {
+					overwrittenItems.add(fromOid);
+				}
+
+				// remember this item so we don't delete it later.
+				movedItems.add(itemOid);
+			}
+		} else if (isEndOfList) {
 			// this will initialize all sub-objects in the item, too
 			ctx.patches.push(
 				...ctx.patchCreator.createListPush(oid, value, ctx.authz),
 			);
 		} else if (areTheSameIdentity(value, oldValue)) {
-			// the identity of this item hasn't changed, but we
-			// still have to diff the contents.
+			// note : since the branch above covers object references which
+			// were present in the original list, logically this branch only
+			// covers primitives. either way, call diff, it's just more
+			// proper to do so.
 			diff(oldValue, value, ctx);
 		} else {
 			// the identity of this item has changed. we can now evaluate
@@ -215,22 +264,55 @@ export function diffLists(from: any[], to: any[], ctx: DiffContext) {
 		}
 	}
 
-	// remove any remaining items at the end of the array
+	// remove any remaining items at the end of the array.
 	const deletedItemsAtEnd = fromCopy.length - to.length;
 	if (deletedItemsAtEnd > 0) {
+		for (let i = fromCopy.length - 1; i >= to.length; i--) {
+			const value = fromCopy[i];
+			const itemOid = maybeGetOid(value);
+			if (itemOid) {
+				// avoid deleting moved objects that were at the end of the list before.
+				// their reference was moved elsewhere, but their contents must be retained.
+				if (!movedItems.has(itemOid)) {
+					// if sub-items were objects, we need to delete them all
+					// this should recursively delete children of these items
+					// also!
+					deleteWithSubObjects(value, ctx);
+					ctx.patches.push(
+						...ctx.patchCreator.createListRemove(
+							oid,
+							createRef(itemOid),
+							'last',
+							ctx.authz,
+						),
+					);
+				}
+			} else {
+				ctx.patches.push(
+					...ctx.patchCreator.createListRemove(oid, value, 'last', ctx.authz),
+				);
+			}
+		}
+	}
+
+	for (const overwrittenOid of overwrittenItems) {
+		if (movedItems.has(overwrittenOid)) {
+			// this item was moved, not overwritten. we don't want to delete it.
+			continue;
+		}
+		// this item was overwritten, not moved. we need to delete it.
 		// if sub-items were objects, we need to delete them all
 		// this should recursively delete children of these items
 		// also!
-		for (let i = to.length; i < fromCopy.length; i++) {
-			const value = fromCopy[i];
-			deleteWithSubObjects(value, ctx);
+		const item = from.find((x) => maybeGetOid(x) === overwrittenOid);
+		if (item) {
+			deleteWithSubObjects(item, ctx);
 		}
-		// push the list-delete for the deleted items
 		ctx.patches.push(
-			...ctx.patchCreator.createListDelete(
+			...ctx.patchCreator.createListRemove(
 				oid,
-				to.length,
-				deletedItemsAtEnd,
+				createRef(overwrittenOid),
+				'last',
 				ctx.authz,
 			),
 		);

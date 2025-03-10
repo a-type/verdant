@@ -2,9 +2,11 @@
 // written upon rebasing. If you apply ops to an undefined
 // snapshot without an initialize, it remains undefined.
 
+import { AuthorizationKey } from './authz.js';
+
 export type DocumentBaseline<T extends any = any> = {
 	oid: string;
 	snapshot: T;
 	timestamp: string;
-	authz?: string;
+	authz?: AuthorizationKey;
 };

@@ -1,4 +1,5 @@
 import {
+	AuthorizationKey,
 	DocumentBaseline,
 	ObjectIdentifier,
 	Operation,
@@ -12,16 +13,15 @@ import {
 	groupPatchesByRootOid,
 	isRootOid,
 	removeOidsFromAllSubObjects,
-	AuthorizationKey,
 } from '@verdant-web/common';
-import { Context } from '../context/context.js';
-import { Entity } from './Entity.js';
-import { Disposable } from '../utils/Disposable.js';
-import { EntityFamilyMetadata } from './EntityMetadata.js';
-import { FileManager } from '../files/FileManager.js';
-import { OperationBatcher } from './OperationBatcher.js';
 import { WeakEvent } from 'weak-event';
+import { Context } from '../context/context.js';
+import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';
+import { Disposable } from '../utils/Disposable.js';
+import { Entity } from './Entity.js';
+import { EntityFamilyMetadata } from './EntityMetadata.js';
+import { OperationBatcher } from './OperationBatcher.js';
 
 enum AbortReason {
 	Reset,
@@ -347,12 +347,11 @@ export class EntityStore extends Disposable {
 			);
 		}
 
-		const operations = this.ctx.patchCreator.createInitialize(processed, oid);
-		if (access) {
-			operations.forEach((op) => {
-				op.authz = access;
-			});
-		}
+		const operations = this.ctx.patchCreator.createInitialize(
+			processed,
+			oid,
+			access,
+		);
 		await this.batcher.commitOperations(operations, {
 			undoable: !!undoable,
 			source: entity,

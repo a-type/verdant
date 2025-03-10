@@ -17,6 +17,7 @@ import {
 	isFileRef,
 	isNullable,
 	isObject,
+	isObjectRef,
 	isRef,
 	maybeGetOid,
 	memoByKeys,
@@ -297,7 +298,12 @@ export class Entity<
 						break;
 					}
 				} else {
-					this.cachedView[key] = child;
+					// special case - rewrite undefined fields to null
+					if (isNullable(schema) && child === undefined) {
+						this.cachedView[key] = null;
+					} else {
+						this.cachedView[key] = child;
+					}
 				}
 			}
 		}
@@ -323,6 +329,33 @@ export class Entity<
 
 	get invalid() {
 		return !!this.validate();
+	}
+
+	/**
+	 * Returns true if this or any child is invalid (pruned)
+	 */
+	get deepInvalid(): boolean {
+		if (this.invalid) return true;
+		if (Array.isArray(this.rawView)) {
+			for (let i = 0; i < this.rawView.length; i++) {
+				if (isObjectRef(this.rawView[i])) {
+					const child = this.getChild(i, this.rawView[i].id);
+					if (child.deepInvalid) {
+						return true;
+					}
+				}
+			}
+		} else if (isObject(this.rawView)) {
+			for (const key in this.rawView) {
+				if (isObjectRef(this.rawView[key])) {
+					const child = this.getChild(key, this.rawView[key].id);
+					if (child.deepInvalid) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	get isList() {
@@ -418,7 +451,7 @@ export class Entity<
 					field: this.schema,
 					value: this.rawView,
 					fieldPath: this.fieldPath,
-					depth: 1,
+					expectRefs: true,
 				}) ?? undefined;
 			return this.validationError;
 		},
@@ -456,12 +489,57 @@ export class Entity<
 		}
 	};
 
+	private rawViewWithMappedChildren = (
+		mapper: (child: Entity | EntityFile) => any,
+	) => {
+		const view = this.rawView;
+		if (!view) {
+			return null;
+		}
+		if (Array.isArray(view)) {
+			const mapped = view.map((value, i) => {
+				if (isRef(value)) {
+					return mapper(this.getChild(i, value.id));
+				} else {
+					return value;
+				}
+			});
+			assignOid(mapped, this.oid);
+			return mapped;
+		} else {
+			const mapped = Object.entries(view).reduce((acc, [key, value]) => {
+				if (isRef(value)) {
+					acc[key as any] = mapper(this.getChild(key, value.id));
+				} else {
+					acc[key as any] = value;
+				}
+				return acc;
+			}, {} as any);
+			assignOid(mapped, this.oid);
+			return mapped;
+		}
+	};
+
 	/**
 	 * A current snapshot of this Entity's data, including nested
 	 * Entities.
 	 */
 	getSnapshot = (): any => {
 		return this.viewWithMappedChildren((child) => child.getSnapshot());
+	};
+
+	/**
+	 * A snapshot of this Entity with unpruned (invalid) data. This will
+	 * not conform to the entity schema and should be used carefully.
+	 *
+	 * Can be used to inspect or recover invalid, pruned data not
+	 * otherwise accessible.
+	 */
+	getUnprunedSnapshot = (): any => {
+		return this.rawViewWithMappedChildren((child) => {
+			if (child instanceof EntityFile) return child.getSnapshot();
+			return child.getUnprunedSnapshot();
+		});
 	};
 
 	// change management methods (internal use only)
@@ -473,6 +551,39 @@ export class Entity<
 			operations,
 		);
 
+		// special case -- if this entity is pruned, any changes we apply to it
+		// will be in relation to 'exposed' pruned data, not the 'real world'
+		// data that's backing it. That means those changes will produce unexpected
+		// or further invalid results. To avoid this, we basically stamp in the
+		// pruned version of this entity before proceeding.
+		//
+		// as an example of a failure mode without this check, consider a list:
+		// [1, 2, <pruned>, 4, 5]
+		// the user sees: [1, 2, 4, 5]
+		// when they try to replace the item at index 2 with "0" (they see "4"), they
+		// actually replace the invisible pruned item, resulting in [1, 2, 0, 4, 5]
+		// being the result when they expected [1, 2, 0, 5].
+		//
+		// To "stamp" the data before applying user changes, we diff the snapshot
+		// (which is the pruned version) with the current state of the entity.
+		if (this.deepInvalid) {
+			this.ctx.log(
+				'warn',
+				'Changes are being applied to a pruned entity. This means that the pruned version is being treated as the new baseline and any pruned invalid data is lost.',
+				this.oid,
+			);
+			this.canonizePrunedVersion();
+		}
+
+		this.applyPendingOperations(operations);
+	};
+
+	// naming is fuzzy here, but this method was split out from
+	// addPendingOperations since that method also conditionally canonizes
+	// the pruned snapshot, and I wanted to keep the actual insertion of
+	// the ops in one place, so leaving it as part of addPendingOperations
+	// would introduce infinite recursion when canonizing.
+	private applyPendingOperations = (operations: Operation[]) => {
 		// apply authz to all operations
 		if (this.access) {
 			for (const op of operations) {
@@ -484,6 +595,21 @@ export class Entity<
 		for (const change of changes) {
 			this.change(change);
 		}
+	};
+
+	private canonizePrunedVersion = () => {
+		const snapshot = this.getSnapshot();
+		const unprunedSnapshot = this.getUnprunedSnapshot();
+		const operations = this.patchCreator.createDiff(
+			unprunedSnapshot,
+			snapshot,
+			{
+				authz: this.access,
+				merge: false,
+			},
+		);
+
+		this.applyPendingOperations(operations);
 	};
 
 	private addConfirmedData = (data: EntityStoreEventData) => {
@@ -932,7 +1058,7 @@ export class Entity<
 		this.addPendingOperations(
 			this.patchCreator.createDiff(this.getSnapshot(), changes, {
 				mergeUnknownObjects: !replaceSubObjects,
-				defaultUndefined: merge,
+				merge,
 			}),
 		);
 	};

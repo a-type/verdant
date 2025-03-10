@@ -92,7 +92,7 @@ export const weirdCollection = schema.collection({
 	},
 });
 
-const testSchema = schema({
+export const testSchema = schema({
 	version: 1,
 	collections: {
 		todos: todoCollection,

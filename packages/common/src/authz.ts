@@ -18,6 +18,8 @@ function decode(str: string): string {
 }
 
 export type AuthorizationKey = string & {
+	// virtual type only used for type checking to try to sort
+	// out between encoded and decoded string values.
 	'@@type': 'authz';
 };
 

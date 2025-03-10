@@ -1,7 +1,17 @@
-import { assert } from '@verdant-web/common';
-import { describe, it, expect, vi, MockedFunction, vitest } from 'vitest';
+import {
+	assert,
+	createRef,
+	EventSubscriber,
+	NaiveTimestampProvider,
+	PatchCreator,
+	schema,
+} from '@verdant-web/common';
+import { describe, expect, it, MockedFunction, vi, vitest } from 'vitest';
+import { WeakEvent } from 'weak-event';
+import { Time } from '../context/Time.js';
+import { EntityFamilyMetadata } from '../entities/EntityMetadata.js';
+import { Entity, EntityFile } from '../index.js';
 import { createTestStorage } from './fixtures/testStorage.js';
-import { EntityFile } from '../index.js';
 
 async function waitForStoragePropagation(mock: MockedFunction<any>) {
 	await new Promise<void>((resolve, reject) => {
@@ -639,7 +649,7 @@ describe('entities', () => {
 				content: { invalid: 'value' },
 			});
 		}).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Validation error: Expected string for field content, got [object Object]]`,
+			`[Error: Validation error: Expected string for field content, got {"invalid":"value"}]`,
 		);
 	});
 
@@ -650,7 +660,7 @@ describe('entities', () => {
 		expect(() => {
 			weird.set('file', { invalid: 'value' });
 		}).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Validation error: Expected file or null for field file, got [object Object]]`,
+			`[Error: Validation error: Expected file or null for field file, got {"invalid":"value"}]`,
 		);
 
 		// valid options
@@ -704,5 +714,150 @@ describe('entities', () => {
 		await storage.todos.delete(item.get('id'));
 
 		expect(item.deleted).toBe(true);
+	});
+
+	it('should apply contextual changes to a pruned entity in a way consistent with the pruned view of the data', async () => {
+		// manually constructing an entity for this test is easiest,
+		// kind of hard to force invalid data otherwise
+		const onPendingOperations = vi.fn();
+		const time = new Time(new NaiveTimestampProvider(), 1);
+		// too much junk in here, have to manually pick and choose
+		let subId = 0;
+		const testCtx = {
+			globalEvents: new EventSubscriber(),
+			time,
+			log: vi.fn(),
+			patchCreator: new PatchCreator(
+				() => time.now,
+				() => `${subId++}`,
+			),
+			files: {
+				add: vi.fn(),
+			},
+		} as any;
+		const metadataFamily = new EntityFamilyMetadata({
+			ctx: testCtx,
+			onPendingOperations,
+			rootOid: 'foos/a',
+		});
+		const entity = new Entity({
+			oid: 'foos/a',
+			schema: {
+				type: 'object',
+				properties: {
+					id: schema.fields.id(),
+					content: schema.fields.string(),
+					items: schema.fields.array({
+						items: schema.fields.object({
+							properties: {
+								content: schema.fields.string(),
+							},
+						}),
+					}),
+				},
+			},
+			ctx: testCtx,
+			deleteSelf: vi.fn(),
+			files: {
+				add: vi.fn(),
+			} as any,
+			metadataFamily,
+			storeEvents: {
+				add: new WeakEvent(),
+				replace: new WeakEvent(),
+				resetAll: new WeakEvent(),
+			},
+			readonlyKeys: ['id'],
+		});
+		metadataFamily.addConfirmedData({
+			baselines: [
+				{
+					oid: 'foos/a:1',
+					snapshot: { content: 'item 1' },
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:2',
+					snapshot: { content: 'item 2' },
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:3',
+					snapshot: {}, // INVALID!
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:4',
+					snapshot: { content: 'item 4' },
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:5',
+					snapshot: [
+						createRef('foos/a:1'),
+						createRef('foos/a:2'),
+						createRef('foos/a:3'),
+						createRef('foos/a:4'),
+					],
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a',
+					snapshot: {
+						id: 'a',
+						content: 'the main foo',
+						items: createRef('foos/a:5'),
+					},
+					timestamp: time.now,
+				},
+			],
+		});
+
+		expect(entity.deepInvalid).toBe(true);
+
+		// check all that worked, lol. and that it's
+		// pruned item 3
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			content: 'the main foo',
+			items: [
+				{ content: 'item 1' },
+				{ content: 'item 2' },
+				{ content: 'item 4' },
+			],
+		});
+
+		// also check that unpruned snapshot is correct
+		expect(entity.getUnprunedSnapshot()).toEqual({
+			id: 'a',
+			content: 'the main foo',
+			items: [
+				{ content: 'item 1' },
+				{ content: 'item 2' },
+				{},
+				{ content: 'item 4' },
+			],
+		});
+
+		// now, let's set the content of index 2.
+		// if this works as expected, we should replace
+		// item 4 (even though technically it's at index 3)
+		// because we are respecting the user's intention.
+		const items = entity.get('items');
+		items.set(2, { content: 'new item' });
+
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			content: 'the main foo',
+			items: [
+				{ content: 'item 1' },
+				{ content: 'item 2' },
+				{ content: 'new item' },
+			],
+		});
+
+		// now, the entity has been 'fixed' and is valid again
+		expect(entity.getSnapshot()).toEqual(entity.getUnprunedSnapshot());
+		expect(entity.deepInvalid).toBe(false);
 	});
 });

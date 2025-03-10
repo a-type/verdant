@@ -1,4 +1,5 @@
 import {
+	AuthorizationKey,
 	DocumentBaseline,
 	ObjectIdentifier,
 	Operation,
@@ -20,7 +21,7 @@ export type EntityMetadataView = {
 	empty: boolean;
 	updatedAt: number;
 	latestTimestamp: string | null;
-	authz?: string;
+	authz?: AuthorizationKey;
 };
 
 export class EntityMetadata {
@@ -101,7 +102,7 @@ export class EntityMetadata {
 					// we don't use after for pending ops, they're all
 					// logically in the future
 					null,
-			  );
+				);
 		if (pendingResult.authz) {
 			authz = pendingResult.authz;
 		}
@@ -221,10 +222,10 @@ export class EntityMetadata {
 		latestTimestamp: string | null;
 		deleted: boolean;
 		futureSeen: string | undefined;
-		authz?: string;
+		authz?: AuthorizationKey;
 	} => {
 		let futureSeen: string | undefined = undefined;
-		let authz: string | undefined = undefined;
+		let authz: AuthorizationKey | undefined = undefined;
 
 		const now = this.ctx.time.now;
 		for (const op of operations) {

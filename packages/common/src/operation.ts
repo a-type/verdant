@@ -1,3 +1,4 @@
+import { AuthorizationKey } from './authz.js';
 import { DocumentBaseline } from './baseline.js';
 import { FileRef, isFileRef } from './files.js';
 import {
@@ -151,7 +152,7 @@ export type Operation = {
 	oid: ObjectIdentifier;
 	timestamp: string;
 	data: OperationPatch;
-	authz?: string;
+	authz?: AuthorizationKey;
 };
 
 /**
@@ -164,7 +165,7 @@ export function initialToPatches(
 	getNow: () => string,
 	createSubId?: () => string,
 	patches: Operation[] = [],
-	options?: { authz?: string },
+	options?: { authz?: AuthorizationKey },
 ) {
 	assignOid(initial, rootOid);
 	assignOidsToAllSubObjects(initial, createSubId);
@@ -189,7 +190,7 @@ export function shallowInitialToPatches(
 	rootOid: ObjectIdentifier,
 	getNow: () => string,
 	patches: Operation[] = [],
-	options?: { authz?: string },
+	options?: { authz?: AuthorizationKey },
 ) {
 	const op: Operation = {
 		oid: rootOid,
@@ -205,7 +206,7 @@ export function shallowInitialToPatches(
 
 // saves a bit of network traffic by not attaching authz
 // key at all if not present
-export function addAuthzToOp(op: Operation, authz?: string) {
+export function addAuthzToOp(op: Operation, authz?: AuthorizationKey) {
 	if (authz) {
 		op.authz = authz;
 	}
@@ -342,18 +343,18 @@ export function applyPatch<T extends NormalizedObject>(
 				do {
 					const valueToRemove = patch.value;
 					if (patch.only === 'last') {
-						if (isObjectRef(valueToRemove)) {
+						if (isRef(valueToRemove)) {
 							index = findLastIndex(
 								base,
-								(item: any) => item.id === valueToRemove.id,
+								(item: any) => isRef(item) && compareRefs(item, valueToRemove),
 							);
 						} else {
 							index = base.lastIndexOf(valueToRemove);
 						}
 					} else {
-						if (isObjectRef(valueToRemove)) {
+						if (isRef(valueToRemove)) {
 							index = base.findIndex(
-								(item: any) => item.id === valueToRemove.id,
+								(item: any) => isRef(item) && compareRefs(item, valueToRemove),
 							);
 						} else {
 							index = base.indexOf(valueToRemove);
