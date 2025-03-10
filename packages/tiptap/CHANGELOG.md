@@ -1,5 +1,15 @@
 # @verdant-web/tiptap
 
+## 2.0.0
+
+### Patch Changes
+
+- f2193b5: Lots of bug fixes for diffing lists, manipulating pruned (invalid) data, and reducing patch sizes for moving items in lists and other diffs.
+- Updated dependencies [f2193b5]
+  - @verdant-web/common@2.9.0
+  - @verdant-web/store@4.3.0
+  - @verdant-web/react@42.0.0
+
 ## 1.0.1
 
 ### Patch Changes
