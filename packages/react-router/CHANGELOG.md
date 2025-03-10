@@ -1,5 +1,11 @@
 # @verdant-web/react-router
 
+## 0.8.0
+
+### Minor Changes
+
+- 43168e6: Router: base path support
+
 ## 0.7.2
 
 ### Patch Changes
