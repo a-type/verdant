@@ -121,20 +121,20 @@ it('should support non-nullable tiptap schema fields', async () => {
 					{
 						type: 'text',
 						attrs: {},
-						content: [],
-						marks: [],
+						content: null,
+						marks: null,
 						from: null,
 						to: null,
 						text: 'Hello, world!',
 					},
 				],
-				marks: [],
+				marks: null,
 				from: null,
 				to: null,
 				text: null,
 			},
 		],
-		marks: [],
+		marks: null,
 		text: null,
 	});
 });
@@ -190,20 +190,20 @@ it('should support nullable tiptap schema fields with a specified default doc', 
 					{
 						type: 'text',
 						attrs: {},
-						content: [],
-						marks: [],
+						content: null,
+						marks: null,
 						from: null,
 						to: null,
 						text: 'Hello, world!',
 					},
 				],
-				marks: [],
+				marks: null,
 				from: null,
 				to: null,
 				text: null,
 			},
 		],
-		marks: [],
+		marks: null,
 		text: null,
 	});
 });
@@ -276,7 +276,7 @@ it('should support Verdant undo and redo', async () => {
 		from: null,
 		to: null,
 		content: [],
-		marks: [],
+		marks: null,
 		text: null,
 	});
 });
@@ -347,15 +347,15 @@ it('should support TipTap undo and redo', async () => {
 		content: [
 			{
 				attrs: {},
-				content: [],
+				content: null,
 				from: null,
-				marks: [],
+				marks: null,
 				text: null,
 				to: null,
 				type: 'paragraph',
 			},
 		],
-		marks: [],
+		marks: null,
 		text: null,
 	});
 });

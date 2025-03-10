@@ -60,7 +60,7 @@ export type TipTapDocumentEntity = ObjectEntity<
 
 const otherDefaults = {
 	content: [],
-	marks: [],
+	marks: null,
 	attrs: {},
 	from: null,
 	to: null,
@@ -98,6 +98,7 @@ export function createTipTapFieldSchema(options: {
 		text: schema.fields.string({ nullable: true }),
 		marks: schema.fields.array({
 			items: baseField,
+			nullable: true,
 		}),
 	});
 

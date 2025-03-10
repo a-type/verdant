@@ -283,7 +283,7 @@ function formatSnapshotForVerdantAndAssignOids(doc: JSONContent) {
 		doc.attrs = {};
 	}
 	if (doc.marks === undefined) {
-		doc.marks = [];
+		doc.marks = null as any;
 	}
 	if (doc.content) {
 		doc.content.forEach(formatSnapshotForVerdantAndAssignOids);
@@ -295,7 +295,7 @@ function formatSnapshotForVerdantAndAssignOids(doc: JSONContent) {
 function ensureDocShape(json: any) {
 	for (const node of json.content ?? []) {
 		// remove undefined nodes
-		node.content = node.content.filter((n: any) => !!n).map(ensureDocShape);
+		node.content = node.content?.filter((n: any) => !!n).map(ensureDocShape);
 	}
 	return json;
 }
