@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 4.3.0
+
+### Minor Changes
+
+- f2193b5: Lots of bug fixes for diffing lists, manipulating pruned (invalid) data, and reducing patch sizes for moving items in lists and other diffs.
+
+### Patch Changes
+
+- Updated dependencies [f2193b5]
+  - @verdant-web/common@2.9.0
+
 ## 4.2.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @verdant-web/persistence-sqlite
 
+## 3.0.0
+
+### Patch Changes
+
+- Updated dependencies [f2193b5]
+  - @verdant-web/store@4.3.0
+
 ## 2.0.0
 
 ### Patch Changes
