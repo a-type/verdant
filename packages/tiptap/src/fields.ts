@@ -3,28 +3,60 @@ import {
 	ShapeFromProperty,
 	StorageAnyFieldSchema,
 	StorageArrayFieldSchema,
+	StorageMapFieldSchema,
 	StorageNumberFieldSchema,
 	StorageObjectFieldSchema,
 	StorageStringFieldSchema,
 } from '@verdant-web/common';
+import { ListEntity, ObjectEntity } from '@verdant-web/store';
 
 export type TiptapFieldSchema = StorageObjectFieldSchema<{
 	type: StorageStringFieldSchema;
-	from: StorageNumberFieldSchema;
-	to: StorageNumberFieldSchema;
-	attrs: StorageObjectFieldSchema<{
-		values: StorageAnyFieldSchema;
-	}>;
-	content: StorageArrayFieldSchema<TiptapFieldSchema>;
-	text: StorageStringFieldSchema;
-	marks: StorageArrayFieldSchema<TiptapFieldSchema>;
+	from: StorageNumberFieldSchema & { nullable: true };
+	to: StorageNumberFieldSchema & { nullable: true };
+	attrs: StorageMapFieldSchema<StorageAnyFieldSchema>;
+	content: StorageArrayFieldSchema<TiptapFieldSchema> & { nullable: true };
+	text: StorageStringFieldSchema & { nullable: true };
+	marks: StorageArrayFieldSchema<TiptapFieldSchema> & { nullable: true };
 }>;
+
+type PartialNull<T> = {
+	[K in keyof T]?: T[K] | null;
+};
 
 export type TipTapFieldInitializer = Pick<
 	ShapeFromProperty<TiptapFieldSchema>,
 	'type'
 > &
-	Partial<ShapeFromProperty<TiptapFieldSchema>>;
+	PartialNull<ShapeFromProperty<TiptapFieldSchema>>;
+
+export type TipTapAttrsEntity = ObjectEntity<
+	{ [key: string]: any },
+	{ [key: string]: any },
+	{ [key: string]: any }
+>;
+export type TipTapContentEntity = ListEntity<
+	TipTapFieldInitializer[],
+	TipTapDocumentEntity[],
+	ShapeFromProperty<TiptapFieldSchema>[]
+>;
+/**
+ * NOTE: it's not recommended to use this type directly. Instead rely on the generated
+ * types from the Verdant CLI.
+ */
+export type TipTapDocumentEntity = ObjectEntity<
+	TipTapFieldInitializer,
+	{
+		type: string;
+		from: number | null;
+		to: number | null;
+		attrs: TipTapAttrsEntity;
+		content: TipTapContentEntity;
+		text: string | null;
+		marks: TipTapContentEntity;
+	},
+	ShapeFromProperty<TiptapFieldSchema>
+>;
 
 const otherDefaults = {
 	content: [],
@@ -61,6 +93,7 @@ export function createTipTapFieldSchema(options: {
 		}),
 		content: schema.fields.array({
 			items: baseField,
+			nullable: true,
 		}),
 		text: schema.fields.string({ nullable: true }),
 		marks: schema.fields.array({
@@ -78,10 +111,12 @@ export function createTipTapFieldSchema(options: {
 			}),
 			content: schema.fields.array({
 				items: nestedContent,
+				nullable: true,
 			}),
 			text: schema.fields.string({ nullable: true }),
 			marks: schema.fields.array({
 				items: nestedContent,
+				nullable: true,
 			}),
 		},
 		default: () => {

@@ -663,6 +663,9 @@ importers:
       '@verdant-web/store':
         specifier: workspace:*
         version: link:../packages/store
+      '@verdant-web/tiptap':
+        specifier: workspace:*
+        version: link:../packages/tiptap
       '@whatwg-node/server':
         specifier: ^0.9.67
         version: 0.9.67

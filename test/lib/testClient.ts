@@ -1,15 +1,16 @@
+import { Operation, StorageSchema } from '@verdant-web/common';
 import { ReplicaType } from '@verdant-web/server';
+import { afterAll, expect } from 'vitest';
+import { WebSocket } from 'ws';
 import {
+	Client,
 	ClientDescriptor,
 	ClientDescriptorOptions,
+	ClientWithCollections,
 	Migration,
-	Client,
 	PersistenceImplementation,
 } from '../client/index.js';
-import { Operation, StorageSchema } from '@verdant-web/common';
-import { afterAll, expect } from 'vitest';
 import { getPersistence } from './persistence.js';
-import { WebSocket } from 'ws';
 
 const cleanupClients: Client<any, any>[] = [];
 
@@ -64,7 +65,7 @@ export async function createTestClient({
 					// polling sucks for testing lol
 					automaticTransportSelection: autoTransport,
 					pullInterval: 300,
-			  }
+				}
 			: undefined,
 		log:
 			log ||
@@ -72,11 +73,11 @@ export async function createTestClient({
 				? (level, ...args: any[]) => {
 						defaultLog(`[${logId}]`, level, ...args);
 						onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
-				  }
+					}
 				: onLog
-				? (...args: any[]) =>
-						onLog(args.map((a) => JSON.stringify(a)).join('\n'))
-				: undefined),
+					? (...args: any[]) =>
+							onLog(args.map((a) => JSON.stringify(a)).join('\n'))
+					: undefined),
 		files,
 		schema,
 		rebaseTimeout: 0,
@@ -103,7 +104,7 @@ export async function createTestClient({
 		expect(err).toBe(null);
 	});
 	cleanupClients.push(client);
-	return client;
+	return client as any as ClientWithCollections;
 }
 
 afterAll(async () => {

@@ -1,7 +1,7 @@
+import { stableStringify } from '@verdant-web/common';
+import { ClientWithCollections, EntityFile } from '@verdant-web/store';
 import { expect, Mock } from 'vitest';
 import { AnyEntity, Client, Query } from '../client/index.js';
-import { ClientWithCollections, EntityFile } from '@verdant-web/store';
-import { stableStringify } from '@verdant-web/common';
 
 export async function waitForMockCall(mock: Mock, calls = 1, debug?: string) {
 	return waitForCondition(
@@ -103,8 +103,8 @@ export async function waitForQueryResult(
 				Array.isArray(query.__rawValue)
 					? `${query.__rawValue.length} items`
 					: !!query.__rawValue
-					? 'exists'
-					: 'null',
+						? 'exists'
+						: 'null',
 			);
 			reject(new Error('Timed out waiting for query ' + (debug || query.key)));
 		}, timeoutMs);
@@ -270,7 +270,11 @@ export async function waitForEntitySnapshot(
 		let timer = setTimeout(() => {
 			onFail?.(entity);
 			expect(entity.getSnapshot()).toEqual(snapshot);
-			reject(new Error('Timed out waiting for snapshot'));
+			reject(
+				new Error(
+					`Timed out waiting for snapshot ${JSON.stringify(snapshot)}\n current:\n ${JSON.stringify(entity.getSnapshot())}`,
+				),
+			);
 		}, timeout);
 
 		if (stableStringify(entity.getSnapshot()) === stableStringify(snapshot)) {
