@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 1.0.1
+
+### Patch Changes
+
+- baaeae0: Bugfix: properly initialize tiptap editor from existing doc
+
 ## 1.0.0
 
 ### Minor Changes
