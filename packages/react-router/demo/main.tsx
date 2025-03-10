@@ -80,6 +80,10 @@ const routes = makeRoutes([
 							},
 						],
 					},
+					{
+						path: 'comments/:commentId',
+						component: lazy(() => import('./routes/Comment.jsx')),
+					},
 				],
 			},
 		],
@@ -99,7 +103,7 @@ function handleNavigate(path: string, { state }: { state?: any }) {
 
 function App() {
 	return (
-		<Router routes={routes} onNavigate={handleNavigate}>
+		<Router basePath="/base/" routes={routes} onNavigate={handleNavigate}>
 			<main className="main">
 				<nav style={{ position: 'sticky', top: 0, zIndex: 1 }}>
 					<Link to="/">Home</Link>

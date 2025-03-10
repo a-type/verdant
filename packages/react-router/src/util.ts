@@ -18,3 +18,10 @@ export function joinPaths(path1: string, path2: string | undefined) {
 export function generateId() {
 	return Math.random().toString(36).slice(2, 9);
 }
+
+export function removeBasePath(pathname: string, basePath: string | undefined) {
+	if (basePath && pathname.startsWith(basePath)) {
+		return pathname.slice(basePath.length);
+	}
+	return pathname;
+}

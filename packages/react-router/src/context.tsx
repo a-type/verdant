@@ -29,11 +29,13 @@ type RouteGlobalContextValue = {
 	path: string;
 	transitioning: boolean;
 	events: EventTarget;
+	basePath: string;
 };
 
 export const RouteGlobalContext = createContext<RouteGlobalContextValue>({
 	rootMatch: null,
 	path: '',
+	basePath: '',
 	transitioning: false,
 	events: new EventTarget(),
 });
@@ -65,4 +67,10 @@ export function useEvents(): EventTarget {
 	const { events } = useContext(RouteGlobalContext);
 
 	return events;
+}
+
+export function useBasePath(): string {
+	const { basePath } = useContext(RouteGlobalContext);
+
+	return basePath;
 }

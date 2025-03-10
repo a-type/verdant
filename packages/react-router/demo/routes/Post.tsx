@@ -13,7 +13,14 @@ export function Post() {
 		<div>
 			<h1>{post.title}</h1>
 			<p>{post.content}</p>
-			<Link to={`/posts/${id}/passthrough/testable`}>Test</Link>
+			<ul>
+				<li>
+					<Link to={`/posts/${id}/passthrough/testable`}>Test</Link>
+				</li>
+				<li>
+					<Link to={`/posts/${id}/comments/demo-comment`}>Demo comment</Link>
+				</li>
+			</ul>
 			<Outlet />
 			<div>Preview test:</div>
 			<RouteByPath path="passthrough/testable" />

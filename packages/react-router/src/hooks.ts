@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
 	RouteLevelContext,
+	useBasePath,
 	useEvents,
 	useLocationPath,
 	useRootMatch,
@@ -20,9 +21,9 @@ import {
 	matchPath,
 } from './resolution.js';
 import { getScrollPosition, recordScrollPosition } from './scrollPositions.js';
-import { RouteConfig, RouteMatch } from './types.js';
-import { generateId } from './util.js';
 import { useIsRouteTransitioning } from './TransitionIndicator.js';
+import { RouteConfig, RouteMatch } from './types.js';
+import { generateId, joinPaths, removeBasePath } from './util.js';
 
 function useStableCallback<T extends Function>(cb: T): T {
 	const ref = useRef(cb);
@@ -53,31 +54,36 @@ export function useOnLocationChange(
 		prev: PreviousLocation,
 	) => void,
 ) {
+	const basePath = useBasePath();
 	const cb = useStableCallback(callback);
 	const previousRef = useRef<PreviousLocation>({
-		pathname: location.pathname,
+		pathname: removeBasePath(location.pathname, basePath),
 		search: location.search,
 		hash: location.hash,
 	});
 
 	useLayoutEffect(() => {
 		const handler = (ev: PopStateEvent) => {
+			const locationCopy = {
+				...location,
+				pathname: removeBasePath(location.pathname, basePath),
+			};
 			cb(
-				location,
+				locationCopy,
 				ev.state || {
 					id: 'initial',
 				},
 				previousRef.current,
 			);
 			previousRef.current = {
-				pathname: location.pathname,
+				pathname: removeBasePath(location.pathname, basePath),
 				search: location.search,
 				hash: location.hash,
 			};
 		};
 		window.addEventListener('popstate', handler);
 		return () => window.removeEventListener('popstate', handler);
-	}, [cb]);
+	}, [cb, basePath]);
 }
 
 const EMPTY_ROUTES: RouteConfig[] = [];
@@ -181,6 +187,7 @@ export function useNextMatchingRoute(): RouteMatch | null {
  */
 export function useNavigate() {
 	const events = useEvents();
+	const basePath = useBasePath();
 
 	return useCallback(
 		(
@@ -206,10 +213,15 @@ export function useNavigate() {
 				}
 				to = toUrl.pathname + toUrl.search + toUrl.hash;
 			}
+			if (basePath) {
+				to = joinPaths(basePath, to);
+			}
 			events.dispatchEvent(new WillNavigateEvent());
 			// if paths are equal for this navigation, preserve current
 			// route id
-			const id = preserveScroll ? history.state?.id ?? 'initial' : generateId();
+			const id = preserveScroll
+				? (history.state?.id ?? 'initial')
+				: generateId();
 			const routeState = {
 				state,
 				skipTransition,
@@ -226,7 +238,7 @@ export function useNavigate() {
 				}),
 			);
 		},
-		[events],
+		[events, basePath],
 	);
 }
 

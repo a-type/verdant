@@ -3,7 +3,9 @@ import { ComponentType } from 'react';
 type CommonRouteConfig = {
 	component: ComponentType;
 	children?: RouteConfig[];
-	onVisited?: (params: { [key: string]: string }) => void | (() => void);
+	onVisited?: (params: {
+		[key: string]: string;
+	}) => void | (() => void) | Promise<void> | Promise<() => void>;
 	data?: any;
 };
 

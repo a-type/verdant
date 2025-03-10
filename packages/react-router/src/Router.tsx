@@ -1,8 +1,16 @@
-import { ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
-import { RouteConfig, RouteMatch } from './types.js';
+import {
+	ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+	useTransition,
+} from 'react';
 import { RouteGlobalProvider, RouteLevelProvider } from './context.js';
+import { PreviousLocation, RouteState, useOnLocationChange } from './hooks.js';
 import { Outlet } from './Outlet.js';
-import { PreviousLocation, useOnLocationChange } from './hooks.js';
+import { RouteConfig, RouteMatch } from './types.js';
+import { joinPaths, removeBasePath } from './util.js';
 
 export interface RouterProps {
 	children: ReactNode;
@@ -21,6 +29,7 @@ export interface RouterProps {
 	 * RestoreScroll component. i.e. if you are not using RestoreScroll.
 	 */
 	nativeScrollRestoration?: boolean;
+	basePath?: string;
 }
 
 const Root = () => <Outlet />;
@@ -30,6 +39,7 @@ export function Router({
 	routes,
 	onNavigate,
 	nativeScrollRestoration,
+	basePath,
 }: RouterProps) {
 	const rootRoute = useMemo<RouteConfig>(
 		() => ({
@@ -39,18 +49,36 @@ export function Router({
 		}),
 		[routes],
 	);
-	const [path, setPath] = useState(() => window.location.pathname);
-	const root: RouteMatch = useMemo(
-		() => ({
-			path: '',
-			remainingPath: path,
+	const [path, setPath] = useState(() =>
+		removeBasePath(window.location.pathname, basePath),
+	);
+	const root: RouteMatch = useMemo(() => {
+		const adjustedPath =
+			basePath && path.startsWith(basePath)
+				? path.slice(basePath.length)
+				: path;
+		return {
+			path: basePath && adjustedPath !== path ? basePath : '',
+			remainingPath: adjustedPath,
 			params: {},
 			route: rootRoute,
-		}),
-		[rootRoute, path],
-	);
+		};
+	}, [rootRoute, path, basePath]);
 	const [transitioning, startTransition] = useTransition();
 	const [events] = useState(() => new EventTarget());
+
+	const updatePath = useCallback(
+		(newPath: string, state?: RouteState) => {
+			if (state?.skipTransition) {
+				setPath(newPath);
+			} else {
+				startTransition(() => {
+					setPath(newPath);
+				});
+			}
+		},
+		[setPath, startTransition],
+	);
 
 	useEffect(() => {
 		if (nativeScrollRestoration) return;
@@ -61,18 +89,16 @@ export function Router({
 		};
 	}, [nativeScrollRestoration]);
 
-	useOnLocationChange((location, state, previous) => {
-		const cancelNavigation = onNavigate?.(location, state, previous) === false;
-		if (cancelNavigation) return;
-
-		if (state?.skipTransition) {
-			setPath(location.pathname);
-		} else {
-			startTransition(() => {
-				setPath(location.pathname);
-			});
+	// enforce base path
+	useEffect(() => {
+		if (basePath && !window.location.pathname.startsWith(basePath)) {
+			window.history.replaceState(
+				{},
+				'',
+				joinPaths(basePath, window.location.pathname) + window.location.search,
+			);
 		}
-	});
+	}, [basePath]);
 
 	return (
 		<RouteGlobalProvider
@@ -80,8 +106,30 @@ export function Router({
 			path={path}
 			transitioning={transitioning}
 			events={events}
+			basePath={basePath || ''}
 		>
-			<RouteLevelProvider match={root}>{children}</RouteLevelProvider>
+			<PathManager setPath={updatePath} onNavigate={onNavigate}>
+				<RouteLevelProvider match={root}>{children}</RouteLevelProvider>
+			</PathManager>
 		</RouteGlobalProvider>
 	);
+}
+
+function PathManager({
+	children,
+	setPath,
+	onNavigate,
+}: {
+	children: ReactNode;
+	setPath: (path: string, state?: RouteState) => void;
+	onNavigate?: RouterProps['onNavigate'];
+}) {
+	useOnLocationChange((location, state, previous) => {
+		const cancelNavigation = onNavigate?.(location, state, previous) === false;
+		if (cancelNavigation) return;
+
+		setPath(location.pathname, state);
+	});
+
+	return <>{children}</>;
 }

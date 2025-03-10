@@ -1,8 +1,7 @@
 import { memo, useEffect, useMemo } from 'react';
-import { RouteLevelProvider } from './context.js';
-import { RouteMatch } from './types.js';
-import { useLocationPath } from './context.js';
+import { RouteLevelProvider, useLocationPath } from './context.js';
 import { useRouteMatchesForPath } from './hooks.js';
+import { RouteMatch } from './types.js';
 import { joinPaths } from './util.js';
 
 export interface RouteRendererProps {
@@ -21,7 +20,17 @@ export interface RouteRendererProps {
  */
 export function RouteRenderer({ value, params }: RouteRendererProps) {
 	useEffect(() => {
-		return value?.route.onVisited?.(value.params);
+		const ret = value?.route.onVisited?.(value.params);
+		if (typeof ret === 'function') {
+			return ret;
+		} else if (ret instanceof Promise) {
+			return async () => {
+				const ret2 = await ret;
+				if (typeof ret2 === 'function') {
+					ret2();
+				}
+			};
+		}
 	}, [value]);
 
 	const paramsToPass = useMemo(
