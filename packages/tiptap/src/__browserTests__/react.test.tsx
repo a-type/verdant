@@ -4,10 +4,13 @@ import { createMigration, schema } from '@verdant-web/common';
 import { createHooks } from '@verdant-web/react';
 import { ClientDescriptor, ClientWithCollections } from '@verdant-web/store';
 import { userEvent } from '@vitest/browser/context';
-import { ReactNode, Suspense } from 'react';
+import { ChangeEvent, ReactNode, Suspense } from 'react';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { createTipTapFieldSchema } from '../fields.js';
+import {
+	createTipTapFieldSchema,
+	createTipTapFileMapSchema,
+} from '../fields.js';
 import { useSyncedEditor } from '../react.js';
 
 const testSchema = schema({
@@ -25,6 +28,7 @@ const testSchema = schema({
 						content: [],
 					},
 				}),
+				files: createTipTapFileMapSchema(),
 			},
 		}),
 	},
@@ -409,7 +413,6 @@ it('should initialize from an existing document', async () => {
 	await expect.element(screen.getByTestId('editor')).toBeVisible();
 
 	const editor = screen.getByTestId('editor').getByRole('textbox');
-	await expect.element(editor).toHaveTextContent('');
 	await expect.element(editor).toHaveTextContent('Hello, world!');
 });
 
@@ -466,7 +469,6 @@ it('should withstand multiple edits, undo, and redo consistently', async () => {
 	await expect.element(screen.getByTestId('editor')).toBeVisible();
 
 	const editor = screen.getByTestId('editor').getByRole('textbox');
-	await expect.element(editor).toHaveTextContent('');
 	await expect.element(editor).toHaveTextContent('Hello, world!');
 
 	await userEvent.type(editor, '[pageDown]');
@@ -509,4 +511,103 @@ it('should withstand multiple edits, undo, and redo consistently', async () => {
 	await expect
 		.element(editor)
 		.toHaveTextContent(/^Hello, world!Line 2!Line 3!$/);
+});
+
+it('should support media nodes', async () => {
+	const testPost = await client.posts.put({});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const user = userEvent.setup();
+
+	const TipTapTest = () => {
+		const editor = useSyncedEditor(testPost, 'requiredBody', {
+			editorOptions: {
+				extensions: [StarterKit.configure({ history: false })],
+			},
+			files: testPost.get('files'),
+		});
+
+		const insertMedia = async (ev: ChangeEvent<HTMLInputElement>) => {
+			const file = ev.target.files?.[0];
+			if (!file) return;
+			editor?.chain().insertMedia(file).run();
+		};
+
+		return (
+			<div>
+				<input type="file" onChange={insertMedia} data-testid="insert-media" />
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+			</div>
+		);
+	};
+
+	// load the image fixture to a file
+	const imageRes = await fetch('/cat.jpg', { method: 'GET' });
+	const imageBlob = await imageRes.blob();
+
+	const screen = await renderWithProvider(<TipTapTest />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+
+	const editor = screen.getByTestId('editor').getByRole('textbox');
+	await expect.element(editor).toHaveTextContent('');
+
+	// send keystrokes to the editor
+	await user.type(editor, 'Hello, world!');
+	await expect.element(editor).toHaveTextContent('Hello, world!');
+
+	// simulate paste of an image
+	// load the image into the clipboard
+	await user.upload(
+		screen.getByTestId('insert-media'),
+		new File([imageBlob], 'cat.jpg', { type: 'image/jpeg' }),
+	);
+
+	// the image should be visible in the editor
+	await expect.element(screen.getByRole('img')).toBeVisible();
+
+	const audioRes = await fetch('/cat.m4a', { method: 'GET' });
+	const audioBlob = await audioRes.blob();
+	await user.upload(
+		screen.getByTestId('insert-media'),
+		new File([audioBlob], 'cat.m4a', { type: 'audio/m4a' }),
+	);
+
+	// the audio should be visible in the editor
+	const audio = screen.container.querySelector('audio');
+	expect(audio).not.toBe(null);
+	await expect.element(audio!).toBeVisible();
+
+	const videoRes = await fetch('/cat.mp4', { method: 'GET' });
+	const videoBlob = await videoRes.blob();
+	await user.upload(
+		screen.getByTestId('insert-media'),
+		new File([videoBlob], 'cat.mp4', { type: 'video/mp4' }),
+	);
+
+	// the video should be visible in the editor
+	const video = screen.container.querySelector('video');
+	expect(video).not.toBe(null);
+	await expect.element(video!).toBeVisible();
+
+	const files = testPost.get('files');
+	expect(files.values().length).toBe(3);
+
+	// delete all media nodes; the files should also be removed from Verdant.
+	await user.keyboard('{Delete}{Delete}{Delete}');
+	await expect
+		.element(screen.getByTestId('editor'))
+		.toHaveTextContent('Hello, world!');
+	expect(files.values().length).toBe(0);
 });

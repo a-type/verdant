@@ -6,7 +6,11 @@ import {
 	VerdantExtensionOptions,
 	type EntitySnapshot,
 	type ValidEntityKey,
-} from './plugins.js';
+} from './extensions/Verdant.js';
+import {
+	VerdantMediaExtension,
+	VerdantMediaFileMap,
+} from './extensions/VerdantMedia.js';
 
 export function useSyncedEditor<
 	Ent extends AnyEntity<any, any, any>,
@@ -19,11 +23,13 @@ export function useSyncedEditor<
 		editorDependencies,
 		nullDocumentDefault,
 		extensionOptions,
+		files,
 	}: {
 		editorOptions?: UseEditorOptions;
 		editorDependencies?: any[];
 		nullDocumentDefault?: EntitySnapshot<Ent, Key>;
 		extensionOptions?: Partial<VerdantExtensionOptions>;
+		files?: VerdantMediaFileMap;
 	} = {},
 ) {
 	const cachedOptions = useRef({
@@ -36,13 +42,20 @@ export function useSyncedEditor<
 	};
 	// create a configured version of the Verdant extension, which handles
 	// the actual syncing of the editor content to the field
-	const [extension] = useState(() =>
-		VerdantExtension.configure({
-			parent,
-			fieldName: fieldName as string | number,
-			nullDocumentDefault,
-			...extensionOptions,
-		}),
+	const [extensions] = useState(() =>
+		[
+			VerdantExtension.configure({
+				parent,
+				fieldName: fieldName as string | number,
+				nullDocumentDefault,
+				...extensionOptions,
+			}),
+			files
+				? VerdantMediaExtension.configure({
+						fileMap: files,
+					})
+				: undefined,
+		].filter((v) => !!v),
 	);
 	const editor = useEditor(
 		{
@@ -50,7 +63,7 @@ export function useSyncedEditor<
 			onContentError(props) {
 				console.error('Content error:', props.error);
 			},
-			extensions: [extension, ...(extraOptions?.extensions ?? [])],
+			extensions: [...extensions, ...(extraOptions?.extensions ?? [])],
 		},
 		editorDependencies,
 	);

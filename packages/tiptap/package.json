@@ -82,6 +82,7 @@
 		"playwright": "catalog:",
 		"vite": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
+		"@vitejs/plugin-basic-ssl": "2.0.0",
 		"@verdant-web/cli": "workspace:*",
 		"react-dom": "catalog:",
 		"@types/react-dom": "catalog:",

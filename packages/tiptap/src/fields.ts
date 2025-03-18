@@ -131,3 +131,9 @@ export function createTipTapFieldSchema(options: {
 
 	return rootField as any;
 }
+
+export function createTipTapFileMapSchema() {
+	return schema.fields.map({
+		values: schema.fields.file(),
+	});
+}

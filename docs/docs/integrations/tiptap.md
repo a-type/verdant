@@ -135,6 +135,65 @@ const editor = new Editor({
 });
 ```
 
+## Inserting files and media
+
+Verdant's TipTap integration has experimental support for seamless file paste, drop, or manual insertion via an editor command. It's experimental because the usage is a bit awkward and may change at some point.
+
+Supporting file uploads requires another Verdant field, a map of files which keeps track of the files uploaded and 'attached' to TipTap nodes. It is only recommended to put this field on the same Verdant document as your TipTap document field. For example:
+
+```ts
+import { schema } from '@verdant-web/store';
+import {
+	createTipTapFieldSchema,
+	createTipTapFileMapSchema,
+} from '@verdant-web/tiptap';
+
+export default schema({
+	version: 1,
+	collections: {
+		posts: schema.collection({
+			name: 'post',
+			primaryKey: 'id',
+			fields: {
+				id: schema.fields.id(),
+				body: createTipTapFieldSchema({
+					default: {
+						type: 'doc',
+						content: [],
+					},
+				}),
+				// add your file map
+				files: createTipTapFileMapSchema(),
+			},
+		}),
+	},
+});
+```
+
+Once you have this field, you can configure the `VerdantMediaExtension` with it. This extension will handle paste and file drop events, and provides a custom node to display the files in a minimal way. You probably want to extend this node with NodeView of your own. For similarity to the main Verdant extension, a `createVerdantMediaExtension` function is provided, but there's not really any difference from `VerdantMediaExtension.configure`.
+
+```ts
+new Editor({
+	extensions: [
+		createVerdantExtension(post, 'body'),
+		createVerdantMediaExtension(post.get('files')),
+	],
+});
+```
+
+With this extension added, paste and drop should insert new file nodes which display any image, video, or audio in the editor. Other file types will render as a download link.
+
+### Customizing the Verdant media extension
+
+The default media extension behavior is probably too ugly for your purposes. You can write your own custom NodeView to render the files in a different way, if you want. But there are some important things you need to know:
+
+1. The file is not actually stored on the Node, only a reference to the key in the file map field. Your node view must retrieve the file from `extension.options.fileMap`, which is the same map field you passed into the extension originally.
+2. Files in Verdant are not preloaded before being available, so files may start in a loading state. To accommodate this, you must subscribe to the `change` event on the file and update your node view. When a file is loading, `file.loading` will be true and `file.url` will be null. If loading fails for any reason, `file.failed` will be true. Otherwise, `file.url` should be defined and ready for use.
+
+See the source of the VerdantMediaExtension for an example plain JS node view which accounts for these things, with comments documenting the behavior.
+
+Due to the dynamic nature of file loading, it's probably easier to use React for your node view if your project is already React. You can also use Verdant hooks in your React node view, like `useWatch(file)`, to take care of the plumbing aspects.
+
 ## Usage with React
 
 The library provides a single hook you can use to create a TipTap Editor that's backed with Verdant. It really just wraps the creation and configuration of the extension as shown above.
@@ -145,7 +204,10 @@ import { EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
 function DocumentEditor({ post }: { post: Post }) {
+	const { files } = hooks.useWatch(post);
 	const editor = useSyncedEditor(post, 'body', {
+		// optional:
+		files,
 		editorOptions: {
 			extensions: [StarterKit],
 		},
@@ -166,12 +228,13 @@ The parameters of the hook are:
 2. The name of the field which has the TipTap document. This will be typechecked against the first parameter.
 3. Additional options, including:
 
-   a. `nullDocumentDefault`: A default document snapshot value to use if the document field is `null`. You should provide this if your field is nullable and you haven't included any logic to prevent the rendering of the current component if the field is missing. It must be a full document snapshot and will be passed to the editor until the Verdant field is initialized on first change.
+   a. `files`: A reference to a file map field. Passing this automatically configures and adds the `VerdantMediaExtension`.
+   b. `nullDocumentDefault`: A default document snapshot value to use if the document field is `null`. You should provide this if your field is nullable and you haven't included any logic to prevent the rendering of the current component if the field is missing. It must be a full document snapshot and will be passed to the editor until the Verdant field is initialized on first change.
 
-   b. `editorOptions`: Additional options to configure the editor, see `useEditor` from TipTap's React library
+   c. `editorOptions`: Additional options to configure the editor, see `useEditor` from TipTap's React library
 
-   c. `editorDependencies`: Values to include in the dependency array of `useEditor`. Be careful, these will cause the editor to be recreated when changing.
-   d. `extensionOptions`: Any other options you want to use to configure the Verdant TipTap extension, see docs in previous section.
+   d. `editorDependencies`: Values to include in the dependency array of `useEditor`. Be careful, these will cause the editor to be recreated when changing.
+   e. `extensionOptions`: Any other options you want to use to configure the Verdant TipTap extension, see docs in previous section.
 
 Other than that, everything is taken care of. Pass the `editor` returned to the `editor` prop of `EditorContent` from `@tiptap/react`, and you can now edit the document and watch as changes are persisted locally and synced to peers.
 
