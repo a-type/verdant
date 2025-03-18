@@ -8,7 +8,7 @@ import {
 
 export type VerdantMediaFileMap = ObjectEntity<
 	Record<string, File>,
-	Record<string, EntityFile | null>,
+	Record<string, EntityFile | undefined>,
 	Record<string, EntityFileSnapshot>
 >;
 export interface VerdantMediaExtensionOptions {
