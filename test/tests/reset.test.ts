@@ -31,10 +31,8 @@ async function connectAndSeedData(library: string) {
 	});
 
 	// seed data into library
-	clientA.sync.start();
-	clientB.sync.start();
-
-	await waitForPeerCount(clientA, 1, true);
+	await clientA.sync.start();
+	await waitForSync(clientA);
 
 	const a_produceCategory = await clientA.categories.put({
 		name: 'Produce',
@@ -54,6 +52,9 @@ async function connectAndSeedData(library: string) {
 		content: 'Unknown',
 		id: 'unknown',
 	});
+
+	await clientB.sync.start();
+	await waitForPeerCount(clientA, 1, true);
 
 	await waitForQueryResult(clientB.items.get(a_apples.get('id')));
 	await waitForQueryResult(clientB.items.get(a_oranges.get('id')));
@@ -386,7 +387,6 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	await waitForCondition(() => {
 		try {
 			// newField isn't part of the client typings
-			// @ts-expect-error
 			b_applesQuery.current?.get('newField');
 			return true;
 		} catch {
