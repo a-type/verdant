@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 2.1.0
+
+### Minor Changes
+
+- 88f7d89: Adds experimental support for seamless file uploads in TipTap
+
 ## 2.0.0
 
 ### Patch Changes
