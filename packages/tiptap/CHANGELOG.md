@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 2.1.1
+
+### Patch Changes
+
+- 430f487: Adjust typing of files map
+
 ## 2.1.0
 
 ### Minor Changes
