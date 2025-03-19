@@ -131,6 +131,7 @@ export class Entity<
 			childCache ||
 			new EntityCache({
 				initial: [this],
+				ctx,
 			});
 		this.metadataFamily = metadataFamily;
 		this.storeEvents = storeEvents;
