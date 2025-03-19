@@ -788,7 +788,11 @@ export class Entity<
 					// special case: lists -- as long as the list itself
 					// is present and valid, it can omit invalid children
 					// selectively rather than fallback to an empty default
-					if (fieldSchema.type === 'array' && !childEntity.invalid) {
+					if (fieldSchema.type === 'array') {
+						return childEntity as KeyValue[Key];
+					}
+					// special case: maps -- similar to lists
+					if (fieldSchema.type === 'map') {
 						return childEntity as KeyValue[Key];
 					}
 					if (isNullable(fieldSchema)) {

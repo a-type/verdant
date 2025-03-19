@@ -1,16 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
-import { Entity } from './Entity.js';
-import { EntityFamilyMetadata } from './EntityMetadata.js';
-import { Context } from '../context/context.js';
-import { EntityStoreEvents } from './EntityStore.js';
-import { WeakEvent } from 'weak-event';
-import { FileManager } from '../files/FileManager.js';
 import {
 	NaiveTimestampProvider,
 	PatchCreator,
 	groupPatchesByOid,
 } from '@verdant-web/common';
+import { describe, expect, it, vi } from 'vitest';
+import { WeakEvent } from 'weak-event';
+import { Context } from '../context/context.js';
 import { Time } from '../context/Time.js';
+import { FileManager } from '../files/FileManager.js';
+import { Entity } from './Entity.js';
+import { EntityFamilyMetadata } from './EntityMetadata.js';
+import { EntityStoreEvents } from './EntityStore.js';
 
 describe('Entity', () => {
 	const schema = {
@@ -65,6 +65,7 @@ describe('Entity', () => {
 			log: vi.fn(),
 			time: new Time(time, 1),
 			patchCreator,
+			weakRef: (v: any) => new WeakRef(v),
 		};
 		const entity = new Entity({
 			oid: 'test/1',
