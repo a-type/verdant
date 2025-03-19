@@ -736,6 +736,7 @@ describe('entities', () => {
 			files: {
 				add: vi.fn(),
 			},
+			weakRef: (v: any) => new WeakRef(v),
 		} as any;
 		const metadataFamily = new EntityFamilyMetadata({
 			ctx: testCtx,
@@ -900,6 +901,7 @@ describe('entities', () => {
 			files: {
 				add: vi.fn(),
 			},
+			weakRef: (v: any) => new WeakRef(v),
 		} as any;
 		const metadataFamily = new EntityFamilyMetadata({
 			ctx: testCtx,
