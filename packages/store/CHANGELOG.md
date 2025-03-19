@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 4.4.0
+
+### Minor Changes
+
+- f0254d4: Store: overhaul "pruning" self-healing data systems to produce reliably valid data and fix bugs. Eliminate a few memory leaks. Common: add a few new util functions.
+
+### Patch Changes
+
+- Updated dependencies [f0254d4]
+  - @verdant-web/common@2.9.1
+
 ## 4.3.0
 
 ### Minor Changes
