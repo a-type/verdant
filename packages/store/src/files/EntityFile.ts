@@ -1,5 +1,6 @@
 import { EventSubscriber, FileData } from '@verdant-web/common';
 import { Context } from '../context/context.js';
+import { Entity } from '../entities/Entity.js';
 
 export type EntityFileEvents = {
 	change: () => void;
@@ -7,6 +8,9 @@ export type EntityFileEvents = {
 
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
+
+// this one goes on Entity
+export const CHILD_FILE_CHANGED = Symbol('child-file-changed');
 
 export type EntityFileSnapshot = {
 	id: string;
@@ -27,19 +31,23 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _uploaded = false;
 	private ctx: Context;
 	private unsubscribes: (() => void)[] = [];
+	private parent: Entity;
 
 	constructor(
 		public readonly id: string,
 		{
 			downloadRemote = false,
 			ctx,
+			parent,
 		}: {
 			downloadRemote?: boolean;
 			ctx: Context;
+			parent: Entity;
 		},
 	) {
 		super();
 		this.ctx = ctx;
+		this.parent = parent;
 		this._downloadRemote = downloadRemote;
 
 		this.unsubscribes.push(
@@ -57,6 +65,11 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		return this._uploaded || this._fileData?.remote || false;
 	}
 
+	private emitChange() {
+		this.parent[CHILD_FILE_CHANGED](this);
+		this.emit('change');
+	}
+
 	[UPDATE] = (fileData: FileData) => {
 		this.ctx.log('debug', 'EntityFile updated', this.id, fileData);
 		this._loading = false;
@@ -69,13 +82,13 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			this.ctx.log('debug', 'Creating object URL for file', this.id);
 			this._objectUrl = URL.createObjectURL(fileData.file);
 		}
-		this.emit('change');
+		this.emitChange();
 	};
 
 	[MARK_FAILED] = () => {
 		this._failed = true;
 		this._loading = false;
-		this.emit('change');
+		this.emitChange();
 	};
 
 	private onUploaded = (data: FileData) => {
@@ -83,7 +96,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this._fileData ??= data;
 		this._uploaded = true;
 		this.ctx.log('debug', 'File marked uploaded', this.id, this._fileData);
-		this.emit('change');
+		this.emitChange();
 	};
 
 	get url(): string | null {

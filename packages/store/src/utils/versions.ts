@@ -17,7 +17,7 @@ export function getLatestVersion(data: {
 			return tsVersion;
 		}
 		return v;
-	}, 0);
+	}, 1);
 
 	return latestVersion;
 }

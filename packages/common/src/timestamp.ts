@@ -42,6 +42,20 @@ export class NaiveTimestampProvider implements TimestampProvider {
 	}
 }
 
+// good for tests that require determinism.
+export class FixedTimestampProvider implements TimestampProvider {
+	time = new Date(2025, 2, 19).getTime().toString();
+	counter = 0;
+	now = (version: number | string) => {
+		return encodeVersion(version) + this.time + '-' + this.counter++;
+	};
+	update = () => {};
+	zero = (version: number | string) => {
+		return encodeVersion(version) + '0' + '-' + this.counter++;
+	};
+	getWallClockTime = () => 0;
+}
+
 export class HybridLogicalClockTimestampProvider implements TimestampProvider {
 	private latest: HLCTimestamp = {
 		time: Date.now(),

@@ -156,3 +156,11 @@ export function traverseCollectionFieldsAndRemoveExtraProperties(
 		}
 	}
 }
+
+export function isPrimitive(fieldSchema: StorageFieldSchema) {
+	return (
+		fieldSchema.type === 'string' ||
+		fieldSchema.type === 'number' ||
+		fieldSchema.type === 'boolean'
+	);
+}

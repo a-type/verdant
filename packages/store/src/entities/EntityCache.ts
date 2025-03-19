@@ -1,8 +1,9 @@
-import { Entity, EntityInit } from './Entity.js';
-import { EntityFile } from '../files/EntityFile.js';
 import { ObjectIdentifier } from '@verdant-web/common';
+import { EntityFile } from '../files/EntityFile.js';
+import { Entity, EntityInit } from './Entity.js';
 
 export class EntityCache {
+	// TODO: make this use weakrefs to avoid memory leaks
 	private cache = new Map<string, Entity | EntityFile>();
 
 	constructor({ initial }: { initial?: Entity[] } = {}) {

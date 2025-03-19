@@ -2,6 +2,7 @@ import {
 	assert,
 	createRef,
 	EventSubscriber,
+	FixedTimestampProvider,
 	NaiveTimestampProvider,
 	PatchCreator,
 	schema,
@@ -10,6 +11,7 @@ import { describe, expect, it, MockedFunction, vi, vitest } from 'vitest';
 import { WeakEvent } from 'weak-event';
 import { Time } from '../context/Time.js';
 import { EntityFamilyMetadata } from '../entities/EntityMetadata.js';
+import { MARK_FAILED } from '../files/EntityFile.js';
 import { Entity, EntityFile } from '../index.js';
 import { createTestStorage } from './fixtures/testStorage.js';
 
@@ -859,5 +861,312 @@ describe('entities', () => {
 		// now, the entity has been 'fixed' and is valid again
 		expect(entity.getSnapshot()).toEqual(entity.getUnprunedSnapshot());
 		expect(entity.deepInvalid).toBe(false);
+	});
+
+	it('should only fire deep change once for a file change even if you get it multiple times', async () => {
+		// addressing a specific bug / lazy thing I did that caused a listener leak
+		const storage = await createTestStorage();
+		const weird = await storage.weirds.put({});
+		const fileList = weird.get('fileList');
+		const file = new window.File(['d(⌐□_□)b'], 'test.txt', {
+			type: 'text/plain',
+		});
+		fileList.push(file);
+		const deepListener = vi.fn();
+		fileList.subscribe('changeDeep', deepListener);
+		fileList.get(0);
+		fileList.get(0);
+		fileList.get(0);
+		// easy way to trigger change
+		fileList.get(0)[MARK_FAILED]();
+		expect(deepListener).toHaveBeenCalledTimes(1);
+	});
+
+	it('should correctly prune deep nested objects', () => {
+		// manually constructing an entity for this test is easiest,
+		// kind of hard to force invalid data otherwise
+		const onPendingOperations = vi.fn();
+		const time = new Time(new FixedTimestampProvider(), 1);
+		// too much junk in here, have to manually pick and choose
+		let subId = 100; // avoid false-flag matching of other ids by choosing an arbitrary start point
+		const testCtx = {
+			globalEvents: new EventSubscriber(),
+			time,
+			log: console.log,
+			patchCreator: new PatchCreator(
+				() => time.now,
+				() => `${subId++}`,
+			),
+			files: {
+				add: vi.fn(),
+			},
+		} as any;
+		const metadataFamily = new EntityFamilyMetadata({
+			ctx: testCtx,
+			onPendingOperations,
+			rootOid: 'foos/a',
+		});
+		const entity = new Entity({
+			oid: 'foos/a',
+			schema: {
+				type: 'object',
+				properties: {
+					id: schema.fields.id(),
+					// should prune to an empty list entity
+					listTest: schema.fields.array({
+						items: schema.fields.object({
+							fields: {
+								required: schema.fields.string(),
+							},
+						}),
+					}),
+					objectTest: schema.fields.object({
+						default: () => ({
+							// @ts-ignore - excessive nesting
+							nested: {
+								required: 'foo',
+							},
+						}),
+						fields: {
+							nested: schema.fields.object({
+								fields: {
+									required: schema.fields.string(),
+								},
+							}),
+						},
+					}),
+					// this one will not be present at all.
+					missingTest: schema.fields.object({
+						default: () => ({
+							value: 1,
+						}),
+						fields: {
+							value: schema.fields.number(),
+						},
+					}),
+				},
+			},
+			ctx: testCtx,
+			deleteSelf: vi.fn(),
+			files: {
+				add: vi.fn(),
+			} as any,
+			metadataFamily,
+			storeEvents: {
+				add: new WeakEvent(),
+				replace: new WeakEvent(),
+				resetAll: new WeakEvent(),
+			},
+			readonlyKeys: ['id'],
+		});
+		metadataFamily.addConfirmedData({
+			baselines: [
+				{
+					// an invalid list item
+					oid: 'foos/a:1',
+					snapshot: {},
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:2',
+					snapshot: [createRef('foos/a:1')],
+					timestamp: time.now,
+				},
+				{
+					// an invalid nested object
+					oid: 'foos/a:3',
+					snapshot: {},
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a:4',
+					snapshot: { nested: createRef('foos/a:3') },
+					timestamp: time.now,
+				},
+				{
+					oid: 'foos/a',
+					snapshot: {
+						id: 'a',
+						listTest: createRef('foos/a:2'),
+						objectTest: createRef('foos/a:4'),
+					},
+					timestamp: time.now,
+				},
+			],
+		});
+
+		expect(entity.deepInvalid).toBe(true);
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			listTest: [],
+			// gets the default, pruned
+			objectTest: {
+				nested: {
+					required: 'foo',
+				},
+			},
+			missingTest: {
+				value: 1,
+			},
+		});
+
+		// the kicker...
+		const list = entity.get('listTest');
+		expect(list).toBeInstanceOf(Entity);
+		const obj = entity.get('objectTest');
+		expect(obj).toBeInstanceOf(Entity);
+		const missing = entity.get('missingTest');
+		expect(missing).toBeInstanceOf(Entity);
+
+		// we should be able to make edits to the pruned versions
+		// and they get committed.
+		list.push({ required: 'foo' });
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			listTest: [{ required: 'foo' }],
+			objectTest: {
+				nested: {
+					required: 'foo',
+				},
+			},
+			missingTest: {
+				value: 1,
+			},
+		});
+		obj.get('nested').set('required', 'bar');
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			listTest: [{ required: 'foo' }],
+			objectTest: {
+				nested: {
+					required: 'bar',
+				},
+			},
+			missingTest: {
+				value: 1,
+			},
+		});
+		missing.set('value', 2);
+		expect(entity.getSnapshot()).toEqual({
+			id: 'a',
+			listTest: [{ required: 'foo' }],
+			objectTest: {
+				nested: {
+					required: 'bar',
+				},
+				// gets the default, pruned
+			},
+			missingTest: {
+				value: 2,
+			},
+		});
+
+		expect(onPendingOperations).toHaveBeenCalledTimes(5);
+		// when doing those changes above, we see pending operations
+		// added to construct the pruned versions with applied changes
+		function removeExtra(obj: any) {
+			delete obj.timestamp;
+			delete obj.authz;
+			return obj;
+		}
+		// being kind of precious about assertions here since
+		// ordering is not quite as important and some ops create new
+		// oids.
+		const firstCall = onPendingOperations.mock.calls[0][0].map(removeExtra);
+
+		// the required field was set to the default
+		expect(firstCall).toContainEqual({
+			data: {
+				name: 'required',
+				op: 'set',
+				value: 'foo',
+			},
+			oid: 'foos/a:3',
+		});
+
+		// missingTest is created wholesale
+		expect(firstCall).toContainEqual({
+			data: {
+				op: 'set',
+				name: 'missingTest',
+				value: {
+					'@@type': 'ref',
+					id: expect.stringMatching(/^foos\/a:/),
+				},
+			},
+			oid: 'foos/a',
+		});
+		expect(firstCall).toContainEqual({
+			data: {
+				op: 'initialize',
+				value: {
+					value: 1,
+				},
+			},
+			oid: expect.stringMatching(/^foos\/a:/),
+		});
+
+		// we asserted all the contents, now also assert the length
+		expect(firstCall).toHaveLength(3);
+
+		const secondCall = onPendingOperations.mock.calls[1][0].map(removeExtra);
+		// the invalid item was removed from the array
+		expect(secondCall).toContainEqual({
+			data: {
+				op: 'delete',
+			},
+			oid: 'foos/a:1',
+		});
+		expect(secondCall).toContainEqual({
+			data: {
+				op: 'list-remove',
+				only: 'last',
+				value: {
+					'@@type': 'ref',
+					id: 'foos/a:1',
+				},
+			},
+			oid: 'foos/a:2',
+		});
+
+		const thirdCall = onPendingOperations.mock.calls[2][0].map(removeExtra);
+		// we can be more lax here
+		expect(thirdCall).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "op": "initialize",
+			      "value": {
+			        "required": "foo",
+			      },
+			    },
+			    "oid": "foos/a:100",
+			  },
+			  {
+			    "data": {
+			      "op": "list-push",
+			      "value": {
+			        "@@type": "ref",
+			        "id": "foos/a:100",
+			      },
+			    },
+			    "oid": "foos/a:2",
+			  },
+			]
+		`);
+
+		const fourthCall = onPendingOperations.mock.calls[3][0].map(removeExtra);
+		expect(fourthCall).toMatchInlineSnapshot(`
+			[
+			  {
+			    "data": {
+			      "name": "required",
+			      "op": "set",
+			      "value": "bar",
+			    },
+			    "oid": "foos/a:3",
+			  },
+			]
+		`);
 	});
 });

@@ -205,13 +205,18 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				return await this._entities.addData(data);
 			}
 		} catch (err) {
-			this.context.log('critical', 'Sync failed', err);
+			this.context.log(
+				'critical',
+				'Sync failed. To avoid data corruption, the client will now shut down.',
+				err,
+			);
 			this.emit(
 				'developerError',
 				new Error('Sync failed, see logs or cause', {
 					cause: err,
 				}),
 			);
+			await this.close();
 			throw err;
 		}
 	};

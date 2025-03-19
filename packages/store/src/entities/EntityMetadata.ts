@@ -29,6 +29,14 @@ export class EntityMetadata {
 	private baseline: DocumentBaseline | null = null;
 	// these must be kept in timestamp order.
 	private confirmedOperations: Operation[] = [];
+	// operations applied locally, but not sent to persistence
+	// until 'committed' by pending operations. this powers the
+	// self-healing pruning system, which injects these ephemeral
+	// operations to materialize pruned 'fixed' data in place of
+	// 'real' invalid data so the user can keep using the app. as
+	// soon as the user makes modifications to the entity, this
+	// ephemeral pruned data is applied underneath it.
+	private ephemeralOperations?: Operation[] = [];
 	private pendingOperations: Operation[] = [];
 	readonly oid;
 
@@ -90,15 +98,26 @@ export class EntityMetadata {
 			authz = confirmedResult.authz;
 		}
 
+		const ephemeralResult =
+			!this.ephemeralOperations || omitPending
+				? confirmedResult
+				: this.applyOperations(
+						confirmedResult.view,
+						confirmedResult.deleted,
+						this.ephemeralOperations,
+						confirmedResult.latestTimestamp,
+						null,
+					);
+
 		const pendingResult = omitPending
 			? confirmedResult
 			: this.applyOperations(
-					confirmedResult.view,
-					confirmedResult.deleted,
+					ephemeralResult.view,
+					ephemeralResult.deleted,
 					// now we're applying pending operations
 					this.pendingOperations,
 					// keep our latest timestamp up to date
-					confirmedResult.latestTimestamp,
+					ephemeralResult.latestTimestamp,
 					// we don't use after for pending ops, they're all
 					// logically in the future
 					null,
@@ -200,9 +219,20 @@ export class EntityMetadata {
 	};
 
 	addPendingOperation = (operation: Operation) => {
-		// check to see if new operation supersedes the previous one
-		// we can assume pending ops are always newer
 		this.pendingOperations.push(operation);
+	};
+
+	addEphemeralOperation = (operation: Operation) => {
+		if (!this.ephemeralOperations) {
+			this.ephemeralOperations = [];
+		}
+		this.ephemeralOperations.push(operation);
+	};
+
+	clearEphemeralOperations = () => {
+		const old = this.ephemeralOperations;
+		this.ephemeralOperations = [];
+		return old;
 	};
 
 	discardPendingOperation = (operation: Operation) => {
@@ -346,12 +376,41 @@ export class EntityFamilyMetadata {
 	 * local changes are usually handled, as a list.
 	 */
 	addPendingData = (operations: Operation[]) => {
+		// when pending data is applied, we go ahead and
+		// write all ephemeral changes first.
+		this.flushAllEphemeral();
+
 		const changes: Record<ObjectIdentifier, EntityChange> = {};
 		for (const op of operations) {
 			this.get(op.oid).addPendingOperation(op);
 			changes[op.oid] ??= { oid: op.oid, isLocal: true };
 		}
 		this.onPendingOperations(operations);
+		return Object.values(changes);
+	};
+
+	private ephemeralMemo = new Array<Operation>();
+	private flushAllEphemeral = () => {
+		for (const ent of this.entities.values()) {
+			const ops = ent.clearEphemeralOperations();
+			if (ops) {
+				this.ephemeralMemo.push(...ops);
+			}
+		}
+		if (this.ephemeralMemo.length) {
+			const ephemeralCopy = this.ephemeralMemo.slice();
+			// must clear this first to avoid infinite recursion
+			this.ephemeralMemo.length = 0;
+			this.addPendingData(ephemeralCopy);
+		}
+	};
+
+	addEphemeralData = (operations: Operation[]) => {
+		const changes: Record<ObjectIdentifier, EntityChange> = {};
+		for (const op of operations) {
+			this.get(op.oid).addEphemeralOperation(op);
+			changes[op.oid] ??= { oid: op.oid, isLocal: true };
+		}
 		return Object.values(changes);
 	};
 

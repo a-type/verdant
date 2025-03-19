@@ -10,6 +10,7 @@ import {
 	compareRefs,
 	createFileRef,
 	createRef,
+	createSubOid,
 	getChildFieldSchema,
 	getFieldDefault,
 	hasDefault,
@@ -18,6 +19,7 @@ import {
 	isNullable,
 	isObject,
 	isObjectRef,
+	isPrimitive,
 	isRef,
 	maybeGetOid,
 	memoByKeys,
@@ -25,6 +27,7 @@ import {
 	validateEntityField,
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
+import { CHILD_FILE_CHANGED } from '../files/EntityFile.js';
 import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';
 import { ClientWithCollections, EntityFile } from '../index.js';
@@ -112,6 +115,7 @@ export class Entity<
 		files,
 		storeEvents,
 		deleteSelf,
+		fieldPath,
 	}: EntityInit) {
 		super();
 
@@ -122,6 +126,7 @@ export class Entity<
 		this.ctx = ctx;
 		this.files = files;
 		this.schema = schema;
+		this.fieldPath = fieldPath || [];
 		this.entityFamily =
 			childCache ||
 			new EntityCache({
@@ -213,8 +218,8 @@ export class Entity<
 			return null as any;
 		}
 
-		this.cachedView = this.isList ? [] : {};
-		assignOid(this.cachedView, this.oid);
+		let newView: any = this.isList ? [] : {};
+		assignOid(newView, this.oid);
 
 		if (Array.isArray(rawView)) {
 			const schema = getChildFieldSchema(this.schema, 0);
@@ -243,7 +248,7 @@ export class Entity<
 
 						// this item will be pruned.
 					} else {
-						this.cachedView.push(child);
+						newView.push(child);
 					}
 				}
 			}
@@ -271,10 +276,10 @@ export class Entity<
 					);
 					if (this.schema.type === 'map') {
 						// it's valid to prune here if it's a map
-						this.cachedView = {};
+						newView = {};
 					} else {
 						// otherwise prune moves upward
-						this.cachedView = null;
+						newView = null;
 					}
 					break;
 				}
@@ -287,28 +292,29 @@ export class Entity<
 						'key:',
 						key,
 					);
-					/**
-					 * PRUNE - this is a prune point. we can't continue
-					 * to render this data. If this is a map, we can ignore
-					 * this value. Otherwise we must prune upward.
-					 * This exits the loop.
-					 */
 					if (this.schema.type !== 'map') {
-						this.cachedView = null;
+						/**
+						 * PRUNE - this is a prune point. we can't continue
+						 * to render this data. If this is a map, we can ignore
+						 * this value. Otherwise we must prune upward.
+						 * This exits the loop.
+						 */
+						newView = null;
 						break;
 					}
 				} else {
 					// special case - rewrite undefined fields to null
 					if (isNullable(schema) && child === undefined) {
-						this.cachedView[key] = null;
+						newView[key] = null;
 					} else {
-						this.cachedView[key] = child;
+						newView[key] = child;
 					}
 				}
 			}
 		}
 
-		return this.cachedView;
+		this.cachedView = newView;
+		return newView;
 	}
 
 	private childIsNull = (child: any) => {
@@ -597,19 +603,16 @@ export class Entity<
 		}
 	};
 
-	private canonizePrunedVersion = () => {
+	private getPruneDiff = () => {
 		const snapshot = this.getSnapshot();
 		const unprunedSnapshot = this.getUnprunedSnapshot();
-		const operations = this.patchCreator.createDiff(
-			unprunedSnapshot,
-			snapshot,
-			{
-				authz: this.access,
-				merge: false,
-			},
-		);
-
-		this.applyPendingOperations(operations);
+		return this.patchCreator.createDiff(unprunedSnapshot, snapshot, {
+			authz: this.access,
+			merge: false,
+		});
+	};
+	private canonizePrunedVersion = () => {
+		this.applyPendingOperations(this.getPruneDiff());
 	};
 
 	private addConfirmedData = (data: EntityStoreEventData) => {
@@ -700,6 +703,10 @@ export class Entity<
 		this.emit('changeDeep', target, ev);
 		this.parent?.deepChange(target, ev);
 	};
+	[CHILD_FILE_CHANGED] = (file: EntityFile) => {
+		// consistent with prior behavior, but kind of arbitrary.
+		this.deepChange(this, { isLocal: false, oid: this.oid });
+	};
 
 	private getChild = (key: any, oid: ObjectIdentifier) => {
 		const schema = getChildFieldSchema(this.schema, key);
@@ -767,16 +774,40 @@ export class Entity<
 				const file = this.files.get(child.id, {
 					downloadRemote: !!fieldSchema.downloadRemote,
 					ctx: this.ctx,
-				});
-
-				// FIXME: this seems bad and inconsistent
-				file.subscribe('change', () => {
-					this.deepChange(this, { isLocal: false, oid: this.oid });
+					parent: this,
 				});
 
 				return file as KeyValue[Key];
 			} else {
-				return this.getChild(key, child.id) as KeyValue[Key];
+				const childEntity = this.getChild(key, child.id);
+				if (childEntity.deepInvalid) {
+					// this child is pruned. materialize a pruned version of
+					// this subtree if possible.
+
+					// special case: lists -- as long as the list itself
+					// is present and valid, it can omit invalid children
+					// selectively rather than fallback to an empty default
+					if (fieldSchema.type === 'array' && !childEntity.invalid) {
+						return childEntity as KeyValue[Key];
+					}
+					if (isNullable(fieldSchema)) {
+						return null as KeyValue[Key];
+					}
+					if (hasDefault(fieldSchema)) {
+						const unprunedSnapshot = childEntity.getUnprunedSnapshot();
+						const pruneDiff = this.patchCreator.createDiff(
+							unprunedSnapshot,
+							getFieldDefault(fieldSchema),
+							{
+								merge: false,
+								mergeUnknownObjects: true,
+								authz: this.access,
+							},
+						);
+						return this.processPrunedChild(key, childEntity, pruneDiff);
+					}
+				}
+				return childEntity as KeyValue[Key];
 			}
 		} else {
 			// if this is a Map type, a missing child is
@@ -794,14 +825,57 @@ export class Entity<
 					requireDefaults: true,
 				})
 			) {
-				// FIXME: this returns []/{} for arrays and objects, but the contract
-				// of this method should return an Entity for such object fields.
-				// I want to write a test case for this one before attempting to fix
-				// just to be sure the fix works.
-				return getFieldDefault(fieldSchema);
+				if (hasDefault(fieldSchema)) {
+					// primitive fields with defaults are easy.
+					if (isPrimitive(fieldSchema)) {
+						return getFieldDefault(fieldSchema) as KeyValue[Key];
+					}
+
+					// object/list fields are hard.
+					const defaultValue = getFieldDefault(fieldSchema);
+					const prunedFieldOid = createSubOid(this.oid);
+					const pruneDiff = this.patchCreator.createInitialize(
+						defaultValue,
+						prunedFieldOid,
+						this.access,
+					);
+					pruneDiff.push(
+						...this.patchCreator.createSet(
+							this.oid,
+							key,
+							createRef(prunedFieldOid),
+							this.access,
+						),
+					);
+					const childEntity = this.getChild(key, prunedFieldOid);
+					return this.processPrunedChild(key, childEntity, pruneDiff);
+				} else {
+					// failure / hard prune: no way to represent this
+					// data in a valid way exists. the parent entity
+					// is also invalid and this should bubble up.
+					return undefined as KeyValue[Key];
+				}
 			}
 			return child as KeyValue[Key];
 		}
+	};
+
+	private processPrunedChild = (
+		key: any,
+		child: Entity,
+		pruneDiff: Operation[],
+	): any => {
+		this.ctx.log(
+			'warn',
+			'Replacing invalid child object field with ephemeral, valid data',
+			this.oid,
+			key,
+		);
+		const changes = this.metadataFamily.addEphemeralData(pruneDiff);
+		for (const change of changes) {
+			this.change(change);
+		}
+		return child as any;
 	};
 
 	/**
@@ -865,7 +939,7 @@ export class Entity<
 				});
 			}
 		}
-		return processValueFiles(value, this.files.add);
+		return processValueFiles(value, (file) => this.files.add(file, this));
 	};
 
 	private getDeleteMode = (key: any) => {

@@ -1,6 +1,7 @@
 import {
 	AuthorizationKey,
 	DocumentBaseline,
+	FileData,
 	ObjectIdentifier,
 	Operation,
 	StorageObjectFieldSchema,
@@ -335,7 +336,8 @@ export class EntityStore extends Disposable {
 		// remove any OID associations from the initial data
 		removeOidsFromAllSubObjects(initial);
 		// grab files and replace them with refs
-		const processed = processValueFiles(initial, this.files.add);
+		const fileRefs: FileData[] = [];
+		const processed = processValueFiles(initial, fileRefs.push.bind(fileRefs));
 
 		assignOid(processed, oid);
 
@@ -346,6 +348,8 @@ export class EntityStore extends Disposable {
 				`Could not put new document: no schema exists for collection ${collection}`,
 			);
 		}
+		// add files with entity as parent
+		fileRefs.forEach((file) => this.files.add(file, entity));
 
 		const operations = this.ctx.patchCreator.createInitialize(
 			processed,

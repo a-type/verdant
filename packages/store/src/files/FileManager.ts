@@ -1,5 +1,6 @@
 import { FileData } from '@verdant-web/common';
 import { Context } from '../context/context.js';
+import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../internal.js';
 import { Sync } from '../sync/Sync.js';
 import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
@@ -22,11 +23,11 @@ export class FileManager extends Disposable {
 		);
 	}
 
-	add = async (file: FileData) => {
+	add = async (file: FileData, parent: Entity) => {
 		// immediately cache the file
 		let entityFile = this.cache.get(file.id);
 		if (!entityFile) {
-			entityFile = new EntityFile(file.id, { ctx: this.context });
+			entityFile = new EntityFile(file.id, { ctx: this.context, parent });
 			this.cache.set(file.id, entityFile);
 		}
 
@@ -44,7 +45,10 @@ export class FileManager extends Disposable {
 	 * Immediately returns an EntityFile to use, then either loads
 	 * the file from cache, local database, or the server.
 	 */
-	get = (id: string, options: { downloadRemote?: boolean; ctx: Context }) => {
+	get = (
+		id: string,
+		options: { downloadRemote?: boolean; ctx: Context; parent: Entity },
+	) => {
 		if (this.cache.has(id)) {
 			return this.cache.get(id)!;
 		}
