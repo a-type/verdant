@@ -1,5 +1,15 @@
 # @verdant-web/tiptap
 
+## 4.0.0
+
+### Patch Changes
+
+- 31ea7e5: Store: improve error behavior for failed sync. TipTap: fix editor not refreshing when source entities change.
+- Updated dependencies [17e1f20]
+- Updated dependencies [31ea7e5]
+  - @verdant-web/react@42.1.0
+  - @verdant-web/store@4.4.1
+
 ## 3.0.0
 
 ### Patch Changes
