@@ -1,6 +1,6 @@
 import { useEditor, UseEditorOptions } from '@tiptap/react';
 import { AnyEntity } from '@verdant-web/store';
-import { useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import {
 	VerdantExtension,
 	VerdantExtensionOptions,
@@ -34,28 +34,30 @@ export function useSyncedEditor<
 ) {
 	const cachedOptions = useRef({
 		nullDocumentDefault,
-		fieldName,
+		extensionOptions,
 	});
 	cachedOptions.current = {
 		nullDocumentDefault,
-		fieldName,
+		extensionOptions,
 	};
 	// create a configured version of the Verdant extension, which handles
 	// the actual syncing of the editor content to the field
-	const [extensions] = useState(() =>
-		[
-			VerdantExtension.configure({
-				parent,
-				fieldName: fieldName as string | number,
-				nullDocumentDefault,
-				...extensionOptions,
-			}),
-			files
-				? VerdantMediaExtension.configure({
-						fileMap: files,
-					})
-				: undefined,
-		].filter((v) => !!v),
+	const extensions = useMemo(
+		() =>
+			[
+				VerdantExtension.configure({
+					parent,
+					fieldName: fieldName as string | number,
+					nullDocumentDefault,
+					...cachedOptions.current.extensionOptions,
+				}),
+				files
+					? VerdantMediaExtension.configure({
+							fileMap: files,
+						})
+					: undefined,
+			].filter((v) => !!v),
+		[fieldName, parent, files],
 	);
 	const editor = useEditor(
 		{
@@ -65,7 +67,7 @@ export function useSyncedEditor<
 			},
 			extensions: [...extensions, ...(extraOptions?.extensions ?? [])],
 		},
-		editorDependencies,
+		[...extensions, ...(editorDependencies ?? [])],
 	);
 
 	return editor;

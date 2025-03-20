@@ -611,3 +611,87 @@ it('should support media nodes', async () => {
 		.toHaveTextContent('Hello, world!');
 	expect(files.values().length).toBe(0);
 });
+
+it('can re-render with a different backing entity', async () => {
+	const testPost = await client.posts.put({
+		requiredBody: {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [
+						{
+							type: 'text',
+							text: 'Hello, world!',
+						},
+					],
+				},
+			],
+		},
+	});
+	const testPost2 = await client.posts.put({
+		requiredBody: {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [
+						{
+							type: 'text',
+							text: 'Goodbye, world!',
+						},
+					],
+				},
+			],
+		},
+	});
+
+	// reset history
+	await client.entities.flushAllBatches();
+	client.undoHistory.clear();
+
+	const user = userEvent.setup();
+
+	const TipTapTest = ({ post }: { post: any }) => {
+		const editor = useSyncedEditor(post, 'requiredBody', {
+			editorOptions: {
+				extensions: [StarterKit.configure({ history: false })],
+			},
+			files: post.get('files'),
+		});
+
+		const insertMedia = async (ev: ChangeEvent<HTMLInputElement>) => {
+			const file = ev.target.files?.[0];
+			if (!file) return;
+			editor?.chain().insertMedia(file).run();
+		};
+
+		return (
+			<div>
+				<input type="file" onChange={insertMedia} data-testid="insert-media" />
+				<div>Text editor:</div>
+				<EditorContent
+					style={{
+						width: 500,
+						height: 300,
+					}}
+					editor={editor}
+					id="#editor"
+					data-testid="editor"
+				/>
+			</div>
+		);
+	};
+
+	const screen = await renderWithProvider(<TipTapTest post={testPost} />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+	await expect
+		.element(screen.getByTestId('editor'))
+		.toHaveTextContent('Hello, world!');
+
+	screen.rerender(<TipTapTest post={testPost2} />);
+	await expect.element(screen.getByTestId('editor')).toBeVisible();
+	await expect
+		.element(screen.getByTestId('editor'))
+		.toHaveTextContent('Goodbye, world!');
+});

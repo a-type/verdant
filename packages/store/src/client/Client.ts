@@ -4,6 +4,7 @@ import {
 	EventSubscriber,
 	FileData,
 	Operation,
+	VerdantError,
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
 import { DocumentManager } from '../entities/DocumentManager.js';
@@ -212,9 +213,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			);
 			this.emit(
 				'developerError',
-				new Error('Sync failed, see logs or cause', {
-					cause: err,
-				}),
+				new VerdantError(
+					VerdantError.Code.Unexpected,
+					err as any,
+					'Sync failed. To avoid data corruption, the client will now shut down.',
+				),
 			);
 			await this.close();
 			throw err;
