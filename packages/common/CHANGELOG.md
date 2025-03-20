@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 2.9.1
+
+### Patch Changes
+
+- f0254d4: Store: overhaul "pruning" self-healing data systems to produce reliably valid data and fix bugs. Eliminate a few memory leaks. Common: add a few new util functions.
+
 ## 2.9.0
 
 ### Minor Changes
