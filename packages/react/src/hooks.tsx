@@ -5,6 +5,7 @@ import {
 } from '@verdant-web/common';
 import {
 	Client,
+	ClientDescriptor,
 	ClientWithCollections,
 	Entity,
 	Query,
@@ -517,6 +518,17 @@ export function createHooks<Presence = any, Profile = any>(
 		return null;
 	}
 
+	function useDeveloperError(clientDesc: ClientDescriptor) {
+		const [error, setError] = useState<Error | null>(null);
+		useEffect(() => {
+			let unsub: (() => void) | null = null;
+			clientDesc.open().then((client) => {
+				unsub = client.subscribe('developerError', setError);
+			});
+		}, [clientDesc]);
+		return error;
+	}
+
 	const hooks: Record<string, any> = {
 		useStorage,
 		useClient: useStorage,
@@ -542,18 +554,24 @@ export function createHooks<Presence = any, Profile = any>(
 			value,
 			children,
 			sync,
-			fallback,
+			errorFallback,
 			...rest
 		}: {
 			children?: ReactNode;
 			value: StorageDescriptor;
 			sync?: boolean;
-			fallback?: ReactNode;
+			errorFallback?: ReactNode;
 		}) => {
 			// auto-open storage when used in provider
 			useMemo(() => {
 				value.open();
 			}, [value]);
+			const error = useDeveloperError(value);
+
+			if (error && errorFallback) {
+				return errorFallback;
+			}
+
 			return (
 				<Context.Provider value={value} {...rest}>
 					{children}
