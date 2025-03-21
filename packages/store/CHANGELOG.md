@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.4.1
+
+### Patch Changes
+
+- 31ea7e5: Store: improve error behavior for failed sync. TipTap: fix editor not refreshing when source entities change.
+
 ## 4.4.0
 
 ### Minor Changes
