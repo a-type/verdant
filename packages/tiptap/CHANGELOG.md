@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 4.1.0
+
+### Minor Changes
+
+- 9053db9: TipTap: tools for server-rendering documents with embedded files
+
 ## 4.0.0
 
 ### Patch Changes
