@@ -6,7 +6,8 @@
 		"rootDir": ".",
 		"jsx": "react-jsx",
 		"noEmit": true,
-		"lib": ["DOM", "ESNext"]
+		"lib": ["DOM", "ESNext"],
+		"customConditions": []
 	},
 	"include": ["**/*.ts", "**/*.tsx"]
 }

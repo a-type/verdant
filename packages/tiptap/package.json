@@ -14,6 +14,11 @@
 			"development": "./src/react.ts",
 			"import": "./dist/esm/react.js",
 			"types": "./dist/esm/react.d.ts"
+		},
+		"./server": {
+			"development": "./src/server/index.ts",
+			"import": "./dist/esm/server/index.js",
+			"types": "./dist/esm/server/index.d.ts"
 		}
 	},
 	"publishConfig": {
@@ -25,6 +30,10 @@
 			"./react": {
 				"import": "./dist/esm/react.js",
 				"types": "./dist/esm/react.d.ts"
+			},
+			"./server": {
+				"import": "./dist/esm/server/index.js",
+				"types": "./dist/esm/server/index.d.ts"
 			}
 		},
 		"access": "public"
@@ -36,13 +45,15 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"build": "tsc -p tsconfig.json",
+		"build:client": "tsc --project tsconfig.json",
+		"build:server": "tsc --project tsconfig.server.json",
+		"build": "pnpm run build:client && pnpm run build:server",
 		"prepublish": "pnpm run build",
 		"link": "pnpm link --global",
 		"typecheck": "tsc --noEmit",
 		"demo:generate": "verdant -s ./demo/store/schema.ts -o ./demo/store/.generated -r --select=publish --module=esm",
 		"demo:dev": "vite --config ./demo/vite.config.ts ./demo",
-		"demo:server": "verdant-server"
+		"demo:server": "node ./demo/server/index.mjs"
 	},
 	"peerDependencies": {
 		"@tiptap/core": "^2.11.5",
@@ -53,6 +64,9 @@
 		"react": "^19.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@verdant-web/store": {
+			"optional": true
+		},
 		"@verdant-web/react": {
 			"optional": true
 		},
@@ -67,25 +81,28 @@
 		"@verdant-web/common": "workspace:*"
 	},
 	"devDependencies": {
-		"typescript": "catalog:",
-		"vitest": "catalog:",
+		"@hono/node-server": "1.14.0",
 		"@tiptap/core": "^2.11.5",
+		"@tiptap/html": "^2.11.5",
 		"@tiptap/pm": "^2.11.5",
 		"@tiptap/react": "^2.11.5",
 		"@tiptap/starter-kit": "^2.11.5",
-		"react": "catalog:",
 		"@types/react": "catalog:",
-		"@verdant-web/react": "workspace:*",
-		"@verdant-web/store": "workspace:*",
-		"vitest-browser-react": "catalog:",
-		"@vitest/browser": "catalog:",
-		"playwright": "catalog:",
-		"vite": "catalog:",
-		"@vitejs/plugin-react": "catalog:",
-		"@vitejs/plugin-basic-ssl": "2.0.0",
-		"@verdant-web/cli": "workspace:*",
-		"react-dom": "catalog:",
 		"@types/react-dom": "catalog:",
-		"@verdant-web/server": "workspace:*"
+		"@verdant-web/cli": "workspace:*",
+		"@verdant-web/react": "workspace:*",
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/store": "workspace:*",
+		"@vitejs/plugin-basic-ssl": "2.0.0",
+		"@vitejs/plugin-react": "catalog:",
+		"@vitest/browser": "catalog:",
+		"hono": "4.7.5",
+		"playwright": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:",
+		"vitest-browser-react": "catalog:"
 	}
 }

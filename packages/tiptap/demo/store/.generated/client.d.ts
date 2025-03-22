@@ -153,6 +153,32 @@ export type PostNullableBodyContent = ListEntity<
   PostNullableBodyContentDestructured,
   PostNullableBodyContentSnapshot
 >;
+export type PostNullableBodyContentItem = ObjectEntity<
+  PostNullableBodyContentItemInit,
+  PostNullableBodyContentItemDestructured,
+  PostNullableBodyContentItemSnapshot
+>;
+export type PostNullableBodyContentItemType = string;
+export type PostNullableBodyContentItemFrom = number;
+export type PostNullableBodyContentItemTo = number;
+export type PostNullableBodyContentItemAttrs = ObjectEntity<
+  PostNullableBodyContentItemAttrsInit,
+  PostNullableBodyContentItemAttrsDestructured,
+  PostNullableBodyContentItemAttrsSnapshot
+>;
+export type PostNullableBodyContentItemAttrsValue = any;
+export type PostNullableBodyContentItemContent = ListEntity<
+  PostNullableBodyContentItemContentInit,
+  PostNullableBodyContentItemContentDestructured,
+  PostNullableBodyContentItemContentSnapshot
+>;
+
+export type PostNullableBodyContentItemText = string;
+export type PostNullableBodyContentItemMarks = ListEntity<
+  PostNullableBodyContentItemMarksInit,
+  PostNullableBodyContentItemMarksDestructured,
+  PostNullableBodyContentItemMarksSnapshot
+>;
 
 export type PostNullableBodyText = string;
 export type PostNullableBodyMarks = ListEntity<
@@ -179,6 +205,32 @@ export type PostRequiredBodyContent = ListEntity<
   PostRequiredBodyContentDestructured,
   PostRequiredBodyContentSnapshot
 >;
+export type PostRequiredBodyContentItem = ObjectEntity<
+  PostRequiredBodyContentItemInit,
+  PostRequiredBodyContentItemDestructured,
+  PostRequiredBodyContentItemSnapshot
+>;
+export type PostRequiredBodyContentItemType = string;
+export type PostRequiredBodyContentItemFrom = number;
+export type PostRequiredBodyContentItemTo = number;
+export type PostRequiredBodyContentItemAttrs = ObjectEntity<
+  PostRequiredBodyContentItemAttrsInit,
+  PostRequiredBodyContentItemAttrsDestructured,
+  PostRequiredBodyContentItemAttrsSnapshot
+>;
+export type PostRequiredBodyContentItemAttrsValue = any;
+export type PostRequiredBodyContentItemContent = ListEntity<
+  PostRequiredBodyContentItemContentInit,
+  PostRequiredBodyContentItemContentDestructured,
+  PostRequiredBodyContentItemContentSnapshot
+>;
+
+export type PostRequiredBodyContentItemText = string;
+export type PostRequiredBodyContentItemMarks = ListEntity<
+  PostRequiredBodyContentItemMarksInit,
+  PostRequiredBodyContentItemMarksDestructured,
+  PostRequiredBodyContentItemMarksSnapshot
+>;
 
 export type PostRequiredBodyText = string;
 export type PostRequiredBodyMarks = ListEntity<
@@ -186,110 +238,238 @@ export type PostRequiredBodyMarks = ListEntity<
   PostRequiredBodyMarksDestructured,
   PostRequiredBodyMarksSnapshot
 >;
+export type PostFiles = ObjectEntity<
+  PostFilesInit,
+  PostFilesDestructured,
+  PostFilesSnapshot
+>;
+export type PostFilesValue = EntityFile;
 export type PostInit = {
   id?: string;
   nullableBody?: PostNullableBodyInit | null;
   requiredBody?: PostRequiredBodyInit;
+  files?: PostFilesInit;
 };
 
 export type PostNullableBodyAttrsInit = {
   [key: string]: PostNullableBodyAttrsValueInit;
 };
-export type PostNullableBodyContentInit = PostNullableBodyInit[];
-export type PostNullableBodyMarksInit = PostNullableBodyInit[];
+export type PostNullableBodyContentItemAttrsInit = {
+  [key: string]: PostNullableBodyContentItemAttrsValueInit;
+};
+export type PostNullableBodyContentItemContentInit =
+  | PostNullableBodyContentInit[]
+  | null;
+export type PostNullableBodyContentItemMarksInit =
+  | PostNullableBodyContentInit[]
+  | null;
+export type PostNullableBodyContentItemInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: PostNullableBodyContentItemAttrsInit;
+  content?: PostNullableBodyContentItemContentInit | null;
+  text?: string | null;
+  marks?: PostNullableBodyContentItemMarksInit | null;
+};
+export type PostNullableBodyContentInit =
+  | PostNullableBodyContentItemInit[]
+  | null;
+export type PostNullableBodyMarksInit = PostNullableBodyContentInit[] | null;
 export type PostNullableBodyInit = {
   type: string;
   from?: number | null;
   to?: number | null;
   attrs?: PostNullableBodyAttrsInit;
-  content?: PostNullableBodyContentInit;
+  content?: PostNullableBodyContentInit | null;
   text?: string | null;
-  marks?: PostNullableBodyMarksInit;
+  marks?: PostNullableBodyMarksInit | null;
 };
 export type PostRequiredBodyAttrsInit = {
   [key: string]: PostRequiredBodyAttrsValueInit;
 };
-export type PostRequiredBodyContentInit = PostRequiredBodyInit[];
-export type PostRequiredBodyMarksInit = PostRequiredBodyInit[];
+export type PostRequiredBodyContentItemAttrsInit = {
+  [key: string]: PostRequiredBodyContentItemAttrsValueInit;
+};
+export type PostRequiredBodyContentItemContentInit =
+  | PostRequiredBodyContentInit[]
+  | null;
+export type PostRequiredBodyContentItemMarksInit =
+  | PostRequiredBodyContentInit[]
+  | null;
+export type PostRequiredBodyContentItemInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: PostRequiredBodyContentItemAttrsInit;
+  content?: PostRequiredBodyContentItemContentInit | null;
+  text?: string | null;
+  marks?: PostRequiredBodyContentItemMarksInit | null;
+};
+export type PostRequiredBodyContentInit =
+  | PostRequiredBodyContentItemInit[]
+  | null;
+export type PostRequiredBodyMarksInit = PostRequiredBodyContentInit[] | null;
 export type PostRequiredBodyInit = {
   type: string;
   from?: number | null;
   to?: number | null;
   attrs?: PostRequiredBodyAttrsInit;
-  content?: PostRequiredBodyContentInit;
+  content?: PostRequiredBodyContentInit | null;
   text?: string | null;
-  marks?: PostRequiredBodyMarksInit;
+  marks?: PostRequiredBodyMarksInit | null;
 };
+export type PostFilesInit = { [key: string]: PostFilesValueInit };
 export type PostDestructured = {
   id: string;
   nullableBody: PostNullableBody | null;
   requiredBody: PostRequiredBody;
+  files: PostFiles;
 };
 
 export type PostNullableBodyAttrsDestructured = {
   [key: string]: PostNullableBodyAttrsValue | undefined;
 };
-export type PostNullableBodyContentDestructured =
-  PostNullableBodyDestructured[];
-export type PostNullableBodyMarksDestructured = PostNullableBodyDestructured[];
+export type PostNullableBodyContentItemAttrsDestructured = {
+  [key: string]: PostNullableBodyContentItemAttrsValue | undefined;
+};
+export type PostNullableBodyContentItemContentDestructured =
+  PostNullableBodyContent[];
+export type PostNullableBodyContentItemMarksDestructured =
+  PostNullableBodyContent[];
+export type PostNullableBodyContentItemDestructured = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: PostNullableBodyContentItemAttrs;
+  content: PostNullableBodyContentItemContent | null;
+  text: string | null;
+  marks: PostNullableBodyContentItemMarks | null;
+};
+export type PostNullableBodyContentDestructured = PostNullableBodyContentItem[];
+export type PostNullableBodyMarksDestructured = PostNullableBodyContent[];
 export type PostNullableBodyDestructured = {
   type: string;
   from: number | null;
   to: number | null;
   attrs: PostNullableBodyAttrs;
-  content: PostNullableBodyContent;
+  content: PostNullableBodyContent | null;
   text: string | null;
-  marks: PostNullableBodyMarks;
+  marks: PostNullableBodyMarks | null;
 };
 export type PostRequiredBodyAttrsDestructured = {
   [key: string]: PostRequiredBodyAttrsValue | undefined;
 };
-export type PostRequiredBodyContentDestructured =
-  PostRequiredBodyDestructured[];
-export type PostRequiredBodyMarksDestructured = PostRequiredBodyDestructured[];
+export type PostRequiredBodyContentItemAttrsDestructured = {
+  [key: string]: PostRequiredBodyContentItemAttrsValue | undefined;
+};
+export type PostRequiredBodyContentItemContentDestructured =
+  PostRequiredBodyContent[];
+export type PostRequiredBodyContentItemMarksDestructured =
+  PostRequiredBodyContent[];
+export type PostRequiredBodyContentItemDestructured = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: PostRequiredBodyContentItemAttrs;
+  content: PostRequiredBodyContentItemContent | null;
+  text: string | null;
+  marks: PostRequiredBodyContentItemMarks | null;
+};
+export type PostRequiredBodyContentDestructured = PostRequiredBodyContentItem[];
+export type PostRequiredBodyMarksDestructured = PostRequiredBodyContent[];
 export type PostRequiredBodyDestructured = {
   type: string;
   from: number | null;
   to: number | null;
   attrs: PostRequiredBodyAttrs;
-  content: PostRequiredBodyContent;
+  content: PostRequiredBodyContent | null;
   text: string | null;
-  marks: PostRequiredBodyMarks;
+  marks: PostRequiredBodyMarks | null;
+};
+export type PostFilesDestructured = {
+  [key: string]: PostFilesValue | undefined;
 };
 export type PostSnapshot = {
   id: string;
   nullableBody: PostNullableBodySnapshot | null;
   requiredBody: PostRequiredBodySnapshot;
+  files: PostFilesSnapshot;
 };
 
 export type PostNullableBodyAttrsSnapshot = {
   [key: string]: PostNullableBodyAttrsValueSnapshot;
 };
-export type PostNullableBodyContentSnapshot = PostNullableBodySnapshot[];
-export type PostNullableBodyMarksSnapshot = PostNullableBodySnapshot[];
+export type PostNullableBodyContentItemAttrsSnapshot = {
+  [key: string]: PostNullableBodyContentItemAttrsValueSnapshot;
+};
+export type PostNullableBodyContentItemContentSnapshot =
+  | PostNullableBodyContentSnapshot[]
+  | null;
+export type PostNullableBodyContentItemMarksSnapshot =
+  | PostNullableBodyContentSnapshot[]
+  | null;
+export type PostNullableBodyContentItemSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: PostNullableBodyContentItemAttrsSnapshot;
+  content: PostNullableBodyContentItemContentSnapshot | null;
+  text: string | null;
+  marks: PostNullableBodyContentItemMarksSnapshot | null;
+};
+export type PostNullableBodyContentSnapshot =
+  | PostNullableBodyContentItemSnapshot[]
+  | null;
+export type PostNullableBodyMarksSnapshot =
+  | PostNullableBodyContentSnapshot[]
+  | null;
 export type PostNullableBodySnapshot = {
   type: string;
   from: number | null;
   to: number | null;
   attrs: PostNullableBodyAttrsSnapshot;
-  content: PostNullableBodyContentSnapshot;
+  content: PostNullableBodyContentSnapshot | null;
   text: string | null;
-  marks: PostNullableBodyMarksSnapshot;
+  marks: PostNullableBodyMarksSnapshot | null;
 };
 export type PostRequiredBodyAttrsSnapshot = {
   [key: string]: PostRequiredBodyAttrsValueSnapshot;
 };
-export type PostRequiredBodyContentSnapshot = PostRequiredBodySnapshot[];
-export type PostRequiredBodyMarksSnapshot = PostRequiredBodySnapshot[];
+export type PostRequiredBodyContentItemAttrsSnapshot = {
+  [key: string]: PostRequiredBodyContentItemAttrsValueSnapshot;
+};
+export type PostRequiredBodyContentItemContentSnapshot =
+  | PostRequiredBodyContentSnapshot[]
+  | null;
+export type PostRequiredBodyContentItemMarksSnapshot =
+  | PostRequiredBodyContentSnapshot[]
+  | null;
+export type PostRequiredBodyContentItemSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: PostRequiredBodyContentItemAttrsSnapshot;
+  content: PostRequiredBodyContentItemContentSnapshot | null;
+  text: string | null;
+  marks: PostRequiredBodyContentItemMarksSnapshot | null;
+};
+export type PostRequiredBodyContentSnapshot =
+  | PostRequiredBodyContentItemSnapshot[]
+  | null;
+export type PostRequiredBodyMarksSnapshot =
+  | PostRequiredBodyContentSnapshot[]
+  | null;
 export type PostRequiredBodySnapshot = {
   type: string;
   from: number | null;
   to: number | null;
   attrs: PostRequiredBodyAttrsSnapshot;
-  content: PostRequiredBodyContentSnapshot;
+  content: PostRequiredBodyContentSnapshot | null;
   text: string | null;
-  marks: PostRequiredBodyMarksSnapshot;
+  marks: PostRequiredBodyMarksSnapshot | null;
 };
+export type PostFilesSnapshot = { [key: string]: PostFilesValueSnapshot };
 
 /** Index filters for Post **/
 

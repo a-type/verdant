@@ -1,10 +1,15 @@
 import { mergeAttributes, Node } from '@tiptap/core';
-import {
+import type {
 	EntityFile,
 	EntityFileSnapshot,
-	id,
 	ObjectEntity,
 } from '@verdant-web/store';
+import {
+	fileIdAttribute,
+	fileKeyAttribute,
+	fileNameAttribute,
+	fileTypeAttribute,
+} from './attributes.js';
 
 export type VerdantMediaFileMap = ObjectEntity<
 	Record<string, File>,
@@ -31,7 +36,6 @@ declare module '@tiptap/core' {
 	}
 }
 
-const fileIdAttribute = 'data-verdant-file';
 export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 	name: 'verdant-media',
 	group: 'block',
@@ -43,21 +47,59 @@ export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 	},
 	addAttributes() {
 		return {
+			[fileKeyAttribute]: {
+				default: null,
+				keepOnSplit: false,
+				parseHTML: (element) => element.getAttribute(fileKeyAttribute),
+				rendered: true,
+			},
 			[fileIdAttribute]: {
 				default: null,
+				keepOnSplit: false,
+				parseHTML: (element) => element.getAttribute(fileIdAttribute),
+				rendered: true,
 			},
 			alt: {
 				default: null,
+				keepOnSplit: false,
+				parseHTML: (element) => element.getAttribute('alt'),
+			},
+			[fileTypeAttribute]: {
+				default: null,
+				keepOnSplit: false,
+				parseHTML: (element) => element.getAttribute(fileTypeAttribute),
+				rendered: true,
+			},
+			[fileNameAttribute]: {
+				default: null,
+				keepOnSplit: false,
+				parseHTML: (element) => element.getAttribute(fileNameAttribute),
+				rendered: true,
 			},
 		};
 	},
 	parseHTML() {
 		return [
 			{
-				tag: `[${fileIdAttribute}]`,
+				tag: `[${fileKeyAttribute}]`,
 				getAttrs: (element) => {
+					let fileKey = element.getAttribute(fileKeyAttribute);
+
+					// back compat
+					if (!fileKey && element.getAttribute('data-verdant-file')) {
+						fileKey = element.getAttribute('data-verdant-file');
+					}
+
 					const fileId = element.getAttribute(fileIdAttribute);
+					const alt = element.getAttribute('alt');
+					const type = element.getAttribute(fileTypeAttribute);
+					const name = element.getAttribute(fileNameAttribute);
+
 					return {
+						[fileKeyAttribute]: fileKey,
+						alt,
+						[fileTypeAttribute]: type,
+						[fileNameAttribute]: name,
 						[fileIdAttribute]: fileId,
 					};
 				},
@@ -65,38 +107,52 @@ export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 		];
 	},
 	renderHTML(props) {
-		const fileId = props.node.attrs[fileIdAttribute];
-		if (!fileId) {
+		const fileKey = props.node.attrs[fileKeyAttribute];
+		if (!fileKey) {
 			return ['div', props.HTMLAttributes, 'Missing file'];
 		}
-		const file = this.options.fileMap.get(fileId);
+		const file = this.options.fileMap.get(fileKey);
 		if (!file) {
 			return ['div', props.HTMLAttributes, 'Missing file'];
 		}
+		const fileId = file.id;
+		const baseAttrs = {
+			[fileKeyAttribute]: fileKey,
+			[fileIdAttribute]: fileId,
+			[fileTypeAttribute]: file.type,
+			[fileNameAttribute]: file.name,
+		};
 		if (file.loading) {
 			// this means the user didn't preload files before rendering...
 			return [
 				'div',
-				props.HTMLAttributes,
+				mergeAttributes(baseAttrs, props.HTMLAttributes),
 				'Loading file. This file was not preloaded before rendering the document.',
 			];
 		}
 		const type = file.type;
 		if (type?.startsWith('image/')) {
-			return ['img', mergeAttributes({ src: file.url }, props.HTMLAttributes)];
+			return [
+				'img',
+				mergeAttributes({ src: file.url, ...baseAttrs }, props.HTMLAttributes),
+			];
 		} else if (type?.startsWith('video/')) {
 			return [
 				'video',
-				mergeAttributes({ src: file.url }, props.HTMLAttributes),
+				mergeAttributes({ src: file.url, ...baseAttrs }, props.HTMLAttributes),
 			];
 		} else if (type?.startsWith('audio/')) {
 			return [
 				'audio',
-				mergeAttributes({ src: file.url }, props.HTMLAttributes),
+				mergeAttributes({ src: file.url, ...baseAttrs }, props.HTMLAttributes),
 			];
 		} else {
 			// TODO: render file download
-			return ['div', props.HTMLAttributes, 'Unsupported file type'];
+			return [
+				'div',
+				mergeAttributes(baseAttrs, props.HTMLAttributes),
+				'Unsupported file type',
+			];
 		}
 	},
 	onBeforeCreate() {
@@ -123,12 +179,12 @@ export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 		this.editor.on('update', ({ transaction }) => {
 			const fileIds = new Set<string>();
 			transaction.doc.forEach((node) => {
-				if (node.attrs[fileIdAttribute]) {
-					fileIds.add(node.attrs[fileIdAttribute]);
+				if (node.attrs[fileKeyAttribute]) {
+					fileIds.add(node.attrs[fileKeyAttribute]);
 				}
 			});
 			transaction.before.forEach((node) => {
-				const fileId = node.attrs[fileIdAttribute];
+				const fileId = node.attrs[fileKeyAttribute];
 				if (fileId && !fileIds.has(fileId)) {
 					// the file was removed from the document
 					this.options.fileMap.delete(fileId);
@@ -141,13 +197,20 @@ export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 			insertMedia:
 				(file: File) =>
 				({ commands }) => {
-					const fileId = id();
-					this.options.fileMap.set(fileId, file);
+					const fileKey = crypto.randomUUID();
+					this.options.fileMap.set(fileKey, file);
+					const storedFile = this.options.fileMap.get(fileKey);
+					if (!storedFile) {
+						throw new Error('Failed to store file in file map');
+					}
 					return commands.insertContent(
 						{
 							type: this.name,
 							attrs: {
-								[fileIdAttribute]: fileId,
+								[fileKeyAttribute]: fileKey,
+								[fileTypeAttribute]: file.type,
+								[fileNameAttribute]: file.name,
+								[fileIdAttribute]: storedFile.id,
 							},
 						} as any,
 						{
@@ -171,7 +234,7 @@ export const VerdantMediaExtension = Node.create<VerdantMediaExtensionOptions>({
 			});
 
 			// get the file ID from attrs
-			const fileId = node.attrs[fileIdAttribute];
+			const fileId = node.attrs[fileKeyAttribute];
 			if (!fileId) {
 				root.textContent = 'Missing file';
 				return {
@@ -297,3 +360,127 @@ export async function preloadMedia(files: VerdantMediaFileMap) {
 		}),
 	);
 }
+
+export interface VerdantMediaRendererExtensionOptions {}
+
+/**
+ * An extension for rendering TipTap documents with Verdant media nodes.
+ * - ONLY works if the files being rendered are already synced to a Verdant server.
+ * - ONLY works if you process the document JSON with `@verdant-web/tiptap/server`'s `attachFileUrls` function on your server.
+ * It's good for static sites or server-side rendering of documents you authored
+ * with Verdant.
+ */
+export const VerdantMediaRendererExtension =
+	Node.create<VerdantMediaRendererExtensionOptions>({
+		name: 'verdant-media',
+		group: 'block',
+		addAttributes() {
+			return {
+				[fileKeyAttribute]: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute(fileKeyAttribute),
+					rendered: true,
+				},
+				[fileIdAttribute]: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute(fileIdAttribute),
+					rendered: true,
+				},
+				alt: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute('alt'),
+				},
+				[fileTypeAttribute]: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute(fileTypeAttribute),
+					rendered: true,
+				},
+				[fileNameAttribute]: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute(fileNameAttribute),
+					rendered: true,
+				},
+				src: {
+					default: null,
+					keepOnSplit: false,
+					parseHTML: (element) => element.getAttribute('src'),
+					rendered: true,
+				},
+			};
+		},
+		parseHTML() {
+			return [
+				{
+					tag: `[${fileKeyAttribute}]`,
+					getAttrs: (element) => {
+						const fileKey = element.getAttribute(fileKeyAttribute);
+						const fileId = element.getAttribute(fileIdAttribute);
+						const alt = element.getAttribute('alt');
+						const type = element.getAttribute(fileTypeAttribute);
+						const name = element.getAttribute(fileNameAttribute);
+						const src = element.getAttribute('src');
+						return {
+							[fileKeyAttribute]: fileKey,
+							[fileIdAttribute]: fileId,
+							alt,
+							src,
+							[fileTypeAttribute]: type,
+							[fileNameAttribute]: name,
+						};
+					},
+				},
+			];
+		},
+		renderHTML(props) {
+			const src = props.node.attrs.src;
+			const fileKey = props.node.attrs[fileKeyAttribute];
+			const fileId = props.node.attrs[fileIdAttribute];
+			const alt = props.node.attrs.alt;
+			const name = props.node.attrs[fileNameAttribute];
+			const type = props.node.attrs[fileTypeAttribute];
+
+			const baseAttrs = {
+				[fileKeyAttribute]: fileKey,
+				[fileIdAttribute]: fileId,
+				alt,
+				[fileTypeAttribute]: type,
+				[fileNameAttribute]: name,
+			};
+
+			if (!src) {
+				return [
+					'div',
+					mergeAttributes(baseAttrs, props.HTMLAttributes),
+					'Missing file',
+				];
+			}
+
+			if (type?.startsWith('image/')) {
+				return [
+					'img',
+					mergeAttributes({ src, ...baseAttrs }, props.HTMLAttributes),
+				];
+			} else if (type?.startsWith('video/')) {
+				return [
+					'video',
+					mergeAttributes({ src, ...baseAttrs }, props.HTMLAttributes),
+				];
+			} else if (type?.startsWith('audio/')) {
+				return [
+					'audio',
+					mergeAttributes({ src, ...baseAttrs }, props.HTMLAttributes),
+				];
+			} else {
+				return [
+					'a',
+					mergeAttributes({ href: src, ...baseAttrs }, props.HTMLAttributes),
+					'Download',
+				];
+			}
+		},
+	});

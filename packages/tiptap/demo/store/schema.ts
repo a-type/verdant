@@ -1,5 +1,8 @@
 import { schema } from '@verdant-web/common';
-import { createTipTapFieldSchema } from '../../src/fields.js';
+import {
+	createTipTapFieldSchema,
+	createTipTapFileMapSchema,
+} from '../../src/fields.js';
 
 export default schema({
 	version: 1,
@@ -16,6 +19,7 @@ export default schema({
 						content: [],
 					},
 				}),
+				files: createTipTapFileMapSchema(),
 			},
 		}),
 	},

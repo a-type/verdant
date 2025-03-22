@@ -14,7 +14,7 @@
 		},
 		"./storage": {
 			"development": "./src/storage/index.ts",
-			"import": "./dist/esm/storage/index.ts",
+			"import": "./dist/esm/storage/index.js",
 			"types": "./dist/esm/storage/index.d.ts"
 		}
 	},

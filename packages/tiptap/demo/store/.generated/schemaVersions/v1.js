@@ -7,6 +7,14 @@ import { schema as schema2 } from "@verdant-web/common";
 import {
   schema
 } from "@verdant-web/common";
+var otherDefaults = {
+  content: [],
+  marks: null,
+  attrs: {},
+  from: null,
+  to: null,
+  text: null
+};
 function createTipTapFieldSchema(options) {
   if (options.default === void 0) {
     throw new Error(
@@ -14,16 +22,9 @@ function createTipTapFieldSchema(options) {
     );
   }
   const baseField = schema.fields.object({
-    fields: {},
-    default: () => {
-      if (options.default === null) {
-        return null;
-      }
-      return structuredClone(options.default);
-    },
-    nullable: options.default === null
+    fields: {}
   });
-  return schema.fields.replaceObjectFields(baseField, {
+  const nestedContent = schema.fields.replaceObjectFields(baseField, {
     type: schema.fields.string(),
     from: schema.fields.number({ nullable: true }),
     to: schema.fields.number({ nullable: true }),
@@ -31,12 +32,46 @@ function createTipTapFieldSchema(options) {
       values: schema.fields.any()
     }),
     content: schema.fields.array({
-      items: baseField
+      items: baseField,
+      nullable: true
     }),
     text: schema.fields.string({ nullable: true }),
     marks: schema.fields.array({
-      items: baseField
+      items: baseField,
+      nullable: true
     })
+  });
+  const rootField = schema.fields.object({
+    fields: {
+      type: schema.fields.string(),
+      from: schema.fields.number({ nullable: true }),
+      to: schema.fields.number({ nullable: true }),
+      attrs: schema.fields.map({
+        values: schema.fields.any()
+      }),
+      content: schema.fields.array({
+        items: nestedContent,
+        nullable: true
+      }),
+      text: schema.fields.string({ nullable: true }),
+      marks: schema.fields.array({
+        items: nestedContent,
+        nullable: true
+      })
+    },
+    default: () => {
+      if (options.default === null) {
+        return null;
+      }
+      return { ...otherDefaults, ...structuredClone(options.default) };
+    },
+    nullable: options.default === null
+  });
+  return rootField;
+}
+function createTipTapFileMapSchema() {
+  return schema.fields.map({
+    values: schema.fields.file()
   });
 }
 
@@ -55,7 +90,8 @@ var schema_default = schema2({
             type: "doc",
             content: []
           }
-        })
+        }),
+        files: createTipTapFileMapSchema()
       }
     })
   }

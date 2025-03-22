@@ -6,5 +6,12 @@
 		"lib": ["dom", "esnext", "webworker"],
 		"types": ["@vitest/browser/providers/playwright"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"src/**/*.test.ts",
+		"src/**/*.test.tsx",
+		"src/server/*.ts"
+	]
 }

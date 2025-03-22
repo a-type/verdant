@@ -194,6 +194,30 @@ See the source of the VerdantMediaExtension for an example plain JS node view wh
 
 Due to the dynamic nature of file loading, it's probably easier to use React for your node view if your project is already React. You can also use Verdant hooks in your React node view, like `useWatch(file)`, to take care of the plumbing aspects.
 
+### Rendering files in HTML
+
+TipTap can render a JSON document to HTML, which is useful if you're using it as an authoring editor for websites. This is something Verdant tries to support, but it gets a little tricky with files.
+
+#### Rendering without files
+
+If you don't need embedded media support, you should be able to server-render your HTML using `@tiptap/html` without much complication. All you have to do is get the snapshot of your Verdant TipTap field to the server.
+
+Call `.getSnapshot()` on your Verdant field to get its current contents as JSON. This will match the structure TipTap needs to render the document. You can then send this to your server to be stored in a database, then retrieved when the page is requested and passed through `generateHTML` to produce the document contents.
+
+The above approach works for "publish" style pages, where the user chooses when to publish something and the published version stays in place until they explicitly publish again, even if they make changes to their document.
+
+#### Rendering with files
+
+To render HTML with embedded Verdant-backed files, you must do the following:
+
+1. The document and associated files must be synced to the server. Your server cannot serve files which only exist on the user's device!
+2. You must process your document snapshot through `attachFileUrls`, exported by `@verdant-web/tiptap/server`.
+3. You must replace the `VerdantMediaExtension` with `VerdantMediaRendererExtension`, exported from `@verdant-web/tiptap`.
+
+`attachFileUrls` requires a `document` (your JSON snapshot), `libraryId` (the Verdant library ID which owns the document), and a `Server` instance. It uses the Verdant server instance to read the final URL of each file in the document and attach it as an `src` attribute, along with metadata like MIME type and file name. These are used by the `VerdantMediaRendererExtension` to render appropriate HTML representations of each file.
+
+For an example of this in use, see the Verdant TipTap package demo folder, `/packages/tiptap/demo/server/index.js`. Note that this is more of a proof of concept example than a real-world use case, which would involve storing the published document snapshot in a database or file somewhere.
+
 ## Usage with React
 
 The library provides a single hook you can use to create a TipTap Editor that's backed with Verdant. It really just wraps the creation and configuration of the extension as shown above.

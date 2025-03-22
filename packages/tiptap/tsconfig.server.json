@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"lib": ["ESNext"],
+		"outDir": "./dist/esm",
+		"rootDir": "./src",
+		"declarationDir": "./dist/esm",
+		"declaration": true
+	},
+	"include": ["src/server/**/*", "src/extensions/attributes.ts"],
+	"exclude": ["node_modules", "dist"]
+}

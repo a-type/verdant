@@ -1,9 +1,8 @@
-import { ReactNode, StrictMode, Suspense, useEffect } from 'react';
+import { ReactNode, StrictMode, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { NodeIdExtension } from '../src/plugins.js';
 import { useSyncedEditor } from '../src/react.js';
 import { ClientDescriptor, createHooks } from './store/index.js';
 
@@ -18,7 +17,7 @@ const clientDesc = new ClientDescriptor({
 	sync: {
 		defaultProfile: {},
 		initialPresence: {},
-		authEndpoint: `http://localhost:3242/auth/tiptap?userId=${userId}`,
+		authEndpoint: `http://localhost:3234/auth/tiptap?userId=${userId}`,
 	},
 });
 
@@ -57,9 +56,11 @@ function SnapshotDisplay() {
 
 function RequiredEditor() {
 	const post = hooks.usePost('default')!;
+	hooks.useWatch(post);
 
 	const editor = useSyncedEditor(post, 'requiredBody', {
-		editorOptions: { extensions: [StarterKit, NodeIdExtension()] },
+		editorOptions: { extensions: [StarterKit] },
+		files: post.get('files'),
 	});
 
 	return (
@@ -72,9 +73,10 @@ function RequiredEditor() {
 
 function NullableEditor() {
 	const post = hooks.usePost('default')!;
+	hooks.useWatch(post);
 
 	const editor = useSyncedEditor(post, 'nullableBody', {
-		editorOptions: { extensions: [StarterKit, NodeIdExtension()] },
+		editorOptions: { extensions: [StarterKit] },
 		nullDocumentDefault: {
 			type: 'doc',
 			content: [],
@@ -84,6 +86,7 @@ function NullableEditor() {
 			text: null,
 			marks: [],
 		},
+		files: post.get('files'),
 	});
 
 	return (
@@ -92,6 +95,35 @@ function NullableEditor() {
 			style={{ width: 500, height: 300, border: '1px solid black' }}
 		/>
 	);
+}
+
+function RenderButton() {
+	const post = hooks.usePost('default')!;
+	const [html, setHtml] = useState('');
+
+	const renderPost = async () => {
+		const snapshot = post.getSnapshot();
+		const res = await fetch(`http://localhost:3234/render`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ doc: snapshot.requiredBody, libraryId: 'tiptap' }),
+		});
+		const text = await res.text();
+		setHtml(text);
+	};
+
+	if (post) {
+		return (
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+				<button onClick={renderPost}>Render</button>
+				{html && <iframe srcDoc={html} style={{ width: 400, height: 400 }} />}
+			</div>
+		);
+	}
+
+	return null;
 }
 
 function SuspenseChecker() {
@@ -104,12 +136,14 @@ function App() {
 		<hooks.Provider value={clientDesc} sync>
 			<Suspense fallback={<SuspenseChecker />}>
 				<DefaultPostCreator>
-					<h1>Required Editor</h1>
+					<h2>Required Editor</h2>
 					<RequiredEditor />
-					<h1>Nullable Editor</h1>
+					<h2>Nullable Editor</h2>
 					<NullableEditor />
-					<h1>Document snapshot</h1>
+					<h2>Document snapshot</h2>
 					<SnapshotDisplay />
+					<h2>Server rendering</h2>
+					<RenderButton />
 				</DefaultPostCreator>
 			</Suspense>
 		</hooks.Provider>

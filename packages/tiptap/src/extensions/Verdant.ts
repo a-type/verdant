@@ -1,8 +1,8 @@
 import { Extension, JSONContent } from '@tiptap/core';
 import { assignOid, cloneDeep, maybeGetOid } from '@verdant-web/common';
 import { AnyEntity, getEntityClient, ObjectEntity } from '@verdant-web/store';
+import { verdantIdAttribute } from './attributes.js';
 
-export const verdantIdAttribute = 'data-verdant-oid';
 export interface VerdantExtensionOptions {
 	parent: AnyEntity<any, any, any>;
 	fieldName: string | number;
