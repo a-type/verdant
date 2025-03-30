@@ -5,6 +5,8 @@ import {
 	fileTypeAttribute,
 } from '../extensions/attributes.js';
 
+export { VerdantMediaRendererExtension } from '../extensions/VerdantMediaRenderer.js';
+
 /**
  * Attaches file URLs to all Verdant media nodes in the document, according
  * to the file service attached to your Verdant server.
