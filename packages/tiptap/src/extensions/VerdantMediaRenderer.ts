@@ -8,6 +8,11 @@ import {
 
 export interface VerdantMediaRendererExtensionOptions {}
 
+// because this is on client and server, types get annoying...
+function getAttribute(element: any, key: string) {
+	return getAttribute(element, key);
+}
+
 /**
  * An extension for rendering TipTap documents with Verdant media nodes.
  * - ONLY works if the files being rendered are already synced to a Verdant server.
@@ -24,36 +29,36 @@ export const VerdantMediaRendererExtension =
 				[fileKeyAttribute]: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute(fileKeyAttribute),
+					parseHTML: (element) => getAttribute(element, fileKeyAttribute),
 					rendered: true,
 				},
 				[fileIdAttribute]: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute(fileIdAttribute),
+					parseHTML: (element) => getAttribute(element, fileIdAttribute),
 					rendered: true,
 				},
 				alt: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute('alt'),
+					parseHTML: (element) => getAttribute(element, 'alt'),
 				},
 				[fileTypeAttribute]: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute(fileTypeAttribute),
+					parseHTML: (element) => getAttribute(element, fileTypeAttribute),
 					rendered: true,
 				},
 				[fileNameAttribute]: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute(fileNameAttribute),
+					parseHTML: (element) => getAttribute(element, fileNameAttribute),
 					rendered: true,
 				},
 				src: {
 					default: null,
 					keepOnSplit: false,
-					parseHTML: (element) => element.getAttribute('src'),
+					parseHTML: (element) => getAttribute(element, 'src'),
 					rendered: true,
 				},
 			};
@@ -63,12 +68,12 @@ export const VerdantMediaRendererExtension =
 				{
 					tag: `[${fileKeyAttribute}]`,
 					getAttrs: (element) => {
-						const fileKey = element.getAttribute(fileKeyAttribute);
-						const fileId = element.getAttribute(fileIdAttribute);
-						const alt = element.getAttribute('alt');
-						const type = element.getAttribute(fileTypeAttribute);
-						const name = element.getAttribute(fileNameAttribute);
-						const src = element.getAttribute('src');
+						const fileKey = getAttribute(element, fileKeyAttribute);
+						const fileId = getAttribute(element, fileIdAttribute);
+						const alt = getAttribute(element, 'alt');
+						const type = getAttribute(element, fileTypeAttribute);
+						const name = getAttribute(element, fileNameAttribute);
+						const src = getAttribute(element, 'src');
 						return {
 							[fileKeyAttribute]: fileKey,
 							[fileIdAttribute]: fileId,
