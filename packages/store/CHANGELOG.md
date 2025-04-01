@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.4.2
+
+### Patch Changes
+
+- 36ac749: Add built-in logger and logger options
+
 ## 4.4.1
 
 ### Patch Changes
