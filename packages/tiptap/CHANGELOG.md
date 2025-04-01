@@ -1,5 +1,11 @@
 # @verdant-web/tiptap
 
+## 4.1.1
+
+### Patch Changes
+
+- 4b7966f: Export media renderer extension in server entry, separate it out
+
 ## 4.1.0
 
 ### Minor Changes
