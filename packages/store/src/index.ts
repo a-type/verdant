@@ -50,7 +50,7 @@ export type { QueryStatus } from './queries/BaseQuery.js';
 export type { CollectionQueries } from './queries/CollectionQueries.js';
 export type { Query } from './queries/types.js';
 export * from './sync/cliSync.js';
-export { ServerSync } from './sync/Sync.js';
+export { ServerSync, type ServerSyncOptions } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { UndoHistory } from './UndoHistory.js';
 export * from './utils/id.js';
