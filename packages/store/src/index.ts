@@ -43,6 +43,7 @@ export type {
 	ObjectEntity,
 } from './entities/types.js';
 export { EntityFile, type EntityFileSnapshot } from './files/EntityFile.js';
+export * from './logger.js';
 export { IdbPersistence } from './persistence/idb/idbPersistence.js';
 export type * from './persistence/interfaces.js';
 export type { QueryStatus } from './queries/BaseQuery.js';

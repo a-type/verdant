@@ -11,6 +11,7 @@ import {
 } from '@verdant-web/common';
 import { UndoHistory } from '../UndoHistory.js';
 import type { Client } from '../client/Client.js';
+import { VerdantLogger } from '../logger.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
 import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
@@ -41,10 +42,7 @@ export interface Context {
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
 	oldSchemas: StorageSchema[];
-	log: (
-		level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
-		...args: any[]
-	) => void;
+	log: VerdantLogger;
 	entityEvents: EventSubscriber<{
 		collectionsChanged: (names: string[]) => void;
 		documentChanged: (oid: ObjectIdentifier) => void;

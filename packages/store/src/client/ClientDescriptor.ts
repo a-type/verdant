@@ -5,12 +5,12 @@ import {
 	PatchCreator,
 	StorageSchema,
 	VerdantError,
-	noop,
 } from '@verdant-web/common';
 import { FileConfig, InitialContext, QueryConfig } from '../context/context.js';
 import { ShutdownHandler } from '../context/ShutdownHandler.js';
 import { Time } from '../context/Time.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
+import { debugLogger, noLogger, VerdantLogger } from '../logger.js';
 import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
 import { deleteAllDatabases } from '../persistence/idb/util.js';
 import { PersistenceImplementation } from '../persistence/interfaces.js';
@@ -39,10 +39,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	/**
 	 * Provide a log function to log internal debug messages
 	 */
-	log?: (
-		level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
-		...args: any[]
-	) => void;
+	log?: VerdantLogger | false;
 	disableRebasing?: boolean;
 	rebaseTimeout?: number;
 	/**
@@ -136,12 +133,14 @@ export class ClientDescriptor<
 				init.schema.version,
 			);
 			const environment = init.environment || defaultBrowserEnvironment;
+			const logger =
+				init.log === false ? noLogger : init.log || debugLogger('🌿');
 			let ctx: InitialContext = {
 				closing: false,
 				entityEvents: new EventSubscriber(),
 				globalEvents: new EventSubscriber(),
 				internalEvents: new EventSubscriber(),
-				log: init.log || noop,
+				log: logger,
 				migrations: init.migrations,
 				namespace: init.namespace,
 				originalNamespace: init.namespace,
@@ -166,7 +165,7 @@ export class ClientDescriptor<
 				persistence:
 					init.persistence || new IdbPersistence(environment.indexedDB),
 				environment,
-				persistenceShutdownHandler: new ShutdownHandler(init.log),
+				persistenceShutdownHandler: new ShutdownHandler(logger),
 				pauseRebasing: false,
 				getClient() {
 					throw new VerdantError(
