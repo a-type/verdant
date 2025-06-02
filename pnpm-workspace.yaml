@@ -11,10 +11,10 @@ catalog:
   better-sqlite3: ^11.8.1
   typescript: 5.7.3
   '@types/node': 22.13.4
-  vitest: 3.0.8
-  '@vitest/browser': 3.0.8
+  vitest: 3.2.0
+  '@vitest/browser': 3.2.0
   vitest-browser-react: 0.1.1
-  playwright: 1.51.0
+  playwright: 1.52.0
   react: 19.0.0
   '@types/react': 19.0.10
   vite: 6.1.1
