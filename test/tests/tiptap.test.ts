@@ -69,24 +69,16 @@ it('applies successive updates to a nested document in a tiptap-like scenario', 
 	});
 	let text = '';
 	for (let i = 0; i < 100; i++) {
+		// the real TipTap extension is fairly optimized to make targetted changes,
+		// this mimics that by reusing the snapshot and only updating the text
 		text += 'a';
-		doc.get('content').update(
-			{
-				type: 'doc',
-				content: [
-					{
-						type: 'paragraph',
-						attrs: { id: '1' },
-						content: [{ type: 'text', text }],
-					},
-				],
-			},
-			{
-				merge: false,
-				dangerouslyDisableMerge: true,
-				replaceSubObjects: false,
-			},
-		);
+		const snapshot = doc.get('content').getSnapshot();
+		snapshot.content![0].content![0].text = text;
+		doc.get('content').update(snapshot, {
+			merge: false,
+			dangerouslyDisableMerge: true,
+			replaceSubObjects: false,
+		});
 		// mimic typing delay
 		await new Promise((resolve) => setTimeout(resolve, 10));
 	}
@@ -96,10 +88,12 @@ it('applies successive updates to a nested document in a tiptap-like scenario', 
 			doc
 				.get('content')
 				.get('content')
-				.get(0)
-				.get('content')
-				.get(0)
-				.get('text') === text,
+				?.get(0)
+				?.get('content')
+				?.get(0)
+				?.get('text') === text,
+		20000,
+		'waiting for text to be updated',
 	);
 });
 

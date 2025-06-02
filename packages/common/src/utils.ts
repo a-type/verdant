@@ -197,3 +197,12 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 export function noop() {}
+
+// avoids recursion and other issues with JSON.stringify
+export function safeStringify(obj: any) {
+	try {
+		return JSON.stringify(obj);
+	} catch (e) {
+		return `[recursive/invalid:${String(obj)}]`;
+	}
+}

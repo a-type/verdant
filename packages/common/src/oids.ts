@@ -2,7 +2,7 @@ import { v4 } from 'uuid';
 import { isFileRef } from './files.js';
 import { isObjectRef, ObjectRef } from './operation.js';
 import { isRef } from './refs.js';
-import { assert, isObject } from './utils.js';
+import { assert, isObject, safeStringify } from './utils.js';
 
 /**
  * OIDs
@@ -42,7 +42,7 @@ export function getOid(obj: any) {
 	const oid = maybeGetOid(obj);
 	assert(
 		!!oid,
-		`Object ${JSON.stringify(obj)} does not have an OID assigned to it`,
+		`Object ${safeStringify(obj)} does not have an OID assigned to it`,
 	);
 	return oid;
 }
@@ -57,7 +57,7 @@ export function maybeGetOid(obj: any): ObjectIdentifier | undefined {
 export function assignOid(obj: any, oid: ObjectIdentifier) {
 	assert(
 		isObject(obj),
-		`Only objects can be assigned OIDs, received ${JSON.stringify(obj)}`,
+		`Only objects can be assigned OIDs, received ${safeStringify(obj)}`,
 	);
 	if (hasOid(obj)) {
 		removeOid(obj);
@@ -197,7 +197,7 @@ export function decomposeOid(oid: ObjectIdentifier): {
 export function assertAllLevelsHaveOids(obj: any, root?: any) {
 	assert(
 		getOid(obj),
-		`Object ${JSON.stringify(obj)} must have an oid (child of ${JSON.stringify(
+		`Object ${safeStringify(obj)} must have an oid (child of ${safeStringify(
 			root,
 		)})`,
 	);

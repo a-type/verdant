@@ -334,6 +334,14 @@ export class Entity<
 		return this.viewData.deleted || this.view === null;
 	}
 
+	/**
+	 * Doesn't compute view data; simply uses available cached
+	 * view info to determine deletion status.
+	 */
+	private get quickDeleted() {
+		return this._viewData?.deleted || this.cachedView === null;
+	}
+
 	get invalid() {
 		return !!this.validate();
 	}
@@ -648,6 +656,21 @@ export class Entity<
 		this.cachedView = undefined;
 	};
 
+	// invalidates cached view of any entity targetted by change. this can
+	// be called by any member of the tree and will automatically target
+	// the correct entity.
+	private invalidate = (ev: EntityChange) => {
+		if (ev.oid === this.oid) {
+			this.invalidateCachedView();
+		} else {
+			const other = this.entityFamily.getCached(ev.oid);
+			if (other && other instanceof Entity) {
+				// forward the invalidation to the correct family member.
+				other.invalidate(ev);
+			}
+		}
+	};
+
 	private change = (ev: EntityChange) => {
 		if (ev.oid === this.oid) {
 			// reset cached view
@@ -689,12 +712,25 @@ export class Entity<
 		}
 	};
 	private changeNested = (ev: EntityChange) => {
+		// do not emit changes when deleted
+		if (this.deleted) {
+			this.ctx.log('debug', 'Entity deleted, not emitting change', this.oid);
+			return;
+		}
 		// chain deepChanges to parents
 		this.deepChange(this, ev);
 		// emit the change, it's for us
 		this.emit('change', { isLocal: ev.isLocal });
 	};
 	protected deepChange = (target: Entity, ev: EntityChange) => {
+		if (this.deleted) {
+			this.ctx.log(
+				'debug',
+				'Entity deleted, not emitting deep change',
+				this.oid,
+			);
+			return;
+		}
 		// reset cached deep updated at timestamp; either this
 		// entity or children have changed
 		this.cachedDeepUpdatedAt = null;
@@ -878,7 +914,7 @@ export class Entity<
 		);
 		const changes = this.metadataFamily.addEphemeralData(pruneDiff);
 		for (const change of changes) {
-			this.change(change);
+			this.invalidate(change);
 		}
 		return child as any;
 	};

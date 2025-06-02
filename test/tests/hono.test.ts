@@ -21,6 +21,7 @@ import {
 	waitForEntityCondition,
 	waitForPeerCount,
 	waitForQueryResult,
+	waitForSync,
 	waitForTime,
 } from '../lib/waits.js';
 
@@ -118,7 +119,7 @@ describe('the server', () => {
 			// 		console.log('A:', msg);
 			// 	}
 			// },
-			// logId: 'A',
+			logId: 'A',
 		});
 
 		const clientB = await createTestClient({
@@ -132,6 +133,8 @@ describe('the server', () => {
 		const item1 = await clientA.items.put({ content: 'item 1', id: '1' });
 
 		clientA.sync.start();
+		await waitForSync(clientA);
+
 		clientB.sync.start();
 
 		await waitForPeerCount(clientA, 1);

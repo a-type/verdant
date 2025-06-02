@@ -5,6 +5,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 	StorageObjectFieldSchema,
+	VerdantError,
 	assert,
 	assignOid,
 	decomposeOid,
@@ -280,11 +281,11 @@ export class EntityStore extends Disposable {
 				const entity = cached.deref();
 				if (entity) {
 					if (entity.deleted) {
-						this.ctx.log('debug', 'Hydrated entity is deleted', oid);
+						this.ctx.log('debug', 'Cached entity is deleted', oid);
 						// debugger;
 						return null;
 					}
-					this.ctx.log('debug', 'Hydrating entity from cache', oid);
+					this.ctx.log('debug', 'Using cached hydrated entity', oid);
 					return entity;
 				} else {
 					this.ctx.log('debug', "Removing GC'd entity from cache", oid);
@@ -307,6 +308,7 @@ export class EntityStore extends Disposable {
 			const pendingPromise = this.loadEntity(entity, opts);
 			pendingPromise.finally(() => {
 				this.pendingEntityPromises.delete(oid);
+				this.ctx.log('debug', 'Hydration complete', oid);
 			});
 			this.pendingEntityPromises.set(oid, pendingPromise);
 			return pendingPromise;
@@ -341,15 +343,11 @@ export class EntityStore extends Disposable {
 
 		assignOid(processed, oid);
 
-		// creating a new Entity with no data, then preloading the operations
-		const entity = this.constructEntity(oid);
-		if (!entity) {
-			throw new Error(
-				`Could not put new document: no schema exists for collection ${collection}`,
-			);
+		// validate that schema exists
+		const { schema } = this.getCollectionSchema(collection);
+		if (!schema) {
+			throw new Error(`Collection schema not found for ${collection}`);
 		}
-		// add files with entity as parent
-		fileRefs.forEach((file) => this.files.add(file, entity));
 
 		const operations = this.ctx.patchCreator.createInitialize(
 			processed,
@@ -358,24 +356,39 @@ export class EntityStore extends Disposable {
 		);
 		await this.batcher.commitOperations(operations, {
 			undoable: !!undoable,
-			source: entity,
 		});
 
 		// TODONE: what happens if you create an entity with an OID that already
 		// exists?
 		// A: it will overwrite the existing entity
 
-		// we still need to synchronously add the initial operations to the Entity
-		// even though they are flowing through the system
-		// FIXME: this could be better aligned to avoid grouping here
-		const operationsGroupedByOid = groupPatchesByOid(operations);
-		this.events.add.invoke(this, {
-			operations: operationsGroupedByOid,
-			isLocal: true,
+		// wait for the entity to load and cache before returning
+		const entity = await this.hydrate(oid);
+		if (!entity) {
+			// something failed when creating the entity
+			this.ctx.log(
+				'error',
+				'Failed to create entity; hydrated entity is null. Hopefully an error is logged above.',
+				oid,
+			);
+			throw new VerdantError(
+				VerdantError.Code.Unexpected,
+				undefined,
+				`Failed to create document ${oid}`,
+			);
+		}
+		// add files with entity as parent
+		// note: these .add invocations have async behavior -- it should upload any files to the
+		// server if sync is active. but we don't need to wait for it to make the entity usable as file
+		// data should already be locally available.
+		this.ctx.log(
+			'debug',
+			'Associating',
+			fileRefs.length,
+			'files to new entity',
 			oid,
-		});
-		this.cache.set(oid, this.ctx.weakRef(entity));
-
+		);
+		fileRefs.forEach((file) => this.files.add(file, entity));
 		return entity;
 	};
 
@@ -391,12 +404,6 @@ export class EntityStore extends Disposable {
 
 		const entities = await Promise.all(oids.map((oid) => this.hydrate(oid)));
 
-		// remove the entities from cache
-		oids.forEach((oid) => {
-			this.cache.delete(oid);
-			this.ctx.log('debug', 'Deleted document from cache', oid);
-		});
-
 		const operations: Operation[] = [];
 		for (const entity of entities) {
 			if (entity) {
@@ -411,6 +418,12 @@ export class EntityStore extends Disposable {
 
 		await this.batcher.commitOperations(operations, {
 			undoable: options?.undoable === undefined ? true : options.undoable,
+		});
+
+		// remove the entities from cache
+		oids.forEach((oid) => {
+			this.cache.delete(oid);
+			this.ctx.log('debug', 'Deleted document from cache', oid);
 		});
 	};
 
@@ -444,7 +457,7 @@ export class EntityStore extends Disposable {
 	};
 
 	/**
-	 * Constructs an entity from an OID, but does not load it.
+	 * Constructs an entity from an OID, but does not load it or add it to the cache.
 	 */
 	private constructEntity = (oid: string): Entity | null => {
 		assert(!!oid, 'Cannot construct entity without OID');

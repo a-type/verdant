@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createTestStorage } from './fixtures/testStorage.js';
 
 describe('mutations', () => {
@@ -53,6 +53,41 @@ describe('mutations', () => {
 
 		expect(itemAExists).toBeNull();
 		expect(itemBExists === itemB).toBe(true);
+	});
+
+	it('should not fire change events on deleted entities while deleting them', async () => {
+		const client = await createTestStorage({
+			// log: console.log,
+		});
+		const item = await client.todos.put({
+			id: '1',
+			content: 'itemA',
+			category: 'test',
+			attachments: [
+				{
+					name: 'foo',
+				},
+			],
+		});
+		const watchRoot = vi.fn(() => {
+			console.trace('watchRoot called');
+			console.error(item.deleted);
+		});
+		const watchRootDeep = vi.fn(() => {
+			console.error('watchRootDeep called');
+		});
+		const watchItem = vi.fn(() => {
+			console.error('watchItem called');
+			console.error(item.get('attachments').get(0).deleted);
+		});
+		item.subscribe('change', watchRoot);
+		item.subscribe('changeDeep', watchRootDeep);
+		item.get('attachments').get(0).subscribe('change', watchItem);
+
+		await client.todos.delete('1');
+		expect(watchRoot).toHaveBeenCalledTimes(0);
+		expect(watchRootDeep).toHaveBeenCalledTimes(0);
+		expect(watchItem).toHaveBeenCalledTimes(0);
 	});
 
 	describe('on entities', () => {
