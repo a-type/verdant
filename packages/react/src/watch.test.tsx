@@ -63,7 +63,7 @@ function renderWithProvider(content: React.ReactElement) {
 	});
 }
 
-it.only('should only re-render when observed keys change', async () => {
+it('should only re-render when observed keys change', async () => {
 	// seed the initial post
 	const testPost = await client.posts.put({});
 
