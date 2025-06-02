@@ -1,5 +1,13 @@
 # @verdant-web/tiptap
 
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [fb75036]
+  - @verdant-web/store@4.5.0
+  - @verdant-web/react@42.1.0
+
 ## 4.1.2
 
 ### Patch Changes
