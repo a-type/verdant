@@ -697,8 +697,14 @@ export class Entity<
 				this.ctx.log('debug', 'Entity deleted', this.oid);
 				this.emit('delete', { isLocal: ev.isLocal });
 				this.wasDeletedLastChange = true;
+			} else {
+				this.ctx.log(
+					'debug',
+					'Entity already deleted, not emitting delete or change events',
+					this.oid,
+				);
+				// already deleted, do nothing.
 			}
-			// already deleted, do nothing.
 		} else {
 			if (this.wasDeletedLastChange) {
 				this.ctx.log('debug', 'Entity restored', this.oid);

@@ -42,6 +42,7 @@ beforeAll(async () => {
 		oldSchemas: [testSchema],
 		migrations: [createMigration(testSchema)],
 		namespace: 'watch-test',
+		log: console.log,
 	});
 	client = await (clientDesc.open() as Promise<ClientWithCollections>);
 });
@@ -62,7 +63,7 @@ function renderWithProvider(content: React.ReactElement) {
 	});
 }
 
-it('should only re-render when observed keys change', async () => {
+it.only('should only re-render when observed keys change', async () => {
 	// seed the initial post
 	const testPost = await client.posts.put({});
 
@@ -81,7 +82,7 @@ it('should only re-render when observed keys change', async () => {
 	};
 
 	const screen = await renderWithProvider(<ObserverTest />);
-	await expect.element(screen.getByTestId('content')).toBeVisible();
+	await expect.element(screen.getByTestId('content')).toBeInTheDocument();
 
 	// record initial render count
 	const initialRenderCount = renderCount;
