@@ -63,6 +63,9 @@ importers:
       '@types/node':
         specifier: 20.10.5
         version: 20.10.5
+      playwright:
+        specifier: 'catalog:'
+        version: 1.52.0
       tsx:
         specifier: ^3.12.1
         version: 3.14.0
@@ -14211,7 +14214,7 @@ snapshots:
       sirv: 3.0.1
       tinyrainbow: 1.2.0
       vitest: 2.1.8(@types/node@20.10.5)(@vitest/browser@2.1.8)(jsdom@24.1.3)(msw@2.7.3(@types/node@20.10.5)(typescript@5.7.2))(terser@5.37.0)
-      ws: 8.18.1
+      ws: 8.18.2
     optionalDependencies:
       playwright: 1.52.0
     transitivePeerDependencies:
@@ -14233,7 +14236,7 @@ snapshots:
       sirv: 3.0.1
       tinyrainbow: 1.2.0
       vitest: 2.1.8(@types/node@20.17.10)(@vitest/browser@2.1.8)(jsdom@26.0.0)(msw@2.7.3(@types/node@20.17.10)(typescript@5.7.2))(terser@5.37.0)
-      ws: 8.18.1
+      ws: 8.18.2
     optionalDependencies:
       playwright: 1.52.0
     transitivePeerDependencies:
@@ -14255,7 +14258,7 @@ snapshots:
       sirv: 3.0.1
       tinyrainbow: 1.2.0
       vitest: 2.1.8(@types/node@22.13.4)(@vitest/browser@2.1.8)(jsdom@20.0.3)(msw@2.7.3(@types/node@22.13.4)(typescript@5.7.2))(terser@5.37.0)
-      ws: 8.18.1
+      ws: 8.18.2
     optionalDependencies:
       playwright: 1.52.0
     transitivePeerDependencies:
@@ -14277,7 +14280,7 @@ snapshots:
       sirv: 3.0.1
       tinyrainbow: 1.2.0
       vitest: 2.1.8(@types/node@22.13.4)(@vitest/browser@2.1.8)(jsdom@26.0.0)(msw@2.7.3(@types/node@22.13.4)(typescript@5.7.3))(terser@5.37.0)
-      ws: 8.18.1
+      ws: 8.18.2
     optionalDependencies:
       playwright: 1.52.0
     transitivePeerDependencies:
