@@ -26,15 +26,12 @@ The Verdant app scaffolding has a lot of opinions. Well, they happen to be my op
 
 You can use the scaffolding CLI to set up your repo.
 
-Run `pnpm create @verdant-web/app` to run the bootstrapper. Choose the `local-only` template for this project and give it a name.
+Run `pnpm create @verdant-web/app` to run the bootstrapper.
 
 This will get you started with a functional tooling set with a Vite-powered React app and a PWA service worker. It will also create your first Verdant schema.
 
 ```
 ┌  create-verdant-app
-│
-◇  What template do you want to use?
-│  The "local-only"     | A static webpage using Verdant for first-class IndexedDB DX (no sync)
 │
 ◇  Where do you want to create your app?
 │  ./mood-tracker
@@ -67,9 +64,9 @@ Now it's time to get a little creative and start "thinking in local-first." Supp
 So to prevent this happening, it's time to get clever, and make the date our collection's primary key. Let's start from the schema below:
 
 ```ts
-import { collection, schema } from '@verdant-web/store';
+import { schema } from '@verdant-web/store';
 
-const entries = collection({
+const entries = schema.collection({
 	name: 'entry',
 	primaryKey: 'date',
 	fields: {
@@ -225,7 +222,7 @@ For the actual mood entry buttons, there's nothing really Verdant-specific. I'm 
 </div>;
 ```
 
-Let's drop this component on our `HomePage` and delete the old `TodoList` stuff while we're at it.
+Let's drop this component on our `apps/web/src/pages/HomePage.tsx` and delete the old `TodoList` stuff while we're at it.
 
 ```tsx
 import { EntryCreator } from '@/components/entries/EntryCreator.jsx';
