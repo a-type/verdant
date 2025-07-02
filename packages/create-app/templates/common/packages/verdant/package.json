@@ -9,14 +9,12 @@
 		"preflight": "verdant preflight -s ./src/schema.ts -o ./src/client",
 		"build": "pnpm run preflight"
 	},
-	"peerDependencies": {
-		"react": "^18.2.0"
-	},
 	"dependencies": {
-		"@verdant-web/cli": "^2.1.0",
-		"@verdant-web/common": "^1.13.4",
-		"@verdant-web/react": "^20.0.3",
-		"@verdant-web/store": "^2.5.2",
+		"@verdant-web/cli": "^4.8.2",
+		"@verdant-web/common": "^2.9.1",
+		"@verdant-web/react": "^42.1.0",
+		"@verdant-web/store": "^4.5.0",
+		"react": "catalog:",
 		"cuid": "^2.1.8"
 	}
 }

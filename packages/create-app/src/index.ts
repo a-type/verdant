@@ -1,40 +1,19 @@
 #!/usr/bin/env node
 
-import {
-	intro,
-	outro,
-	spinner,
-	text,
-	confirm,
-	note,
-	select,
-	isCancel,
-} from '@clack/prompts';
-import { cpTpl } from 'cp-tpl';
-import * as url from 'url';
-import * as path from 'path';
+import { confirm, intro, isCancel, outro, spinner, text } from '@clack/prompts';
 import { ExecOptions, exec } from 'child_process';
+import { cpTpl } from 'cp-tpl';
 import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as url from 'url';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 intro('create-verdant-app');
 
-const templateName = await select({
-	message: 'What template do you want to use?',
-	options: [
-		{
-			value: 'local',
-			label:
-				'The "local-only"     | A static webpage using Verdant for first-class IndexedDB DX (no sync)',
-		},
-		{
-			value: 'full',
-			label:
-				'The "small business" | A kitchen sink app with a sync server, Google login, and Stripe subscriptions',
-		},
-	],
-});
+// sad to say I cannot really support multiple templates anymore.
+// hard to keep things tested and up to date.
+const templateName = 'local';
 
 if (isCancel(templateName)) {
 	outro('Cancelled');
@@ -149,12 +128,6 @@ await execAsync('pnpm generate --select=wip --module=esm', {
 installSpinner.stop(
 	'Your first Verdant schema has been created in WIP mode. You can try out your app immediately! Edit your schema and run `pnpm generate` to generate a new version.',
 );
-
-if (templateName === 'full') {
-	note(
-		`⚠️ The code is scaffolded, but you've still got a few things to do before getting started. Be sure to read the README!`,
-	);
-}
 
 const openInCode = await confirm({
 	message: 'Do you want to open the project in VS Code?',
