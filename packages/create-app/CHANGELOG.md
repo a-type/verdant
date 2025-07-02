@@ -1,5 +1,11 @@
 # @verdant-web/create-app
 
+## 0.7.0
+
+### Minor Changes
+
+- 725bc4d: Remove 'full' template and template selection. Update some outdated deps on local template.
+
 ## 0.6.1
 
 ### Patch Changes
