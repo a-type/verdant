@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install playwright
-        run: pnpx playwright install --with-deps
+        run: pnpm ci:playwright:install
 
       - name: Typecheck
         run: pnpm typecheck

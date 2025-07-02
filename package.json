@@ -19,7 +19,8 @@
 		"prerelease": "pnpm changeset pre enter next",
 		"link": "pnpm link --global",
 		"benchmark": "pnpm run --filter @verdant-web/test benchmark",
-		"typecheck": "turbo run typecheck"
+		"typecheck": "turbo run typecheck",
+		"ci:playwright:install": "playwright install --with-deps"
 	},
 	"repository": "https://github.com/a-type/verdant",
 	"author": "Grant Forrest <gaforres@gmail.com>",
@@ -29,7 +30,8 @@
 		"tsx": "^3.12.1",
 		"turbo": "^2.0.11",
 		"typescript": "^5.4.2",
-		"vitest": "catalog:"
+		"vitest": "catalog:",
+		"playwright": "catalog:"
 	},
 	"dependencies": {
 		"fake-indexeddb": "^5.0.1",
