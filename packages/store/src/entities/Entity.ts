@@ -808,6 +808,12 @@ export class Entity<
 		if (isRef(child)) {
 			if (isFileRef(child)) {
 				if (fieldSchema.type !== 'file') {
+					// at least try to not fail
+					if (isNullable(fieldSchema)) {
+						return null as KeyValue[Key];
+					} else if (hasDefault(fieldSchema)) {
+						return getFieldDefault(fieldSchema) as KeyValue[Key];
+					}
 					throw new Error(
 						`Expected file schema for key ${String(key)}, got ${
 							fieldSchema.type
@@ -822,6 +828,22 @@ export class Entity<
 
 				return file as KeyValue[Key];
 			} else {
+				if (fieldSchema.type === 'file') {
+					// schema and child ref type do not match...
+					console.error(
+						`Expected file ref for key ${String(key)}, got ${child}`,
+					);
+					// at least try to not fail
+					if (isNullable(fieldSchema)) {
+						return null as KeyValue[Key];
+					} else if (hasDefault(fieldSchema)) {
+						return getFieldDefault(fieldSchema) as KeyValue[Key];
+					} else {
+						throw new Error(
+							`No valid value for key ${String(key)} in ${JSON.stringify(this.schema)}`,
+						);
+					}
+				}
 				const childEntity = this.getChild(key, child.id);
 				if (childEntity.deepInvalid) {
 					// this child is pruned. materialize a pruned version of
