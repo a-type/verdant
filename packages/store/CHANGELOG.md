@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.5.1
+
+### Patch Changes
+
+- 6479573: More resilience around incorrect data types and refs
+
 ## 4.5.0
 
 ### Minor Changes
