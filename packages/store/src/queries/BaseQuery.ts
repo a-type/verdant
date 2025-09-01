@@ -223,7 +223,13 @@ export abstract class BaseQuery<T> extends Disposable {
 	};
 
 	execute = () => {
-		this.context.log('debug', 'Executing query', this.key);
+		const startTime = new Date();
+		this.context.log(
+			'debug',
+			`[${startTime.toLocaleTimeString()}]`,
+			'Executing query',
+			this.key,
+		);
 
 		if (this.status === 'initial') {
 			this.status = 'initializing';
@@ -247,6 +253,17 @@ export abstract class BaseQuery<T> extends Disposable {
 				} else {
 					throw new Error('Unknown error executing query');
 				}
+			})
+			.finally(() => {
+				const endTime = new Date();
+				const duration = endTime.getTime() - startTime.getTime();
+				this.context.log(
+					'debug',
+					`[${endTime.toLocaleTimeString()}]`,
+					'Query executed',
+					this.key,
+					`Duration: ${duration}ms`,
+				);
 			});
 		return this._executionPromise;
 	};
