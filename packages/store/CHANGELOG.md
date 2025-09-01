@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.5.2
+
+### Patch Changes
+
+- d59c730: Add timing debug output to queries
+
 ## 4.5.1
 
 ### Patch Changes
