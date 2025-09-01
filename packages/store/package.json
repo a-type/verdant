@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/store",
-	"version": "4.5.1",
+	"version": "4.5.2",
 	"access": "public",
 	"type": "module",
 	"main": "dist/esm/index.js",
