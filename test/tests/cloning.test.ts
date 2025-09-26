@@ -1,18 +1,19 @@
-import { it, expect } from 'vitest';
+import { assert } from '@verdant-web/common';
+import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
+import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForFileLoaded,
 	waitForFileUpload,
 	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import { assert } from '@verdant-web/common';
-import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
 	// serverLog: true,
 	// testLog: true,
+	library: 'cloning',
 });
 
 it(
@@ -23,7 +24,6 @@ it(
 	async () => {
 		const persistence = getPersistence();
 		const clientA = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'A',
 			files: {
 				// clean deleted files immediately
@@ -67,7 +67,6 @@ it(
 		await clientA.close();
 
 		const clientAAgain = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'A',
 			files: {
 				canCleanupDeletedFile: () => true,
@@ -88,7 +87,6 @@ it(
 		// we will also test with a remote client to make sure it
 		// downloads the file to clone
 		const clientB = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'B',
 			// logId: 'B',
 		});

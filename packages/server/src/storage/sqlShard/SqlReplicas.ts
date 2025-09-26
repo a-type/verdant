@@ -217,4 +217,15 @@ export class SqlReplicas implements ReplicaStorage {
 		const db = this.db;
 		await db.deleteFrom('ReplicaInfo').where('clientId', '=', userId).execute();
 	};
+	forceTruant = async (replicaId: string): Promise<void> => {
+		const db = this.db;
+		await db
+			.updateTable('ReplicaInfo')
+			.set({
+				lastSeenWallClockTime:
+					Date.now() - this.replicaTruancyMinutes * 60 * 1000 - 1,
+			})
+			.where('id', '=', replicaId)
+			.execute();
+	};
 }

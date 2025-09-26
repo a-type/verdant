@@ -128,7 +128,9 @@ export async function waitForQueryResult(
 	expect(predicate(query.current)).toBe(true);
 }
 
-export async function waitForEverythingToRebase(client: Client) {
+export async function waitForEverythingToRebase(
+	client: Client | ClientWithCollections,
+) {
 	await waitForCondition(
 		async () => {
 			if ((await client.stats()).meta.operationsSize.count === 0) {

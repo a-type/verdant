@@ -5,10 +5,10 @@ import {
 	PersistenceImplementation,
 } from '@verdant-web/store';
 import { expect, it } from 'vitest';
-import { startTestServer } from '../lib/testServer.js';
-import { waitForQueryResult } from '../lib/waits.js';
-import { createTestClient } from '../lib/testClient.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import { getPersistence } from '../lib/persistence.js';
+import { createTestClient } from '../lib/testClient.js';
+import { waitForQueryResult } from '../lib/waits.js';
 
 async function createClient({
 	schema,
@@ -45,9 +45,11 @@ async function createClient({
 	return client as any as ClientWithCollections;
 }
 
-it('does not expose private documents when migrating', async () => {
-	const server = await startTestServer();
+const { server } = createTestContext({
+	library: 'authz-migration',
+});
 
+it('does not expose private documents when migrating', async () => {
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',

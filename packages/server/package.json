@@ -98,7 +98,7 @@
 		"cross-env": "7.0.3",
 		"typescript": "^5.4.2",
 		"vitest": "^2.0.5",
-		"hono": "^4.7.2",
+		"hono": "catalog:",
 		"@hono/node-server": "^1.13.8",
 		"@cloudflare/workers-types": "^4.20250224.0"
 	}

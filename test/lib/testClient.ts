@@ -99,8 +99,13 @@ export async function createTestClient({
 			ConsoleColors.red,
 			`Developer Error (client: ${library}_${user})`,
 		);
-		console.error(err);
-		console.error('>>> cause >>>', err.cause, ConsoleColors.reset);
+		console.error(ConsoleColors.red, err);
+		console.error(
+			ConsoleColors.red,
+			'>>> cause >>>',
+			err.cause,
+			ConsoleColors.reset,
+		);
 		expect(err).toBe(null);
 	});
 	cleanupClients.push(client);

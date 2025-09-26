@@ -1,25 +1,45 @@
-import { afterAll, beforeAll } from 'vitest';
+import { afterAll } from 'vitest';
 import { createTestClient } from './testClient.js';
-import { startTestServer } from './testServer.js';
 // @ts-ignore
+import { Client, ClientWithCollections } from '@verdant-web/store';
 import { IDBFactory } from 'fake-indexeddb';
+import { testServerApi } from '../servers/testServerApi.js';
 
 export function createTestContext({
-	serverLog,
-	keepDb,
 	testLog,
-	disableRebasing,
-	truancyMinutes,
+	library,
 }: {
-	serverLog?: boolean | ((...args: any[]) => void);
-	keepDb?: boolean;
 	testLog?: boolean;
-	disableRebasing?: boolean;
-	truancyMinutes?: number;
-} = {}) {
+	library: string;
+}) {
 	const idbMap = new Map<string, IDBFactory>();
+	const createClient = async (
+		config: Omit<Parameters<typeof createTestClient>[0], 'library'>,
+	) => {
+		let idb = config.indexedDb ?? idbMap.get(config.user);
+		if (!idb) {
+			idb = new IDBFactory();
+			idbMap.set(config.user, idb);
+		}
+		const client = await createTestClient({
+			server: context.server,
+			indexedDb: idb,
+			library,
+			...config,
+		});
+		// context.clients.push(client);
+		return client;
+	};
 	const context = {
-		clients: [],
+		library,
+		clients: [] as Client<any, any>[],
+		server: testServerApi,
+		createTestClient: createClient,
+		createGenericClient: async (
+			config: Omit<Parameters<typeof createTestClient>[0], 'library'>,
+		) => {
+			return createClient(config) as unknown as ClientWithCollections;
+		},
 		log: (...args: any[]) => {
 			if (testLog) console.log('🔺', ...args);
 		},
@@ -34,50 +54,15 @@ export function createTestContext({
 					console.log(prefix, ...args);
 				}
 			},
-	} as unknown as {
-		server: UnwrapPromise<ReturnType<typeof startTestServer>>;
-		clients: UnwrapPromise<ReturnType<typeof createTestClient>>[];
-		createTestClient: typeof createTestClient;
-		log: (...args: any[]) => void;
-		filterLog: (
-			prefix: string,
-			...matches: string[]
-		) => (...args: any[]) => void;
 	};
-	beforeAll(async () => {
-		context.server = await startTestServer({
-			log: serverLog,
-			keepDb,
-			disableRebasing,
-			truancyMinutes,
-		});
-		context.createTestClient = async (
-			config: Parameters<typeof createTestClient>[0],
-		) => {
-			let idb = config.indexedDb ?? idbMap.get(config.user);
-			if (!idb) {
-				idb = new IDBFactory();
-				idbMap.set(config.user, idb);
-			}
-			const client = await createTestClient({
-				server: context.server,
-				indexedDb: idb,
-				...config,
-			});
-			context.clients.push(client);
-			return client;
-		};
-	});
 	afterAll(async () => {
-		await context.server.cleanup();
 		await Promise.allSettled(
 			context.clients.map((client) => client.close().catch(() => {})),
 		);
+		await testServerApi.evict(library);
 	}, 20 * 1000);
 
 	(global as any).testContext = context;
 
 	return context as Required<typeof context>;
 }
-
-type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;

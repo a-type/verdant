@@ -2,30 +2,17 @@ import { assert } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { getPersistence } from '../lib/persistence.js';
-import {
-	waitForCondition,
-	waitForQueryResult,
-	waitForSync,
-	waitForTime,
-} from '../lib/waits.js';
-
-const ctx = createTestContext({
-	truancyMinutes: 10,
-	// serverLog: true,
-	// testLog: true,
-});
+import { waitForQueryResult, waitForSync, waitForTime } from '../lib/waits.js';
 
 it('should reset truant replicas upon their reconnection', async () => {
-	const library = 'truant';
+	const ctx = createTestContext({
+		// serverLog: true,
+		// testLog: true,
+		library: 'truant-1',
+	});
 	const persistence = getPersistence();
 
-	const onServerChange = vi.fn();
-	ctx.server.core.events.subscribe('changes', onServerChange);
-
-	const startTime = Date.now();
-	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
-		library,
 		user: 'truant-1',
 		persistence,
 		// logId: 'truant',
@@ -44,28 +31,12 @@ it('should reset truant replicas upon their reconnection', async () => {
 
 	// that's probably enough to demonstrate...
 	await truantClient.entities.flushAllBatches();
-	// wait for server to receive the updates
-	await waitForCondition(
-		() => {
-			return (
-				onServerChange.mock.calls.length > 0 &&
-				onServerChange.mock.calls.some((call) =>
-					call.some((arg) => {
-						return JSON.stringify(arg).includes('item 2 updated');
-					}),
-				)
-			);
-		},
-		3000,
-		'server to receive item 2 update',
-	);
+	await waitForSync(truantClient);
 	truantClient.sync.stop();
 
-	vi.setSystemTime(startTime + 5 * 60 * 1000);
-	ctx.log('system time set to', startTime + 5 * 60 * 1000);
+	await ctx.server.forceTruant(ctx.library, await truantClient.getReplicaId());
 
 	const currentClient = await ctx.createTestClient({
-		library,
 		user: 'current-1',
 		persistence,
 		// logId: 'current',
@@ -76,6 +47,8 @@ it('should reset truant replicas upon their reconnection', async () => {
 	await waitForQueryResult(
 		currentClient.items.findAll(),
 		(r) => r.length === 2,
+		3000,
+		'current replica items',
 	);
 	const currentItem1 = await currentClient.items.get(item1.get('id')).resolved;
 	assert(currentItem1);
@@ -87,9 +60,6 @@ it('should reset truant replicas upon their reconnection', async () => {
 
 	await currentClient.entities.flushAllBatches();
 
-	vi.setSystemTime(startTime + 15 * 60 * 1000);
-	ctx.log('system time set to', startTime + 15 * 60 * 1000);
-
 	ctx.log('Restarting truant client');
 
 	const onReset = vi.fn();
@@ -97,7 +67,12 @@ it('should reset truant replicas upon their reconnection', async () => {
 	await truantClient.sync.start();
 
 	const itemsQuery3 = truantClient.items.get(currentItem3.get('id'));
-	await waitForQueryResult(itemsQuery3);
+	await waitForQueryResult(
+		itemsQuery3,
+		undefined,
+		3000,
+		'truant restored items',
+	);
 	// this will indicate the replica was found truant and reset.
 	expect(onReset).toHaveBeenCalled();
 
@@ -109,15 +84,14 @@ it('should reset truant replicas upon their reconnection', async () => {
 
 it('should not reset truant replicas with up to date server order', async () => {
 	const library = 'truant-up-to-date';
+	const ctx = createTestContext({
+		library,
+		// serverLog: true,
+		// testLog: true,
+	});
 	const persistence = getPersistence();
 
-	const onServerChange = vi.fn();
-	ctx.server.core.events.subscribe('changes', onServerChange);
-
-	const startTime = Date.now();
-	vi.setSystemTime(startTime);
 	const truantClient = await ctx.createTestClient({
-		library,
 		user: 'truant-2',
 		// logId: 'truant',
 		persistence,
@@ -136,28 +110,12 @@ it('should not reset truant replicas with up to date server order', async () => 
 
 	// that's probably enough to demonstrate...
 	await truantClient.entities.flushAllBatches();
-	// wait for server to receive the updates
-	await waitForCondition(
-		() => {
-			return (
-				onServerChange.mock.calls.length > 0 &&
-				onServerChange.mock.calls.some((call) =>
-					call.some((arg) => {
-						return JSON.stringify(arg).includes('item 2 updated');
-					}),
-				)
-			);
-		},
-		3000,
-		'server to receive item 2 update',
-	);
+	await waitForSync(truantClient);
 	truantClient.sync.stop();
 
-	vi.setSystemTime(startTime + 5 * 60 * 1000);
-	ctx.log('system time set to', startTime + 5 * 60 * 1000);
+	await ctx.server.forceTruant(library, await truantClient.getReplicaId());
 
 	const currentClient = await ctx.createTestClient({
-		library,
 		user: 'current-2',
 		persistence,
 		// logId: 'current',
@@ -168,10 +126,9 @@ it('should not reset truant replicas with up to date server order', async () => 
 	await waitForQueryResult(
 		currentClient.items.findAll(),
 		(r) => r.length === 2,
+		3000,
+		'current replica items',
 	);
-
-	vi.setSystemTime(startTime + 15 * 60 * 1000);
-	ctx.log('system time set to', startTime + 15 * 60 * 1000);
 
 	ctx.log('Restarting truant client');
 

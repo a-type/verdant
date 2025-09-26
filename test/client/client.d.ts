@@ -70,6 +70,12 @@ export class Client<Presence = any, Profile = any> {
   queries: BaseClient<Presence, Profile>["queries"];
 
   /**
+   * Get the local replica ID for this client instance.
+   * Not generally useful for people besides me.
+   */
+  getReplicaId: BaseClient<Presence, Profile>["getReplicaId"];
+
+  /**
    * Deletes all local data. If the client is connected to sync,
    * this will cause the client to re-sync all data from the server.
    * Use this very carefully, and only as a last resort.

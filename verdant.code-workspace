@@ -66,6 +66,10 @@
 		{
 			"path": "examples",
 		},
+		{
+			"path": ".",
+			"name": "🏡 Root",
+		},
 	],
 	"settings": {
 		"vitest.workspaceConfig": "./configs/vitest.workspace.ts",

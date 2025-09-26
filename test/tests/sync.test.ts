@@ -11,25 +11,23 @@ import {
 const context = createTestContext({
 	// testLog: true,
 	// serverLog: true,
+	library: 'sync',
 });
 
 it('can sync multiple clients even if they go offline', async () => {
 	const { server, createTestClient, log } = context;
 	const clientA = await createTestClient({
 		server,
-		library: 'sync-1',
 		user: 'User A',
 		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
-		library: 'sync-1',
 		user: 'User B',
 		// logId: 'B',
 	});
 	const clientC = await createTestClient({
 		server,
-		library: 'sync-1',
 		user: 'User C',
 		// logId: 'C',
 	});

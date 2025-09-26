@@ -22,4 +22,5 @@ export interface GenericMicroserver {
 		req: Request,
 		info: TokenInfo,
 	) => () => Response;
+	forceTruant: (replicaId: string) => Promise<void>;
 }

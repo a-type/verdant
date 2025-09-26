@@ -8,9 +8,9 @@ import {
 import { expect, it } from 'vitest';
 // @ts-ignore
 import { Operation } from '@verdant-web/common';
+import { createTestContext } from '../lib/createTestContext.js';
 import { getPersistence } from '../lib/persistence.js';
 import { createTestClient } from '../lib/testClient.js';
-import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
 	waitForQueryResult,
@@ -52,16 +52,16 @@ async function createClient({
 	return client as any as ClientWithCollections;
 }
 
-function log(...args: any[]) {
-	// console.log('🐱', ...args);
-}
-
 // Using the ungenerated client to be more dynamic with the schema
 // This means a lot of ts-ignore because the inner typings are
 // way too complicated for external use (hence codegen)
 it(
 	'offline migrates to add collections, indexes, and defaults; or changing data shape',
 	async () => {
+		const { log, server, createGenericClient } = createTestContext({
+			library: 'migration-offline',
+		});
+
 		const persistence = getPersistence();
 		const v1Item = schema.collection({
 			name: 'item',
@@ -83,13 +83,11 @@ it(
 
 		const clientInit = {
 			migrations,
-			library: 'migration-offline',
 			user: 'a',
 			persistence,
 		};
 
-		// @ts-ignore
-		let client = await createClient({
+		let client = await createGenericClient({
 			schema: v1Schema,
 			...clientInit,
 			// logId: 'client1',
@@ -161,7 +159,7 @@ it(
 		// be added?
 		migrations.push(createMigration(v1Schema, v2Schema, async () => {}));
 
-		client = await createClient({
+		client = await createGenericClient({
 			schema: v2Schema,
 			oldSchemas: [v1Schema, v2Schema],
 			...clientInit,
@@ -311,7 +309,7 @@ it(
 			}),
 		);
 
-		client = await createClient({
+		client = await createGenericClient({
 			schema: v3Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema],
 			...clientInit,
@@ -436,7 +434,7 @@ it(
 			),
 		);
 
-		client = await createClient({
+		client = await createGenericClient({
 			schema: v4Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 			// disable rebasing so we get predictable metadata
@@ -555,7 +553,7 @@ it(
 
 		migrations.push(createMigration(v4Schema, v5Schema));
 
-		client = await createClient({
+		client = await createGenericClient({
 			schema: v5Schema,
 			oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema, v5Schema],
 			...clientInit,
@@ -624,8 +622,8 @@ it(
 );
 
 it('migrates in an online world where old operations still come in', async () => {
-	const server = await startTestServer({
-		// log: true,
+	const { log, createGenericClient } = createTestContext({
+		library: 'migration-online',
 	});
 	const persistenceA = getPersistence();
 	const persistenceB = getPersistence();
@@ -651,10 +649,9 @@ it('migrates in an online world where old operations still come in', async () =>
 		migrations,
 		library: 'migration-online',
 		user: 'a',
-		server,
 	};
 
-	let clientA = await createClient({
+	let clientA = await createGenericClient({
 		oldSchemas: [v1Schema],
 		schema: v1Schema,
 		...clientInit,
@@ -683,7 +680,7 @@ it('migrates in an online world where old operations still come in', async () =>
 	await clientA.close();
 	await new Promise<void>((resolve) => resolve());
 
-	let clientB = await createClient({
+	let clientB = await createGenericClient({
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		...clientInit,
@@ -759,7 +756,7 @@ it('migrates in an online world where old operations still come in', async () =>
 		createMigration(v1Schema, v2Schema, async ({ migrate }) => {}),
 	);
 
-	clientA = await createClient({
+	clientA = await createGenericClient({
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
@@ -845,6 +842,10 @@ it('migrates in an online world where old operations still come in', async () =>
 });
 
 it('supports skip migrations in real life', async () => {
+	const { log, createGenericClient } = createTestContext({
+		library: 'migration-skip',
+	});
+
 	const persistence = getPersistence();
 	const v1Item = schema.collection({
 		name: 'item',
@@ -871,7 +872,7 @@ it('supports skip migrations in real life', async () => {
 		persistence,
 	};
 
-	let client = await createClient({
+	let client = await createGenericClient({
 		schema: v1Schema,
 		...clientInit,
 		oldSchemas: [v1Schema],
@@ -1040,7 +1041,7 @@ it('supports skip migrations in real life', async () => {
 		}),
 	);
 
-	client = await createClient({
+	client = await createGenericClient({
 		schema: v4Schema,
 		oldSchemas: [v1Schema, v2Schema, v3Schema, v4Schema],
 		...clientInit,

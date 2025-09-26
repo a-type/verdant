@@ -1,26 +1,24 @@
 import { Migration, StorageSchema, createMigration } from '@verdant-web/common';
-import defaultMigrations from '../migrations/index.js';
-import defaultSchema from '../schema.js';
 import { ClientWithCollections } from '@verdant-web/store';
-// @ts-ignore
-import { createTestContext } from '../lib/createTestContext.js';
 import { expect, it } from 'vitest';
+import { createTestContext } from '../lib/createTestContext.js';
+import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForCondition,
 	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import { getPersistence } from '../lib/persistence.js';
+import defaultMigrations from '../migrations/index.js';
+import defaultSchema from '../schema.js';
 
 const context = createTestContext({
 	// testLog: true,
 	// serverLog: true,
+	library: 'longevity',
 });
 const log = context.log;
 
 it('maintains consistency in real world scenarios', async () => {
-	const LIBRARY = 'longevity';
-
 	const persistenceA = getPersistence();
 	const persistenceB = getPersistence();
 
@@ -29,7 +27,6 @@ it('maintains consistency in real world scenarios', async () => {
 		migrations: Migration[],
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
-			library: LIBRARY,
 			user: 'A',
 			persistence: persistenceA,
 			schema,
@@ -45,7 +42,6 @@ it('maintains consistency in real world scenarios', async () => {
 		migrations: Migration[],
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
-			library: LIBRARY,
 			user: 'B',
 			persistence: persistenceB,
 			schema,

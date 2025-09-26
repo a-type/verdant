@@ -1,6 +1,5 @@
 import { assert } from '@a-type/utils';
-import { rmSync } from 'node:fs';
-import { afterAll, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
 import {
@@ -14,15 +13,7 @@ import {
 const context = createTestContext({
 	// serverLog: true,
 	// testLog: true,
-});
-
-afterAll(() => {
-	// delete the ./test-files directory
-	try {
-		rmSync('./test-files', { recursive: true });
-	} catch (e) {
-		// console.log(e);
-	}
+	library: 'file-sync-1',
 });
 
 it(
@@ -35,14 +26,12 @@ it(
 			return 'test';
 		};
 		const clientA = await context.createTestClient({
-			library: 'file-sync-1',
 			user: 'User A',
 			// logId: 'A',
 		});
 		clientA.sync.start();
 
 		const clientB = await context.createTestClient({
-			library: 'file-sync-1',
 			user: 'User B',
 			// logId: 'B',
 		});

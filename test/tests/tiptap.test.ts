@@ -5,7 +5,7 @@ import {
 	schema,
 	stableStringify,
 } from '@verdant-web/common';
-import { ClientWithCollections, getEntityClient, id } from '@verdant-web/store';
+import { getEntityClient, id } from '@verdant-web/store';
 import {
 	createTipTapFieldSchema,
 	TipTapDocumentEntity,
@@ -18,10 +18,6 @@ import {
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
-
-const context = createTestContext({
-	// keepDb: true,
-});
 
 const documents = collection({
 	name: 'document',
@@ -47,12 +43,16 @@ const testSchema = schema({
 });
 
 it('applies successive updates to a nested document in a tiptap-like scenario', async () => {
-	const client = (await context.createTestClient({
+	const context = createTestContext({
+		// keepDb: true,
+		library: 'tiptap',
+	});
+
+	const client = await context.createGenericClient({
 		schema: testSchema,
 		migrations: [createMigration(testSchema)],
-		library: 'tiptap',
 		user: 'A',
-	})) as unknown as ClientWithCollections;
+	});
 	client.sync.start();
 
 	const doc = await client.documents.put({
@@ -98,20 +98,22 @@ it('applies successive updates to a nested document in a tiptap-like scenario', 
 });
 
 it('handles concurrent structural changes to a document in a tiptap-like scenario', async () => {
-	const clientA = await context.createTestClient({
+	const context = createTestContext({
+		// keepDb: true,
+		library: 'tiptap-collab',
+	});
+	const clientA = await context.createGenericClient({
 		schema: testSchema,
 		migrations: [createMigration(testSchema)],
-		library: 'tiptap-collab',
 		user: 'A1',
 	});
 	await clientA.sync.start();
 	const docA = await clientA.documents.put({});
 	await waitForSync(clientA);
 
-	const clientB = await context.createTestClient({
+	const clientB = await context.createGenericClient({
 		schema: testSchema,
 		migrations: [createMigration(testSchema)],
-		library: 'tiptap-collab',
 		user: 'B1',
 	});
 	clientB.sync.start();

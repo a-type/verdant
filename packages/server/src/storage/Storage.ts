@@ -35,6 +35,7 @@ export interface ReplicaStorage {
 	delete(replicaId: string): Promise<void>;
 	deleteAll(): Promise<void>;
 	deleteAllForUser(userId: string): Promise<void>;
+	forceTruant(replicaId: string): Promise<void>;
 }
 
 export interface OperationStorage {

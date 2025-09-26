@@ -3,16 +3,17 @@ import { EntityFile } from '@verdant-web/store';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
+import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForCondition,
 	waitForEverythingToRebase,
 	waitForMockCall,
 } from '../lib/waits.js';
-import { getPersistence } from '../lib/persistence.js';
 
 const context = createTestContext({
 	// serverLog: true,
 	// testLog: true,
+	library: 'files-1',
 });
 
 it('can store and cleanup local files', async () => {
@@ -22,7 +23,6 @@ it('can store and cleanup local files', async () => {
 	const onFileSaved = vi.fn();
 	const clientA = await createTestClient({
 		server,
-		library: 'files-1',
 		user: 'User A',
 		// logId: 'A',
 		persistence,
@@ -56,7 +56,6 @@ it('can store and cleanup local files', async () => {
 
 	const clientA2 = await createTestClient({
 		server,
-		library: 'files-1',
 		user: 'User A',
 		// logId: 'A2',
 		persistence,
@@ -94,7 +93,6 @@ it('can store and cleanup local files', async () => {
 
 	const clientA3 = await createTestClient({
 		server,
-		library: 'files-1',
 		user: 'User A',
 		files: {
 			// immediately delete files

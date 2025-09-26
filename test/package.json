@@ -3,8 +3,8 @@
 	"private": true,
 	"type": "module",
 	"dependencies": {
-		"@a-type/utils": "^1.0.2",
-		"@hono/node-server": "^1.13.8",
+		"@a-type/utils": "^1.1.5",
+		"@hono/node-server": "^1.19.4",
 		"@types/express": "^4.17.14",
 		"@types/node": "catalog:",
 		"@types/ws": "^8.5.14",
@@ -17,15 +17,15 @@
 		"@whatwg-node/server": "^0.9.67",
 		"better-sqlite3": "catalog:",
 		"express": "^4.21.2",
-		"fake-indexeddb": "6.0.0",
+		"fake-indexeddb": "^6.2.2",
 		"get-port": "^7.0.0",
-		"hono": "^4.7.1",
+		"hono": "catalog:",
 		"itty-router": "5.0.18",
 		"jsdom": "^26.0.0",
 		"kysely": "^0.27.4",
 		"tsx": "^4.16.2",
 		"typescript": "catalog:",
-		"vitest": "^2.0.5",
+		"vitest": "catalog:",
 		"ws": "^8.9.0"
 	},
 	"scripts": {
@@ -36,7 +36,6 @@
 		"ci:test:sqlite": "cross-env SQLITE=true vitest run",
 		"benchmark": "tsx --max-old-space-size=8192 benchmark.ts",
 		"longevity": "node --loader tsx/esm --max-old-space-size=8192 longevity.ts",
-		"//typecheck": "tsc --noEmit",
 		"posttest": "node ./scripts/cleanupDbs.mjs"
 	},
 	"devDependencies": {

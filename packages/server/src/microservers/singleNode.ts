@@ -139,4 +139,8 @@ export class SingleNodeMicroserver implements GenericMicroserver {
 	getInfo = async () => {
 		return this.library.getInfo();
 	};
+
+	forceTruant = async (replicaId: string) => {
+		await this.library.forceTruant(replicaId);
+	};
 }

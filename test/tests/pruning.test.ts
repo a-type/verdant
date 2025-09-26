@@ -4,7 +4,6 @@ import {
 	createMigration,
 	schema,
 } from '@verdant-web/common';
-import { ClientWithCollections } from '@verdant-web/store';
 import { it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { getPersistence } from '../lib/persistence.js';
@@ -16,7 +15,7 @@ import {
 
 const ctx = createTestContext({
 	testLog: true,
-	serverLog: true,
+	library: 'pruning',
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {
@@ -51,32 +50,30 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 
 	const clientAInit = {
 		migrations,
-		library: 'test',
 		user: 'a',
 		persistence,
 	};
 
-	const clientA = (await ctx.createTestClient({
+	const clientA = await ctx.createGenericClient({
 		...clientAInit,
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
 		// logId: 'A1',
-	})) as any as ClientWithCollections;
+	});
 	clientA.sync.start();
 
 	const clientBInit = {
 		migrations,
-		library: 'test',
 		user: 'b',
 		persistence,
 	};
 
-	const clientB = (await ctx.createTestClient({
+	const clientB = await ctx.createGenericClient({
 		...clientBInit,
 		schema: v1Schema,
 		oldSchemas: [v1Schema],
-		logId: 'B1',
-	})) as any as ClientWithCollections;
+		// logId: 'B1',
+	});
 
 	const item1 = await clientA.items.put({
 		id: '1',
@@ -148,13 +145,13 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		}),
 	];
 
-	const clientB2 = (await ctx.createTestClient({
+	const clientB2 = await ctx.createGenericClient({
 		...clientBInit,
 		schema: v2Schema,
 		migrations,
 		oldSchemas: [v1Schema, v2Schema],
 		// logId: 'B2',
-	})) as any as ClientWithCollections;
+	});
 	await clientB2.sync.start();
 
 	// clientB2 will now migrate the item, but some data will sync
@@ -213,13 +210,13 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	ctx.log('Client A closed');
 
 	// upgrade client A to v2 to resolve pruned data
-	const clientA2 = (await ctx.createTestClient({
+	const clientA2 = await ctx.createGenericClient({
 		...clientAInit,
 		schema: v2Schema,
 		migrations,
 		oldSchemas: [v1Schema, v2Schema],
 		// logId: 'A2',
-	})) as any as ClientWithCollections;
+	});
 
 	await clientA2.sync.start();
 

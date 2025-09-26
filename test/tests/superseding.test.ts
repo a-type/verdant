@@ -2,16 +2,14 @@ import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { waitForCondition, waitForOnline } from '../lib/waits.js';
 
-const ctx = createTestContext({
-	// test will observe total number of operations synced
-	disableRebasing: true,
-	// testLog: true,
-	// serverLog: true,
-});
-
 it('overwrites superseded operations to the same key before syncing', async () => {
-	const clientA = await ctx.createTestClient({
+	const ctx = createTestContext({
+		// testLog: true,
+		// serverLog: true,
 		library: 'superseding',
+	});
+
+	const clientA = await ctx.createTestClient({
 		user: 'A',
 		// logId: 'A',
 	});
@@ -39,13 +37,21 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		.commit();
 
 	// wait for the sync to complete
-	const lib = await ctx.server.core.get('superseding');
 	await waitForCondition(async () => {
-		return !!(await lib.getInfo());
+		return !!(await ctx.server.info(ctx.library));
 	});
 
+	// join another client and then disconnect it to force no rebasing
+	const truantClient = await ctx.createTestClient({
+		user: 'B',
+	});
+	truantClient.sync.start();
+	await waitForOnline(truantClient);
+	truantClient.sync.stop();
+	await waitForOnline(truantClient, false);
+
 	ctx.log('checking server library');
-	let stats = await lib.getInfo();
+	let stats = await ctx.server.info(ctx.library);
 	expect(stats?.operationsCount).toBe(1);
 
 	await clientA
@@ -62,18 +68,23 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		.commit();
 
 	await waitForCondition(async () => {
-		stats = await lib.getInfo();
+		stats = await ctx.server.info(ctx.library);
 		return stats?.operationsCount === 3;
 	});
 
-	stats = await lib.getInfo();
+	stats = await ctx.server.info(ctx.library);
 	// +1 for write of categoryId, +1 for write of purchased
 	expect(stats?.operationsCount).toBe(3);
 });
 
 it('superseding handles list items moving around', async () => {
-	const clientA = await ctx.createTestClient({
+	const ctx = createTestContext({
 		library: 'superseding2',
+		// testLog: true,
+		// serverLog: true,
+	});
+
+	const clientA = await ctx.createTestClient({
 		user: 'A',
 	});
 

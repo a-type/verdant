@@ -819,6 +819,10 @@ export class Library implements ILibrary {
 		await this.storage.replicas.deleteAllForUser(userId);
 	};
 
+	forceTruant = async (replicaId: string) => {
+		await this.storage.replicas.forceTruant(replicaId);
+	};
+
 	getDocumentSnapshot = (oid: string) => {
 		return this.hydrateObject(oid);
 	};

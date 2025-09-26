@@ -4,17 +4,16 @@ import {
 	Entity,
 	schema,
 } from '@verdant-web/store';
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import { startTestServer } from '../lib/testServer.js';
+import { expect, it } from 'vitest';
 // @ts-ignore
 import { stableStringify } from '@verdant-web/common';
-import { VerdantCore } from '@verdant-web/server';
+import { createTestContext } from '../lib/createTestContext.js';
 import { createTestClient } from '../lib/testClient.js';
 import { waitForCondition } from '../lib/waits.js';
 
-function log(...args: any[]) {
-	// console.log(...args);
-}
+const { server, log, library } = createTestContext({
+	library: 'fuzz',
+});
 
 const fuzzCollectionSchema = schema.collection({
 	name: 'fuzz',
@@ -41,7 +40,6 @@ async function createClient({
 	logId?: string;
 	server?: { port: number };
 }) {
-	const library = 'fuzz';
 	const client = await createTestClient({
 		// disableRebasing: true,
 		schema: fuzzSchema,
@@ -194,8 +192,11 @@ async function waitForConsistency(
 		},
 		5000,
 		async () => {
-			const serverLib = await server.core.get('fuzz');
-			const serverSnap = await serverLib.getDocumentSnapshot('fuzz', 'default');
+			const serverSnap = await server.getDocumentSnapshot(
+				'fuzz',
+				'fuzz',
+				'default',
+			);
 			const fuzz1 = await getFuzz(client1);
 			const fuzz2 = await getFuzz(client2);
 			const fuzz1Pending = fuzz1.metadata.pendingOperations;
@@ -210,7 +211,7 @@ async function waitForConsistency(
 
 				Server version:
 
-				${stableStringify(serverSnap.data)}
+				${stableStringify(serverSnap)}
 
 				[A pending]
 				${stableStringify(fuzz1Pending)}
@@ -233,20 +234,9 @@ const avoidLists = false;
 const avoidDelete = false;
 const fuzzCount = 50;
 
-let server: { cleanup: () => Promise<void>; port: number; core: VerdantCore };
-
-beforeAll(async () => {
-	server = await startTestServer({
-		// log: true,
-		// disableRebasing: true,
-	});
-});
-afterAll(() => {
-	return server.cleanup();
-}, 30 * 1000);
-
 it(
 	'withstands numerous arbitrary fuzz changes to data from clients offline and online and arrives at consistency',
+	{ timeout: 60 * 1000 },
 	async () => {
 		const client1 = await createClient({
 			user: 'a',
@@ -300,5 +290,4 @@ it(
 		await waitForConsistency(client1, client2, 'offline');
 		log('✅ Offline consistency achieved');
 	},
-	{ timeout: 60 * 1000 },
 );
