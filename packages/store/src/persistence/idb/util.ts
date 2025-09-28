@@ -130,10 +130,14 @@ export async function closeDatabase(db: IDBDatabase) {
 
 export async function deleteAllDatabases(
 	namespace: string,
-	indexedDB: IDBFactory = globalIDB,
+	environment: Context['environment'],
 ) {
-	const req1 = indexedDB.deleteDatabase([namespace, 'meta'].join('_'));
-	const req2 = indexedDB.deleteDatabase([namespace, 'collections'].join('_'));
+	const req1 = environment.indexedDB.deleteDatabase(
+		[namespace, 'meta'].join('_'),
+	);
+	const req2 = environment.indexedDB.deleteDatabase(
+		[namespace, 'collections'].join('_'),
+	);
 	await Promise.all([
 		new Promise((resolve, reject) => {
 			req1.onsuccess = resolve;
@@ -144,7 +148,8 @@ export async function deleteAllDatabases(
 			req2.onerror = reject;
 		}),
 	]);
-	window.location.reload();
+	// reload the page to reset any existing connections
+	environment.location.reload();
 }
 
 export function deleteDatabase(name: string, indexedDB = window.indexedDB) {
@@ -171,6 +176,7 @@ export function createAbortableTransaction(
 				log?.('debug', 'aborting transaction');
 				try {
 					tx.abort();
+					(tx as any).__aborted = true;
 				} catch (e) {
 					log?.('debug', 'aborting transaction failed', e);
 				}
@@ -187,12 +193,57 @@ export function createAbortableTransaction(
 	} catch (err) {
 		if (err instanceof Error && err.name === 'InvalidStateError') {
 			// database is probably closing. it's ok, what can you do?
-			log?.('error', 'Failed to create transaction, database is closing');
-			return {} as any;
+			log?.('warn', 'Failed to create transaction, database is closing');
+			// mock a Transaction so code can continue,
+			// but doesn't do anything.
+			return {
+				abort: () => {},
+				addEventListener: () => {},
+				objectStore: () => {
+					return {
+						add: () => {},
+						put: () => {},
+						get: () => {},
+						getAll: () => {},
+						delete: () => {},
+						clear: () => {},
+						openCursor: () => {
+							const req = {
+								onsuccess: () => {},
+								onerror: (_: any) => {},
+								result: null,
+							};
+							setTimeout(() => {
+								req.onerror({} as any);
+							}, 0);
+							return req;
+						},
+						index: () => {
+							throw new Error('Transaction is not active');
+						},
+					};
+				},
+				oncomplete: null,
+				onerror: null,
+				onabort: null,
+				error: new Error('Transaction is not active') as any,
+				commit: () => {},
+				db,
+				dispatchEvent: () => false,
+				removeEventListener: () => {},
+				durability: 'default',
+				mode: 'readonly',
+				objectStoreNames: storeNames as any,
+				__aborted: true,
+			} as unknown as IDBTransaction;
 		} else {
 			throw err;
 		}
 	}
+}
+
+export function isTransactionAborted(tx: IDBTransaction) {
+	return (tx as any).__aborted;
 }
 
 /**

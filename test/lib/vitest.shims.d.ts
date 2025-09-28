@@ -1,6 +1,7 @@
 declare module 'vitest' {
 	export interface ProvidedContext {
 		SERVER_PORT: string;
+		USE_SQLITE: boolean;
 	}
 }
 

@@ -5,17 +5,20 @@ import {
 	getIndexValues,
 	ObjectIdentifier,
 } from '@verdant-web/common';
-import { Context } from '../../../context/context.js';
+import { InitialContext } from '../../../context/context.js';
 import { PersistenceDocumentDb } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
-import { closeDatabase, getSizeOfObjectStore, isAbortError } from '../util.js';
+import {
+	closeDatabase,
+	getSizeOfObjectStore,
+	isAbortError,
+	isTransactionAborted,
+} from '../util.js';
 import { getRange } from './ranges.js';
 
 export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
-	private ctx;
-	constructor(db: IDBDatabase, context: Omit<Context, 'documents' | 'files'>) {
-		super(db, { log: context.log });
-		this.ctx = context;
+	constructor(db: IDBDatabase, context: InitialContext) {
+		super(db, context);
 		this.addDispose(() => {
 			this.ctx.log('info', 'Closing document database for', this.ctx.namespace);
 			return closeDatabase(this.db);
@@ -73,6 +76,9 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 		offset?: number;
 	}): Promise<{ result: ObjectIdentifier[]; hasNextPage: boolean }> => {
 		const tx = this.createTransaction([collection], { mode: 'readonly' });
+		if (isTransactionAborted(tx)) {
+			return { result: [], hasNextPage: false };
+		}
 		const store = tx.objectStore(collection);
 		const source = index?.where ? store.index(index.where) : store;
 		const direction = index?.order === 'desc' ? 'prev' : 'next';

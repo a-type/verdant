@@ -13,7 +13,6 @@ import { SingleNodeMicroserverManager } from '../../microservers/singleNode.js';
 
 export function createNodeWebsocketHandler(core: SingleNodeMicroserverManager) {
 	const wss = new WebSocketServer({ noServer: true });
-	const connectionToReplicaIdMap = new WeakMap<WebSocket, string>();
 	wss.on(
 		'connection',
 		async (ws: WebSocket, req: IncomingMessage, info: TokenInfo) => {
@@ -25,24 +24,12 @@ export function createNodeWebsocketHandler(core: SingleNodeMicroserverManager) {
 
 			ws.on('message', async (message: any) => {
 				const data = JSON.parse(message.toString()) as ClientMessage;
-
-				if (data.replicaId) {
-					connectionToReplicaIdMap.set(ws, data.replicaId);
-					microserver.clientConnections.presence.keepAlive(data.replicaId);
-				}
-
 				await microserver.handleMessage(key, info, data);
 			});
 
 			ws.on('close', () => {
-				const replicaId = connectionToReplicaIdMap.get(ws);
-				if (!replicaId) {
-					core.log('warn', 'No replica ID found for closed connection');
-					return;
-				}
-
 				microserver.clientConnections.remove(key);
-				core.log('debug', 'Connection closed', { replicaId });
+				core.log('debug', 'Connection closed', { key, userId: info.userId });
 			});
 		},
 	);

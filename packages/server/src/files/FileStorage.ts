@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
 import { ReadableStream } from 'stream/web';
 
 export interface FileInfo {

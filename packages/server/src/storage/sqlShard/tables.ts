@@ -1,11 +1,11 @@
 import { ReplicaType } from '@verdant-web/common';
-import { Generated, Selectable } from 'kysely';
 
 export interface Database {
 	OperationHistory: OperationHistoryTable;
 	DocumentBaseline: DocumentBaselineTable;
 	ReplicaInfo: ReplicaInfoTable;
 	FileMetadata: FileMetadataTable;
+	_Migrations: { id: number; appliedAt: string };
 }
 
 export interface OperationHistoryTable {
@@ -16,7 +16,7 @@ export interface OperationHistoryTable {
 	replicaId: string;
 	authz: string | null;
 }
-export type OperationHistoryRow = Selectable<OperationHistoryTable>;
+export type OperationHistoryRow = OperationHistoryTable;
 
 export interface DocumentBaselineTable {
 	oid: string;
@@ -24,7 +24,7 @@ export interface DocumentBaselineTable {
 	timestamp: string;
 	authz: string | null;
 }
-export type DocumentBaselineRow = Selectable<DocumentBaselineTable>;
+export type DocumentBaselineRow = DocumentBaselineTable;
 
 export interface ReplicaInfoTable {
 	id: string;
@@ -32,10 +32,10 @@ export interface ReplicaInfoTable {
 	lastSeenWallClockTime: number | null;
 	ackedLogicalTime: string | null;
 	type: ReplicaType;
-	ackedServerOrder: Generated<number>;
+	ackedServerOrder: number;
 }
 
-export type ReplicaInfoRow = Selectable<ReplicaInfoTable>;
+export type ReplicaInfoRow = ReplicaInfoTable;
 
 export interface FileMetadataTable {
 	fileId: string;
@@ -44,4 +44,4 @@ export interface FileMetadataTable {
 	pendingDeleteAt: number | null;
 }
 
-export type FileMetadataRow = Selectable<FileMetadataTable>;
+export type FileMetadataRow = FileMetadataTable;

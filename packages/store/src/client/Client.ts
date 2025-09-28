@@ -329,7 +329,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 	__dangerous__resetLocal = async () => {
 		this.sync.stop();
-		await deleteAllDatabases(this.namespace, indexedDB);
+		await deleteAllDatabases(this.namespace, this.context.environment);
 	};
 
 	export = async (

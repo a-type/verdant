@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { waitForCondition, waitForOnline } from '../lib/waits.js';
+import { waitForCondition, waitForOnline, waitForSync } from '../lib/waits.js';
 
 it('overwrites superseded operations to the same key before syncing', async () => {
 	const ctx = createTestContext({
@@ -24,17 +24,8 @@ it('overwrites superseded operations to the same key before syncing', async () =
 	});
 	// the client will sync only baselines, leaving us a clean
 	// slate to observe the superseding behavior
-	clientA.sync.start();
-	await waitForOnline(clientA);
-
-	await clientA
-		.batch()
-		.run(() => {
-			for (let i = 0; i < 10; i++) {
-				item.set('content', `${i} apples`);
-			}
-		})
-		.commit();
+	await clientA.sync.start();
+	await waitForSync(clientA);
 
 	// wait for the sync to complete
 	await waitForCondition(async () => {
@@ -49,6 +40,16 @@ it('overwrites superseded operations to the same key before syncing', async () =
 	await waitForOnline(truantClient);
 	truantClient.sync.stop();
 	await waitForOnline(truantClient, false);
+
+	await clientA
+		.batch()
+		.run(() => {
+			for (let i = 0; i < 10; i++) {
+				item.set('content', `${i} apples`);
+			}
+		})
+		.commit();
+	await waitForSync(clientA);
 
 	ctx.log('checking server library');
 	let stats = await ctx.server.info(ctx.library);

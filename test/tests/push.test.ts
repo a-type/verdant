@@ -1,5 +1,5 @@
 import { assert } from '@a-type/utils';
-import { ReplicaType } from '@verdant-web/server';
+import { ReplicaType } from '@verdant-web/common';
 import { expect, it, vitest } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import {
@@ -10,6 +10,7 @@ import {
 
 const context = createTestContext({
 	library: 'push-sync',
+	// testLog: true,
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {
@@ -25,6 +26,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	});
 	const clientB = await context.createTestClient({
 		user: 'User B',
+		// logId: 'B',
 	});
 
 	await client.items.put({

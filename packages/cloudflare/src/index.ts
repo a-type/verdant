@@ -1,3 +1,3 @@
 export { createVerdantWorkerApp } from './api.js';
-export { configureVerdant } from './globals.js';
+export { R2FileStorage } from './files.js';
 export { VerdantObject } from './verdantObject.js';

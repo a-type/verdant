@@ -2,18 +2,43 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	test: {
+		browser: {
+			enabled: true,
+			provider: 'playwright',
+			instances: [
+				{
+					browser: 'chromium',
+					headless: true,
+				},
+			],
+			connectTimeout: 10_000,
+			isolate: true,
+			screenshotFailures: false,
+			// headless: true,
+		},
+		clearMocks: true,
+		setupFiles: ['setup/client.ts'],
+		globalSetup: ['setup/server.ts'],
+		testTimeout: 20000,
+		// testNamePattern: /.*\.test\.ts/,
 		projects: [
 			{
+				extends: true,
 				test: {
-					environment: 'jsdom',
-					clearMocks: true,
-					setupFiles: ['setup/indexedDB.ts'],
-					globalSetup: ['setup/server.ts'],
-					testTimeout: 30000,
-					name: 'Hono',
+					name: { label: 'hono', color: 'cyan' },
 					env: {
 						NODE_ENV: 'test',
-						TEST_MODE: 'hono',
+						SERVER: 'hono',
+					},
+				},
+			},
+			{
+				extends: true,
+				test: {
+					name: { label: 'cf', color: 'yellow' },
+					env: {
+						NODE_ENV: 'test',
+						SERVER: 'cloudflare',
 					},
 				},
 			},

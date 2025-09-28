@@ -76,15 +76,14 @@
 		}
 	},
 	"dependencies": {
-		"@a-type/kysely": "^1.0.2",
+		"@hono/node-server": "catalog:",
 		"@fastify/busboy": "^3.1.1",
 		"@verdant-web/common": "workspace:*",
 		"async-lock": "^1.4.0",
 		"better-sqlite3": "catalog:",
 		"busboy": "^1.6.0",
+		"hono": "catalog:",
 		"jsonwebtoken": "^8.5.1",
-		"kysely": "catalog:",
-		"kysely-plugin-serialize": "^0.5.7",
 		"minimist": "^1.2.8",
 		"ws": "^8.9.0"
 	},
@@ -93,13 +92,10 @@
 		"@types/better-sqlite3": "^7.6.12",
 		"@types/busboy": "^1.5.0",
 		"@types/jsonwebtoken": "^8.5.9",
-		"@types/node": "^20.11.5",
+		"@types/node": "catalog:",
 		"@types/ws": "^8.5.3",
 		"cross-env": "7.0.3",
-		"typescript": "^5.4.2",
-		"vitest": "^2.0.5",
-		"hono": "catalog:",
-		"@hono/node-server": "^1.13.8",
-		"@cloudflare/workers-types": "^4.20250224.0"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	}
 }

@@ -116,6 +116,7 @@ export class WebSocketSync
 		}
 
 		const message = JSON.parse(event.data) as ServerMessage;
+		this.ctx.log('debug', 'Received', message.type, 'message');
 		switch (message.type) {
 			case 'sync-resp':
 				if (message.ackThisNonce) {
@@ -178,16 +179,19 @@ export class WebSocketSync
 	};
 
 	private onError = (event: Event) => {
-		this.ctx.log('error', event);
+		this.ctx.log('error', 'Sync socket error', event);
+		if (this.disposed) return;
 		this.reconnectScheduler.next();
 
 		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private onClose = (event: CloseEvent) => {
-		this.ctx.log('info', 'Sync disconnected');
+		this.ctx.log('info', 'Sync socket disconnected');
 		this.onOnlineChange(false);
-		this.onError(event);
+		if (this.disposed) return;
+		this.reconnectScheduler.next();
+		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private initializeSocket = async () => {
@@ -282,7 +286,9 @@ export class WebSocketSync
 	stop = () => {
 		this.socket?.removeEventListener('message', this.onMessage);
 		this.socket?.removeEventListener('close', this.onClose);
-		this.socket?.close();
+		if (this.socket?.readyState === WEBSOCKET_OPEN) {
+			this.socket.close();
+		}
 		this.socket = null;
 		this._status = 'paused';
 	};

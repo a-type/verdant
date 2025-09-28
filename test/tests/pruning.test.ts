@@ -6,7 +6,6 @@ import {
 } from '@verdant-web/common';
 import { it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForEntitySnapshot,
 	waitForPeerCount,
@@ -19,8 +18,6 @@ const ctx = createTestContext({
 });
 
 it('prunes invalid data in entities with changes from outdated clients', async () => {
-	const persistence = getPersistence();
-
 	const v1Item = collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -51,7 +48,6 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	const clientAInit = {
 		migrations,
 		user: 'a',
-		persistence,
 	};
 
 	const clientA = await ctx.createGenericClient({
@@ -65,7 +61,6 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 	const clientBInit = {
 		migrations,
 		user: 'b',
-		persistence,
 	};
 
 	const clientB = await ctx.createGenericClient({
@@ -81,7 +76,7 @@ it('prunes invalid data in entities with changes from outdated clients', async (
 		tags: ['a', 'b'],
 	});
 
-	clientB.sync.start();
+	await clientB.sync.start();
 	await waitForQueryResult(clientB.items.get('1'));
 
 	// need to make a change here so B doesn't get its data

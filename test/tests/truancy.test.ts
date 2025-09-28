@@ -1,7 +1,6 @@
 import { assert } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { getPersistence } from '../lib/persistence.js';
 import { waitForQueryResult, waitForSync, waitForTime } from '../lib/waits.js';
 
 it('should reset truant replicas upon their reconnection', async () => {
@@ -10,11 +9,8 @@ it('should reset truant replicas upon their reconnection', async () => {
 		// testLog: true,
 		library: 'truant-1',
 	});
-	const persistence = getPersistence();
-
 	const truantClient = await ctx.createTestClient({
 		user: 'truant-1',
-		persistence,
 		// logId: 'truant',
 	});
 
@@ -38,7 +34,6 @@ it('should reset truant replicas upon their reconnection', async () => {
 
 	const currentClient = await ctx.createTestClient({
 		user: 'current-1',
-		persistence,
 		// logId: 'current',
 	});
 
@@ -89,12 +84,10 @@ it('should not reset truant replicas with up to date server order', async () => 
 		// serverLog: true,
 		// testLog: true,
 	});
-	const persistence = getPersistence();
 
 	const truantClient = await ctx.createTestClient({
 		user: 'truant-2',
 		// logId: 'truant',
-		persistence,
 	});
 
 	await truantClient.sync.start();
@@ -117,7 +110,6 @@ it('should not reset truant replicas with up to date server order', async () => 
 
 	const currentClient = await ctx.createTestClient({
 		user: 'current-2',
-		persistence,
 		// logId: 'current',
 	});
 

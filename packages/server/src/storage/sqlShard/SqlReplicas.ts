@@ -1,15 +1,14 @@
 import { ReplicaType, VerdantError } from '@verdant-web/common';
-import { Kysely, sql } from 'kysely';
 import { StoredReplicaInfo } from '../../types.js';
 import { ReplicaStorage } from '../Storage.js';
-import { Database, ReplicaInfoRow } from './tables.js';
+import { SqliteExecutor } from './database.js';
+import { ReplicaInfoRow } from './tables.js';
 
 export class SqlReplicas implements ReplicaStorage {
 	constructor(
-		private db: Kysely<Database>,
+		private db: SqliteExecutor,
 		private libraryId: string,
 		private readonly replicaTruancyMinutes: number,
-		private readonly dialect: 'sqlite' | 'postgres',
 	) {}
 
 	get truantCutoff(): number {
@@ -23,12 +22,10 @@ export class SqlReplicas implements ReplicaStorage {
 
 	get = async (replicaId: string): Promise<StoredReplicaInfo | null> => {
 		const db = this.db;
-		const row =
-			(await db
-				.selectFrom('ReplicaInfo')
-				.where('id', '=', replicaId)
-				.selectAll()
-				.executeTakeFirst()) ?? null;
+		const row = await db.first<ReplicaInfoRow>(
+			`SELECT * FROM ReplicaInfo WHERE id = ?`,
+			[replicaId],
+		);
 		if (row) return this.attachLibraryId(row);
 		return row;
 	};
@@ -42,16 +39,12 @@ export class SqlReplicas implements ReplicaStorage {
 		const existing = await this.get(replicaId);
 		if (!existing) {
 			const db = this.db;
-			const created = await db
-				.insertInto('ReplicaInfo')
-				.values({
-					id: replicaId,
-					clientId: info.userId,
-					type: info.type,
-					ackedServerOrder: 0,
-				})
-				.returningAll()
-				.executeTakeFirst();
+			const created = await db.first<ReplicaInfoRow>(
+				`INSERT INTO ReplicaInfo (id, clientId, type, ackedServerOrder) VALUES (?, ?, ?, ?)
+					ON CONFLICT(id) DO NOTHING
+					RETURNING *`,
+				[replicaId, info.userId, info.type, 0],
+			);
 			if (!created) {
 				throw new VerdantError(
 					VerdantError.Code.Unexpected,
@@ -68,11 +61,10 @@ export class SqlReplicas implements ReplicaStorage {
 		if (existing.type !== info.type) {
 			const db = this.db;
 			// type should be updated if a new token changes it
-			await db
-				.updateTable('ReplicaInfo')
-				.set({ type: info.type })
-				.where('id', '=', replicaId)
-				.execute();
+			await db.exec(`UPDATE ReplicaInfo SET type = ? WHERE id = ?`, [
+				info.type,
+				replicaId,
+			]);
 		}
 
 		if (existing.clientId !== info.userId) {
@@ -97,64 +89,49 @@ export class SqlReplicas implements ReplicaStorage {
 	getAll = async (
 		options?: { omitTruant: boolean } | undefined,
 	): Promise<StoredReplicaInfo[]> => {
-		const db = this.db;
-		let builder = db.selectFrom('ReplicaInfo');
+		const result = await this.db.query<ReplicaInfoRow>(
+			`SELECT * FROM ReplicaInfo${options?.omitTruant ? ' WHERE lastSeenWallClockTime > ?' : ''}`,
+			options?.omitTruant ? [this.truantCutoff] : [],
+		);
 
-		if (options?.omitTruant) {
-			builder = builder.where('lastSeenWallClockTime', '>', this.truantCutoff);
-		}
-
-		return (await builder.selectAll().execute()).map(this.attachLibraryId);
+		return result.map(this.attachLibraryId);
 	};
 
 	updateLastSeen = async (replicaId: string): Promise<void> => {
 		const clockTime = Date.now();
 		const db = this.db;
-		await db
-			.updateTable('ReplicaInfo')
-			.set({ lastSeenWallClockTime: clockTime })
-			.where('id', '=', replicaId)
-			.execute();
+		await db.exec(
+			`UPDATE ReplicaInfo SET lastSeenWallClockTime = ? WHERE id = ?`,
+			[clockTime, replicaId],
+		);
 	};
 
 	updateAckedServerOrder = async (
 		replicaId: string,
 		serverOrder: number,
 	): Promise<void> => {
-		const max = this.dialect === 'postgres' ? 'GREATEST' : 'MAX';
-		const db = this.db;
-		await db
-			.updateTable('ReplicaInfo')
-			.set(
-				'ackedServerOrder',
-				({ val }) =>
-					sql<number>`${sql.raw(max)}(ackedServerOrder, ${val(serverOrder)})`,
-			)
-			.where('id', '=', replicaId)
-			.execute();
+		await this.db.exec(
+			`UPDATE ReplicaInfo SET ackedServerOrder = MAX(ackedServerOrder, ?) WHERE id = ?`,
+			[serverOrder, replicaId],
+		);
 	};
 
 	updateAcknowledgedLogicalTime = async (
 		replicaId: string,
 		timestamp: string,
 	): Promise<void> => {
-		const db = this.db;
-		await db
-			.updateTable('ReplicaInfo')
-			.set({ ackedLogicalTime: timestamp })
-			.where('id', '=', replicaId)
-			.execute();
+		await this.db.exec(
+			`UPDATE ReplicaInfo SET ackedLogicalTime = ? WHERE id = ?`,
+			[timestamp, replicaId],
+		);
 	};
 
 	getEarliestAckedServerOrder = async (): Promise<number> => {
-		const db = this.db;
 		// gets earliest acked server order of all non-truant replicas.
-		const res = await db
-			.selectFrom('ReplicaInfo')
-			.where('lastSeenWallClockTime', '>', this.truantCutoff)
-			.orderBy('ackedServerOrder', 'asc')
-			.select('ackedServerOrder')
-			.executeTakeFirst();
+		const res = await this.db.first<Pick<ReplicaInfoRow, 'ackedServerOrder'>>(
+			`SELECT ackedServerOrder FROM ReplicaInfo WHERE lastSeenWallClockTime > ? ORDER BY ackedServerOrder ASC LIMIT 1`,
+			[this.truantCutoff],
+		);
 		return res?.ackedServerOrder ?? 0;
 	};
 
@@ -163,28 +140,24 @@ export class SqlReplicas implements ReplicaStorage {
 		timestamp: string,
 	): Promise<void> => {
 		if (!timestamp) return;
-		const db = this.db;
 		// when acking an operation, we also set the replica's server order
 		// to that operation's server order, if it's greater.
-		const max = this.dialect === 'postgres' ? 'GREATEST' : 'MAX';
-		await db
-			.updateTable('ReplicaInfo')
-			.set({ ackedLogicalTime: timestamp })
-			.set(
-				'ackedServerOrder',
-				({ val }) => sql<number>`${sql.raw(max)}(
-					ackedServerOrder,
-					COALESCE(
-						(
-        			SELECT serverOrder FROM OperationHistory
-        			WHERE timestamp = ${val(timestamp)}
-      			),
-						0
+		await this.db.exec(
+			`UPDATE ReplicaInfo SET
+					ackedLogicalTime = ?,
+					ackedServerOrder = MAX(
+						ackedServerOrder,
+						COALESCE(
+							(
+								SELECT serverOrder FROM OperationHistory
+								WHERE timestamp = ?
+							),
+							0
+						)
 					)
-				)`,
-			)
-			.where('id', '=', replicaId)
-			.execute();
+				WHERE id = ?`,
+			[timestamp, timestamp, replicaId],
+		);
 	};
 
 	getGlobalAck = async (
@@ -206,26 +179,18 @@ export class SqlReplicas implements ReplicaStorage {
 		);
 	};
 	delete = async (replicaId: string): Promise<void> => {
-		const db = this.db;
-		await db.deleteFrom('ReplicaInfo').where('id', '=', replicaId).execute();
+		await this.db.exec(`DELETE FROM ReplicaInfo WHERE id = ?`, [replicaId]);
 	};
 	deleteAll = async (): Promise<void> => {
-		const db = this.db;
-		await db.deleteFrom('ReplicaInfo').execute();
+		await this.db.exec(`DELETE FROM ReplicaInfo`, []);
 	};
 	deleteAllForUser = async (userId: string): Promise<void> => {
-		const db = this.db;
-		await db.deleteFrom('ReplicaInfo').where('clientId', '=', userId).execute();
+		await this.db.exec(`DELETE FROM ReplicaInfo WHERE clientId = ?`, [userId]);
 	};
 	forceTruant = async (replicaId: string): Promise<void> => {
-		const db = this.db;
-		await db
-			.updateTable('ReplicaInfo')
-			.set({
-				lastSeenWallClockTime:
-					Date.now() - this.replicaTruancyMinutes * 60 * 1000 - 1,
-			})
-			.where('id', '=', replicaId)
-			.execute();
+		await this.db.exec(
+			`UPDATE ReplicaInfo SET lastSeenWallClockTime = ? WHERE id = ?`,
+			[Date.now() - this.replicaTruancyMinutes * 60 * 1000 - 1, replicaId],
+		);
 	};
 }

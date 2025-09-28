@@ -9,8 +9,6 @@ import {
 } from '../lib/waits.js';
 
 const context = createTestContext({
-	// serverLog: true,
-	// keepDb: true,
 	// testLog: true,
 	library: 'undo-1',
 });
@@ -28,8 +26,8 @@ it(
 		});
 		const log = context.log;
 
-		clientA.sync.start();
-		clientB.sync.start();
+		await clientA.sync.start();
+		await clientB.sync.start();
 		await waitForOnline(clientA);
 		await waitForOnline(clientB);
 
@@ -58,7 +56,7 @@ it(
 
 		log('🔺 --- Client B push ---');
 
-		clientB
+		await clientB
 			.batch()
 			.run(() => {
 				b_itemA.get('comments').push({
@@ -71,7 +69,7 @@ it(
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		log('🔺 --- Client A push ---');
 
-		clientA
+		await clientA
 			.batch()
 			.run(() => {
 				a_itemA.get('comments').push({
@@ -81,8 +79,8 @@ it(
 			})
 			.commit();
 
-		clientA.sync.start();
-		clientB.sync.start();
+		await clientA.sync.start();
+		await clientB.sync.start();
 
 		await waitForOnline(clientA);
 		await waitForOnline(clientB);

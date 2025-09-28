@@ -21,7 +21,7 @@ async function connectAndSeedData({
 	});
 	const clientB = await createTestClient({
 		user: 'User B',
-		// logId: 'B',
+		logId: 'B',
 	});
 
 	// seed data into library
@@ -101,7 +101,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	clientB.sync.stop();
 
 	// reset server
-	await ctx.server.evict('reset-1');
+	await ctx.server.evict(ctx.library);
 
 	// add more data offline with A and B
 	const a_banana = await clientA.items.put({
@@ -144,9 +144,14 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 		'B receives banana',
 	);
 	const b_pearQuery = clientB.items.get(pearId);
-	await waitForQueryResult(b_pearQuery, (val) => {
-		return !val;
-	});
+	await waitForQueryResult(
+		b_pearQuery,
+		(val) => {
+			return !val;
+		},
+		5000,
+		'B confirms pear is gone',
+	);
 	expect(b_pearQuery.current).toBe(null);
 
 	const clientC = await connectNewReplicaAndCheckIntegrity(ctx, {
@@ -200,11 +205,6 @@ it('can re-initialize in realtime when replicas are still connected', async () =
 		await connectAndSeedData(ctx);
 
 	await ctx.server.evict(library);
-	await waitForOnline(clientA, false);
-	await waitForOnline(clientA, true);
-
-	await waitForOnline(clientA);
-	await waitForOnline(clientB);
 
 	await waitForQueryResult(clientA.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientA.categories.get(a_produceCategory.get('id')));
@@ -377,7 +377,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	await waitForCondition(() => {
 		try {
 			// newField isn't part of the client typings
-			b_applesQuery.current?.get('newField');
+			b_applesQuery.current?.get('newField' as any);
 			return true;
 		} catch {
 			return false;

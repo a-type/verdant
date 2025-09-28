@@ -47,13 +47,12 @@ it('applies successive updates to a nested document in a tiptap-like scenario', 
 		// keepDb: true,
 		library: 'tiptap',
 	});
-
 	const client = await context.createGenericClient({
 		schema: testSchema,
 		migrations: [createMigration(testSchema)],
 		user: 'A',
 	});
-	client.sync.start();
+	await client.sync.start();
 
 	const doc = await client.documents.put({
 		content: {

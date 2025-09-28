@@ -7,19 +7,8 @@ import {
 import { UserProfiles } from '../Profiles.js';
 
 export type PresenceEvents = {
-	lost: (replicaId: string, userId: string) => void;
+	lost: (connectionKey: string, userId: string) => void;
 };
-
-export interface IPresence extends EventSubscriber<PresenceEvents> {
-	set: (
-		userId: string,
-		userInfo: UserInfoUpdate,
-	) => Promise<UserInfo<any, any>>;
-	get: (userId: string) => UserInfo<any, any> | undefined;
-	removeReplica: (replicaId: string) => void;
-	all: () => Record<string, UserInfo<any, any>>;
-	clear: () => void;
-}
 
 /**
  * Stores client presence in-memory for connected
@@ -27,15 +16,19 @@ export interface IPresence extends EventSubscriber<PresenceEvents> {
  */
 export class Presence extends EventSubscriber<PresenceEvents> {
 	private presences: Record<string, UserInfo<any, any>> = {};
-	private replicaToUser: Record<string, string> = {};
-	private userToReplica: Record<string, Set<string>> = {};
+	private connectionToUser: Record<string, string> = {};
+	private userToConnection: Record<string, Set<string>> = {};
 	private keepalives = new Map<string, NodeJS.Timeout>();
 
 	constructor(private profiles: UserProfiles<any>) {
 		super();
 	}
 
-	set = async (userId: string, userInfo: UserInfoUpdate) => {
+	set = async (
+		connectionKey: string,
+		userId: string,
+		userInfo: UserInfoUpdate,
+	) => {
 		if (!this.presences[userId]) {
 			this.presences[userId] = {
 				...userInfo,
@@ -45,27 +38,27 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		} else {
 			Object.assign(this.presences[userId], userInfo);
 		}
-		this.replicaToUser[userInfo.replicaId] = userId;
-		this.userToReplica[userId] =
-			this.userToReplica[userId] || new Set<string>();
-		this.userToReplica[userId].add(userInfo.replicaId);
+		this.connectionToUser[connectionKey] = userId;
+		this.userToConnection[userId] =
+			this.userToConnection[userId] || new Set<string>();
+		this.userToConnection[userId].add(connectionKey);
 
-		this.keepAlive(userInfo.replicaId);
+		this.keepAlive(connectionKey);
 
 		return this.presences[userId]!;
 	};
 
-	keepAlive = (replicaId: string) => {
-		const existing = this.keepalives.get(replicaId);
+	keepAlive = (connectionKey: string) => {
+		const existing = this.keepalives.get(connectionKey);
 		if (existing) {
 			clearTimeout(existing);
 		}
 
 		this.keepalives.set(
-			replicaId,
+			connectionKey,
 			setTimeout(() => {
-				this.removeReplica(replicaId);
-				this.keepalives.delete(replicaId);
+				this.removeConnection(connectionKey);
+				this.keepalives.delete(connectionKey);
 			}, 30 * 1000),
 		);
 	};
@@ -74,14 +67,14 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		return this.presences[userId];
 	};
 
-	removeReplica = (replicaId: string) => {
-		const userId = this.replicaToUser[replicaId];
+	removeConnection = (connectionKey: string) => {
+		const userId = this.connectionToUser[connectionKey];
 		if (!userId) return;
 
-		this.userToReplica[userId].delete(replicaId);
-		if (this.userToReplica[userId].size === 0) {
+		this.userToConnection[userId].delete(connectionKey);
+		if (this.userToConnection[userId].size === 0) {
 			delete this.presences[userId];
-			this.emit('lost', replicaId, userId);
+			this.emit('lost', connectionKey, userId);
 
 			// memory cleanup
 			if (Object.keys(this.presences).length === 0) {
@@ -96,7 +89,7 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 
 	clear = () => {
 		this.presences = {};
-		this.replicaToUser = {};
-		this.userToReplica = {};
+		this.connectionToUser = {};
+		this.userToConnection = {};
 	};
 }

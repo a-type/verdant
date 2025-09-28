@@ -8,6 +8,7 @@ import {
 	getOidSubIdRange,
 	ObjectIdentifier,
 } from '@verdant-web/common';
+import { InitialContext } from '../../../context/context.js';
 import {
 	AbstractTransaction,
 	AckInfo,
@@ -19,7 +20,6 @@ import {
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import { closeDatabase, getSizeOfObjectStore } from '../util.js';
-import { Context } from '../../../context/context.js';
 
 export type StoredClientOperation = ClientOperation & {
 	/** This acts as the primary key */
@@ -37,10 +37,7 @@ export class IdbMetadataDb
 	extends IdbService
 	implements PersistenceMetadataDb<IDBTransaction>
 {
-	constructor(
-		db: IDBDatabase,
-		private ctx: Pick<Context, 'log' | 'namespace'>,
-	) {
+	constructor(db: IDBDatabase, ctx: InitialContext) {
 		super(db, ctx);
 		this.addDispose(() => {
 			this.ctx.log('info', `Closing metadata DB for`, this.ctx.namespace);
@@ -330,10 +327,10 @@ export class IdbMetadataDb
 					start && end
 						? IDBKeyRange.bound(start, end, false, true)
 						: start
-						? IDBKeyRange.lowerBound(start, false)
-						: end
-						? IDBKeyRange.upperBound(end, true)
-						: undefined;
+							? IDBKeyRange.lowerBound(start, false)
+							: end
+								? IDBKeyRange.upperBound(end, true)
+								: undefined;
 				return store.index('timestamp').openCursor(range, 'next');
 			},
 			iterator,

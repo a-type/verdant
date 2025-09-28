@@ -1,6 +1,6 @@
-import { authz, ClientMessage, ServerMessage } from '@verdant-web/common';
+import { authz, ServerMessage } from '@verdant-web/common';
 import { IncomingMessage, ServerResponse } from 'http';
-import { WebSocket } from 'ws';
+import { WebSocket as WSWebSocket } from 'ws';
 import { UserProfileLoader } from '../Profiles.js';
 import { TokenInfo } from '../TokenVerifier.js';
 import { MessageSender } from './MessageSender.js';
@@ -112,30 +112,38 @@ class FetchClientConnection extends ClientConnection {
 	};
 }
 
+function subscribeToSocketEvent(
+	socket: WSWebSocket | WebSocket,
+	event: string,
+	handler: (data: any) => void,
+) {
+	if ('on' in socket) {
+		(socket as WSWebSocket).on(event as any, handler);
+		return () => (socket as WSWebSocket).off(event as any, handler);
+	} else {
+		(socket as WebSocket).addEventListener(event as any, (evt) =>
+			handler((evt as any).data),
+		);
+		return () =>
+			(socket as WebSocket).removeEventListener(event as any, handler);
+	}
+}
+
 class WebSocketClientConnection extends ClientConnection {
 	readonly type = 'websocket';
-	// detected from messages
-	replicaId: string | null = null;
 
 	constructor(
 		key: string,
-		readonly ws: WebSocket,
+		// supports either NodeJS+WS mock websocket or native WebSocket
+		// for Cloudflare / Edge environments
+		readonly ws: WebSocket | WSWebSocket,
 		info: TokenInfo,
 	) {
 		super(key, info);
-		// maybe brittle... detect associated replica ID from messages
-		// by wiretapping. this is used to update presence when
-		// the socket is disconnected.
-		ws.on('message', (message: any) => {
-			const data = JSON.parse(message.toString()) as ClientMessage;
-			if (data?.replicaId) {
-				this.replicaId = data.replicaId;
-			}
-		});
 	}
 
 	handleMessage = (message: ServerMessage) => {
-		this.ws.send(JSON.stringify(message));
+		return this.ws.send(JSON.stringify(message));
 	};
 }
 
@@ -147,17 +155,28 @@ export class ClientConnectionManager implements MessageSender {
 		this.presence = new Presence(profiles);
 	}
 
-	addSocket = (key: string, socket: WebSocket, info: TokenInfo) => {
+	addSocket = (
+		key: string,
+		socket: WebSocket | WSWebSocket,
+		info: TokenInfo,
+	) => {
 		const connection = new WebSocketClientConnection(key, socket, info);
 
 		this.connections.set(key, connection);
 
-		socket.on('close', () => {
-			this.connections.delete(key);
-			if (connection.replicaId) {
-				this.presence.removeReplica(connection.replicaId);
-			}
-		});
+		const unsubscribes: (() => void)[] = [];
+		unsubscribes.push(
+			subscribeToSocketEvent(socket, 'close', () => {
+				this.connections.delete(key);
+				this.presence.removeConnection(key);
+				unsubscribes.forEach((u) => u());
+			}),
+		);
+		unsubscribes.push(
+			subscribeToSocketEvent(socket, 'messsage', () => {
+				this.presence.keepAlive(key);
+			}),
+		);
 	};
 
 	addRequest = (
@@ -195,6 +214,7 @@ export class ClientConnectionManager implements MessageSender {
 
 	remove = (key: string) => {
 		this.connections.delete(key);
+		this.presence.removeConnection(key);
 	};
 
 	respond = (key: string, message: ServerMessage) => {

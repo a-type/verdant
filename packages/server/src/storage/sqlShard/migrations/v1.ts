@@ -1,53 +1,43 @@
-import { Kysely } from 'kysely';
+export const version = 1;
 
-export async function up(db: Kysely<any>) {
-	await db.schema
-		.createTable('DocumentBaseline')
-		.ifNotExists()
-		.addColumn('oid', 'text', (cb) => cb.primaryKey())
-		.addColumn('snapshot', 'text')
-		.addColumn('timestamp', 'text', (cb) => cb.notNull())
-		.execute();
-
-	await db.schema
-		.createTable('OperationHistory')
-		.ifNotExists()
-		.addColumn('oid', 'text', (cb) => cb.notNull())
-		.addColumn('timestamp', 'text', (cb) => cb.notNull())
-		.addColumn('data', 'text', (cb) => cb.notNull())
-		.addColumn('serverOrder', 'integer', (cb) => cb.notNull().defaultTo(0))
-		.addColumn('replicaId', 'text', (cb) => cb.notNull())
-		.addPrimaryKeyConstraint('OperationHistory_primaryKey', [
-			'replicaId',
-			'oid',
-			'timestamp',
-		])
-		.execute();
-
-	await db.schema
-		.createTable('ReplicaInfo')
-		.ifNotExists()
-		.addColumn('id', 'text', (cb) => cb.primaryKey())
-		.addColumn('clientId', 'text', (cb) => cb.notNull())
-		.addColumn('lastSeenWallClockTime', 'integer')
-		.addColumn('ackedLogicalTime', 'text')
-		.addColumn('type', 'integer', (cb) => cb.notNull().defaultTo(0))
-		.addColumn('ackedServerOrder', 'integer', (cb) => cb.notNull().defaultTo(0))
-		.execute();
-
-	await db.schema
-		.createTable('FileMetadata')
-		.ifNotExists()
-		.addColumn('fileId', 'text', (cb) => cb.primaryKey())
-		.addColumn('name', 'text', (cb) => cb.notNull())
-		.addColumn('type', 'text', (cb) => cb.notNull())
-		.addColumn('pendingDeleteAt', 'integer')
-		.execute();
-}
-
-export async function down(db: Kysely<any>) {
-	await db.schema.dropTable('DocumentBaseline').execute();
-	await db.schema.dropTable('OperationHistory').execute();
-	await db.schema.dropTable('ReplicaInfo').execute();
-	await db.schema.dropTable('FileMetadata').execute();
-}
+export const up = [
+	`
+CREATE TABLE IF NOT EXISTS "_Migrations" (
+	"id" INTEGER PRIMARY KEY,
+	"appliedAt" TEXT NOT NULL
+);`,
+	`
+CREATE TABLE IF NOT EXISTS "DocumentBaseline" (
+	"oid" TEXT PRIMARY KEY,
+	"snapshot" TEXT,
+	"timestamp" TEXT NOT NULL
+);
+`,
+	`
+CREATE TABLE IF NOT EXISTS "OperationHistory" (
+	"oid" TEXT NOT NULL,
+	"timestamp" TEXT NOT NULL,
+	"data" TEXT NOT NULL,
+	"serverOrder" INTEGER NOT NULL DEFAULT 0,
+	"replicaId" TEXT NOT NULL,
+	PRIMARY KEY ("replicaId", "oid", "timestamp")
+);
+`,
+	`
+CREATE TABLE IF NOT EXISTS "ReplicaInfo" (
+	"id" TEXT PRIMARY KEY,
+	"clientId" TEXT NOT NULL,
+	"lastSeenWallClockTime" INTEGER,
+	"ackedLogicalTime" TEXT,
+	"type" INTEGER NOT NULL DEFAULT 0,
+	"ackedServerOrder" INTEGER NOT NULL DEFAULT 0
+);`,
+	`
+CREATE TABLE IF NOT EXISTS "FileMetadata" (
+	"fileId" TEXT PRIMARY KEY,
+	"name" TEXT NOT NULL,
+	"type" TEXT NOT NULL,
+	"pendingDeleteAt" INTEGER
+);
+`,
+];

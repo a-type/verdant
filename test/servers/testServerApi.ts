@@ -1,4 +1,4 @@
-import { FileInfo } from '@verdant-web/server';
+import type { FileInfo } from '@verdant-web/server';
 import { inject } from 'vitest';
 
 export interface TestServerApi {

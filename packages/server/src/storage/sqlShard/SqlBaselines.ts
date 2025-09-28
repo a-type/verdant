@@ -1,27 +1,27 @@
 import { DocumentBaseline, Ref, applyPatch } from '@verdant-web/common';
-import { Kysely } from 'kysely';
 import { HydratedDocumentBaseline, StoredOperation } from '../../types.js';
 import { BaselineStorage } from '../Storage.js';
-import { Database, DocumentBaselineRow } from './tables.js';
+import { SqliteExecutor } from './database.js';
+import { DocumentBaselineRow } from './tables.js';
 
 export class SqlBaselines implements BaselineStorage {
 	constructor(
-		private db: Kysely<Database>,
+		private db: SqliteExecutor,
 		private libraryId: string,
-		private dialect: 'postgres' | 'sqlite',
 	) {}
 
 	get = async (
 		oid: string,
-		{ tx }: { tx?: Kysely<Database> } = {},
+		{ tx }: { tx?: SqliteExecutor } = {},
 	): Promise<HydratedDocumentBaseline | null> => {
 		const db = tx ?? this.db;
-		const raw =
-			(await db
-				.selectFrom('DocumentBaseline')
-				.where('oid', '=', oid)
-				.selectAll()
-				.executeTakeFirst()) ?? null;
+		const raw = await db.first<DocumentBaselineRow>(
+			`
+					SELECT * FROM DocumentBaseline
+					WHERE oid = ?
+				`,
+			[oid],
+		);
 		if (!raw) return null;
 		this.hydrate(raw);
 		return raw as any;
@@ -29,11 +29,9 @@ export class SqlBaselines implements BaselineStorage {
 
 	getAll = async () => {
 		const db = this.db;
-		const raw = await db
-			.selectFrom('DocumentBaseline')
-			.orderBy('timestamp', 'asc')
-			.selectAll()
-			.execute();
+		const raw = await db.query<DocumentBaselineRow>(
+			`SELECT * FROM DocumentBaseline ORDER BY timestamp ASC`,
+		);
 
 		raw.forEach(this.hydrate);
 
@@ -45,39 +43,36 @@ export class SqlBaselines implements BaselineStorage {
 		{
 			tx,
 		}: {
-			tx?: Kysely<Database>;
+			tx?: SqliteExecutor;
 		},
 	) => {
 		const db = tx ?? this.db;
 		if (!baseline.snapshot) {
-			await db
-				.deleteFrom('DocumentBaseline')
-				.where('oid', '=', baseline.oid)
-				.execute();
+			await db.exec(`DELETE FROM DocumentBaseline WHERE oid = ?`, [
+				baseline.oid,
+			]);
 			return;
 		}
 
-		await db
-			.insertInto('DocumentBaseline')
-			.values({
-				oid: baseline.oid,
-				snapshot: JSON.stringify(baseline.snapshot),
-				timestamp: baseline.timestamp,
-				authz: baseline.authz,
-			})
-			.onConflict((cb) =>
-				cb.doUpdateSet({
-					snapshot: JSON.stringify(baseline.snapshot),
-					timestamp: baseline.timestamp,
-					authz: baseline.authz,
-				}),
-			)
-			.execute();
+		await db.exec(
+			`INSERT INTO DocumentBaseline (oid, snapshot, timestamp, authz) VALUES (?, ?, ?, ?)
+				ON CONFLICT(oid) DO UPDATE SET
+					snapshot = excluded.snapshot,
+					timestamp = excluded.timestamp,
+					authz = excluded.authz
+				`,
+			[
+				baseline.oid,
+				JSON.stringify(baseline.snapshot),
+				baseline.timestamp,
+				baseline.authz,
+			],
+		);
 	};
 
 	insertAll = async (baselines: DocumentBaseline[]) => {
 		const db = this.db;
-		await db.transaction().execute(async (tx) => {
+		await db.transaction(async (tx) => {
 			for (const baseline of baselines) {
 				await this.set(baseline, { tx });
 			}
@@ -98,7 +93,7 @@ export class SqlBaselines implements BaselineStorage {
 
 		const db = this.db;
 
-		await db.transaction().execute(async (tx) => {
+		await db.transaction(async (tx) => {
 			let baseline = await this.get(oid, { tx });
 			if (!baseline) {
 				baseline = {
@@ -126,17 +121,16 @@ export class SqlBaselines implements BaselineStorage {
 
 	deleteAll = async () => {
 		const db = this.db;
-		await db.deleteFrom('DocumentBaseline').execute();
+		await db.exec('DELETE FROM DocumentBaseline;');
 	};
 
 	getCount = async () => {
 		const db = this.db;
 		return (
 			(
-				await db
-					.selectFrom('DocumentBaseline')
-					.select(({ fn }) => fn.countAll<number>().as('count'))
-					.executeTakeFirst()
+				await db.first<{ count: number }>(
+					`SELECT COUNT(*) as count FROM DocumentBaseline;`,
+				)
 			)?.count ?? 0
 		);
 	};

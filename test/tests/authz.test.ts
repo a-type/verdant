@@ -59,6 +59,8 @@ it('doesnt sync authorized docs to other users', async () => {
 	await waitForEntityCondition(
 		privateItemOnA2,
 		(e) => e.get('comments').length === 1,
+		2000,
+		'A2 sees comment',
 	);
 
 	expect(await userB.items.get(privateItem.get('id')).resolved).toBeNull();

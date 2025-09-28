@@ -141,11 +141,8 @@ export class MessageCreator {
 	};
 
 	createHeartbeat = async (): Promise<HeartbeatMessage> => {
-		const localReplicaInfo = await this.meta.getLocalReplica();
 		return {
 			type: 'heartbeat',
-			timestamp: this.ctx.time.now,
-			replicaId: localReplicaInfo.id,
 		};
 	};
 

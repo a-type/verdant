@@ -13,9 +13,9 @@ const { server, library, createTestClient } = createTestContext({
 });
 
 it('the server allows retrieving a document snapshot', async () => {
-	FileReader.prototype.readAsDataURL = () => {
-		return 'test';
-	};
+	// FileReader.prototype.readAsDataURL = () => {
+	// 	return 'test';
+	// };
 
 	const clientA = await createTestClient({
 		server,

@@ -8,9 +8,9 @@ const ctx = createTestContext({
 });
 
 it('supports the server requesting more history if it has lost data', async () => {
-	FileReader.prototype.readAsDataURL = () => {
-		return 'test';
-	};
+	// FileReader.prototype.readAsDataURL = () => {
+	// 	return 'test';
+	// };
 
 	const client = await ctx.createTestClient({
 		user: 'A',
@@ -39,14 +39,14 @@ it('supports the server requesting more history if it has lost data', async () =
 
 	client.sync.stop();
 
-	const fileData = await ctx.server.getFileInfo('need-more', image.id);
+	const fileData = await ctx.server.getFileInfo(ctx.library, image.id);
 	expect(fileData).not.toBeNull();
 
-	await ctx.server.evict('need-more');
+	await ctx.server.evict(ctx.library);
 
 	await waitForCondition(
 		async () => {
-			const lib = await ctx.server.info('need-more');
+			const lib = await ctx.server.info(ctx.library);
 			return lib === null;
 		},
 		5000,
@@ -78,7 +78,7 @@ it('supports the server requesting more history if it has lost data', async () =
 
 	await waitForCondition(
 		async () => {
-			const lib = await ctx.server.info('need-more');
+			const lib = await ctx.server.info(ctx.library);
 			return !!lib;
 		},
 		5000,

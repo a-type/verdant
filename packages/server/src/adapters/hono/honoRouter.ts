@@ -8,6 +8,7 @@ import { tokenMiddleware } from './tokenMiddleware.js';
 export function createHonoRouter(core: SingleNodeMicroserverManager) {
 	const mw = tokenMiddleware(core.tokenVerifier);
 	const app = new Hono<any>()
+		.onError(errorHandler)
 		.use('*', async (c, next) => {
 			core.log('debug', 'Incoming request', {
 				method: c.req.method,
@@ -15,7 +16,6 @@ export function createHonoRouter(core: SingleNodeMicroserverManager) {
 			});
 			await next();
 		})
-		.onError(errorHandler)
 		.post('/', mw, async (ctx) => {
 			const key = ctx.get('key');
 			const info = ctx.get('tokenInfo');

@@ -1,7 +1,6 @@
 import { createMigration, schema } from '@verdant-web/common';
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { getPersistence } from '../lib/persistence.js';
 import defaultSchema from '../schema.js';
 
 it('applies a WIP schema over an old schema and discards it once the new version is ready', async () => {
@@ -15,7 +14,6 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		user: 'a',
 		// logId: 'A',
 		oldSchemas: [defaultSchema],
-		persistence: getPersistence(),
 	};
 	const client = await createGenericClient(baseClientOptions);
 

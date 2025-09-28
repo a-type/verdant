@@ -1,56 +1,13 @@
-import {
-	ClientWithCollections,
-	createMigration,
-	Migration,
-	PersistenceImplementation,
-	schema,
-} from '@verdant-web/store';
+import { createMigration, Migration, schema } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 // @ts-ignore
 import { Operation } from '@verdant-web/common';
 import { createTestContext } from '../lib/createTestContext.js';
-import { getPersistence } from '../lib/persistence.js';
-import { createTestClient } from '../lib/testClient.js';
 import {
 	waitForEntityCondition,
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
-
-async function createClient({
-	schema,
-	oldSchemas,
-	migrations,
-	server,
-	library,
-	user,
-	logId,
-	disableRebasing,
-	persistence,
-}: {
-	schema: any;
-	oldSchemas: any[];
-	migrations: Migration<any>[];
-	server?: { port: number };
-	library: string;
-	user: string;
-	logId?: string;
-	disableRebasing?: boolean;
-	persistence?: PersistenceImplementation;
-}): Promise<ClientWithCollections> {
-	const client = await createTestClient({
-		schema,
-		oldSchemas,
-		migrations,
-		library,
-		user,
-		server,
-		logId,
-		disableRebasing,
-		persistence,
-	});
-	return client as any as ClientWithCollections;
-}
 
 // Using the ungenerated client to be more dynamic with the schema
 // This means a lot of ts-ignore because the inner typings are
@@ -58,11 +15,10 @@ async function createClient({
 it(
 	'offline migrates to add collections, indexes, and defaults; or changing data shape',
 	async () => {
-		const { log, server, createGenericClient } = createTestContext({
+		const { log, createGenericClient } = createTestContext({
 			library: 'migration-offline',
 		});
 
-		const persistence = getPersistence();
 		const v1Item = schema.collection({
 			name: 'item',
 			primaryKey: 'id',
@@ -84,7 +40,6 @@ it(
 		const clientInit = {
 			migrations,
 			user: 'a',
-			persistence,
 		};
 
 		let client = await createGenericClient({
@@ -625,8 +580,8 @@ it('migrates in an online world where old operations still come in', async () =>
 	const { log, createGenericClient } = createTestContext({
 		library: 'migration-online',
 	});
-	const persistenceA = getPersistence();
-	const persistenceB = getPersistence();
+	// const persistenceA = await getPersistence();
+	// const persistenceB = await getPersistence();
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -647,7 +602,6 @@ it('migrates in an online world where old operations still come in', async () =>
 
 	const clientInit = {
 		migrations,
-		library: 'migration-online',
 		user: 'a',
 	};
 
@@ -655,7 +609,6 @@ it('migrates in an online world where old operations still come in', async () =>
 		oldSchemas: [v1Schema],
 		schema: v1Schema,
 		...clientInit,
-		persistence: persistenceA,
 		// logId: 'A',
 	});
 	clientA.sync.start();
@@ -685,7 +638,6 @@ it('migrates in an online world where old operations still come in', async () =>
 		oldSchemas: [v1Schema],
 		...clientInit,
 		user: 'b',
-		persistence: persistenceB,
 		// logId: 'B',
 	});
 	clientB.sync.start();
@@ -760,7 +712,6 @@ it('migrates in an online world where old operations still come in', async () =>
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
-		persistence: persistenceA,
 		// logId: 'A2',
 	});
 	clientA.sync.start();
@@ -846,7 +797,6 @@ it('supports skip migrations in real life', async () => {
 		library: 'migration-skip',
 	});
 
-	const persistence = getPersistence();
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -867,9 +817,7 @@ it('supports skip migrations in real life', async () => {
 
 	const clientInit = {
 		migrations,
-		library: 'migration-skip',
 		user: 'a',
-		persistence,
 	};
 
 	let client = await createGenericClient({

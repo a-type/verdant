@@ -2,16 +2,10 @@
 
 import { DocumentBaseline } from './baseline.js';
 import { Operation } from './operation.js';
-import {
-	UserInfo,
-	UserInfoUpdate,
-	VerdantInternalPresence,
-} from './presence.js';
+import { UserInfo, VerdantInternalPresence } from './presence.js';
 
 export type HeartbeatMessage = {
 	type: 'heartbeat';
-	timestamp: string;
-	replicaId: string;
 };
 
 export type HeartbeatResponseMessage = {

@@ -127,6 +127,11 @@ export class Library implements ILibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
+		if (message.type === 'heartbeat') {
+			this.handleHeartbeat(message, clientKey, info);
+			return;
+		}
+
 		const allowed = await this.validateReplicaAccess(
 			message.replicaId,
 			clientKey,
@@ -144,9 +149,6 @@ export class Library implements ILibrary {
 				break;
 			case 'ack':
 				await this.handleAck(message, clientKey, info);
-				break;
-			case 'heartbeat':
-				await this.handleHeartbeat(message, clientKey, info);
 				break;
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
@@ -489,25 +491,32 @@ export class Library implements ILibrary {
 			'operations and',
 			baselines.length,
 			'baselines',
+			'to client key',
+			clientKey,
 		);
 
 		// mutating baselines/operations to remove extra data -
 		// mutating just to save on allocations here.
 
-		this.sender.respond(clientKey, {
-			type: 'sync-resp',
-			operations: this.removeOperationExtras(ops),
-			baselines: this.removeBaselineExtras(baselines),
-			globalAckTimestamp:
-				(await this.storage.replicas.getGlobalAck()) ?? undefined,
-			peerPresence: this.presence.all(),
-			// only request the client to overwrite local data if a reset is requested
-			// and there is data to overwrite it. otherwise the client may still
-			// send its own history to us.
-			overwriteLocalData: overwriteReplicaData,
-			ackedTimestamp: message.timestamp,
-			ackThisNonce,
-		});
+		try {
+			this.sender.respond(clientKey, {
+				type: 'sync-resp',
+				operations: this.removeOperationExtras(ops),
+				baselines: this.removeBaselineExtras(baselines),
+				globalAckTimestamp:
+					(await this.storage.replicas.getGlobalAck()) ?? undefined,
+				peerPresence: this.presence.all(),
+				// only request the client to overwrite local data if a reset is requested
+				// and there is data to overwrite it. otherwise the client may still
+				// send its own history to us.
+				overwriteLocalData: overwriteReplicaData,
+				ackedTimestamp: message.timestamp,
+				ackThisNonce,
+			});
+		} catch (err) {
+			this.log('error', err);
+			throw err;
+		}
 	};
 
 	private createAckNonce = (serverOrder: number): string | undefined => {
@@ -688,7 +697,7 @@ export class Library implements ILibrary {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		const updated = await this.presence.set(info.userId, {
+		const updated = await this.presence.set(clientKey, info.userId, {
 			presence: message.presence,
 			internal: message.internal,
 			replicaId: message.replicaId,

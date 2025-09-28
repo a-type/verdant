@@ -1,8 +1,8 @@
 import { VerdantError } from '@verdant-web/common';
-import { Context } from 'hono';
+import { ErrorHandler } from 'hono';
 import { ContentfulStatusCode } from 'hono/utils/http-status';
 
-export function errorHandler(err: Error, ctx: Context) {
+export const errorHandler: ErrorHandler = (err, ctx) => {
 	if (err instanceof VerdantError) {
 		if (err.code > VerdantError.Code.Unexpected) {
 			console.error('Verdant error:', err);
@@ -15,4 +15,4 @@ export function errorHandler(err: Error, ctx: Context) {
 		new VerdantError(VerdantError.Code.Unexpected).toResponse(),
 		500,
 	);
-}
+};

@@ -1,6 +1,10 @@
 import { VerdantError } from '@verdant-web/common';
 
 export function getRequestToken(req: Request) {
+	if (req.method === 'OPTIONS') {
+		// preflight request, np
+		return null;
+	}
 	// websocket compat - we only receive one header...
 	const protocolHeader = req.headers.get('Sec-WebSocket-Protocol');
 	if (protocolHeader) {

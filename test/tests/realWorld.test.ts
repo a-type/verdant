@@ -2,7 +2,6 @@ import { Migration, StorageSchema, createMigration } from '@verdant-web/common';
 import { ClientWithCollections } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { getPersistence } from '../lib/persistence.js';
 import {
 	waitForCondition,
 	waitForOnline,
@@ -12,23 +11,18 @@ import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
 
 const context = createTestContext({
-	// testLog: true,
-	// serverLog: true,
+	testLog: true,
 	library: 'longevity',
 });
 const log = context.log;
 
 it('maintains consistency in real world scenarios', async () => {
-	const persistenceA = getPersistence();
-	const persistenceB = getPersistence();
-
 	function createClientA(
 		schema: StorageSchema,
 		migrations: Migration[],
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
 			user: 'A',
-			persistence: persistenceA,
 			schema,
 			migrations,
 			// log: context.filterLog('A', 'a6'),
@@ -43,7 +37,6 @@ it('maintains consistency in real world scenarios', async () => {
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
 			user: 'B',
-			persistence: persistenceB,
 			schema,
 			migrations,
 			// logId: 'B',
@@ -126,8 +119,8 @@ it('maintains consistency in real world scenarios', async () => {
 	// First client comes online with new schema, migrates, syncs.
 	// Make sure they have 1) the same data, 2) all the data
 
-	clientA1.sync.start();
-	clientB1.sync.start();
+	await clientA1.sync.start();
+	await clientB1.sync.start();
 
 	log('Started clients');
 
@@ -159,7 +152,7 @@ it('maintains consistency in real world scenarios', async () => {
 	await updateItem(clientB1, 'a2');
 	log('Client B changes done');
 
-	clientB1.sync.start();
+	await clientB1.sync.start();
 	await waitForOnline(clientB1, true);
 	log('Client B online');
 
@@ -198,7 +191,7 @@ it('maintains consistency in real world scenarios', async () => {
 	];
 
 	const clientB2 = await createClientB(schemaV2, migrationsV2);
-	clientB2.sync.start();
+	await clientB2.sync.start();
 	await waitForOnline(clientB2, true);
 	log('Client B online and migrated');
 
@@ -215,7 +208,7 @@ it('maintains consistency in real world scenarios', async () => {
 
 	const clientA2 = await createClientA(schemaV2, migrationsV2);
 	log('Client A opened');
-	clientA2.sync.start();
+	await clientA2.sync.start();
 	await waitForOnline(clientA2, true);
 	log('Client A online and migrated');
 

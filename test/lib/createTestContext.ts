@@ -1,38 +1,32 @@
-import { afterAll } from 'vitest';
-import { createTestClient } from './testClient.js';
-// @ts-ignore
 import { Client, ClientWithCollections } from '@verdant-web/store';
-import { IDBFactory } from 'fake-indexeddb';
+import { afterAll } from 'vitest';
 import { testServerApi } from '../servers/testServerApi.js';
+import { createTestClient } from './testClient.js';
 
 export function createTestContext({
 	testLog,
-	library,
+	library: rawLibrary,
 }: {
 	testLog?: boolean;
 	library: string;
 }) {
-	const idbMap = new Map<string, IDBFactory>();
+	const nonce = Math.random().toString(36).slice(2, 7);
+	const library = `${rawLibrary}-${nonce}`;
 	const createClient = async (
 		config: Omit<Parameters<typeof createTestClient>[0], 'library'>,
 	) => {
-		let idb = config.indexedDb ?? idbMap.get(config.user);
-		if (!idb) {
-			idb = new IDBFactory();
-			idbMap.set(config.user, idb);
-		}
 		const client = await createTestClient({
 			server: context.server,
-			indexedDb: idb,
 			library,
 			...config,
 		});
-		// context.clients.push(client);
+		context.clients.push(client as any);
 		return client;
 	};
 	const context = {
 		library,
-		clients: [] as Client<any, any>[],
+		nonce,
+		clients: [] as (Client | ClientWithCollections)[],
 		server: testServerApi,
 		createTestClient: createClient,
 		createGenericClient: async (
@@ -57,12 +51,14 @@ export function createTestContext({
 	};
 	afterAll(async () => {
 		await Promise.allSettled(
-			context.clients.map((client) => client.close().catch(() => {})),
+			context.clients.map(async (client) => {
+				client.sync.stop();
+				await client.__dangerous__resetLocal();
+				client.close();
+			}),
 		);
 		await testServerApi.evict(library);
-	}, 20 * 1000);
-
-	(global as any).testContext = context;
+	}, 10 * 1000);
 
 	return context as Required<typeof context>;
 }

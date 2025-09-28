@@ -2,6 +2,7 @@ packages:
   - 'packages/*'
   - 'docs'
   - 'test'
+  - 'test/servers/cloudflare'
   - 'examples/**'
   - 'scaleTest'
   - 'scratchpad'

@@ -6,7 +6,12 @@ import {
 	StorageSchema,
 	VerdantError,
 } from '@verdant-web/common';
-import { FileConfig, InitialContext, QueryConfig } from '../context/context.js';
+import {
+	Context,
+	FileConfig,
+	InitialContext,
+	QueryConfig,
+} from '../context/context.js';
 import { ShutdownHandler } from '../context/ShutdownHandler.js';
 import { Time } from '../context/Time.js';
 import { FakeWeakRef } from '../FakeWeakRef.js';
@@ -64,7 +69,7 @@ export interface ClientDescriptorOptions<Presence = any, Profile = any> {
 	 * Normally these are provided by the browser, but in other
 	 * runtimes you may need to provide your own.
 	 */
-	environment?: InitialContext['environment'];
+	environment?: Partial<InitialContext['environment']>;
 
 	/**
 	 * Enables experimental WeakRef usage to cull documents
@@ -132,9 +137,12 @@ export class ClientDescriptor<
 				new HybridLogicalClockTimestampProvider(),
 				init.schema.version,
 			);
-			const environment = init.environment || defaultBrowserEnvironment;
 			const logger =
 				init.log === false ? noLogger : init.log || debugLogger('🌿');
+			const environment = {
+				...defaultBrowserEnvironment,
+				...init.environment,
+			};
 			let ctx: InitialContext = {
 				closing: false,
 				entityEvents: new EventSubscriber(),
@@ -224,12 +232,15 @@ export class ClientDescriptor<
 	};
 
 	__dangerous__resetLocal = async () => {
-		await deleteAllDatabases(this.namespace);
+		await deleteAllDatabases(this.namespace, defaultBrowserEnvironment);
 	};
 }
 
-const defaultBrowserEnvironment = {
+const defaultBrowserEnvironment: Context['environment'] = {
 	WebSocket: typeof WebSocket !== 'undefined' ? WebSocket : (undefined as any),
 	fetch: typeof window !== 'undefined' ? window.fetch.bind(window) : fetch!,
 	indexedDB: typeof indexedDB !== 'undefined' ? indexedDB : (undefined as any),
+	location:
+		typeof window !== 'undefined' ? window.location : (undefined as any),
+	history: typeof window !== 'undefined' ? window.history : (undefined as any),
 };

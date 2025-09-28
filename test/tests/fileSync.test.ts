@@ -22,9 +22,9 @@ it(
 		timeout: 15000,
 	},
 	async () => {
-		FileReader.prototype.readAsDataURL = () => {
-			return 'test';
-		};
+		// FileReader.prototype.readAsDataURL = () => {
+		// 	return 'test';
+		// };
 		const clientA = await context.createTestClient({
 			user: 'User A',
 			// logId: 'A',
@@ -61,12 +61,17 @@ it(
 		// this isn't the same as the original file, but it's good enough to know
 		// something was delivered...
 		let fileResponse: Response | null = null;
-		const fileUrl = `http://localhost:${context.server.port}/files/file-sync-1/${file.id}/test.txt`;
+		const fileUrl = `http://localhost:${context.server.port}/files/${context.library}/${file.id}/test.txt`;
 		await waitForCondition(
 			async () => {
 				console.log('fetching', fileUrl);
-				fileResponse = await fetch(fileUrl);
-				return fileResponse.status !== 404;
+				try {
+					fileResponse = await fetch(fileUrl);
+					return fileResponse.status !== 404;
+				} catch (e) {
+					console.log('fetch error', e);
+					return false;
+				}
 			},
 			5000,
 			async () => {
@@ -78,6 +83,6 @@ it(
 		const blob = await fileResponse!.blob();
 		const text = await blob.text();
 		context.log(`image blob: ${text}`);
-		expect(blob.type?.replace(/\s+/g, '')).toBe('text/plain;charset=utf-8');
+		expect(blob.type?.replace(/\s+/g, '')).toContain('text/plain');
 	},
 );

@@ -106,6 +106,8 @@ export interface Context {
 		WebSocket: typeof WebSocket;
 		fetch: typeof fetch;
 		indexedDB: typeof indexedDB;
+		location: Location;
+		history: History;
 	};
 
 	persistence: PersistenceImplementation;

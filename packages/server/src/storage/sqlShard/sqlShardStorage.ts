@@ -1,16 +1,16 @@
 import { existsSync, mkdirSync } from 'fs';
-import { Kysely } from 'kysely';
 import {
 	defaultFileExpirationDays,
 	defaultReplicaTruancyMinutes,
 } from '../../defaults.js';
+import { Logger } from '../../logger.js';
 import { Storage, StorageFactory, StorageOptions } from '../Storage.js';
 import { Databases } from './Databases.js';
 import { SqlBaselines } from './SqlBaselines.js';
 import { SqlFileMetadata } from './SqlFileMetadata.js';
 import { SqlOperations } from './SqlOperations.js';
 import { SqlReplicas } from './SqlReplicas.js';
-import { Database } from './tables.js';
+import { SqliteExecutor } from './database.js';
 
 export const sqlShardStorage = ({
 	databasesDirectory,
@@ -18,11 +18,13 @@ export const sqlShardStorage = ({
 	closeTimeout,
 	fileDeleteExpirationDays = defaultFileExpirationDays,
 	replicaTruancyMinutes = defaultReplicaTruancyMinutes,
+	log,
 }: {
 	databasesDirectory: string;
 	disableWal?: boolean;
 	closeTimeout?: number;
 	databases?: Databases;
+	log?: Logger;
 } & StorageOptions): StorageFactory => {
 	if (databasesDirectory !== ':memory:' && !existsSync(databasesDirectory)) {
 		mkdirSync(databasesDirectory);
@@ -32,6 +34,7 @@ export const sqlShardStorage = ({
 		directory: databasesDirectory,
 		disableWal,
 		closeTimeout,
+		log,
 	});
 	return async (libraryId) => {
 		const db = await dbs.get(libraryId);
@@ -55,27 +58,25 @@ export class SqlShardStorage implements Storage {
 	}
 
 	constructor(
-		private db: Kysely<Database>,
+		private db: SqliteExecutor,
 		options: Required<StorageOptions> & { libraryId: string },
 	) {
-		this.baselines = new SqlBaselines(db, options.libraryId, 'sqlite');
-		this.operations = new SqlOperations(db, options.libraryId, 'sqlite');
+		this.baselines = new SqlBaselines(db, options.libraryId);
+		this.operations = new SqlOperations(db, options.libraryId);
 		this.replicas = new SqlReplicas(
 			db,
 			options.libraryId,
 			options.replicaTruancyMinutes,
-			'sqlite',
 		);
 		this.fileMetadata = new SqlFileMetadata(
 			db,
 			options.libraryId,
 			options.fileDeleteExpirationDays,
-			'sqlite',
 		);
 	}
 
 	close = async () => {
 		this.#open = false;
-		await this.db.destroy();
+		await this.db.close();
 	};
 }

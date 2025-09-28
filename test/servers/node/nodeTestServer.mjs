@@ -11,6 +11,7 @@ import { createNodeWebsocketHandler } from '@verdant-web/server/node';
 import { sqlShardStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { rm } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -25,19 +26,19 @@ const keepDb = false;
 
 const port = await getPort();
 const app = new Hono();
+app.use(
+	cors({
+		origin: (o) => o,
+		allowHeaders: ['Content-Type', 'Authorization'],
+		allowMethods: ['GET', 'POST', 'OPTIONS', 'DELETE', 'PUT', 'PATCH'],
+		credentials: true,
+	}),
+);
 
 const { storage, databaseLocation } = shardedStorage(keepDb);
 
-const forwardLogsToIpc = (...args) => {
-	console.debug(...args);
-	if (process.send) {
-		process.send(
-			JSON.stringify({
-				type: 'log',
-				args,
-			}),
-		);
-	}
+const log = (...args) => {
+	// console.log(...args);
 };
 
 const fileDir = resolve(process.cwd(), 'test-files');
@@ -52,18 +53,18 @@ const core = createVerdant({
 			return { id: userId };
 		},
 	},
-	log: forwardLogsToIpc,
+	log,
 	fileStorage: new LocalFileStorage({
 		rootDirectory: fileDir,
 		host: `http://127.0.0.1:${port}/files`,
-		log: forwardLogsToIpc,
+		log,
 	}),
 });
 const subApp = createHonoRouter(core);
 app.use(async (c, next) => {
-	forwardLogsToIpc('➡️ ', c.req.method, c.req.path);
+	log('➡️ ', c.req.method, c.req.path);
 	await next();
-	forwardLogsToIpc('⬅️ ', c.res.status);
+	log('⬅️ ', c.res.status);
 });
 app.route('/lofi', subApp);
 
@@ -89,13 +90,13 @@ app.get('/auth/:library', async (ctx) => {
 app.get(
 	'/files/*',
 	async (ctx, next) => {
-		forwardLogsToIpc('📁', 'File request', ctx.req.path);
+		log('📁', 'File request', ctx.req.path);
 		return next();
 	},
 	serveStatic({
 		root: fileDir,
 		onNotFound: (path) => {
-			forwardLogsToIpc('🚫', 'File not found:', path);
+			log('🚫', 'File not found:', path);
 		},
 		rewriteRequestPath: (path) => path.replace('/files/', ''),
 	}),

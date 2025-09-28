@@ -1,4 +1,4 @@
-import { ReplicaType } from '@verdant-web/server';
+import { ReplicaType } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import {

@@ -1,13 +1,13 @@
-export { migrateToLatest } from '@a-type/kysely';
 export { errorHandler } from './adapters/hono/errorHandler.js';
 export { createHonoRouter } from './adapters/hono/honoRouter.js';
 export { tokenMiddleware } from './adapters/hono/tokenMiddleware.js';
 export { ClientConnectionManager } from './connections/ClientConnection.js';
 export { FileStorageLibraryDelegate } from './files/FileStorage.js';
-export { Library } from './libraries/Library.js';
+export { Library, type LibraryEvents } from './libraries/Library.js';
 export type * from './microservers/generic.js';
 export { UserProfileLoader } from './Profiles.js';
-export { default as migrations } from './storage/sqlShard/migrations.js';
+export { SqliteExecutor } from './storage/sqlShard/database.js';
+export { migrateToLatest } from './storage/sqlShard/migrations.js';
 export { SqlShardStorage } from './storage/sqlShard/sqlShardStorage.js';
 export type { Database as DatabaseTypes } from './storage/sqlShard/tables.js';
 export { TokenVerifier } from './TokenVerifier.js';

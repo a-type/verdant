@@ -6,6 +6,7 @@ import {
 	waitForEntityCondition,
 	waitForPeerCount,
 	waitForQueryResult,
+	waitForSync,
 } from '../lib/waits.js';
 
 const context = createTestContext({
@@ -59,11 +60,7 @@ it('can sync multiple clients even if they go offline', async () => {
 
 	// bring all clients online - but A must come up first to populate data.
 	clientA.sync.start();
-	await new Promise<void>((resolve) => {
-		clientA.sync.subscribe('onlineChange', (isOnline) => {
-			if (isOnline) resolve();
-		});
-	});
+	await waitForSync(clientA);
 
 	clientB.sync.start();
 	clientC.sync.start();
