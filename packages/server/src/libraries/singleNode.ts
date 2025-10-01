@@ -15,10 +15,10 @@ import {
 	FileStorageLibraryDelegate,
 } from '../files/FileStorage.js';
 import { Library } from '../internals.js';
-import { LibraryEvents } from '../libraries/Library.js';
 import { Logger } from '../logger.js';
 import { StorageFactory } from '../storage/Storage.js';
-import { GenericMicroserver, GenericMicroserverManager } from './generic.js';
+import { LibraryEvents } from './Library.js';
+import { LibraryApi } from './generic.js';
 
 export interface SingleNodeMicroserverConfig {
 	storage: StorageFactory;
@@ -32,7 +32,7 @@ export interface SingleNodeMicroserverConfig {
 
 const noop = () => {};
 
-export class SingleNodeMicroserverManager implements GenericMicroserverManager {
+export class SingleNodeLibraryManager {
 	public readonly events = new EventSubscriber<LibraryEvents>();
 	private microserverPromises: Map<string, Promise<SingleNodeMicroserver>> =
 		new Map();
@@ -88,7 +88,7 @@ export class SingleNodeMicroserverManager implements GenericMicroserverManager {
 	};
 }
 
-export class SingleNodeMicroserver implements GenericMicroserver {
+export class SingleNodeMicroserver implements LibraryApi {
 	constructor(
 		private library: Library,
 		public readonly clientConnections: ClientConnectionManager,

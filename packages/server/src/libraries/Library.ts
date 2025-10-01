@@ -44,22 +44,7 @@ export interface LibraryFileInfo {
 	libraryId: string;
 }
 
-export interface ILibrary {
-	handleMessage: (
-		message: ClientMessage,
-		clientKey: string,
-		info: TokenInfo,
-	) => Promise<void>;
-	destroy: () => Promise<void>;
-	getPresence: (userId: string) => Promise<any>;
-	getInfo: () => Promise<LibraryInfo | null>;
-	evictUser: (userId: string) => Promise<void>;
-	getDocumentSnapshot: (oid: string) => Promise<any>;
-	getFileInfo: (fileId: string) => Promise<LibraryFileInfo | null>;
-	putFileInfo: (info: FileInfo) => Promise<void>;
-}
-
-export class Library implements ILibrary {
+export class Library {
 	private storage;
 	private sender;
 	private disableRebasing: boolean;

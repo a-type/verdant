@@ -1,6 +1,6 @@
 import { FileStorage } from './files/FileStorage.js';
+import { SingleNodeLibraryManager } from './libraries/singleNode.js';
 import { Logger } from './logger.js';
-import { SingleNodeMicroserverManager } from './microservers/singleNode.js';
 import { UserProfileLoader, UserProfiles } from './Profiles.js';
 import { StorageFactory } from './storage/Storage.js';
 import { TokenVerifier } from './TokenVerifier.js';
@@ -24,7 +24,7 @@ export function createVerdant({
 }) {
 	const tokenVerifier = new TokenVerifier({ secret: tokenSecret });
 	const profiles = new UserProfileLoader(profilesSource);
-	return new SingleNodeMicroserverManager({
+	return new SingleNodeLibraryManager({
 		profiles,
 		storage,
 		tokenVerifier,

@@ -1,11 +1,11 @@
 import { ClientMessage, VerdantError } from '@verdant-web/common';
 import { Hono } from 'hono';
 import { Readable } from 'stream';
-import { SingleNodeMicroserverManager } from '../../microservers/singleNode.js';
+import { SingleNodeLibraryManager } from '../../libraries/singleNode.js';
 import { errorHandler } from './errorHandler.js';
 import { tokenMiddleware } from './tokenMiddleware.js';
 
-export function createHonoRouter(core: SingleNodeMicroserverManager) {
+export function createHonoRouter(core: SingleNodeLibraryManager) {
 	const mw = tokenMiddleware(core.tokenVerifier);
 	const app = new Hono<any>()
 		.onError(errorHandler)

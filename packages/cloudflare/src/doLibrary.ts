@@ -16,7 +16,6 @@ import {
 	FileStorageLibraryDelegate,
 	Library,
 	LibraryEvents,
-	migrateToLatest,
 	SqlShardStorage,
 	tokenMiddleware,
 	TokenVerifier,
@@ -30,7 +29,7 @@ interface SocketMeta {
 	key: string;
 }
 
-export interface VerdantObjectConfig {
+export interface DurableObjectLibraryConfig {
 	tokenSecret: string;
 	disableRebasing?: boolean;
 	fileStorage: FileStorage;
@@ -42,11 +41,11 @@ export interface VerdantObjectConfig {
 	};
 }
 
-export class VerdantObject {
+export class DurableObjectLibrary {
 	#app: Hono<any>;
 	#socketInfoCache: WeakMap<WebSocket, SocketMeta> = new WeakMap();
 	#initialized = false;
-	#config: VerdantObjectConfig;
+	#config: DurableObjectLibraryConfig;
 
 	protected clientConnections: ClientConnectionManager;
 	protected library!: Library;
@@ -54,7 +53,7 @@ export class VerdantObject {
 
 	constructor(
 		private ctx: DurableObjectState,
-		verdant: VerdantObjectConfig,
+		verdant: DurableObjectLibraryConfig,
 	) {
 		this.#config = verdant;
 
@@ -77,8 +76,6 @@ export class VerdantObject {
 				await next();
 			})
 			.use(tokenMiddleware(new TokenVerifier({ secret: verdant.tokenSecret })))
-			// TODO: do we need to check that the library ID matches
-			// the storage state here?
 			.use(async (ctx, next) => {
 				// only after authorization, migrate the database
 				await this.initialize(ctx.get('tokenInfo').libraryId);
@@ -222,9 +219,12 @@ export class VerdantObject {
 				'Library ID does not match existing storage',
 			);
 		}
+		await this.ctx.storage.put('libraryId', libraryId);
 		this.#initialized = true;
-		const db = createDurableObjectSqliteExecutor(this.ctx.storage);
-		await migrateToLatest(db, this.log);
+		const db = createDurableObjectSqliteExecutor(this.ctx.storage, {
+			log: this.log,
+		});
+		await db.migrate();
 		const storage = new SqlShardStorage(db, {
 			libraryId,
 			fileDeleteExpirationDays:
@@ -242,10 +242,9 @@ export class VerdantObject {
 				libraryId,
 				this.#config.fileStorage,
 			),
-			log: this.#config.log,
+			log: this.log,
 			presence: this.clientConnections.presence,
 		});
-		this.ctx.storage.put('libraryId', libraryId);
 	};
 	#restore = async () => {
 		if (this.#initialized) {

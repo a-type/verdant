@@ -3,6 +3,7 @@ export type { ClientMessage, ServerMessage } from '@verdant-web/common';
 export { createVerdant, type VerdantCore } from './core.js';
 export { LocalFileStorage } from './files/FileStorage.js';
 export type { FileInfo, FileStorage } from './files/FileStorage.js';
+export { type LibraryApi } from './libraries/generic.js';
 export type { UserProfiles } from './Profiles.js';
 export { TokenProvider } from './TokenProvider.js';
 export type { TokenInfo } from './TokenVerifier.js';

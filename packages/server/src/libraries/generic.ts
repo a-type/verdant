@@ -1,11 +1,7 @@
-import { LibraryFileInfo } from '../libraries/Library.js';
 import { LibraryInfo } from '../types.js';
+import { LibraryFileInfo } from './Library.js';
 
-export interface GenericMicroserverManager {
-	get(libraryId: string, env: any): Promise<GenericMicroserver>;
-}
-
-export interface GenericMicroserver {
+export interface LibraryApi {
 	getFileInfo(fileId: string): Promise<LibraryFileInfo | null>;
 	forceTruant: (replicaId: string) => Promise<void>;
 	getInfo: () => Promise<LibraryInfo | null>;

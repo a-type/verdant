@@ -1,21 +1,15 @@
 import {
 	createVerdantWorkerApp,
 	R2FileStorage,
-	VerdantObject,
+	DurableObjectLibrary as VerdantObject,
 } from '@verdant-web/cloudflare';
-import { ReplicaType, TokenProvider } from '@verdant-web/server';
-import {
-	errorHandler,
-	GenericMicroserver,
-} from '@verdant-web/server/internals';
+import { LibraryApi, ReplicaType, TokenProvider } from '@verdant-web/server';
+import { errorHandler } from '@verdant-web/server/hono';
 import { DurableObject } from 'cloudflare:workers';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-export class VerdantLibrary
-	extends DurableObject<Env>
-	implements GenericMicroserver
-{
+export class VerdantLibrary extends DurableObject<Env> implements LibraryApi {
 	private verdant: VerdantObject;
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);

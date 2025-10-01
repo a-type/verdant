@@ -9,9 +9,9 @@ import internal from 'node:stream';
 import { URL } from 'url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { TokenInfo } from '../../TokenVerifier.js';
-import { SingleNodeMicroserverManager } from '../../microservers/singleNode.js';
+import { SingleNodeLibraryManager } from '../../libraries/singleNode.js';
 
-export function createNodeWebsocketHandler(core: SingleNodeMicroserverManager) {
+export function createNodeWebsocketHandler(core: SingleNodeLibraryManager) {
 	const wss = new WebSocketServer({ noServer: true });
 	wss.on(
 		'connection',

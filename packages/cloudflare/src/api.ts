@@ -1,4 +1,8 @@
-import { tokenMiddleware, TokenVerifier } from '@verdant-web/server/internals';
+import {
+	errorHandler,
+	tokenMiddleware,
+	TokenVerifier,
+} from '@verdant-web/server/internals';
 import { Hono } from 'hono';
 import { basePath } from 'hono/route';
 
@@ -21,6 +25,7 @@ export function createVerdantWorkerApp(config: VerdantWorkerConfig) {
 	// this really just determines which library DO to route to
 	// and the DO handles the rest
 	const app = new Hono<{ Bindings: any; Variables: any }>()
+		.onError(errorHandler)
 		.use((ctx, next) => {
 			const tokenVerifier = new TokenVerifier({
 				secret: ctx.env[config.tokenSecretBindingName],

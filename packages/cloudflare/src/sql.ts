@@ -2,6 +2,7 @@ import { SqliteExecutor } from '@verdant-web/server/internals';
 
 export function createDurableObjectSqliteExecutor(
 	storage: DurableObjectStorage,
+	{ log }: { log?: (level: string, ...args: any[]) => void } = {},
 ): SqliteExecutor {
 	return new SqliteExecutor(
 		{
@@ -27,8 +28,6 @@ export function createDurableObjectSqliteExecutor(
 				storage.sql.exec(sql, ...params);
 			},
 		},
-		{
-			log: () => {},
-		},
+		{ log },
 	);
 }
