@@ -113,3 +113,5 @@ test-files
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+__screenshots__/
