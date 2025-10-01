@@ -9,7 +9,7 @@
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
-		"typescript": "^5.5.2",
+		"typescript": "catalog:",
 		"wrangler": "^4.40.1",
 		"@verdant-web/server": "workspace:*",
 		"@verdant-web/cloudflare": "workspace:*",
