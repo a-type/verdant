@@ -98,7 +98,7 @@ describe('generated client', () => {
 			},
 		});
 
-		expect(
+		await expect(
 			client.posts.put({
 				title: 'fails',
 				content: {
