@@ -4,7 +4,7 @@ import {
 	DurableObjectLibrary as VerdantObject,
 } from '@verdant-web/cloudflare';
 import { LibraryApi, ReplicaType, TokenProvider } from '@verdant-web/server';
-import { errorHandler } from '@verdant-web/server/hono';
+import { errorHandler } from '@verdant-web/server/node';
 import { DurableObject } from 'cloudflare:workers';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';

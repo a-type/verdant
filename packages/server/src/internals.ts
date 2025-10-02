@@ -1,6 +1,6 @@
-export { errorHandler } from './adapters/hono/errorHandler.js';
-export { createHonoRouter } from './adapters/hono/honoRouter.js';
-export { tokenMiddleware } from './adapters/hono/tokenMiddleware.js';
+export { errorHandler } from './adapters/node/errorHandler.js';
+export { createHttpRouter as createHonoRouter } from './adapters/node/httpRouter.js';
+export { tokenMiddleware } from './adapters/node/tokenMiddleware.js';
 export { ClientConnectionManager } from './connections/ClientConnection.js';
 export { FileStorageLibraryDelegate } from './files/FileStorage.js';
 export type * from './libraries/generic.js';

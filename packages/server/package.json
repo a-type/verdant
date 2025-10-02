@@ -26,11 +26,6 @@
 			"development": "./src/adapters/node/index.ts",
 			"import": "./dist/esm/adapters/node/index.js",
 			"types": "./dist/esm/adapters/node/index.d.ts"
-		},
-		"./hono": {
-			"development": "./src/adapters/hono/index.ts",
-			"import": "./dist/esm/adapters/hono/index.js",
-			"types": "./dist/esm/adapters/hono/index.d.ts"
 		}
 	},
 	"publishConfig": {

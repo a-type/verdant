@@ -25,7 +25,7 @@ export interface SingleNodeMicroserverConfig {
 	fileStorage?: FileStorage;
 	disableRebasing?: boolean;
 	profiles: UserProfileLoader<any>;
-	tokenVerifier: TokenVerifier;
+	tokenSecret: string;
 	log?: Logger;
 	__testMode?: boolean;
 }
@@ -36,11 +36,10 @@ export class SingleNodeLibraryManager {
 	public readonly events = new EventSubscriber<LibraryEvents>();
 	private microserverPromises: Map<string, Promise<SingleNodeMicroserver>> =
 		new Map();
+	public readonly tokenVerifier: TokenVerifier;
 
-	constructor(private ctx: SingleNodeMicroserverConfig) {}
-
-	public get tokenVerifier() {
-		return this.ctx.tokenVerifier;
+	constructor(private ctx: SingleNodeMicroserverConfig) {
+		this.tokenVerifier = new TokenVerifier({ secret: ctx.tokenSecret });
 	}
 
 	public get log() {

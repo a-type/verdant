@@ -7,17 +7,16 @@ export interface SqliteExecutor {
 	query: <O extends Record<string, any>>(
 		sql: string,
 		parameters?: readonly unknown[],
-	) => Promise<O[]>;
+	) => O[];
 	first: <O extends Record<string, any>>(
 		sql: string,
 		parameters?: readonly unknown[],
-	) => Promise<O | null>;
-	exec: (sql: string, parameters?: readonly unknown[]) => Promise<void>;
-	migrate: () => Promise<void>;
-	close: () => Promise<void>;
-	transaction: <T>(cb: (tx: SqliteExecutor) => Promise<T>) => Promise<T>;
+	) => O | null;
+	exec: (sql: string, parameters?: readonly unknown[]) => void;
+	migrate: () => void;
+	close: () => void;
+	transaction: <T>(cb: (tx: SqliteExecutor) => T) => T | Promise<T>;
 	migrated: boolean;
-	silenceTrace?: boolean;
 }
 
 export class SqliteExecutor {
@@ -26,7 +25,7 @@ export class SqliteExecutor {
 		partial: Pick<SqliteExecutor, 'query' | 'exec' | 'close'> & {
 			createTransaction: (
 				exec: SqliteExecutor,
-			) => <T>(cb: (tx: SqliteExecutor) => Promise<T>) => Promise<T>;
+			) => <T>(cb: (tx: SqliteExecutor) => T) => T | Promise<T>;
 		},
 		{ log }: { log?: Logger } = {},
 	) {
@@ -37,21 +36,21 @@ export class SqliteExecutor {
 		this.transaction = partial.createTransaction(this);
 	}
 
-	migrate = async () => {
-		await migrateToLatest(this, this.log);
+	migrate = () => {
+		return migrateToLatest(this, this.log);
 	};
-	first = async <O extends Record<string, any>>(
+	first = <O extends Record<string, any>>(
 		sql: string,
 		parameters?: readonly unknown[],
-	): Promise<O | null> => {
-		const results = await this.query<O>(sql, parameters);
+	): O | null => {
+		const results = this.query<O>(sql, parameters);
 		return results[0] ?? null;
 	};
 	migrated = false;
 }
 
-export async function openDatabase(executor: SqliteExecutor) {
-	await executor.migrate();
+export function openDatabase(executor: SqliteExecutor) {
+	executor.migrate();
 	return executor;
 }
 
@@ -77,18 +76,18 @@ export function createFilesystemExecutor(
 
 	return new SqliteExecutor(
 		{
-			query: async function (sql, parameters = []) {
+			query: function (sql, parameters = []) {
 				const stmt = internalDb.prepare(sql);
 				return stmt.all(...parameters) as any;
 			},
-			exec: async function (sql, parameters = []) {
+			exec: function (sql, parameters = []) {
 				const stmt = internalDb.prepare(sql);
 				stmt.run(...parameters);
 			},
-			close: async function () {
+			close: function () {
 				internalDb.close();
 			},
-			createTransaction: (exec) => async (cb) => {
+			createTransaction: (exec) => (cb) => {
 				const tx = internalDb.transaction(() => {
 					return cb(exec);
 				});

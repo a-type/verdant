@@ -6,5 +6,5 @@ export type { FileInfo, FileStorage } from './files/FileStorage.js';
 export { type LibraryApi } from './libraries/generic.js';
 export type { UserProfiles } from './Profiles.js';
 export { TokenProvider } from './TokenProvider.js';
-export type { TokenInfo } from './TokenVerifier.js';
+export { type TokenInfo } from './TokenVerifier.js';
 export type { LibraryInfo } from './types.js';

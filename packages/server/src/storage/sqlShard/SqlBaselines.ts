@@ -14,8 +14,11 @@ export class SqlBaselines implements BaselineStorage {
 		oid: string,
 		{ tx }: { tx?: SqliteExecutor } = {},
 	): Promise<HydratedDocumentBaseline | null> => {
+		return this.#getSync(oid, { tx });
+	};
+	#getSync = (oid: string, { tx }: { tx?: SqliteExecutor } = {}) => {
 		const db = tx ?? this.db;
-		const raw = await db.first<DocumentBaselineRow>(
+		const raw = db.first<DocumentBaselineRow>(
 			`
 					SELECT * FROM DocumentBaseline
 					WHERE oid = ?
@@ -29,7 +32,7 @@ export class SqlBaselines implements BaselineStorage {
 
 	getAll = async () => {
 		const db = this.db;
-		const raw = await db.query<DocumentBaselineRow>(
+		const raw = db.query<DocumentBaselineRow>(
 			`SELECT * FROM DocumentBaseline ORDER BY timestamp ASC`,
 		);
 
@@ -38,7 +41,7 @@ export class SqlBaselines implements BaselineStorage {
 		return raw as any;
 	};
 
-	set = async (
+	set = (
 		baseline: DocumentBaseline,
 		{
 			tx,
@@ -48,13 +51,12 @@ export class SqlBaselines implements BaselineStorage {
 	) => {
 		const db = tx ?? this.db;
 		if (!baseline.snapshot) {
-			await db.exec(`DELETE FROM DocumentBaseline WHERE oid = ?`, [
+			return db.exec(`DELETE FROM DocumentBaseline WHERE oid = ?`, [
 				baseline.oid,
 			]);
-			return;
 		}
 
-		await db.exec(
+		return db.exec(
 			`INSERT INTO DocumentBaseline (oid, snapshot, timestamp, authz) VALUES (?, ?, ?, ?)
 				ON CONFLICT(oid) DO UPDATE SET
 					snapshot = excluded.snapshot,
@@ -72,9 +74,9 @@ export class SqlBaselines implements BaselineStorage {
 
 	insertAll = async (baselines: DocumentBaseline[]) => {
 		const db = this.db;
-		await db.transaction(async (tx) => {
+		return db.transaction((tx) => {
 			for (const baseline of baselines) {
-				await this.set(baseline, { tx });
+				this.set(baseline, { tx });
 			}
 		});
 	};
@@ -93,8 +95,8 @@ export class SqlBaselines implements BaselineStorage {
 
 		const db = this.db;
 
-		await db.transaction(async (tx) => {
-			let baseline = await this.get(oid, { tx });
+		await db.transaction((tx) => {
+			let baseline = this.#getSync(oid, { tx });
 			if (!baseline) {
 				baseline = {
 					oid,
@@ -115,22 +117,20 @@ export class SqlBaselines implements BaselineStorage {
 				}
 			}
 			baseline.timestamp = operations[operations.length - 1].timestamp;
-			await this.set(baseline, { tx });
+			this.set(baseline, { tx });
 		});
 	};
 
 	deleteAll = async () => {
 		const db = this.db;
-		await db.exec('DELETE FROM DocumentBaseline;');
+		db.exec('DELETE FROM DocumentBaseline;');
 	};
 
 	getCount = async () => {
 		const db = this.db;
 		return (
-			(
-				await db.first<{ count: number }>(
-					`SELECT COUNT(*) as count FROM DocumentBaseline;`,
-				)
+			db.first<{ count: number }>(
+				`SELECT COUNT(*) as count FROM DocumentBaseline;`,
 			)?.count ?? 0
 		);
 	};

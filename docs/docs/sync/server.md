@@ -23,6 +23,8 @@ This server will store data in a SQLite database file called `verdant.sqlite` in
 To connect to your prototyping sync server, pass the following options to your Verdant client descriptor constructor (the server CLI also outputs instructions for this):
 
 ```ts
+import { cliSync } from '@verdant-web/store';
+
 const clientDesc = new ClientDescriptor({
 	namespace: 'whatever',
 	sync: cliSync('<a library id>'),
@@ -33,24 +35,36 @@ const clientDesc = new ClientDescriptor({
 
 ## A real server
 
-To start syncing in production scenarios, you must first host a server - just a few lines of code.
+To start syncing in production scenarios, you must first host a server.
 
-The server can be run standalone, or plugged into an existing HTTP server. It requires a few things to be constructed:
+> **Tip:** using Cloudflare? Verdant now supports Cloudflare via a separate [adapter](./cloudflare.md)
 
-- A path to a SQLite database to store data
+A Node server requires a few things:
+
+- A SQLite database directory to store data
 - An authorization function which it uses to determine connected client identity and library access
 - Optional: an interface implementation to provide more detailed user profile information for presence features
 
-Create a server like this:
+Verdant's Node server implementation is based on Hono, a nice little HTTP server framework. Some assembly is required.
 
 ```ts
-import { Server } from '@verdant-web/server';
-import { sqlStorage } from '@verdant-web/server/storage';
+import { createHonoRouter } from '@verdant-web/server/node';
+import { sqlShardStorage } from '@verdant-web/server/storage';
+import { LocalFileStorage, TokenProvider } from '@verdant-web/server';
 
-const server = new Server({
-	storage: sqlStorage({ databaseFile: 'verdant.sqlite' }),
-	tokenSecret: process.env.LOFI_SECRET,
-	// below fields are optional
+// for the Hono server parts
+import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+
+// the "core" is a service API for interacting with libraries.
+// you could plug this into your own HTTP or other kind of interface,
+// but further on are some Hono-based tools to help get started.
+const core = createVerdant({
+	// SQLite databases for each library are stored in this directory
+	storage: sqlShardStorage({
+		databasesDirectory: 'verdant-dbs',
+	}),
+	// implement .get to retrieve detailed profile information for sync users
 	profiles: {
 		get: async (userId: string) => {
 			// you could fetch a profile record from a database here to augment
@@ -59,25 +73,73 @@ const server = new Server({
 			return { id: userId };
 		},
 	},
-	// supposing you're using Express or another server already,
-	// you can attach Verdant to it instead of running it separately.
-	httpServer: myExistingServer,
+	// required to validate sync access tokens generated from
+	// your API
+	tokenSecret: process.env.TOKEN_SECRET,
+	// optional; enables file sync
+	fileStorage: new LocalFileStorage({
+		rootDirectory: 'verdant-files',
+		// this matches an API you must host (see below)
+		host: `http://localhost:${port}/files`,
+	}),
+	// optional logger
+	log?: (level, ...args) => console.log(level, ...args),
+})
+
+// our verdant router will be mounted to a subpath
+// and handle all HTTP sync requests
+const verdantRouter = createHttpRouter(core);
+
+// this is "your" app -- Verdant lives in it,
+// but you control the API.
+const app = new Hono()
+	.route('/verdant', verdantRouter)
+	// issue sync tokens
+	.get('/auth/:libraryId', async (ctx) => {
+		// here you authenticate your user, authorize
+		// their access to a particular library, and
+		// issue a token.
+		const library = ctx.req.param('library');
+
+		const user = // your own session / auth logic here
+
+		// remember to check that the user is allowed to sync
+		// to this library
+
+		const token = tokenProvider.getToken({
+			libraryId: library,
+			userId: user,
+			// this subpath matches the verdantRouter mount
+			syncEndpoint: `http://127.0.0.1:${port}/verdant`,
+			type,
+		});
+		return ctx.json({
+			accessToken: token,
+		});
+	})
+	// (optional) serve uploaded files
+	// if you use LocalFileStorage
+	.get('/files/*', serveStatic({
+		root: 'verdant-files',
+		rewriteRequestPath: (path) => path.replace('/files/', ''),
+	}));
+
+const server = serve({
+	fetch: app.fetch,
+	port
 });
 
-// if you did not provide your own http server, call listen to begin
-// serving requests
-server.listen(8080, () => {
-	console.log('Ready!');
+// handle websocket sync! must be done like this, not included
+// in createHttpRouter!
+const onUpgrade = createNodeWebsocketHandler(core);
+server.addListener('upgrade', onUpgrade);
+
+server.addListener('listening', () => {
+	console.info(`🌿 Verdant Server listening on http://localhost:${port}`);
 });
 ```
 
-If you want to attach to an existing HTTP server, you will also need to set up an HTTP endpoint to handle HTTP requests on the `/sync` subpath. For example, using Express:
-
-```ts
-app.use('/sync', server.handleRequest);
-```
-
-Custom HTTP server support is a little limited right now. It should support Connect/Express-like middleware.
+Now, you might think that's a lot of work. That's fair. But the pieces are purposefully a little componentized / low level to keep things adaptable. You can swap out your file storage and integrate Verdant into an existing Hono app or extend the boilerplate above with your own APIs. You also have control over where Verdant mounts, what authorization is applied to libraries, who users are, etc.
 
 ## Profiles
 
@@ -91,7 +153,7 @@ You can evict libraries when a user ends their subscription. This will free up s
 
 If the user decides to subscribe again, you don't need to do anything - whenever they sync again, the server will be sure to restore the library from their replica.
 
-To evict a library, just call `server.evictLibrary('library-id')`.
+To evict a library, just call `core.evict('library-id')`.
 
 ### Using eviction for contingency scenarios
 
@@ -99,7 +161,7 @@ Although I've done a lot of testing to try to make Verdant as consistent and rel
 
 You may reach a situation where a user reaches out about problems with sync. Maybe devices are not consistent, or changes are being reverted.
 
-The first thing to check would be that the user has the latest version of your client code. But after that, you could expose an admin-only endpoint on your server which calls `server.evictLibrary`. This may seem dangerous, but it's pretty safe! The user will need to reconnect with a device which has a good copy of their data to restore their library to the server. If they're already connected to sync when you do this, their device will reconnect and reupload automatically.
+The first thing to check would be that the user has the latest version of your client code. But after that, you could expose an admin-only endpoint on your server which calls `core.evict`. This may seem dangerous, but it's pretty safe! The user will need to reconnect with a device which has a good copy of their data to restore their library to the server. If they're already connected to sync when you do this, their device will reconnect and reupload automatically.
 
 Other replicas which may have interacted with the library will be forced to reset back to this known state, so they'll lose any offline or out-of-sync changes -- but that's kind of the point; starting back at a clean slate.
 

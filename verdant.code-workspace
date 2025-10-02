@@ -25,6 +25,10 @@
 			"path": "packages/react",
 		},
 		{
+			"name": "⌨️ Tiptap",
+			"path": "packages/tiptap",
+		},
+		{
 			"name": "🔗 Router",
 			"path": "packages/react-router",
 		},

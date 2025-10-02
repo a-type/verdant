@@ -118,7 +118,7 @@ it(
 			schema: v2Schema,
 			oldSchemas: [v1Schema, v2Schema],
 			...clientInit,
-			logId: 'A',
+			// logId: 'A',
 		});
 
 		log('📈 Version 2 client created');

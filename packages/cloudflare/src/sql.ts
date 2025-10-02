@@ -6,8 +6,8 @@ export function createDurableObjectSqliteExecutor(
 ): SqliteExecutor {
 	return new SqliteExecutor(
 		{
-			close: async () => {},
-			query: async <O extends Record<string, any>>(
+			close: () => {},
+			query: <O extends Record<string, any>>(
 				sql: string,
 				params: readonly unknown[] = [],
 			) => {
@@ -21,10 +21,10 @@ export function createDurableObjectSqliteExecutor(
 				return results;
 			},
 			createTransaction: (exec) => (cb) =>
-				storage.transaction(async () => {
+				storage.transactionSync(() => {
 					return cb(exec);
 				}),
-			exec: async (sql: string, params: readonly unknown[] = []) => {
+			exec: (sql: string, params: readonly unknown[] = []) => {
 				storage.sql.exec(sql, ...params);
 			},
 		},

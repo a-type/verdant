@@ -22,7 +22,7 @@ export class SqlReplicas implements ReplicaStorage {
 
 	get = async (replicaId: string): Promise<StoredReplicaInfo | null> => {
 		const db = this.db;
-		const row = await db.first<ReplicaInfoRow>(
+		const row = db.first<ReplicaInfoRow>(
 			`SELECT * FROM ReplicaInfo WHERE id = ?`,
 			[replicaId],
 		);
@@ -39,7 +39,7 @@ export class SqlReplicas implements ReplicaStorage {
 		const existing = await this.get(replicaId);
 		if (!existing) {
 			const db = this.db;
-			const created = await db.first<ReplicaInfoRow>(
+			const created = db.first<ReplicaInfoRow>(
 				`INSERT INTO ReplicaInfo (id, clientId, type, ackedServerOrder) VALUES (?, ?, ?, ?)
 					ON CONFLICT(id) DO NOTHING
 					RETURNING *`,
@@ -61,7 +61,7 @@ export class SqlReplicas implements ReplicaStorage {
 		if (existing.type !== info.type) {
 			const db = this.db;
 			// type should be updated if a new token changes it
-			await db.exec(`UPDATE ReplicaInfo SET type = ? WHERE id = ?`, [
+			db.exec(`UPDATE ReplicaInfo SET type = ? WHERE id = ?`, [
 				info.type,
 				replicaId,
 			]);
@@ -89,7 +89,7 @@ export class SqlReplicas implements ReplicaStorage {
 	getAll = async (
 		options?: { omitTruant: boolean } | undefined,
 	): Promise<StoredReplicaInfo[]> => {
-		const result = await this.db.query<ReplicaInfoRow>(
+		const result = this.db.query<ReplicaInfoRow>(
 			`SELECT * FROM ReplicaInfo${options?.omitTruant ? ' WHERE lastSeenWallClockTime > ?' : ''}`,
 			options?.omitTruant ? [this.truantCutoff] : [],
 		);
@@ -100,17 +100,17 @@ export class SqlReplicas implements ReplicaStorage {
 	updateLastSeen = async (replicaId: string): Promise<void> => {
 		const clockTime = Date.now();
 		const db = this.db;
-		await db.exec(
-			`UPDATE ReplicaInfo SET lastSeenWallClockTime = ? WHERE id = ?`,
-			[clockTime, replicaId],
-		);
+		db.exec(`UPDATE ReplicaInfo SET lastSeenWallClockTime = ? WHERE id = ?`, [
+			clockTime,
+			replicaId,
+		]);
 	};
 
 	updateAckedServerOrder = async (
 		replicaId: string,
 		serverOrder: number,
 	): Promise<void> => {
-		await this.db.exec(
+		this.db.exec(
 			`UPDATE ReplicaInfo SET ackedServerOrder = MAX(ackedServerOrder, ?) WHERE id = ?`,
 			[serverOrder, replicaId],
 		);
@@ -120,15 +120,15 @@ export class SqlReplicas implements ReplicaStorage {
 		replicaId: string,
 		timestamp: string,
 	): Promise<void> => {
-		await this.db.exec(
-			`UPDATE ReplicaInfo SET ackedLogicalTime = ? WHERE id = ?`,
-			[timestamp, replicaId],
-		);
+		this.db.exec(`UPDATE ReplicaInfo SET ackedLogicalTime = ? WHERE id = ?`, [
+			timestamp,
+			replicaId,
+		]);
 	};
 
 	getEarliestAckedServerOrder = async (): Promise<number> => {
 		// gets earliest acked server order of all non-truant replicas.
-		const res = await this.db.first<Pick<ReplicaInfoRow, 'ackedServerOrder'>>(
+		const res = this.db.first<Pick<ReplicaInfoRow, 'ackedServerOrder'>>(
 			`SELECT ackedServerOrder FROM ReplicaInfo WHERE lastSeenWallClockTime > ? ORDER BY ackedServerOrder ASC LIMIT 1`,
 			[this.truantCutoff],
 		);
@@ -142,7 +142,7 @@ export class SqlReplicas implements ReplicaStorage {
 		if (!timestamp) return;
 		// when acking an operation, we also set the replica's server order
 		// to that operation's server order, if it's greater.
-		await this.db.exec(
+		this.db.exec(
 			`UPDATE ReplicaInfo SET
 					ackedLogicalTime = ?,
 					ackedServerOrder = MAX(
@@ -179,16 +179,16 @@ export class SqlReplicas implements ReplicaStorage {
 		);
 	};
 	delete = async (replicaId: string): Promise<void> => {
-		await this.db.exec(`DELETE FROM ReplicaInfo WHERE id = ?`, [replicaId]);
+		this.db.exec(`DELETE FROM ReplicaInfo WHERE id = ?`, [replicaId]);
 	};
 	deleteAll = async (): Promise<void> => {
-		await this.db.exec(`DELETE FROM ReplicaInfo`, []);
+		this.db.exec(`DELETE FROM ReplicaInfo`, []);
 	};
 	deleteAllForUser = async (userId: string): Promise<void> => {
-		await this.db.exec(`DELETE FROM ReplicaInfo WHERE clientId = ?`, [userId]);
+		this.db.exec(`DELETE FROM ReplicaInfo WHERE clientId = ?`, [userId]);
 	};
 	forceTruant = async (replicaId: string): Promise<void> => {
-		await this.db.exec(
+		this.db.exec(
 			`UPDATE ReplicaInfo SET lastSeenWallClockTime = ? WHERE id = ?`,
 			[Date.now() - this.replicaTruancyMinutes * 60 * 1000 - 1, replicaId],
 		);

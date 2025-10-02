@@ -17,7 +17,7 @@ export class SqlOperations implements OperationStorage {
 
 	getAll = async (oid: string): Promise<StoredOperation[]> => {
 		const db = this.db;
-		const raw = await db.query<OperationHistoryRow>(
+		const raw = db.query<OperationHistoryRow>(
 			`SELECT * FROM OperationHistory WHERE oid = ? ORDER BY timestamp ASC`,
 			[oid],
 		);
@@ -30,7 +30,7 @@ export class SqlOperations implements OperationStorage {
 		beforeServerOrder: number,
 	): Promise<StoredOperation[]> => {
 		const db = this.db;
-		const raw = await db.query<OperationHistoryRow>(
+		const raw = db.query<OperationHistoryRow>(
 			`SELECT * FROM OperationHistory WHERE serverOrder < ? ORDER BY timestamp ASC`,
 			[beforeServerOrder],
 		);
@@ -43,7 +43,7 @@ export class SqlOperations implements OperationStorage {
 		afterServerOrder: number,
 	): Promise<StoredOperation[]> => {
 		const db = this.db;
-		const raw = await db.query<OperationHistoryRow>(
+		const raw = db.query<OperationHistoryRow>(
 			`SELECT * FROM OperationHistory WHERE serverOrder > ? ORDER BY timestamp ASC`,
 			[afterServerOrder],
 		);
@@ -54,7 +54,7 @@ export class SqlOperations implements OperationStorage {
 
 	getLatestServerOrder = async (): Promise<number> => {
 		const db = this.db;
-		const result = await db.first<Pick<OperationHistoryRow, 'serverOrder'>>(
+		const result = db.first<Pick<OperationHistoryRow, 'serverOrder'>>(
 			`SELECT serverOrder FROM OperationHistory ORDER BY serverOrder DESC LIMIT 1`,
 		);
 		if (result) {
@@ -67,10 +67,8 @@ export class SqlOperations implements OperationStorage {
 	getCount = async (): Promise<number> => {
 		const db = this.db;
 		return (
-			(
-				await db.first<{ count: number }>(
-					`SELECT COUNT(*) as count FROM OperationHistory`,
-				)
+			db.first<{ count: number }>(
+				`SELECT COUNT(*) as count FROM OperationHistory`,
 			)?.count ?? 0
 		);
 	};
@@ -82,16 +80,14 @@ export class SqlOperations implements OperationStorage {
 		const db = this.db;
 		// inserts all operations and updates server order
 		// FIXME: this whole thing is kinda sus
-		return await db.transaction(async (tx): Promise<number> => {
-			let orderResult = await tx.first<
-				Pick<OperationHistoryRow, 'serverOrder'>
-			>(
+		return db.transaction((tx): number => {
+			let orderResult = tx.first<Pick<OperationHistoryRow, 'serverOrder'>>(
 				`SELECT serverOrder FROM OperationHistory ORDER BY serverOrder DESC LIMIT 1`,
 			);
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {
 				// utilizing returned serverOrder accommodates for conflicts
-				const result = await tx.first(
+				const result = tx.first(
 					`INSERT INTO OperationHistory (oid, data, timestamp, replicaId, serverOrder, authz) VALUES (?, ?, ?, ?, ?, ?)
 						ON CONFLICT (replicaId, oid, timestamp) DO NOTHING
 						RETURNING serverOrder`,
@@ -118,13 +114,13 @@ export class SqlOperations implements OperationStorage {
 
 	deleteAll = async (): Promise<void> => {
 		const db = this.db;
-		await db.exec('DELETE FROM OperationHistory');
+		db.exec('DELETE FROM OperationHistory');
 	};
 	delete = async (operations: Operation[]): Promise<void> => {
 		const db = this.db;
-		await db.transaction(async (tx) => {
+		return db.transaction((tx) => {
 			for (const item of operations) {
-				await tx.exec(
+				tx.exec(
 					`DELETE FROM OperationHistory WHERE oid = ? AND timestamp = ?`,
 					[item.oid, item.timestamp],
 				);

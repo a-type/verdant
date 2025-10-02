@@ -43,11 +43,16 @@ export class Databases {
 		}
 		let openPromise = this.openPromises[libraryId];
 		if (!openPromise) {
-			this.openPromises[libraryId] = openDatabase(
-				createFilesystemExecutor(this.directory, libraryId, {
-					disableWal: this.disableWal,
-					log: this.log,
-				}),
+			// only a promise for potential "forward compatibility"
+			// but tbh I'm not sure a promise-based storage solution
+			// is on the horizon. SQLite is fine.
+			this.openPromises[libraryId] = Promise.resolve(
+				openDatabase(
+					createFilesystemExecutor(this.directory, libraryId, {
+						disableWal: this.disableWal,
+						log: this.log,
+					}),
+				),
 			);
 			openPromise = this.openPromises[libraryId];
 		}

@@ -1,7 +1,7 @@
 import { generateId } from '@verdant-web/common';
 import { createMiddleware } from 'hono/factory';
 import { TokenInfo, TokenVerifier } from '../../TokenVerifier.js';
-import { getRequestToken } from './getRequestToken.js';
+import { getRequestToken } from '../node/getRequestToken.js';
 
 export const tokenMiddleware = (tokenVerifier: TokenVerifier) =>
 	createMiddleware<{

@@ -21,7 +21,7 @@ async function connectAndSeedData({
 	});
 	const clientB = await createTestClient({
 		user: 'User B',
-		logId: 'B',
+		// logId: 'B',
 	});
 
 	// seed data into library

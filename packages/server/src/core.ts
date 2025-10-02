@@ -3,7 +3,6 @@ import { SingleNodeLibraryManager } from './libraries/singleNode.js';
 import { Logger } from './logger.js';
 import { UserProfileLoader, UserProfiles } from './Profiles.js';
 import { StorageFactory } from './storage/Storage.js';
-import { TokenVerifier } from './TokenVerifier.js';
 
 export function createVerdant({
 	profiles: profilesSource,
@@ -22,12 +21,11 @@ export function createVerdant({
 	log?: Logger;
 	__testMode?: boolean;
 }) {
-	const tokenVerifier = new TokenVerifier({ secret: tokenSecret });
 	const profiles = new UserProfileLoader(profilesSource);
 	return new SingleNodeLibraryManager({
 		profiles,
 		storage,
-		tokenVerifier,
+		tokenSecret,
 		disableRebasing,
 		fileStorage,
 		log,

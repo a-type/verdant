@@ -5,7 +5,7 @@ import { SingleNodeLibraryManager } from '../../libraries/singleNode.js';
 import { errorHandler } from './errorHandler.js';
 import { tokenMiddleware } from './tokenMiddleware.js';
 
-export function createHonoRouter(core: SingleNodeLibraryManager) {
+export function createHttpRouter(core: SingleNodeLibraryManager) {
 	const mw = tokenMiddleware(core.tokenVerifier);
 	const app = new Hono<any>()
 		.onError(errorHandler)

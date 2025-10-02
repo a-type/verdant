@@ -19,7 +19,7 @@ export class SqlFileMetadata implements FileMetadataStorage {
 
 	get = async (fileId: string): Promise<FileMetadata | null> => {
 		const db = this.db;
-		const row = await db.first<FileMetadataRow>(
+		const row = db.first<FileMetadataRow>(
 			`SELECT * FROM FileMetadata WHERE fileId = ?`,
 			[fileId],
 		);
@@ -29,19 +29,19 @@ export class SqlFileMetadata implements FileMetadataStorage {
 
 	getAll = async (): Promise<FileMetadata[]> => {
 		const db = this.db;
-		return (await db.query<FileMetadataRow>(`SELECT * FROM FileMetadata`)).map(
-			this.attachLibrary,
-		);
+		return db
+			.query<FileMetadataRow>(`SELECT * FROM FileMetadata`)
+			.map(this.attachLibrary);
 	};
 
 	deleteAll = async (): Promise<void> => {
 		const db = this.db;
-		await db.exec('DELETE FROM FileMetadata');
+		db.exec('DELETE FROM FileMetadata');
 	};
 
 	put = async (fileInfo: FileInfo): Promise<void> => {
 		const db = this.db;
-		await db.exec(
+		db.exec(
 			`INSERT INTO FileMetadata (fileId, name, type) VALUES (?, ?, ?)
 				ON CONFLICT(fileId) DO UPDATE SET
 					name = excluded.name,
@@ -54,24 +54,24 @@ export class SqlFileMetadata implements FileMetadataStorage {
 
 	markPendingDelete = async (fileId: string): Promise<void> => {
 		const db = this.db;
-		await db.exec(
-			`UPDATE FileMetadata SET pendingDeleteAt = ? WHERE fileId = ?`,
-			[Date.now(), fileId],
-		);
+		db.exec(`UPDATE FileMetadata SET pendingDeleteAt = ? WHERE fileId = ?`, [
+			Date.now(),
+			fileId,
+		]);
 	};
 
 	delete = async (fileId: string): Promise<void> => {
 		const db = this.db;
-		await db.exec(`DELETE FROM FileMetadata WHERE fileId = ?`, [fileId]);
+		db.exec(`DELETE FROM FileMetadata WHERE fileId = ?`, [fileId]);
 	};
 
 	getPendingDelete = async (): Promise<FileMetadata[]> => {
 		const db = this.db;
-		return (
-			await db.query<FileMetadataRow>(
+		return db
+			.query<FileMetadataRow>(
 				`SELECT * FROM FileMetadata WHERE pendingDeleteAt < ?`,
 				[Date.now() - this.deleteExpirationDays * 24 * 60 * 60 * 1000],
 			)
-		).map(this.attachLibrary);
+			.map(this.attachLibrary);
 	};
 }

@@ -147,7 +147,6 @@ describe('Library', () => {
 
 			// expect sender.broadcast for the operations, and a reply with sync response
 			expect(sender.broadcast).toHaveBeenCalledWith(
-				'library-1',
 				{
 					type: 'op-re',
 					baselines: [
@@ -188,7 +187,7 @@ describe('Library', () => {
 				['clientKey-1'],
 			);
 
-			expect(sender.respond).toHaveBeenCalledWith('library-1', 'clientKey-1', {
+			expect(sender.respond).toHaveBeenCalledWith('clientKey-1', {
 				type: 'sync-resp',
 				operations: [],
 				baselines: [],

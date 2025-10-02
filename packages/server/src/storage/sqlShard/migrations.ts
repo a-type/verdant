@@ -3,9 +3,9 @@ import { SqliteExecutor } from './database.js';
 import * as v1 from './migrations/v1.js';
 import * as v2 from './migrations/v2.js';
 
-export async function getMigrationVersion(run: SqliteExecutor['query']) {
+export function getMigrationVersion(run: SqliteExecutor['query']) {
 	try {
-		const result = await run(
+		const result = run(
 			`SELECT id FROM _Migrations
 			ORDER BY id DESC
 			LIMIT 1;`,
@@ -23,23 +23,23 @@ export async function getMigrationVersion(run: SqliteExecutor['query']) {
 	}
 }
 
-export async function updateMigrationVersion(
+export function updateMigrationVersion(
 	run: SqliteExecutor['exec'],
 	version: number,
 ) {
-	await run(`INSERT INTO _Migrations (id, appliedAt) VALUES (?, ?)`, [
+	run(`INSERT INTO _Migrations (id, appliedAt) VALUES (?, ?)`, [
 		version,
 		Date.now(),
 	]);
 }
 
-export async function migrateToLatest(
+export function migrateToLatest(
 	e: Pick<SqliteExecutor, 'exec' | 'query' | 'migrated'>,
 	log: Logger,
 ) {
 	const allMigrations = [v1, v2];
 
-	const currentVersion = await getMigrationVersion(e.query);
+	const currentVersion = getMigrationVersion(e.query);
 
 	const pendingMigrations = allMigrations.slice(currentVersion);
 	if (pendingMigrations.length === 0) {
@@ -50,7 +50,7 @@ export async function migrateToLatest(
 	for (const migration of pendingMigrations) {
 		for (const step of migration.up) {
 			try {
-				await e.exec(step);
+				e.exec(step);
 			} catch (err) {
 				log('error', `Error applying migration v${migration.version}:`, err);
 				log('error', `SQL:`, step);
@@ -60,7 +60,7 @@ export async function migrateToLatest(
 		log('info', `Applied migration v${migration.version}`);
 	}
 
-	await updateMigrationVersion(
+	updateMigrationVersion(
 		e.exec,
 		allMigrations[allMigrations.length - 1].version,
 	);

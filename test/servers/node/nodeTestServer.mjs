@@ -6,8 +6,10 @@ import {
 	ReplicaType,
 	TokenProvider,
 } from '@verdant-web/server';
-import { createHonoRouter } from '@verdant-web/server/hono';
-import { createNodeWebsocketHandler } from '@verdant-web/server/node';
+import {
+	createHttpRouter,
+	createNodeWebsocketHandler,
+} from '@verdant-web/server/node';
 import { sqlShardStorage } from '@verdant-web/server/storage';
 import getPort from 'get-port';
 import { Hono } from 'hono';
@@ -38,7 +40,7 @@ app.use(
 const { storage, databaseLocation } = shardedStorage(keepDb);
 
 const log = (...args) => {
-	// console.log(...args);
+	// console.log('🧊', ...args);
 };
 
 const fileDir = resolve(process.cwd(), 'test-files');
@@ -60,7 +62,7 @@ const core = createVerdant({
 		log,
 	}),
 });
-const subApp = createHonoRouter(core);
+const subApp = createHttpRouter(core);
 app.use(async (c, next) => {
 	log('➡️ ', c.req.method, c.req.path);
 	await next();
