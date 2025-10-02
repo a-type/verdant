@@ -48,9 +48,9 @@ A Node server requires a few things:
 Verdant's Node server implementation is based on Hono, a nice little HTTP server framework. Some assembly is required.
 
 ```ts
-import { createHonoRouter } from '@verdant-web/server/node';
+import { createHttpRouter, createNodeWebsocketHandler } from '@verdant-web/server/node';
 import { sqlShardStorage } from '@verdant-web/server/storage';
-import { LocalFileStorage, TokenProvider } from '@verdant-web/server';
+import { LocalFileStorage, TokenProvider, createVerdant } from '@verdant-web/server';
 
 // for the Hono server parts
 import { serve } from '@hono/node-server';
@@ -66,7 +66,7 @@ const core = createVerdant({
 	}),
 	// implement .get to retrieve detailed profile information for sync users
 	profiles: {
-		get: async (userId: string) => {
+		get: async (userId) => {
 			// you could fetch a profile record from a database here to augment
 			// this profile with name, image, etc.
 			// values will be cached, so don't worry too much about timing.
@@ -83,12 +83,16 @@ const core = createVerdant({
 		host: `http://localhost:${port}/files`,
 	}),
 	// optional logger
-	log?: (level, ...args) => console.log(level, ...args),
+	log: (level, ...args) => console.log(level, ...args),
 })
 
 // our verdant router will be mounted to a subpath
 // and handle all HTTP sync requests
 const verdantRouter = createHttpRouter(core);
+
+const tokenProvider = new TokenProvider({
+	secret: process.env.TOKEN_SECRET,
+});
 
 // this is "your" app -- Verdant lives in it,
 // but you control the API.
@@ -99,7 +103,7 @@ const app = new Hono()
 		// here you authenticate your user, authorize
 		// their access to a particular library, and
 		// issue a token.
-		const library = ctx.req.param('library');
+		const library = ctx.req.param('libraryId');
 
 		const user = // your own session / auth logic here
 
@@ -111,7 +115,6 @@ const app = new Hono()
 			userId: user,
 			// this subpath matches the verdantRouter mount
 			syncEndpoint: `http://127.0.0.1:${port}/verdant`,
-			type,
 		});
 		return ctx.json({
 			accessToken: token,
