@@ -26,8 +26,8 @@ jobs:
       - name: Install playwright
         run: pnpm ci:playwright:install
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
 
       - name: Run package tests
         run: pnpm ci:test:unit
