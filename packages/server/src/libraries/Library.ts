@@ -781,6 +781,7 @@ export class Library {
 		const rawReplicas = await this.storage.replicas.getAll();
 		const replicas = rawReplicas.map((r) => ({
 			id: r.id,
+			userId: r.clientId,
 			ackedLogicalTime: r.ackedLogicalTime,
 			ackedServerOrder: r.ackedServerOrder,
 			type: r.type,
