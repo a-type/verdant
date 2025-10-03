@@ -32,7 +32,7 @@ interface SocketMeta {
 export interface DurableObjectLibraryConfig {
 	tokenSecret: string;
 	disableRebasing?: boolean;
-	fileStorage: FileStorage;
+	fileStorage?: FileStorage;
 	log?: (level: string, ...args: any[]) => void;
 	profiles: UserProfiles<any>;
 	storageOptions?: {
@@ -106,6 +106,13 @@ export class DurableObjectLibrary {
 				return res;
 			})
 			.post('/files/:fileId', async (ctx) => {
+				if (!verdant.fileStorage) {
+					throw new VerdantError(
+						VerdantError.Code.InvalidRequest,
+						undefined,
+						'File storage not configured',
+					);
+				}
 				const info = ctx.get('tokenInfo');
 
 				const id = ctx.req.param('fileId');
@@ -238,10 +245,9 @@ export class DurableObjectLibrary {
 			sender: this.clientConnections,
 			events: this.events,
 			disableRebasing: this.#config.disableRebasing,
-			fileStorage: new FileStorageLibraryDelegate(
-				libraryId,
-				this.#config.fileStorage,
-			),
+			fileStorage: this.#config.fileStorage
+				? new FileStorageLibraryDelegate(libraryId, this.#config.fileStorage)
+				: undefined,
 			log: this.log,
 			presence: this.clientConnections.presence,
 		});
