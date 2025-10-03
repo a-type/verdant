@@ -2,22 +2,26 @@ packages:
   - 'packages/*'
   - 'docs'
   - 'test'
+  - 'test/servers/cloudflare'
   - 'examples/**'
   - 'scaleTest'
   - 'scratchpad'
   - 'configs'
 
 catalog:
-  better-sqlite3: ^11.8.1
-  typescript: 5.7.3
-  '@types/node': 22.13.4
-  vitest: 3.2.0
-  '@vitest/browser': 3.2.0
-  vitest-browser-react: 0.1.1
-  playwright: 1.52.0
-  react: 19.0.0
-  '@types/react': 19.0.10
-  vite: 6.1.1
-  '@vitejs/plugin-react': 4.3.4
-  react-dom: 19.0.0
-  '@types/react-dom': 19.0.4
+  better-sqlite3: ^11.10.0
+  typescript: 5.9.3
+  '@types/node': 24.6.1
+  vitest: 3.2.4
+  '@vitest/browser': 3.2.4
+  vitest-browser-react: 1.0.1
+  playwright: 1.55.1
+  react: 19.1.1
+  '@types/react': 19.1.16
+  vite: 7.1.7
+  '@vitejs/plugin-react': 5.0.4
+  react-dom: 19.1.1
+  '@types/react-dom': 19.1.9
+  kysely: 0.28.7
+  hono: ^4.9.9
+  '@hono/node-server': ^1.19.5

@@ -60,7 +60,7 @@ function lofiHandler(req: Request, res: Response) {
 
 This endpoint, wherever you choose to host it, will be supplied to the client to connect, authorize, and start syncing with your server.
 
-Although it may seem cumbersome to have a separate endpoint for auth and sync, this flexibility allows you to host your main app server separately from your Verdant sync server, or even implement advanced architectures like spinning up a new server for each library.
+Although it may seem cumbersome to have a separate endpoint for auth and sync, this flexibility allows you to host your main app server separately from your Verdant sync server, or even implement advanced architectures like hosting groups of libraries on servers in different regions, etc.
 
 ## Additional token options
 

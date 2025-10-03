@@ -1,73 +1,62 @@
 import { Operation } from '@verdant-web/common';
 import { StoredOperation } from '../../types.js';
 import { OperationStorage } from '../Storage.js';
+import { SqliteExecutor } from './database.js';
 import { OperationHistoryRow } from './tables.js';
-import { Databases } from './Databases.js';
 
 export class SqlOperations implements OperationStorage {
-	constructor(private dbs: Databases, private dialect: 'postgres' | 'sqlite') {}
+	constructor(
+		private db: SqliteExecutor,
+		private libraryId: string,
+	) {}
 
 	private hydrate = (row: OperationHistoryRow) => {
 		// avoiding extra allocation from .map by type-asserting here
 		row.data = JSON.parse(row.data);
 	};
 
-	getAll = async (
-		libraryId: string,
-		oid: string,
-	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
-		const raw = await db
-			.selectFrom('OperationHistory')
-			.where('oid', '=', oid)
-			.orderBy('timestamp', 'asc')
-			.selectAll()
-			.execute();
+	getAll = async (oid: string): Promise<StoredOperation[]> => {
+		const db = this.db;
+		const raw = db.query<OperationHistoryRow>(
+			`SELECT * FROM OperationHistory WHERE oid = ? ORDER BY timestamp ASC`,
+			[oid],
+		);
 
 		raw.forEach(this.hydrate);
 		return raw as unknown as StoredOperation[];
 	};
 
 	getBeforeServerOrder = async (
-		libraryId: string,
 		beforeServerOrder: number,
 	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
-		const raw = await db
-			.selectFrom('OperationHistory')
-			.where('serverOrder', '<', beforeServerOrder)
-			.orderBy('timestamp', 'asc')
-			.selectAll()
-			.execute();
+		const db = this.db;
+		const raw = db.query<OperationHistoryRow>(
+			`SELECT * FROM OperationHistory WHERE serverOrder < ? ORDER BY timestamp ASC`,
+			[beforeServerOrder],
+		);
 
 		raw.forEach(this.hydrate);
 		return raw as unknown as StoredOperation[];
 	};
 
 	getAfterServerOrder = async (
-		libraryId: string,
 		afterServerOrder: number,
 	): Promise<StoredOperation[]> => {
-		const db = await this.dbs.get(libraryId);
-		const raw = await db
-			.selectFrom('OperationHistory')
-			.where('serverOrder', '>', afterServerOrder)
-			.orderBy('timestamp', 'asc')
-			.selectAll()
-			.execute();
+		const db = this.db;
+		const raw = db.query<OperationHistoryRow>(
+			`SELECT * FROM OperationHistory WHERE serverOrder > ? ORDER BY timestamp ASC`,
+			[afterServerOrder],
+		);
 
 		raw.forEach(this.hydrate);
 		return raw as unknown as StoredOperation[];
 	};
 
-	getLatestServerOrder = async (libraryId: string): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
-		const result = await db
-			.selectFrom('OperationHistory')
-			.orderBy('serverOrder', 'desc')
-			.select('serverOrder')
-			.limit(1)
-			.executeTakeFirst();
+	getLatestServerOrder = async (): Promise<number> => {
+		const db = this.db;
+		const result = db.first<Pick<OperationHistoryRow, 'serverOrder'>>(
+			`SELECT serverOrder FROM OperationHistory ORDER BY serverOrder DESC LIMIT 1`,
+		);
 		if (result) {
 			return result.serverOrder;
 		}
@@ -75,51 +64,42 @@ export class SqlOperations implements OperationStorage {
 		return 0;
 	};
 
-	getCount = async (libraryId: string): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+	getCount = async (): Promise<number> => {
+		const db = this.db;
 		return (
-			(
-				await db
-					.selectFrom('OperationHistory')
-					.select(({ fn }) => fn.countAll<number>().as('count'))
-					.executeTakeFirst()
+			db.first<{ count: number }>(
+				`SELECT COUNT(*) as count FROM OperationHistory`,
 			)?.count ?? 0
 		);
 	};
 
 	insertAll = async (
-		libraryId: string,
 		replicaId: string,
 		operations: Operation[],
 	): Promise<number> => {
-		const db = await this.dbs.get(libraryId);
+		const db = this.db;
 		// inserts all operations and updates server order
 		// FIXME: this whole thing is kinda sus
-		return await db.transaction().execute(async (tx): Promise<number> => {
-			let orderResult = await tx
-				.selectFrom('OperationHistory')
-				.select('serverOrder')
-				.orderBy('serverOrder', 'desc')
-				.limit(1)
-				.executeTakeFirst();
+		return db.transaction((tx): number => {
+			let orderResult = tx.first<Pick<OperationHistoryRow, 'serverOrder'>>(
+				`SELECT serverOrder FROM OperationHistory ORDER BY serverOrder DESC LIMIT 1`,
+			);
 			let currentServerOrder = orderResult?.serverOrder ?? 0;
 			for (const item of operations) {
 				// utilizing returned serverOrder accommodates for conflicts
-				const result = await tx
-					.insertInto('OperationHistory')
-					.values({
-						oid: item.oid,
-						data: JSON.stringify(item.data),
-						timestamp: item.timestamp,
+				const result = tx.first(
+					`INSERT INTO OperationHistory (oid, data, timestamp, replicaId, serverOrder, authz) VALUES (?, ?, ?, ?, ?, ?)
+						ON CONFLICT (replicaId, oid, timestamp) DO NOTHING
+						RETURNING serverOrder`,
+					[
+						item.oid,
+						JSON.stringify(item.data),
+						item.timestamp,
 						replicaId,
-						serverOrder: currentServerOrder + 1,
-						authz: item.authz,
-					})
-					.onConflict((cb) =>
-						cb.columns(['replicaId', 'oid', 'timestamp']).doNothing(),
-					)
-					.returning('serverOrder')
-					.executeTakeFirst();
+						currentServerOrder + 1,
+						item.authz,
+					],
+				);
 				if (result) {
 					currentServerOrder = result.serverOrder;
 				} else {
@@ -132,22 +112,18 @@ export class SqlOperations implements OperationStorage {
 		});
 	};
 
-	deleteAll = async (libraryId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db.deleteFrom('OperationHistory').execute();
+	deleteAll = async (): Promise<void> => {
+		const db = this.db;
+		db.exec('DELETE FROM OperationHistory');
 	};
-	delete = async (
-		libraryId: string,
-		operations: Operation[],
-	): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db.transaction().execute(async (tx) => {
+	delete = async (operations: Operation[]): Promise<void> => {
+		const db = this.db;
+		return db.transaction((tx) => {
 			for (const item of operations) {
-				await tx
-					.deleteFrom('OperationHistory')
-					.where('oid', '=', item.oid)
-					.where('timestamp', '=', item.timestamp)
-					.execute();
+				tx.exec(
+					`DELETE FROM OperationHistory WHERE oid = ? AND timestamp = ?`,
+					[item.oid, item.timestamp],
+				);
 			}
 		});
 	};

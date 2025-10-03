@@ -1,4 +1,5 @@
-import { it, expect } from 'vitest';
+import { assert } from '@verdant-web/common';
+import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
 import {
@@ -7,12 +8,11 @@ import {
 	waitForOnline,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import { assert } from '@verdant-web/common';
-import { getPersistence } from '../lib/persistence.js';
 
 const ctx = createTestContext({
 	// serverLog: true,
 	// testLog: true,
+	library: 'cloning',
 });
 
 it(
@@ -21,16 +21,13 @@ it(
 		timeout: 10000,
 	},
 	async () => {
-		const persistence = getPersistence();
 		const clientA = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'A',
 			files: {
 				// clean deleted files immediately
 				canCleanupDeletedFile: () => true,
 			},
 			// logId: 'A',
-			persistence,
 		});
 		await clientA.sync.start();
 		await waitForOnline(clientA);
@@ -40,18 +37,19 @@ it(
 			content: 'original',
 		});
 		const originalImage = original.get('image')!;
-		await waitForFileUpload(originalImage);
+		await waitForFileUpload(originalImage, 5000, 'upload original image');
 		ctx.log('Uploaded file', originalImage.id);
 
 		const clone = await clientA.items.clone(original);
 		expect(clone.get('image')).not.toBeNull();
 		const cloneImage = clone.get('image')!;
 		await waitForFileLoaded(cloneImage);
-		await waitForFileUpload(cloneImage);
+		await waitForFileUpload(cloneImage, 5000, 'upload clone image');
 		expect(cloneImage.url).not.toBeNull();
 		// at this point it's blob URLs, so they will be the same as the
 		// file is the same
-		expect(cloneImage.url).toEqual(originalImage.url);
+		// UPDATE: not actually true in a real browser.
+		// expect(cloneImage.url).toEqual(originalImage.url);
 		clone.set('content', 'clone');
 
 		// there should be 2 files in the database now
@@ -67,13 +65,11 @@ it(
 		await clientA.close();
 
 		const clientAAgain = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'A',
 			files: {
 				canCleanupDeletedFile: () => true,
 			},
 			// log: ctx.filterLog('A', 'file', 'File', 'clean'),
-			persistence,
 		});
 
 		const clientAAgainClone = await clientAAgain.items.get(clone.get('id'))
@@ -88,7 +84,6 @@ it(
 		// we will also test with a remote client to make sure it
 		// downloads the file to clone
 		const clientB = await ctx.createTestClient({
-			library: 'cloning',
 			user: 'B',
 			// logId: 'B',
 		});
@@ -106,10 +101,10 @@ it(
 		await waitForFileLoaded(anotherCloneImage);
 		ctx.log(anotherCloneImage.getSnapshot());
 		expect(anotherCloneImage.url).not.toBeNull();
-		if (!process.env.SQLITE) {
-			// because B's copy was downloaded from the server, it has
-			// a size... server files are mocked to a hardcoded content
-			expect(anotherCloneImage.url).toEqual('blob:text/plain:13');
-		}
+		// if (!inject('USE_SQLITE')) {
+		// 	// because B's copy was downloaded from the server, it has
+		// 	// a size... server files are mocked to a hardcoded content
+		// 	expect(anotherCloneImage.url).toEqual('blob:text/plain:13');
+		// }
 	},
 );

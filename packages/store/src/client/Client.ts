@@ -240,6 +240,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		return this._queryCache;
 	}
 
+	async getReplicaId() {
+		const replica = await this.context.meta.getLocalReplica();
+		return replica.id;
+	}
+
 	/**
 	 * Batch multiple operations together to be executed in a single transaction.
 	 * The changes made will not be included in the same undo history step as
@@ -324,7 +329,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 
 	__dangerous__resetLocal = async () => {
 		this.sync.stop();
-		await deleteAllDatabases(this.namespace, indexedDB);
+		await deleteAllDatabases(this.namespace, this.context.environment);
 	};
 
 	export = async (

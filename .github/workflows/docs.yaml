@@ -24,7 +24,7 @@ jobs:
         run: pnpm install --filter docs --frozen-lockfile
 
       - name: Build website
-        run: pnpm --filter docs build
+        run: pnpm --filter docs build-docs
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus

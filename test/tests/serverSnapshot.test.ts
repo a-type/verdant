@@ -1,8 +1,6 @@
-import * as fs from 'fs';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
+import { createTestContext } from '../lib/createTestContext.js';
 import { createTestFile } from '../lib/createTestFile.js';
-import { createTestClient } from '../lib/testClient.js';
-import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForEntityCondition,
 	waitForFileUpload,
@@ -10,41 +8,21 @@ import {
 	waitForQueryResult,
 } from '../lib/waits.js';
 
-let server: ReturnType<typeof startTestServer> extends Promise<infer T>
-	? T
-	: never;
-beforeAll(async () => {
-	server = await startTestServer({ log: false, disableRebasing: true });
+const { server, library, createTestClient } = createTestContext({
+	library: 'snapshot-1',
 });
-
-afterAll(() => {
-	// delete the ./test-files directory
-	try {
-		fs.rmSync('./test-files', { recursive: true });
-	} catch (e) {
-		// ignore
-	}
-});
-
-afterAll(async () => {
-	await server.cleanup();
-}, 30 * 1000);
 
 it('the server allows retrieving a document snapshot', async () => {
-	FileReader.prototype.readAsDataURL = () => {
-		return 'test';
-	};
-
-	const library = 'snapshot-1';
+	// FileReader.prototype.readAsDataURL = () => {
+	// 	return 'test';
+	// };
 
 	const clientA = await createTestClient({
 		server,
-		library,
 		user: 'User A',
 	});
 	const clientB = await createTestClient({
 		server,
-		library,
 		user: 'User B',
 	});
 
@@ -112,7 +90,7 @@ it('the server allows retrieving a document snapshot', async () => {
 	);
 
 	// now we can get a snapshot of the document
-	const snapshot = await server.server.getDocumentSnapshot(
+	const snapshot = await server.getDocumentSnapshot(
 		library,
 		'items',
 		a_apples.get('id'),

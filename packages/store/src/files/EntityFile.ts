@@ -27,6 +27,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _fileData: FileData | null = null;
 	private _loading = true;
 	private _failed = false;
+	private _failedReason: string | undefined;
 	private _downloadRemote = false;
 	private _uploaded = false;
 	private ctx: Context;
@@ -64,6 +65,9 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	get isUploaded() {
 		return this._uploaded || this._fileData?.remote || false;
 	}
+	get error() {
+		return this._failedReason || null;
+	}
 
 	private emitChange() {
 		this.parent[CHILD_FILE_CHANGED](this);
@@ -85,8 +89,9 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.emitChange();
 	};
 
-	[MARK_FAILED] = () => {
+	[MARK_FAILED] = (reason?: string) => {
 		this._failed = true;
+		this._failedReason = reason;
 		this._loading = false;
 		this.emitChange();
 	};

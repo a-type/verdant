@@ -1,8 +1,9 @@
-import { Context } from '../../context/context.js';
+import { Context, InitialContext } from '../../context/context.js';
 import { Disposable } from '../../utils/Disposable.js';
 import {
 	createAbortableTransaction,
 	isAbortError,
+	isTransactionAborted,
 	storeRequestPromise,
 } from './util.js';
 
@@ -12,10 +13,9 @@ export class IdbService extends Disposable {
 
 	constructor(
 		protected db: IDBDatabase,
-		{ log }: { log?: Context['log'] } = {},
+		protected readonly ctx: InitialContext,
 	) {
 		super();
-		this.log = log;
 		const abortController = new AbortController();
 		const abort = abortController.abort.bind(abortController);
 		this.globalAbortController = abortController;
@@ -82,6 +82,9 @@ export class IdbService extends Disposable {
 		if (this.disposed || opts?.transaction?.error)
 			return Promise.resolve(undefined as any);
 		const tx = opts?.transaction || this.createTransaction([storeName], opts);
+		if (isTransactionAborted(tx)) {
+			return Promise.resolve(undefined as any);
+		}
 		const store = tx.objectStore(storeName);
 		const request = getRequest(store);
 		return storeRequestPromise<T>(request);
@@ -97,6 +100,9 @@ export class IdbService extends Disposable {
 		},
 	): Promise<T[]> => {
 		if (this.disposed || opts?.transaction?.error) return Promise.resolve([]);
+		if (opts?.transaction && isTransactionAborted(opts.transaction)) {
+			return Promise.resolve([]);
+		}
 		const tx = opts?.transaction || this.createTransaction([storeName], opts);
 		const store = tx.objectStore(storeName);
 		const requests = getRequests(store);
@@ -122,6 +128,9 @@ export class IdbService extends Disposable {
 		},
 	): Promise<void> => {
 		const tx = opts?.transaction || this.createTransaction([storeName], opts);
+		if (isTransactionAborted(tx)) {
+			return;
+		}
 		const store = tx.objectStore(storeName);
 		const request = getRequest(store);
 		if (Array.isArray(request)) {
@@ -191,7 +200,7 @@ export class IdbService extends Disposable {
 		this.db.close();
 		if (typeof window !== 'undefined') {
 			try {
-				window.location.reload();
+				this.ctx.environment.location.reload();
 			} catch (err) {
 				this.log?.('error', 'Failed to reload the page', err);
 			}

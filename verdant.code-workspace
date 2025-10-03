@@ -9,6 +9,10 @@
 			"path": "packages/server",
 		},
 		{
+			"name": "☁️ Cloudflare",
+			"path": "packages/cloudflare",
+		},
+		{
 			"name": "🪢 Common",
 			"path": "packages/common",
 		},
@@ -19,6 +23,10 @@
 		{
 			"name": "⚛️ React",
 			"path": "packages/react",
+		},
+		{
+			"name": "⌨️ Tiptap",
+			"path": "packages/tiptap",
 		},
 		{
 			"name": "🔗 Router",
@@ -61,6 +69,10 @@
 		},
 		{
 			"path": "examples",
+		},
+		{
+			"path": ".",
+			"name": "🏡 Root",
 		},
 	],
 	"settings": {

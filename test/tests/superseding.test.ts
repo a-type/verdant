@@ -1,17 +1,15 @@
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { waitForCondition, waitForOnline } from '../lib/waits.js';
-
-const ctx = createTestContext({
-	// test will observe total number of operations synced
-	disableRebasing: true,
-	// testLog: true,
-	// serverLog: true,
-});
+import { waitForCondition, waitForOnline, waitForSync } from '../lib/waits.js';
 
 it('overwrites superseded operations to the same key before syncing', async () => {
-	const clientA = await ctx.createTestClient({
+	const ctx = createTestContext({
+		// testLog: true,
+		// serverLog: true,
 		library: 'superseding',
+	});
+
+	const clientA = await ctx.createTestClient({
 		user: 'A',
 		// logId: 'A',
 	});
@@ -26,8 +24,22 @@ it('overwrites superseded operations to the same key before syncing', async () =
 	});
 	// the client will sync only baselines, leaving us a clean
 	// slate to observe the superseding behavior
-	clientA.sync.start();
-	await waitForOnline(clientA);
+	await clientA.sync.start();
+	await waitForSync(clientA);
+
+	// wait for the sync to complete
+	await waitForCondition(async () => {
+		return !!(await ctx.server.info(ctx.library));
+	});
+
+	// join another client and then disconnect it to force no rebasing
+	const truantClient = await ctx.createTestClient({
+		user: 'B',
+	});
+	truantClient.sync.start();
+	await waitForOnline(truantClient);
+	truantClient.sync.stop();
+	await waitForOnline(truantClient, false);
 
 	await clientA
 		.batch()
@@ -37,14 +49,10 @@ it('overwrites superseded operations to the same key before syncing', async () =
 			}
 		})
 		.commit();
-
-	// wait for the sync to complete
-	await waitForCondition(async () => {
-		return !!(await ctx.server.server.getLibraryInfo('superseding'));
-	});
+	await waitForSync(clientA);
 
 	ctx.log('checking server library');
-	let stats = await ctx.server.server.getLibraryInfo('superseding');
+	let stats = await ctx.server.info(ctx.library);
 	expect(stats?.operationsCount).toBe(1);
 
 	await clientA
@@ -61,18 +69,23 @@ it('overwrites superseded operations to the same key before syncing', async () =
 		.commit();
 
 	await waitForCondition(async () => {
-		stats = await ctx.server.server.getLibraryInfo('superseding');
+		stats = await ctx.server.info(ctx.library);
 		return stats?.operationsCount === 3;
 	});
 
-	stats = await ctx.server.server.getLibraryInfo('superseding');
+	stats = await ctx.server.info(ctx.library);
 	// +1 for write of categoryId, +1 for write of purchased
 	expect(stats?.operationsCount).toBe(3);
 });
 
 it('superseding handles list items moving around', async () => {
-	const clientA = await ctx.createTestClient({
+	const ctx = createTestContext({
 		library: 'superseding2',
+		// testLog: true,
+		// serverLog: true,
+	});
+
+	const clientA = await ctx.createTestClient({
 		user: 'A',
 	});
 

@@ -1,27 +1,25 @@
+import { authorization } from '@verdant-web/store';
 import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { waitForEntityCondition, waitForQueryResult } from '../lib/waits.js';
-import { authorization } from '@verdant-web/store';
 
 const ctx = createTestContext({
 	// serverLog: true,
+	library: 'authz',
 });
 
 it('doesnt sync authorized docs to other users', async () => {
 	const userA1 = await ctx.createTestClient({
 		user: 'A',
-		library: 'authz',
 	});
 	userA1.sync.start();
 
 	const userA2 = await ctx.createTestClient({
 		user: 'A',
-		library: 'authz',
 	});
 
 	const userB = await ctx.createTestClient({
 		user: 'B',
-		library: 'authz',
 	});
 
 	const privateItem = await userA1.items.put(
@@ -61,6 +59,8 @@ it('doesnt sync authorized docs to other users', async () => {
 	await waitForEntityCondition(
 		privateItemOnA2,
 		(e) => e.get('comments').length === 1,
+		2000,
+		'A2 sees comment',
 	);
 
 	expect(await userB.items.get(privateItem.get('id')).resolved).toBeNull();
@@ -69,13 +69,11 @@ it('doesnt sync authorized docs to other users', async () => {
 	// that new replicas don't get anythign they shouldn't
 	const userA3 = await ctx.createTestClient({
 		user: 'A',
-		library: 'authz',
 	});
 	userA3.sync.start();
 
 	const userC = await ctx.createTestClient({
 		user: 'C',
-		library: 'authz',
 	});
 	userC.sync.start();
 

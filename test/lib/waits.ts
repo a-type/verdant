@@ -20,7 +20,7 @@ export async function waitForOnline(
 	client: Client | ClientWithCollections,
 	online = true,
 ) {
-	return new Promise<void>((resolve) => {
+	return new Promise<void>((resolve, reject) => {
 		if (client.sync.isConnected === online) {
 			resolve();
 			return;
@@ -28,6 +28,13 @@ export async function waitForOnline(
 		client.sync.subscribe('onlineChange', (isOnline) => {
 			if (isOnline === online) resolve();
 		});
+		setTimeout(() => {
+			reject(
+				new Error(
+					`Timed out waiting for online=${online} (isOnline=${client.sync.isConnected})`,
+				),
+			);
+		}, 10000);
 	});
 }
 
@@ -121,7 +128,9 @@ export async function waitForQueryResult(
 	expect(predicate(query.current)).toBe(true);
 }
 
-export async function waitForEverythingToRebase(client: Client) {
+export async function waitForEverythingToRebase(
+	client: Client | ClientWithCollections,
+) {
 	await waitForCondition(
 		async () => {
 			if ((await client.stats()).meta.operationsSize.count === 0) {
@@ -219,10 +228,16 @@ export async function waitForEntityCondition<
 	});
 }
 
-export async function waitForFileUpload(file: EntityFile, timeout = 5000) {
+export async function waitForFileUpload(
+	file: EntityFile,
+	timeout = 5000,
+	debug?: string,
+) {
 	return new Promise<void>((resolve, reject) => {
 		const timer = setTimeout(() => {
-			reject(new Error('Timed out waiting for file upload' + ' ' + file.id));
+			reject(
+				new Error(debug ?? 'Timed out waiting for file upload' + ' ' + file.id),
+			);
 		}, timeout);
 		if (file.isUploaded) {
 			clearTimeout(timer);

@@ -4,87 +4,58 @@ import {
 	Ref,
 	ReplicaType,
 } from '@verdant-web/common';
+import { FileInfo } from '../files/FileStorage.js';
 import {
+	FileMetadata,
 	HydratedDocumentBaseline,
 	StoredOperation,
 	StoredReplicaInfo,
-	FileMetadata,
 } from '../types.js';
-import { FileInfo } from '../files/FileStorage.js';
 
 export interface ReplicaStorage {
 	readonly truantCutoff: number;
-	get(libraryId: string, replicaId: string): Promise<StoredReplicaInfo | null>;
+	get(replicaId: string): Promise<StoredReplicaInfo | null>;
 	getOrCreate(
-		libraryId: string,
 		replicaId: string,
 		info: { userId: string; type: ReplicaType },
 	): Promise<{
 		status: 'new' | 'existing' | 'truant';
 		replicaInfo: StoredReplicaInfo;
 	}>;
-	getAll(
-		libraryId: string,
-		options?: { omitTruant: boolean },
-	): Promise<StoredReplicaInfo[]>;
-	updateLastSeen(libraryId: string, replicaId: string): Promise<void>;
-	updateAckedServerOrder(
-		libraryId: string,
-		replicaId: string,
-		serverOrder: number,
-	): Promise<void>;
+	getAll(options?: { omitTruant: boolean }): Promise<StoredReplicaInfo[]>;
+	updateLastSeen(replicaId: string): Promise<void>;
+	updateAckedServerOrder(replicaId: string, serverOrder: number): Promise<void>;
 	updateAcknowledgedLogicalTime(
-		libraryId: string,
 		replicaId: string,
 		timestamp: string,
 	): Promise<void>;
-	getEarliestAckedServerOrder(libraryId: string): Promise<number>;
-	acknowledgeOperation(
-		libraryId: string,
-		replicaId: string,
-		timestamp: string,
-	): Promise<void>;
-	getGlobalAck(
-		libraryId: string,
-		onlineReplicaIds?: string[],
-	): Promise<string | null>;
-	delete(libraryId: string, replicaId: string): Promise<void>;
-	deleteAll(libraryId: string): Promise<void>;
-	deleteAllForUser(libraryId: string, userId: string): Promise<void>;
+	getEarliestAckedServerOrder(): Promise<number>;
+	acknowledgeOperation(replicaId: string, timestamp: string): Promise<void>;
+	getGlobalAck(onlineReplicaIds?: string[]): Promise<string | null>;
+	delete(replicaId: string): Promise<void>;
+	deleteAll(): Promise<void>;
+	deleteAllForUser(userId: string): Promise<void>;
+	forceTruant(replicaId: string): Promise<void>;
 }
 
 export interface OperationStorage {
-	getAll(libraryId: string, oid: string): Promise<StoredOperation[]>;
-	getBeforeServerOrder(
-		libraryId: string,
-		beforeServerOrder: number,
-	): Promise<StoredOperation[]>;
-	getAfterServerOrder(
-		libraryId: string,
-		afterServerOrder: number,
-	): Promise<StoredOperation[]>;
-	getLatestServerOrder(libraryId: string): Promise<number>;
-	getCount(libraryId: string): Promise<number>;
-	insertAll(
-		libraryId: string,
-		replicaId: string,
-		operations: Operation[],
-	): Promise<number>;
-	deleteAll(libraryId: string): Promise<void>;
-	delete(libraryId: string, operations: Operation[]): Promise<void>;
+	getAll(oid: string): Promise<StoredOperation[]>;
+	getBeforeServerOrder(beforeServerOrder: number): Promise<StoredOperation[]>;
+	getAfterServerOrder(afterServerOrder: number): Promise<StoredOperation[]>;
+	getLatestServerOrder(): Promise<number>;
+	getCount(): Promise<number>;
+	insertAll(replicaId: string, operations: Operation[]): Promise<number>;
+	deleteAll(): Promise<void>;
+	delete(operations: Operation[]): Promise<void>;
 }
 
 export interface BaselineStorage {
-	get(libraryId: string, oid: string): Promise<HydratedDocumentBaseline | null>;
-	getAll(libraryId: string): Promise<HydratedDocumentBaseline[]>;
-	insertAll(
-		libraryId: string,
-		baselines: DocumentBaseline<any>[],
-	): Promise<void>;
-	deleteAll(libraryId: string): Promise<void>;
-	getCount(libraryId: string): Promise<number>;
+	get(oid: string): Promise<HydratedDocumentBaseline | null>;
+	getAll(): Promise<HydratedDocumentBaseline[]>;
+	insertAll(baselines: DocumentBaseline<any>[]): Promise<void>;
+	deleteAll(): Promise<void>;
+	getCount(): Promise<number>;
 	applyOperations(
-		libraryId: string,
 		oid: string,
 		operations: StoredOperation[],
 		deletedRefs?: Ref[],
@@ -92,18 +63,18 @@ export interface BaselineStorage {
 }
 
 export interface FileMetadataStorage {
-	get(libraryId: string, fileId: string): Promise<FileMetadata | null>;
-	getAll(libraryId: string): Promise<FileMetadata[]>;
-	deleteAll(libraryId: string): Promise<void>;
-	put(libraryId: string, fileInfo: FileInfo): Promise<void>;
-	markPendingDelete(libraryId: string, fileId: string): Promise<void>;
-	delete(libraryId: string, fileId: string): Promise<void>;
-	getPendingDelete(libraryId: string): Promise<FileMetadata[]>;
+	get(fileId: string): Promise<FileMetadata | null>;
+	getAll(): Promise<FileMetadata[]>;
+	deleteAll(): Promise<void>;
+	put(fileInfo: FileInfo): Promise<void>;
+	markPendingDelete(fileId: string): Promise<void>;
+	delete(fileId: string): Promise<void>;
+	getPendingDelete(): Promise<FileMetadata[]>;
 }
 
 export interface StorageOptions {
-	replicaTruancyMinutes: number;
-	fileDeleteExpirationDays: number;
+	replicaTruancyMinutes?: number;
+	fileDeleteExpirationDays?: number;
 }
 export interface Storage {
 	replicas: ReplicaStorage;
@@ -112,7 +83,7 @@ export interface Storage {
 	fileMetadata: FileMetadataStorage;
 	close(): Promise<void>;
 	readonly open: boolean;
-	readonly ready: Promise<void>;
 }
 
-export type StorageFactory = (options: StorageOptions) => Storage;
+export type StorageFactory = (libraryId: string) => Promise<Storage>;
+export type StorageFactoryFactory = (options: StorageOptions) => StorageFactory;

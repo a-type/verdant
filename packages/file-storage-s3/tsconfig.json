@@ -2,7 +2,8 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"rootDir": "./src",
-		"outDir": "./dist/esm"
+		"outDir": "./dist/esm",
+		"lib": ["DOM", "ESNext"]
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts", "./typings"]
 }

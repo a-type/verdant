@@ -1,6 +1,5 @@
-import { ReplicaType } from '@verdant-web/server';
+import { ReplicaType } from '@verdant-web/common';
 import { expect, it, vi } from 'vitest';
-import { ClientDescriptor } from '../client/index.js';
 import { createTestContext } from '../lib/createTestContext.js';
 import {
 	waitForBaselineCount,
@@ -12,24 +11,16 @@ import {
 	waitForQueryResult,
 	waitForTime,
 } from '../lib/waits.js';
-import migrations from '../migrations/index.js';
-import schema from '../schema.js';
-import { getPersistence } from '../lib/persistence.js';
-
-const context = createTestContext({
-	// serverLog: true,
-	// testLog: true,
-});
 
 it('an offline client rebases everything', async () => {
-	const desc = new ClientDescriptor({
-		migrations,
-		namespace: 'offline_rebase',
-		oldSchemas: [schema],
-		persistence: getPersistence(),
-		// log: (...args: any[]) => console.log('[offline_rebase]', ...args),
+	const context = createTestContext({
+		// serverLog: true,
+		// testLog: true,
+		library: 'offline_rebase',
 	});
-	const client = await desc.open();
+	const client = await context.createGenericClient({
+		user: 'A1',
+	});
 
 	const produce = await client.categories.put({
 		name: 'Produce',
@@ -63,25 +54,22 @@ it('an offline client rebases everything', async () => {
 
 it('passive clients do not interfere with rebasing when offline', async () => {
 	const onClientARebase = vi.fn();
-	const clientA = await context.createTestClient({
+	const context = createTestContext({
 		library: 'rebase-passive-1',
+	});
+	const clientA = await context.createTestClient({
 		user: 'User A',
-		// logId: 'A',
 	});
 	clientA.subscribe('rebase', onClientARebase);
 	const onClientBRebase = vi.fn();
 	const clientB = await context.createTestClient({
-		library: 'rebase-passive-1',
 		user: 'User B',
-		// logId: 'B',
 	});
 	clientB.subscribe('rebase', onClientBRebase);
 	const onClientCRebase = vi.fn();
 	const clientC = await context.createTestClient({
-		library: 'rebase-passive-1',
 		user: 'User C',
 		type: ReplicaType.PassiveRealtime,
-		// logId: 'C',
 	});
 	clientC.subscribe('rebase', onClientCRebase);
 
@@ -147,15 +135,14 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 });
 
 it("server does not rebase old offline operations that haven't yet synced to online replicas", async () => {
-	const clientA = await context.createTestClient({
+	const context = createTestContext({
 		library: 'old-rebase-sync-1',
+	});
+	const clientA = await context.createTestClient({
 		user: 'A',
-		// logId: 'A',
 	});
 	const clientB = await context.createTestClient({
-		library: 'old-rebase-sync-1',
 		user: 'B',
-		// logId: 'B',
 	});
 
 	clientA.sync.start();

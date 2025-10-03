@@ -1,26 +1,19 @@
-import { Operation, StorageSchema } from '@verdant-web/common';
-import { ReplicaType } from '@verdant-web/server';
-import { afterAll, expect } from 'vitest';
-import { WebSocket } from 'ws';
+import { Operation, ReplicaType, StorageSchema } from '@verdant-web/common';
+import { expect, vi } from 'vitest';
+// import { WebSocket } from 'ws';
 import {
-	Client,
 	ClientDescriptor,
 	ClientDescriptorOptions,
-	ClientWithCollections,
 	Migration,
-	PersistenceImplementation,
 } from '../client/index.js';
-import { getPersistence } from './persistence.js';
-
-const cleanupClients: Client<any, any>[] = [];
 
 export async function createTestClient({
 	server,
 	library,
 	user,
+	nonce,
 	type = ReplicaType.Realtime,
 	logId,
-	indexedDb = new IDBFactory(),
 	migrations,
 	files,
 	transport = 'realtime',
@@ -31,14 +24,13 @@ export async function createTestClient({
 	onOperation,
 	oldSchemas,
 	disableRebasing,
-	persistence,
 }: {
 	server?: { port: number };
 	library: string;
 	user: string;
+	nonce?: string;
 	type?: ReplicaType;
 	logId?: string;
-	indexedDb?: IDBFactory;
 	migrations?: Migration<any>[];
 	files?: ClientDescriptorOptions['files'];
 	transport?: 'realtime' | 'pull';
@@ -49,12 +41,10 @@ export async function createTestClient({
 	onOperation?: (operation: Operation) => void;
 	oldSchemas?: StorageSchema[];
 	disableRebasing?: boolean;
-	persistence?: PersistenceImplementation;
 }) {
 	const desc = new ClientDescriptor({
 		migrations,
-		namespace: `${library}_${user}`,
-		persistence: persistence || getPersistence(),
+		namespace: `${library}_${user}__${nonce ?? 'no_nonce'}`,
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
@@ -77,18 +67,34 @@ export async function createTestClient({
 				: onLog
 					? (...args: any[]) =>
 							onLog(args.map((a) => JSON.stringify(a)).join('\n'))
-					: undefined),
+					: errorLog(`${library}_${user}`)),
 		files,
 		schema,
 		rebaseTimeout: 0,
 		disableRebasing,
 		EXPERIMENTAL_weakRefs: true,
-		environment: {
-			fetch,
-			WebSocket: WebSocket as any,
-			indexedDB: indexedDb,
-		},
 		oldSchemas,
+		environment: {
+			location: {
+				reload: vi.fn(() => {
+					if (log || logId) {
+						console.info('>>> reload called <<<');
+					}
+				}),
+			} as any as Location,
+			history: {
+				pushState: (_, __, url) => {
+					if (log || logId) {
+						console.info('>>> pushState called <<<', url);
+					}
+				},
+				replaceState: (_, __, url) => {
+					if (log || logId) {
+						console.info('>>> replaceState called <<<', url);
+					}
+				},
+			} as History,
+		},
 	});
 	const client = await desc.open();
 	if (onOperation) {
@@ -99,19 +105,17 @@ export async function createTestClient({
 			ConsoleColors.red,
 			`Developer Error (client: ${library}_${user})`,
 		);
-		console.error(err);
-		console.error('>>> cause >>>', err.cause, ConsoleColors.reset);
+		console.error(ConsoleColors.red, err);
+		console.error(
+			ConsoleColors.red,
+			'>>> cause >>>',
+			err.cause,
+			ConsoleColors.reset,
+		);
 		expect(err).toBe(null);
 	});
-	cleanupClients.push(client);
-	return client as any as ClientWithCollections;
+	return client;
 }
-
-afterAll(async () => {
-	for (const client of cleanupClients) {
-		await client.close();
-	}
-});
 
 enum ConsoleColors {
 	red = '\x1b[31m',
@@ -125,7 +129,7 @@ enum ConsoleColors {
 }
 function defaultLog(logId: string, level: string, ...args: any[]) {
 	if (level === 'critical') {
-		console.log(
+		console.trace(
 			logId,
 			ConsoleColors.red,
 			'🔺🔺🔺 CRITICAL',
@@ -133,10 +137,18 @@ function defaultLog(logId: string, level: string, ...args: any[]) {
 			ConsoleColors.reset,
 		);
 	} else if (level === 'error') {
-		console.log(logId, ConsoleColors.red, ...args, ConsoleColors.reset);
+		console.trace(logId, ConsoleColors.red, ...args, ConsoleColors.reset);
 	} else if (level === 'warn') {
 		console.log(logId, ConsoleColors.yellow, ...args, ConsoleColors.reset);
 	} else {
 		console.log(logId, ...args);
 	}
+}
+
+function errorLog(logId: string) {
+	return function (level: string, ...args: any[]) {
+		if (level === 'critical' || level === 'error') {
+			return defaultLog(logId, level, ...args);
+		}
+	};
 }

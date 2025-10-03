@@ -1,98 +1,77 @@
-import { Kysely } from 'kysely';
-import { FileMetadataStorage } from '../Storage.js';
-import { Database, FileMetadataRow } from './tables.js';
-import { FileMetadata } from '../../types.js';
 import { FileInfo } from '../../files/FileStorage.js';
-import { Databases } from './Databases.js';
+import { FileMetadata } from '../../types.js';
+import { FileMetadataStorage } from '../Storage.js';
+import { SqliteExecutor } from './database.js';
+import { FileMetadataRow } from './tables.js';
 
 export class SqlFileMetadata implements FileMetadataStorage {
 	constructor(
-		private dbs: Databases,
+		private db: SqliteExecutor,
+		private libraryId: string,
 		private deleteExpirationDays: number,
-		private dialect: 'postgres' | 'sqlite',
 	) {}
 
-	private attachLibrary = (libraryId: string, row: FileMetadataRow) => {
+	private attachLibrary = (row: FileMetadataRow) => {
 		if (!row) return row;
-		(row as any).libraryId = libraryId;
+		(row as any).libraryId = this.libraryId;
 		return row as FileMetadata;
 	};
 
-	get = async (
-		libraryId: string,
-		fileId: string,
-	): Promise<FileMetadata | null> => {
-		const db = await this.dbs.get(libraryId);
-		const row =
-			(await db
-				.selectFrom('FileMetadata')
-				.where('fileId', '=', fileId)
-				.selectAll()
-				.executeTakeFirst()) ?? null;
-		if (row) return this.attachLibrary(libraryId, row);
+	get = async (fileId: string): Promise<FileMetadata | null> => {
+		const db = this.db;
+		const row = db.first<FileMetadataRow>(
+			`SELECT * FROM FileMetadata WHERE fileId = ?`,
+			[fileId],
+		);
+		if (row) return this.attachLibrary(row);
 		return row;
 	};
 
-	getAll = async (libraryId: string): Promise<FileMetadata[]> => {
-		const db = await this.dbs.get(libraryId);
-		return (await db.selectFrom('FileMetadata').selectAll().execute()).map(
-			this.attachLibrary.bind(this, libraryId),
+	getAll = async (): Promise<FileMetadata[]> => {
+		const db = this.db;
+		return db
+			.query<FileMetadataRow>(`SELECT * FROM FileMetadata`)
+			.map(this.attachLibrary);
+	};
+
+	deleteAll = async (): Promise<void> => {
+		const db = this.db;
+		db.exec('DELETE FROM FileMetadata');
+	};
+
+	put = async (fileInfo: FileInfo): Promise<void> => {
+		const db = this.db;
+		db.exec(
+			`INSERT INTO FileMetadata (fileId, name, type) VALUES (?, ?, ?)
+				ON CONFLICT(fileId) DO UPDATE SET
+					name = excluded.name,
+					type = excluded.type,
+					pendingDeleteAt = NULL
+			`,
+			[fileInfo.id, fileInfo.fileName, fileInfo.type],
 		);
 	};
 
-	deleteAll = async (libraryId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db.deleteFrom('FileMetadata').execute();
+	markPendingDelete = async (fileId: string): Promise<void> => {
+		const db = this.db;
+		db.exec(`UPDATE FileMetadata SET pendingDeleteAt = ? WHERE fileId = ?`, [
+			Date.now(),
+			fileId,
+		]);
 	};
 
-	put = async (libraryId: string, fileInfo: FileInfo): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db
-			.insertInto('FileMetadata')
-			.values({
-				fileId: fileInfo.id,
-				name: fileInfo.fileName,
-				type: fileInfo.type,
-			})
-			.onConflict((cb) =>
-				cb.column('fileId').doUpdateSet({
-					name: fileInfo.fileName,
-					type: fileInfo.type,
-					pendingDeleteAt: null,
-				}),
+	delete = async (fileId: string): Promise<void> => {
+		const db = this.db;
+		db.exec(`DELETE FROM FileMetadata WHERE fileId = ?`, [fileId]);
+	};
+
+	getPendingDelete = async (): Promise<FileMetadata[]> => {
+		const db = this.db;
+		return db
+			.query<FileMetadataRow>(
+				`SELECT * FROM FileMetadata WHERE pendingDeleteAt < ?`,
+				[Date.now() - this.deleteExpirationDays * 24 * 60 * 60 * 1000],
 			)
-			.execute();
-	};
-
-	markPendingDelete = async (
-		libraryId: string,
-		fileId: string,
-	): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db
-			.updateTable('FileMetadata')
-			.set({ pendingDeleteAt: Date.now() })
-			.where('fileId', '=', fileId)
-			.execute();
-	};
-
-	delete = async (libraryId: string, fileId: string): Promise<void> => {
-		const db = await this.dbs.get(libraryId);
-		await db.deleteFrom('FileMetadata').where('fileId', '=', fileId).execute();
-	};
-
-	getPendingDelete = async (libraryId: string): Promise<FileMetadata[]> => {
-		const db = await this.dbs.get(libraryId);
-		return (
-			await db
-				.selectFrom('FileMetadata')
-				.where(
-					'pendingDeleteAt',
-					'<',
-					Date.now() - 1000 * 60 * 60 * 24 * this.deleteExpirationDays,
-				)
-				.selectAll()
-				.execute()
-		).map(this.attachLibrary.bind(this, libraryId));
+			.map(this.attachLibrary);
 	};
 }

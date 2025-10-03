@@ -4,11 +4,11 @@ import {
 	ServerMessage,
 } from '@verdant-web/common';
 import { Backoff, BackoffScheduler } from '../BackoffScheduler.js';
+import { Context } from '../context/context.js';
 import { Heartbeat } from './Heartbeat.js';
 import { PresenceManager } from './PresenceManager.js';
 import { ServerSyncEndpointProvider } from './ServerSyncEndpointProvider.js';
 import { SyncTransport, SyncTransportEvents } from './Sync.js';
-import { Context } from '../context/context.js';
 
 export class WebSocketSync
 	extends EventSubscriber<SyncTransportEvents>
@@ -34,7 +34,7 @@ export class WebSocketSync
 	private heartbeat = new Heartbeat();
 
 	private reconnectScheduler = new BackoffScheduler(
-		new Backoff(60 * 1000, 1.5),
+		new Backoff(2_000, 60_000, 1.5),
 	);
 
 	constructor({
@@ -77,7 +77,6 @@ export class WebSocketSync
 		}
 		this.ctx.log('debug', 'Sync connected');
 		this.onOnlineChange(true);
-		this.reconnectScheduler.reset();
 	};
 
 	private onOnlineChange = async (online: boolean) => {
@@ -106,6 +105,7 @@ export class WebSocketSync
 	};
 
 	private onMessage = async (event: MessageEvent) => {
+		this.reconnectScheduler.reset();
 		if (this._ignoreIncoming) {
 			this.ctx.log(
 				'warn',
@@ -116,6 +116,7 @@ export class WebSocketSync
 		}
 
 		const message = JSON.parse(event.data) as ServerMessage;
+		this.ctx.log('debug', 'Received', message.type, 'message');
 		switch (message.type) {
 			case 'sync-resp':
 				if (message.ackThisNonce) {
@@ -178,16 +179,19 @@ export class WebSocketSync
 	};
 
 	private onError = (event: Event) => {
-		this.ctx.log('error', event);
+		this.ctx.log('error', 'Sync socket error', event);
+		if (this.disposed) return;
 		this.reconnectScheduler.next();
 
 		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private onClose = (event: CloseEvent) => {
-		this.ctx.log('info', 'Sync disconnected');
+		this.ctx.log('info', 'Sync socket disconnected');
 		this.onOnlineChange(false);
-		this.onError(event);
+		if (this.disposed) return;
+		this.reconnectScheduler.next();
+		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private initializeSocket = async () => {
@@ -282,7 +286,9 @@ export class WebSocketSync
 	stop = () => {
 		this.socket?.removeEventListener('message', this.onMessage);
 		this.socket?.removeEventListener('close', this.onClose);
-		this.socket?.close();
+		if (this.socket?.readyState === WEBSOCKET_OPEN) {
+			this.socket.close();
+		}
 		this.socket = null;
 		this._status = 'paused';
 	};

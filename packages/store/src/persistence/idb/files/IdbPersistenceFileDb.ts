@@ -55,7 +55,8 @@ export class IdbPersistenceFileDb
 		const current = await this.getFileRaw(id);
 
 		if (!current) {
-			throw new Error('File is not in local database');
+			this.ctx.log('error', 'Tried to mark unknown file as uploaded', id);
+			return;
 		}
 
 		await this.run(

@@ -1,30 +1,25 @@
-import { it, expect, vitest } from 'vitest';
+import { createMigration, schema } from '@verdant-web/store';
+import { expect, it, vitest } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
 import { waitForMockCall, waitForQueryResult } from '../lib/waits.js';
 import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
-import { schema, createMigration } from '@verdant-web/store';
-import { getPersistence } from '../lib/persistence.js';
 
-const context = createTestContext();
+const context = createTestContext({
+	library: 'unapplied-1',
+});
 
 it('updates docs with unapplied operations after upgrading versions', async () => {
 	const { server, createTestClient } = context;
 
-	const persistence = getPersistence();
-
 	const clientA = await createTestClient({
 		server,
-		library: 'unapplied-1',
 		user: 'User A',
-		persistence,
 		// logId: 'A',
 	});
 	const clientB = await createTestClient({
 		server,
-		library: 'unapplied-1',
 		user: 'User B',
-		persistence,
 		// logId: 'B',
 	});
 
@@ -77,7 +72,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 
 	const clientA2 = await createTestClient({
 		server,
-		library: 'unapplied-1',
 		user: 'User A',
 		migrations: [
 			...defaultMigrations,
@@ -85,7 +79,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 			createMigration(defaultSchema, v2Schema),
 		],
 		schema: v2Schema,
-		persistence,
 	});
 
 	clientA2.sync.start();
@@ -115,7 +108,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 
 	const clientB2 = await createTestClient({
 		server,
-		library: 'unapplied-1',
 		user: 'User B',
 		migrations: [
 			...defaultMigrations,
@@ -132,7 +124,6 @@ it('updates docs with unapplied operations after upgrading versions', async () =
 			}),
 		],
 		schema: v2Schema,
-		persistence,
 	});
 
 	// B should now be able to query the changed items

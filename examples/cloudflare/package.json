@@ -1,0 +1,7 @@
+{
+	"name": "@verdant-web/cloudflare-example",
+	"dependencies": {
+		"@verdant-web/server": "workspace:",
+		"@cloudflare/workers-types": "^4.20250224.0"
+	}
+}

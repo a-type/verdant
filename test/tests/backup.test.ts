@@ -16,16 +16,15 @@ import {
 const ctx = createTestContext({
 	// testLog: true,
 	// serverLog: true,
+	library: 'backup',
 });
 
 it('can backup to file', async () => {
 	const clientA = await ctx.createTestClient({
-		library: 'backup',
 		user: 'A',
 	});
 	const onFileSaved = vi.fn();
 	const clientB = await ctx.createTestClient({
-		library: 'backup',
 		user: 'B',
 		// logId: 'B',
 	});
@@ -54,7 +53,12 @@ it('can backup to file', async () => {
 	a_oranges.set('purchased', true);
 
 	// wait for B to sync everything
-	await waitForQueryResult(clientB.items.findAll(), (r) => r.length === 4);
+	await waitForQueryResult(
+		clientB.items.findAll(),
+		(r) => r.length === 4,
+		2000,
+		'b synced',
+	);
 	const bOranges = clientB.items.get('oranges');
 	await waitForQueryResult(bOranges);
 	await waitForEntityCondition(bOranges.current!, (o) => !!o?.get('purchased'));
@@ -64,7 +68,7 @@ it('can backup to file', async () => {
 	const file = bBananas.current!.get('image')!;
 	await waitForFileLoaded(file);
 
-	await waitForMockCall(onFileSaved, 2);
+	await waitForMockCall(onFileSaved, 2, 'file saved');
 
 	ctx.log('Backing up from B');
 	const backupFile = await createClientBackup(clientB as any);
@@ -90,7 +94,6 @@ it('can backup to file', async () => {
 
 	// import into a new client
 	const clientC = await ctx.createTestClient({
-		library: 'backup',
 		user: 'C',
 		// logId: 'C',
 	});

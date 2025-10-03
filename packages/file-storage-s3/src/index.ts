@@ -1,11 +1,6 @@
-import {
-	S3Client,
-	DeleteObjectCommand,
-	PutObjectCommand,
-} from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { FileStorage, FileInfo } from '@verdant-web/server';
-import path from 'path/posix';
+import { FileInfo, FileStorage } from '@verdant-web/server';
 import { Readable } from 'stream';
 
 export class S3FileStorage implements FileStorage {
@@ -27,7 +22,7 @@ export class S3FileStorage implements FileStorage {
 				? {
 						accessKeyId: process.env.AWS_ACCESS_KEY_ID,
 						secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-				  }
+					}
 				: undefined;
 		this.s3Client = new S3Client({
 			region,

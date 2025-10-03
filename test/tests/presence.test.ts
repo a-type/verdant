@@ -1,31 +1,22 @@
-import { afterAll, beforeAll, it } from 'vitest';
-import { createTestClient } from '../lib/testClient.js';
-import { startTestServer } from '../lib/testServer.js';
+import { it } from 'vitest';
+import { createTestContext } from '../lib/createTestContext.js';
 import { waitForPeerCount, waitForPeerPresence } from '../lib/waits.js';
 
-let server: { port: number; cleanup: () => Promise<void> };
-beforeAll(async () => {
-	server = await startTestServer({ log: false });
+const { server, createTestClient } = createTestContext({
+	library: 'presence-1',
 });
-
-afterAll(async () => {
-	await server.cleanup();
-}, 30 * 1000);
 
 it('updates presence of online clients', async () => {
 	const clientA = await createTestClient({
 		server,
-		library: 'presence-1',
 		user: 'User A',
 	});
 	const clientB = await createTestClient({
 		server,
-		library: 'presence-1',
 		user: 'User B',
 	});
 	const clientC = await createTestClient({
 		server,
-		library: 'presence-1',
 		user: 'User C',
 	});
 

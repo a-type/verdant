@@ -30,7 +30,7 @@ export interface StoredReplicaInfo extends ReplicaInfo {
 	ackedServerOrder: number;
 }
 
-export type LibraryInfo<Profile = unknown> = {
+export type LibraryInfo = {
 	id: string;
 	replicas: {
 		id: string;
@@ -38,7 +38,6 @@ export type LibraryInfo<Profile = unknown> = {
 		ackedServerOrder: number;
 		type: ReplicaType;
 		truant: boolean;
-		profile: Profile;
 	}[];
 	latestServerOrder: number;
 	operationsCount: number;

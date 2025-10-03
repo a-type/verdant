@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
+import { ReadableStream } from 'stream/web';
 
 export interface FileInfo {
 	fileName: string;
@@ -18,7 +19,10 @@ export interface FileInfo {
  * even if the file is not yet uploaded, based on its metadata.
  */
 export interface FileStorage {
-	put(fileStream: Readable, data: FileInfo): Promise<void>;
+	put(
+		fileStream: Readable | ReadableStream | any,
+		data: FileInfo,
+	): Promise<void>;
 	getUrl(data: FileInfo): string | Promise<string>;
 	delete(data: FileInfo): Promise<void>;
 }
@@ -49,7 +53,7 @@ export class LocalFileStorage implements FileStorage {
 		return host;
 	};
 
-	async put(fileStream: Readable, data: FileInfo): Promise<void> {
+	async put(fileStream: any, data: FileInfo): Promise<void> {
 		this.log('debug', 'Saving file', data.id, data.fileName);
 		const filePath = this.getPath(data);
 		const containingDirectory = path.dirname(
@@ -61,6 +65,10 @@ export class LocalFileStorage implements FileStorage {
 		const location = this.getStorageLocation(data);
 		const dest = fs.createWriteStream(location);
 		this.log('info', 'File saving to', location);
+		if (fileStream instanceof ReadableStream) {
+			// @ts-ignore
+			fileStream = Readable.fromWeb(fileStream);
+		}
 		fileStream.pipe(dest);
 	}
 
@@ -99,4 +107,29 @@ export class LocalFileStorage implements FileStorage {
 	private getStorageLocation(data: FileInfo): string {
 		return path.join(this.rootDirectory, this.getPath(data));
 	}
+}
+
+export class FileStorageLibraryDelegate {
+	constructor(
+		private libraryId: string,
+		private fileStorage: FileStorage,
+	) {}
+	put = (fileStream: Readable, data: Omit<FileInfo, 'libraryId'>) => {
+		return this.fileStorage.put(fileStream, {
+			...data,
+			libraryId: this.libraryId,
+		});
+	};
+	getUrl = (data: Omit<FileInfo, 'libraryId'>) => {
+		return this.fileStorage.getUrl({
+			...data,
+			libraryId: this.libraryId,
+		});
+	};
+	delete = (data: Omit<FileInfo, 'libraryId'>) => {
+		return this.fileStorage.delete({
+			...data,
+			libraryId: this.libraryId,
+		});
+	};
 }

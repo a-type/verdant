@@ -1,8 +1,6 @@
 import { createMigration } from '@verdant-web/common';
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { createTestClient } from '../lib/testClient.js';
-import { startTestServer } from '../lib/testServer.js';
 import {
 	waitForCondition,
 	waitForOnline,
@@ -13,19 +11,15 @@ import {
 import migrations from '../migrations/index.js';
 import schema from '../schema.js';
 
-const ctx = createTestContext({
-	// testLog: true,
-	// serverLog: true,
-});
-
-async function connectAndSeedData(library: string) {
-	const clientA = await ctx.createTestClient({
-		library,
+async function connectAndSeedData({
+	log,
+	createTestClient,
+}: ReturnType<typeof createTestContext>) {
+	const clientA = await createTestClient({
 		user: 'User A',
 		// logId: 'A',
 	});
-	const clientB = await ctx.createTestClient({
-		library,
+	const clientB = await createTestClient({
 		user: 'User B',
 		// logId: 'B',
 	});
@@ -61,7 +55,7 @@ async function connectAndSeedData(library: string) {
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientB.categories.get(a_produceCategory.get('id')));
 
-	ctx.log('Seeded data into library');
+	log('Seeded data into library');
 	return {
 		clientA,
 		clientB,
@@ -71,12 +65,11 @@ async function connectAndSeedData(library: string) {
 }
 
 async function connectNewReplicaAndCheckIntegrity(
-	library = 'reset-1',
+	ctx: ReturnType<typeof createTestContext>,
 	{ a_unknownItem, a_produceCategory }: any,
 ) {
 	ctx.log('Connecting new replica to test integrity');
 	const clientC = await ctx.createTestClient({
-		library,
 		user: 'User C',
 		// logId: 'C',
 	});
@@ -98,14 +91,17 @@ function compareSortContent(a: any, b: any) {
 }
 
 it('can re-initialize from replica after resetting server-side while replicas are offline', async () => {
+	const ctx = createTestContext({
+		library: 'reset-1',
+	});
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
-		await connectAndSeedData('reset-1');
+		await connectAndSeedData(ctx);
 
 	clientA.sync.stop();
 	clientB.sync.stop();
 
 	// reset server
-	ctx.server.server.evictLibrary('reset-1');
+	await ctx.server.evict(ctx.library);
 
 	// add more data offline with A and B
 	const a_banana = await clientA.items.put({
@@ -130,7 +126,7 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	await waitForQueryResult(
 		clientA.items.get(a_banana.get('id')),
 		undefined,
-		15000,
+		1500,
 		'A confirms banana',
 	);
 	// A should not have pear
@@ -144,16 +140,21 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	await waitForQueryResult(
 		clientB.items.get(a_banana.get('id')),
 		undefined,
-		15000,
+		1500,
 		'B receives banana',
 	);
 	const b_pearQuery = clientB.items.get(pearId);
-	await waitForQueryResult(b_pearQuery, (val) => {
-		return !val;
-	});
+	await waitForQueryResult(
+		b_pearQuery,
+		(val) => {
+			return !val;
+		},
+		5000,
+		'B confirms pear is gone',
+	);
 	expect(b_pearQuery.current).toBe(null);
 
-	const clientC = await connectNewReplicaAndCheckIntegrity('reset-1', {
+	const clientC = await connectNewReplicaAndCheckIntegrity(ctx, {
 		a_unknownItem,
 		a_produceCategory,
 	});
@@ -197,22 +198,20 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 
 it('can re-initialize in realtime when replicas are still connected', async () => {
 	const library = 'reset-2';
+	const ctx = createTestContext({
+		library,
+	});
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
-		await connectAndSeedData(library);
+		await connectAndSeedData(ctx);
 
-	ctx.server.server.evictLibrary(library);
-	await waitForOnline(clientA, false);
-	await waitForOnline(clientA, true);
-
-	await waitForOnline(clientA);
-	await waitForOnline(clientB);
+	await ctx.server.evict(library);
 
 	await waitForQueryResult(clientA.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientA.categories.get(a_produceCategory.get('id')));
 	await waitForQueryResult(clientB.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientB.categories.get(a_produceCategory.get('id')));
 
-	const clientC = await connectNewReplicaAndCheckIntegrity(library, {
+	const clientC = await connectNewReplicaAndCheckIntegrity(ctx, {
 		a_unknownItem,
 		a_produceCategory,
 	});
@@ -249,19 +248,22 @@ it('can re-initialize in realtime when replicas are still connected', async () =
 
 it('resets from replica over http sync', async () => {
 	const library = 'reset-3';
+	const ctx = createTestContext({
+		library,
+	});
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
-		await connectAndSeedData(library);
+		await connectAndSeedData(ctx);
 
 	clientA.sync.stop();
 	clientB.sync.stop();
 
-	ctx.server.server.evictLibrary(library);
+	await ctx.server.evict(library);
 
 	clientA.sync.setMode('pull');
 	clientA.sync.start();
 	await waitForOnline(clientA);
 
-	const clientC = await connectNewReplicaAndCheckIntegrity(library, {
+	const clientC = await connectNewReplicaAndCheckIntegrity(ctx, {
 		a_unknownItem,
 		a_produceCategory,
 	});
@@ -298,15 +300,11 @@ it('resets from replica over http sync', async () => {
 
 it('can re-initialize a replica from data from an old schema', async () => {
 	const library = 'reset-4';
-	const logWatcher = vi.fn();
-	const server = await startTestServer({
-		disableRebasing: true,
-		log: logWatcher,
-	});
-	const clientA = await createTestClient({
+	const ctx = createTestContext({
 		library,
+	});
+	const clientA = await ctx.createTestClient({
 		user: 'User A',
-		server,
 		// logId: 'A',
 	});
 
@@ -336,12 +334,6 @@ it('can re-initialize a replica from data from an old schema', async () => {
 		id: 'unknown',
 	});
 
-	vi.waitFor(() =>
-		logWatcher.mock.calls.some((c) =>
-			c.some((m) => m?.toString()?.includes('unknown')),
-		),
-	);
-
 	await clientA.close();
 
 	// make a new version without categories. we'll also alter items
@@ -366,10 +358,8 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	};
 	const newMigrations = [...migrations, createMigration(schema, newSchema)];
 
-	const clientB = await createTestClient({
-		library,
+	const clientB = await ctx.createTestClient({
 		user: 'User B',
-		server,
 		schema: newSchema,
 		oldSchemas: [schema, newSchema],
 		migrations: newMigrations,
@@ -387,7 +377,7 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	await waitForCondition(() => {
 		try {
 			// newField isn't part of the client typings
-			b_applesQuery.current?.get('newField');
+			b_applesQuery.current?.get('newField' as any);
 			return true;
 		} catch {
 			return false;

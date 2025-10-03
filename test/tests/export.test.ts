@@ -1,46 +1,18 @@
-import {
-	ClientWithCollections,
-	createMigration,
-	Migration,
-	schema,
-} from '@verdant-web/store';
-import { expect, it, vi, vitest } from 'vitest';
+import { createMigration, Migration, schema } from '@verdant-web/store';
+import { expect, inject, it, vi, vitest } from 'vitest';
+import { createTestContext } from '../lib/createTestContext.js';
+import { createTestFile } from '../lib/createTestFile.js';
 import {
 	waitForFileLoaded,
 	waitForMockCall,
 	waitForQueryResult,
 } from '../lib/waits.js';
-import { createTestFile } from '../lib/createTestFile.js';
-import { createTestClient } from '../lib/testClient.js';
 
-async function createClient({
-	schema,
-	migrations,
-	server,
-	library,
-	user,
-	logId,
-	oldSchemas,
-}: {
-	schema: any;
-	migrations: Migration<any>[];
-	server?: { port: number };
-	library: string;
-	user: string;
-	logId?: string;
-	oldSchemas: any[];
-}): Promise<ClientWithCollections> {
-	const client = await createTestClient({
-		schema,
-		migrations,
-		library,
-		user,
-		server,
-		logId,
-		oldSchemas,
-	});
-	return client as any;
-}
+const USE_SQLITE = inject('USE_SQLITE');
+
+const { createGenericClient: createClient } = createTestContext({
+	library: 'export-1',
+});
 
 it('can export data and import it even after a schema migration', async () => {
 	const v1Item = schema.collection({
@@ -64,7 +36,6 @@ it('can export data and import it even after a schema migration', async () => {
 
 	const clientInit = {
 		migrations,
-		library: 'test',
 		user: 'a',
 		// logId: 'A',
 	};
@@ -158,6 +129,7 @@ it('can export data and import it even after a schema migration', async () => {
 		schema: v2Schema,
 		oldSchemas: [v1Schema, v2Schema],
 		...clientInit,
+		user: 'new_user',
 		// logId: 'client2',
 	});
 
@@ -180,7 +152,7 @@ it('can export data and import it even after a schema migration', async () => {
 	// make some queries to see how they fare
 	const itemsQuery = client.items.findAll();
 	const itemsSubscriber = vitest.fn();
-	itemsQuery.subscribe(itemsSubscriber);
+	itemsQuery.subscribe('change', itemsSubscriber);
 
 	await waitForQueryResult(
 		itemsQuery,
@@ -233,11 +205,11 @@ it('can export data and import it even after a schema migration', async () => {
 			contents: 'world',
 			file: {
 				id: expect.any(String),
-				url: process.env.SQLITE ? expect.any(String) : 'blob:text/plain:6',
+				url: expect.any(String),
 				name: 'test.txt',
 				type: 'text/plain',
 				remote: false,
-				file: process.env.SQLITE ? undefined : expect.any(Blob),
+				file: USE_SQLITE ? undefined : expect.any(Blob),
 			},
 			id: '2',
 			tags: ['a', 'b', 'c'],
@@ -247,11 +219,11 @@ it('can export data and import it even after a schema migration', async () => {
 			contents: 'foo',
 			file: {
 				id: expect.any(String),
-				url: process.env.SQLITE ? expect.any(String) : 'blob:text/plain:23',
+				url: expect.any(String),
 				name: 'test.txt',
 				remote: false,
 				type: 'text/plain',
-				file: process.env.SQLITE ? undefined : expect.any(Blob),
+				file: USE_SQLITE ? undefined : expect.any(Blob),
 			},
 			id: '3',
 			tags: ['a', 'b'],

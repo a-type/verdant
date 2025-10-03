@@ -1,23 +1,28 @@
-import { Kysely } from 'kysely';
-import { openDatabase } from './database.js';
-import { Database as DatabaseTypes } from './tables.js';
-import { mkdirSync, existsSync } from 'fs';
 import { assert } from '@verdant-web/common';
+import { existsSync, mkdirSync } from 'fs';
+import { Logger } from '../../logger.js';
+import {
+	createFilesystemExecutor,
+	openDatabase,
+	SqliteExecutor,
+} from './database.js';
 
 export class Databases {
-	private openPromises: Record<string, Promise<Kysely<DatabaseTypes>>> = {};
-	private cache: Record<string, Kysely<DatabaseTypes>> = {};
+	private openPromises: Record<string, Promise<SqliteExecutor>> = {};
+	private cache: Record<string, SqliteExecutor> = {};
 	private closeTimeouts: Record<string, NodeJS.Timeout> = {};
 	private openedPreviously: Record<string, boolean> = {};
 	private directory;
 	private closeTimeout;
 	private disableWal = false;
-	private closed = new WeakMap<Kysely<DatabaseTypes>, boolean>();
+	private closed = new WeakMap<SqliteExecutor, boolean>();
+	private log: Logger;
 
 	constructor(config: {
 		directory: string;
 		closeTimeout?: number;
 		disableWal?: boolean;
+		log?: Logger;
 	}) {
 		this.directory = config.directory;
 		this.closeTimeout = config.closeTimeout ?? 1000 * 60 * 60;
@@ -25,9 +30,10 @@ export class Databases {
 		if (this.directory !== ':memory:' && !existsSync(this.directory)) {
 			mkdirSync(this.directory, { recursive: true });
 		}
+		this.log = config.log ?? (() => {});
 	}
 
-	get = async (libraryId: string): Promise<Kysely<DatabaseTypes>> => {
+	get = async (libraryId: string): Promise<SqliteExecutor> => {
 		let db = this.cache[libraryId];
 		if (db) {
 			if (!this.closed.get(db)) {
@@ -37,10 +43,17 @@ export class Databases {
 		}
 		let openPromise = this.openPromises[libraryId];
 		if (!openPromise) {
-			this.openPromises[libraryId] = openDatabase(this.directory, libraryId, {
-				skipMigrations: this.openedPreviously[libraryId],
-				disableWal: this.disableWal,
-			});
+			// only a promise for potential "forward compatibility"
+			// but tbh I'm not sure a promise-based storage solution
+			// is on the horizon. SQLite is fine.
+			this.openPromises[libraryId] = Promise.resolve(
+				openDatabase(
+					createFilesystemExecutor(this.directory, libraryId, {
+						disableWal: this.disableWal,
+						log: this.log,
+					}),
+				),
+			);
 			openPromise = this.openPromises[libraryId];
 		}
 		db = await openPromise;
@@ -68,7 +81,7 @@ export class Databases {
 		if (db) {
 			this.closed.set(db, true);
 			delete this.cache[libraryId];
-			db.destroy();
+			db.close();
 		}
 	};
 

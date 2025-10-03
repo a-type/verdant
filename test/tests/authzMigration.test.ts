@@ -1,53 +1,18 @@
 import { createMigration, Migration, schema } from '@verdant-web/common';
-import {
-	authorization,
-	ClientWithCollections,
-	PersistenceImplementation,
-} from '@verdant-web/store';
+import { authorization } from '@verdant-web/store';
 import { expect, it } from 'vitest';
-import { startTestServer } from '../lib/testServer.js';
+import { createTestContext } from '../lib/createTestContext.js';
 import { waitForQueryResult } from '../lib/waits.js';
-import { createTestClient } from '../lib/testClient.js';
-import { getPersistence } from '../lib/persistence.js';
 
-async function createClient({
-	schema,
-	migrations,
+const {
 	server,
+	createGenericClient: createClient,
 	library,
-	user,
-	logId,
-	disableRebasing,
-	oldSchemas,
-	persistence,
-}: {
-	schema: any;
-	migrations: Migration<any>[];
-	server?: { port: number };
-	library: string;
-	user: string;
-	logId?: string;
-	disableRebasing?: boolean;
-	oldSchemas: any[];
-	persistence?: PersistenceImplementation;
-}): Promise<ClientWithCollections> {
-	const client = await createTestClient({
-		schema,
-		migrations,
-		library,
-		user,
-		server,
-		logId,
-		disableRebasing,
-		oldSchemas,
-		persistence,
-	});
-	return client as any as ClientWithCollections;
-}
+} = createTestContext({
+	library: 'authz-migration',
+});
 
 it('does not expose private documents when migrating', async () => {
-	const server = await startTestServer();
-
 	const v1Item = schema.collection({
 		name: 'item',
 		primaryKey: 'id',
@@ -78,9 +43,8 @@ it('does not expose private documents when migrating', async () => {
 
 	const clientInit = {
 		migrations,
-		library: 'test',
+		library,
 		user: 'a',
-		persistence: getPersistence(),
 	};
 
 	let client = await createClient({

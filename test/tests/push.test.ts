@@ -1,17 +1,16 @@
+import { assert } from '@a-type/utils';
+import { ReplicaType } from '@verdant-web/common';
 import { expect, it, vitest } from 'vitest';
 import { createTestContext } from '../lib/createTestContext.js';
-import { ReplicaType } from '@verdant-web/server';
 import {
 	waitForCondition,
 	waitForQueryResult,
 	waitForSync,
 } from '../lib/waits.js';
-import { assert } from '@a-type/utils';
 
 const context = createTestContext({
-	// serverLog: true,
+	library: 'push-sync',
 	// testLog: true,
-	// keepDb: true,
 });
 
 it("doesn't receive back its own ops after pushing them", async () => {
@@ -19,16 +18,13 @@ it("doesn't receive back its own ops after pushing them", async () => {
 		// console.log('[A]', ...args);
 	});
 	const client = await context.createTestClient({
-		library: 'push-test',
 		user: 'User A',
 		type: ReplicaType.Push,
 		// this behavior only seems to happen with pull sync
 		transport: 'pull',
 		onLog: logWatcher,
-		// logId: 'A',
 	});
 	const clientB = await context.createTestClient({
-		library: 'push-test',
 		user: 'User B',
 		// logId: 'B',
 	});

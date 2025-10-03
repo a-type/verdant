@@ -4,6 +4,10 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 export class TokenVerifier {
 	constructor(private config: { secret: string }) {}
 
+	get secret() {
+		return this.config.secret;
+	}
+
 	verifyToken = (token: string): TokenInfo => {
 		try {
 			const decoded = jwt.verify(token, this.config.secret, {

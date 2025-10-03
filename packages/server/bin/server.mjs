@@ -1,15 +1,20 @@
 #!/usr/bin/env node
-import { createReadStream } from 'fs';
-import { createServer } from 'http';
+import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import minimist from 'minimist';
-import { parse, URLSearchParams } from 'url';
 import {
+	createHttpRouter,
+	createNodeWebsocketHandler,
+} from '../dist/esm/adapters/node/index.js';
+import {
+	createVerdant,
 	LocalFileStorage,
 	ReplicaType,
-	Server,
 	TokenProvider,
 } from '../dist/esm/index.js';
-import { sqlStorage } from '../dist/esm/storage/index.js';
+import { sqlShardStorage } from '../dist/esm/storage/index.js';
 
 const argv = minimist(process.argv.slice(1));
 
@@ -17,119 +22,117 @@ const PORT = argv.port || argv.p || process.env.VERDANT_PORT || 3242;
 const SECRET =
 	argv.secret || process.env.VERDANT_SECRET || 'notsecretnotsecretnotsecret';
 
-const tokenProvider = new TokenProvider({ secret: SECRET });
+const tokenProvider = new TokenProvider({
+	secret: SECRET,
+});
 
-const http = createServer((req, res) => {
-	const url = parse(req.url);
-	// write cors headers for incoming host
-	const origin = req.headers.origin;
-	res.setHeader('Access-Control-Allow-Origin', origin ?? '*');
-	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-	res.setHeader(
-		'Access-Control-Allow-Headers',
-		'Content-Type, Authorization, X-Request-Id',
-	);
-	res.setHeader('Access-Control-Allow-Credentials', 'true');
-	res.setHeader('Access-Control-Max-Age', '86400');
-	if (req.method === 'OPTIONS') {
-		res.writeHead(200);
-		res.end();
-		return;
-	}
+// the "core" is a service API for interacting with libraries.
+// you could plug this into your own HTTP or other kind of interface,
+// but further on are some Hono-based tools to help get started.
+const core = createVerdant({
+	// SQLite databases for each library are stored in this directory
+	storage: sqlShardStorage({
+		databasesDirectory: 'verdant-dbs',
+	}),
+	// implement .get to retrieve detailed profile information for sync users
+	profiles: {
+		get: async (userId) => {
+			// you could fetch a profile record from a database here to augment
+			// this profile with name, image, etc.
+			// values will be cached, so don't worry too much about timing.
+			return { id: userId };
+		},
+	},
+	// required to validate sync access tokens generated from
+	// your API
+	tokenSecret: SECRET,
+	// optional; enables file sync
+	fileStorage: new LocalFileStorage({
+		rootDirectory: 'verdant-files',
+		// this matches an API you must host (see below)
+		host: `http://localhost:${PORT}/files`,
+		log: (level, ...args) => console.log(level, ...args),
+	}),
+	// optional logger
+	log: (level, ...args) => console.log(level, ...args),
+});
 
-	// serve files on the /files path
-	if (url.pathname.startsWith('/files/')) {
-		const file = decodeURIComponent(url.pathname.slice(7));
-		console.log('Serving file', file);
-		const fileStream = createReadStream(`files/${file}`);
-		fileStream.pipe(res);
-		fileStream.on('error', (err) => {
-			res.writeHead(404);
-			res.end();
-		});
-		return;
-	}
+// our verdant router will be mounted to a subpath
+// and handle all HTTP sync requests
+const verdantRouter = createHttpRouter(core);
 
-	// provide tokens on the /auth path
-	if (url.pathname.startsWith('/auth/')) {
-		// userId is provided as a query param
-		const params = new URLSearchParams(url.search);
-		const userId = params.get('userId');
+// this is "your" app -- Verdant lives in it,
+// but you control the API.
+const app = new Hono()
+	.use('*', async (c, next) => {
+		// simple request logger
+		console.log(`${c.req.method} ${c.req.url}`);
+		await next();
+	})
+	.use(
+		'*',
+		cors({
+			origin: (o) => o,
+			credentials: true,
+			allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+		}),
+	)
+	.route('/verdant', verdantRouter)
+	// issue sync tokens
+	.get('/auth/:libraryId', async (ctx) => {
+		// here you authenticate your user, authorize
+		// their access to a particular library, and
+		// issue a token.
+		const library = ctx.req.param('libraryId');
 
-		// library ID is in path
-		const libraryId = url.pathname.slice(6);
+		const user = ctx.req.query('userId');
+		const type = ctx.req.query('type') || ReplicaType.Realtime;
+
+		// remember to check that the user is allowed to sync
+		// to this library
 
 		const token = tokenProvider.getToken({
-			userId,
-			libraryId,
-			syncEndpoint: `http://localhost:${PORT}/sync`,
-			role: 'user',
-			type: ReplicaType.Realtime,
+			libraryId: library,
+			userId: user,
+			// this subpath matches the verdantRouter mount
+			syncEndpoint: `http://localhost:${PORT}/verdant`,
+			type,
 		});
-		res.writeHead(200, {
-			'Content-Type': 'application/json',
+		return ctx.json({
+			accessToken: token,
 		});
-		res.end(JSON.stringify({ accessToken: token }));
-		return;
-	} else if (url.pathname.startsWith('/sync')) {
-		if (url.pathname.startsWith('/sync/files/')) {
-			return verdant.handleFileRequest(req, res);
-		}
-		return verdant.handleRequest(req, res);
-	} else {
-		res.writeHead(404);
-		res.end();
-	}
-});
-
-const verdant = new Server({
-	storage: sqlStorage({
-		databaseFile: 'verdant.sqlite',
-	}),
-	tokenSecret: SECRET,
-	fileStorage: new LocalFileStorage({
-		rootDirectory: 'files',
-		host: `http://localhost:${3242}/files`,
-	}),
-	profiles: {
-		get: (userId) => ({
-			id: userId,
+	})
+	// (optional) serve uploaded files
+	// if you use LocalFileStorage
+	.get(
+		'/files/*',
+		serveStatic({
+			root: 'verdant-files',
+			rewriteRequestPath: (path) => path.replace('/files/', ''),
 		}),
-	},
-	httpServer: http,
-	log: (level, ...rest) => {
-		if (process.env.VERDANT_LOG === 'false') {
-			return;
-		}
-		if (level === 'debug' && process.env.VERDANT_DEBUG !== 'true') {
-			return;
-		}
-		console.log(level, ...rest);
-	},
+	);
+
+const server = serve({
+	fetch: app.fetch,
+	port: parseInt(PORT.toString(), 10),
 });
 
-verdant.on('error', (err) => {
-	console.error(err);
-});
+// handle websocket sync! must be done like this, not included
+// in createHttpRouter!
+const onUpgrade = createNodeWebsocketHandler(core);
+server.addListener('upgrade', onUpgrade);
 
-export default new Promise((resolve) => {
-	http.listen(PORT, () => {
-		console.log(`🌿 Verdant standalone server listening on port ${PORT}`);
-		console.log(``);
-		console.log(
-			`It's not recommended you use this server in production. It's a convenient way to test syncing locally, but has no authorization.`,
-		);
-		console.log(``);
-		console.log(
-			`To connect your client, supply "http://localhost:${PORT}/auth/<libraryId>?userId=<userId>" to sync.authEndpoint.`,
-		);
-		console.log(
-			`<libraryId> and <userId> are up to you and your app. Clients on the same library ID will sync data.`,
-		);
-
-		resolve({
-			httpServer: http,
-			verdant,
-		});
-	});
+server.addListener('listening', () => {
+	console.log(`🌿 Verdant standalone server listening on port ${PORT}`);
+	console.log(``);
+	console.log(
+		`Never use this server in production. It's a convenient way to test syncing locally, but has no authorization.`,
+	);
+	console.log(``);
+	console.log(
+		`To connect your client, import \`cliSync\` and pass \`cliSync(<libraryId>)\` to \`sync\`, or supply "http://localhost:${PORT}/auth/<libraryId>?userId=<userId>" to sync.authEndpoint.`,
+	);
+	console.log(
+		`<libraryId> and <userId> are up to you and your app. Clients on the same library ID will sync data.`,
+	);
 });

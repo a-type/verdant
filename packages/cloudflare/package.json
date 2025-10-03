@@ -1,0 +1,46 @@
+{
+	"name": "@verdant-web/cloudflare",
+	"version": "0.0.1",
+	"access": "public",
+	"type": "module",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"import": "./dist/esm/index.js",
+			"types": "./dist/esm/index.d.ts"
+		}
+	},
+	"publishConfig": {
+		"exports": {
+			".": {
+				"import": "./dist/esm/index.js",
+				"types": "./dist/esm/index.d.ts"
+			}
+		},
+		"access": "public"
+	},
+	"files": [
+		"dist/",
+		"src/",
+		"bin/"
+	],
+	"scripts": {
+		"build": "tsc",
+		"prepublish": "pnpm run build"
+	},
+	"peerDependencies": {
+		"hono": "^4.7.2",
+		"@hono/node-server": "^1.13.8"
+	},
+	"dependencies": {
+		"@verdant-web/server": "workspace:*",
+		"@verdant-web/common": "workspace:*"
+	},
+	"devDependencies": {
+		"cross-env": "7.0.3",
+		"typescript": "catalog:",
+		"hono": "catalog:",
+		"@hono/node-server": "catalog:",
+		"@cloudflare/workers-types": "^4.20250224.0"
+	}
+}
