@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/s3-file-storage",
-	"version": "1.0.39",
+	"version": "1.0.40",
 	"access": "public",
 	"type": "module",
 	"exports": {
