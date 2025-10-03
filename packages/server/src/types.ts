@@ -22,8 +22,7 @@ export interface HydratedDocumentBaseline extends DocumentBaseline<any> {
 
 export interface StoredReplicaInfo extends ReplicaInfo {
 	libraryId: string;
-	// the authenticated client ID authorized
-	// to write to this replica
+	/** AKA userId!! */
 	clientId: string;
 	lastSeenWallClockTime: number | null;
 	type: ReplicaType;

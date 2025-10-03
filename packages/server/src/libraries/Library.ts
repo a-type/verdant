@@ -787,6 +787,7 @@ export class Library {
 			truant:
 				!!r.lastSeenWallClockTime &&
 				r.lastSeenWallClockTime < this.storage.replicas.truantCutoff,
+			profile: this.presence.get(r.clientId)?.profile ?? null,
 		}));
 
 		const data = {
