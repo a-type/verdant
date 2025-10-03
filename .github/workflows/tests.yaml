@@ -23,6 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Install playwright
         run: pnpm ci:playwright:install
 
