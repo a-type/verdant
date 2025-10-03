@@ -49,7 +49,8 @@ export class DurableObjectLibrary {
 
 	protected clientConnections: ClientConnectionManager;
 	protected library!: Library;
-	protected events: EventSubscriber<LibraryEvents> = new EventSubscriber();
+	public readonly events: EventSubscriber<LibraryEvents> =
+		new EventSubscriber();
 
 	constructor(
 		private ctx: DurableObjectState,
