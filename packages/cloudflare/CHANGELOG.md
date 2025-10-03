@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.1.1
+
+### Patch Changes
+
+- 687b79c: Mark fileStorage as optional
+
 ## 0.1.0
 
 ### Minor Changes
