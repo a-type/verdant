@@ -4,7 +4,7 @@ import {
 	TokenVerifier,
 } from '@verdant-web/server/internals';
 import { Hono } from 'hono';
-import { basePath } from 'hono/route';
+import { routePath } from 'hono/route';
 
 export interface VerdantWorkerConfig {
 	durableObjectBindingName: string;
@@ -44,7 +44,7 @@ export function createVerdantWorkerApp(config: VerdantWorkerConfig) {
 			);
 			const obj = ctx.env[config.durableObjectBindingName].get(id);
 			// remove the base path so the DO sees the correct routing
-			const path = basePath(ctx);
+			const path = routePath(ctx);
 			const thisUrl = new URL(ctx.req.url);
 			thisUrl.pathname = thisUrl.pathname.replace(path, '') || '/';
 			const modifiedReq: Request = new Request(thisUrl.toString(), ctx.req.raw);
