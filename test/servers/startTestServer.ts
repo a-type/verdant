@@ -26,10 +26,10 @@ export async function startNodeServer(): Promise<{
 					cleanup: async () => {
 						const result = serverProcess.kill();
 						if (!result) {
-							console.warn('Failed to kill server process, trying SIGKILL');
-							const secondResult = serverProcess.kill('SIGKILL');
+							console.warn('Failed to kill server process, trying SIGINT');
+							const secondResult = serverProcess.kill('SIGINT');
 							if (!secondResult) {
-								console.error('Failed to SIGKILL server process');
+								console.error('Failed to SIGINT server process');
 							}
 						}
 					},
@@ -72,10 +72,10 @@ export async function startCloudflareServer(): Promise<{
 					cleanup: async () => {
 						const result = serverProcess.kill();
 						if (!result) {
-							console.warn('Failed to kill server process, trying SIGKILL');
-							const secondResult = serverProcess.kill('SIGKILL');
+							console.warn('Failed to kill server process, trying SIGINT');
+							const secondResult = serverProcess.kill('SIGINT');
 							if (!secondResult) {
-								console.error('Failed to SIGKILL server process');
+								console.error('Failed to SIGINT server process');
 							}
 						}
 					},
