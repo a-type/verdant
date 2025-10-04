@@ -48,13 +48,6 @@ export function createVerdantWorkerApp(config: VerdantWorkerConfig) {
 			const thisUrl = new URL(ctx.req.url);
 			thisUrl.pathname = thisUrl.pathname.replace(path, '') || '/';
 			const modifiedReq: Request = new Request(thisUrl.toString(), ctx.req.raw);
-			console.log(
-				`[verdant worker] routing to DO ${info.libraryId}:`,
-				ctx.req.method,
-				ctx.req.url,
-				path,
-				modifiedReq.url,
-			);
 			return obj.fetch(modifiedReq);
 		});
 

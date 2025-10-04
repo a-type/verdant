@@ -74,7 +74,7 @@ it('supports the server requesting more history if it has lost data', async () =
 
 	// restart sync. the server should request the full history,
 	// and the file should be re-uploaded
-	client.sync.start();
+	await client.sync.start();
 
 	await waitForCondition(
 		async () => {

@@ -456,4 +456,48 @@ describe('Library', () => {
 			});
 		});
 	});
+
+	it('should fully destroy itself', async () => {
+		const sender = {
+			broadcast: vi.fn(),
+			respond: vi.fn(),
+		};
+
+		const library = new Library({
+			...(await baseOptions()),
+			sender,
+		});
+
+		const opMessage: ClientMessage = {
+			type: 'op',
+			replicaId: 'replica-1',
+			operations: [
+				{
+					oid: 'notes/1',
+					timestamp: now(),
+					data: {
+						op: 'set',
+						name: 'title',
+						value: 'My Note!',
+					},
+				},
+			],
+			timestamp: now(),
+		};
+		await library.handleMessage(opMessage, 'clientKey-1', {
+			libraryId: 'library-1',
+			syncEndpoint: 'http://localhost:3000/sync',
+			token: 'fake',
+			type: ReplicaType.Realtime,
+			userId: 'user-1',
+		});
+
+		let info = await library.getInfo();
+		expect(info?.operationsCount).toBe(1);
+
+		await library.destroy();
+
+		info = await library.getInfo();
+		expect(info).toBe(null);
+	});
 });

@@ -55,9 +55,11 @@ export class Heartbeat extends EventSubscriber<{
 	stop = () => {
 		if (this.nextBeat) {
 			clearTimeout(this.nextBeat);
+			this.nextBeat = null;
 		}
 		if (this.deadline) {
 			clearTimeout(this.deadline);
+			this.deadline = null;
 		}
 	};
 

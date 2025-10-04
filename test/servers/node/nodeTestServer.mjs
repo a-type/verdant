@@ -24,7 +24,7 @@ if (!process.send) {
 }
 
 const SECRET = 'notsecret';
-const keepDb = false;
+const keepDb = true;
 
 const port = await getPort();
 const app = new Hono();
@@ -40,7 +40,7 @@ app.use(
 const { storage, databaseLocation } = shardedStorage(keepDb);
 
 const log = (...args) => {
-	// console.log('🧊', ...args);
+	console.log('🧊', ...args);
 };
 
 const fileDir = resolve(process.cwd(), 'test-files');

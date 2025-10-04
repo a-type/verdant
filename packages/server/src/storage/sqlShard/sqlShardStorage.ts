@@ -27,7 +27,7 @@ export const sqlShardStorage = ({
 	log?: Logger;
 } & StorageOptions): StorageFactory => {
 	if (databasesDirectory !== ':memory:' && !existsSync(databasesDirectory)) {
-		mkdirSync(databasesDirectory);
+		mkdirSync(databasesDirectory, { recursive: true });
 		console.info(`Created databases directory: ${databasesDirectory}`);
 	}
 	const dbs = new Databases({

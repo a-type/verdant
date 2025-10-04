@@ -50,7 +50,7 @@ export class Library {
 	private disableRebasing: boolean;
 	private fileStorage;
 	private events;
-	private id: string;
+	readonly id: string;
 	private presence: Presence;
 
 	private log: Logger;
@@ -265,6 +265,7 @@ export class Library {
 				replicaInfo.id,
 				'to',
 				newServerOrder,
+				`(+${insertedOperationsCount} ops, ${replicaInfo.ackedServerOrder} -> ${newServerOrder})`,
 			);
 		}
 	};
@@ -304,12 +305,12 @@ export class Library {
 
 		// for truant replicas -- if their ackedServerOrder is up-to-date, that's fine,
 		// restore them.
-		let overrideTruant = false;
+		let allowThisTruantReplicaToSync = false;
 		if (status === 'truant') {
 			const latestServerOrder =
 				await this.storage.operations.getLatestServerOrder();
 			if (clientReplicaInfo.ackedServerOrder >= latestServerOrder) {
-				overrideTruant = true;
+				allowThisTruantReplicaToSync = true;
 				this.log(
 					'debug',
 					'Overriding truant reset; truant replica has up-to-date server order',
@@ -326,7 +327,8 @@ export class Library {
 		// to that of the server when joining a library.
 		// truant replicas should also reset their storage.
 		const replicaShouldReset =
-			!!message.resyncAll || (!overrideTruant && status !== 'existing');
+			!!message.resyncAll ||
+			(!allowThisTruantReplicaToSync && status !== 'existing');
 
 		// only new replicas need baselines. by definition, a rebase only
 		// happens when all active replicas agree on history. every client
@@ -344,13 +346,16 @@ export class Library {
 		// the full history of the library.
 		// the definition of this field could be improved to be more explicit
 		// and not rely on seemingly unrelated data.
-		const isEmptyLibrary =
-			clientReplicaInfo.ackedServerOrder === 0 &&
-			ops.length === 0 &&
-			baselines.length === 0;
+		const isEmptyLibrary = ops.length === 0 && baselines.length === 0;
 
 		if (isEmptyLibrary) {
-			this.log('info', 'Received sync from new library', replicaId);
+			this.log(
+				'info',
+				'Received sync from new library',
+				this.id,
+				'replica',
+				replicaId,
+			);
 
 			// when initializing a new library, rewrite authz subjects to
 			// the current user ID (on a purely local replica, these authz
@@ -383,13 +388,25 @@ export class Library {
 			// this would mean the replica is providing a full history
 			// but the library already has data. the replica should
 			// reset to the server version
-			this.log(
-				'warn',
-				'Detected replica',
-				replicaId,
-				'is providing a full history but the library already has data. Requesting replica reset.',
-			);
+
+			// only log this warning if the replica is actually sending data
+			if (message.operations.length + message.baselines.length > 0) {
+				this.log(
+					'warn',
+					'Detected replica',
+					replicaId,
+					'is providing a full history but the library already has data. Requesting replica reset.',
+				);
+			}
 			overwriteReplicaData = true;
+		} else if (isEmptyLibrary && message.since === null) {
+			// new library, full history - this is good, we can proceed
+			this.log(
+				'info',
+				'New library and replica providing full history',
+				this.id,
+				replicaId,
+			);
 		}
 
 		if (overwriteReplicaData) {
@@ -423,6 +440,7 @@ export class Library {
 				replicaId,
 				message.operations,
 			);
+			// I think this may be causing issues...
 			this.preemptiveUpdateServerOrder(
 				clientReplicaInfo,
 				newServerOrder,

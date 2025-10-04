@@ -154,6 +154,14 @@ export class PushPullSync
 	}, 3000);
 
 	send = (message: ClientMessage) => {
+		if (this.status !== 'active') {
+			this.ctx.log(
+				'warn',
+				'Attempted to send message while sync is not active',
+				message,
+			);
+			return;
+		}
 		// only certain messages are sent for pull-based sync.
 		switch (message.type) {
 			case 'presence-update':
@@ -173,11 +181,13 @@ export class PushPullSync
 		if (this.status === 'active') {
 			return;
 		}
+		this.ctx.log('debug', 'Starting push-pull sync');
 		await this.endpointProvider.getEndpoints();
 		this.heartbeat.start(true);
 		this._status = 'active';
 	};
 	stop(): void {
+		this.ctx.log('debug', 'Stopping push-pull sync');
 		this.heartbeat.stop();
 		this._status = 'paused';
 	}

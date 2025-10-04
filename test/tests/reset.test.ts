@@ -197,14 +197,13 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 });
 
 it('can re-initialize in realtime when replicas are still connected', async () => {
-	const library = 'reset-2';
 	const ctx = createTestContext({
-		library,
+		library: 'reset-realtime',
 	});
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(ctx);
 
-	await ctx.server.evict(library);
+	await ctx.server.evict(ctx.library);
 
 	await waitForQueryResult(clientA.items.get(a_unknownItem.get('id')));
 	await waitForQueryResult(clientA.categories.get(a_produceCategory.get('id')));
@@ -247,9 +246,8 @@ it('can re-initialize in realtime when replicas are still connected', async () =
 });
 
 it('resets from replica over http sync', async () => {
-	const library = 'reset-3';
 	const ctx = createTestContext({
-		library,
+		library: 'reset-3',
 	});
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(ctx);
@@ -257,7 +255,7 @@ it('resets from replica over http sync', async () => {
 	clientA.sync.stop();
 	clientB.sync.stop();
 
-	await ctx.server.evict(library);
+	await ctx.server.evict(ctx.library);
 
 	clientA.sync.setMode('pull');
 	clientA.sync.start();
@@ -299,9 +297,8 @@ it('resets from replica over http sync', async () => {
 });
 
 it('can re-initialize a replica from data from an old schema', async () => {
-	const library = 'reset-4';
 	const ctx = createTestContext({
-		library,
+		library: 'reset-old',
 	});
 	const clientA = await ctx.createTestClient({
 		user: 'User A',
@@ -385,4 +382,76 @@ it('can re-initialize a replica from data from an old schema', async () => {
 	});
 	const b_apples = b_applesQuery.current! as any;
 	expect(b_apples.get('newField')).toBe('new field');
+});
+
+it('resets from replica over http sync when client had queued unsynced operations', async () => {
+	const ctx = createTestContext({
+		library: 'reset-unsynced',
+		testLog: true,
+	});
+	const { clientA, clientB, a_unknownItem, a_produceCategory } =
+		await connectAndSeedData(ctx);
+
+	clientA.sync.stop();
+	clientB.sync.stop();
+
+	await ctx.server.evict(ctx.library);
+	const info = await ctx.server.info(ctx.library);
+	expect(info).toBeNull();
+	ctx.log('Reset server');
+
+	clientA.items.put({
+		id: 'grape',
+		categoryId: a_produceCategory.get('id'),
+		content: 'Grapes',
+	});
+
+	clientA.sync.setMode('pull');
+	await clientA.sync.start();
+	await waitForSync(clientA);
+
+	const clientC = await connectNewReplicaAndCheckIntegrity(ctx, {
+		a_unknownItem,
+		a_produceCategory,
+	});
+	expect(
+		(await clientC.items.findAll().resolved)
+			.map((i) => filterOutIds(i.getSnapshot()))
+			.sort(compareSortContent),
+	).toMatchInlineSnapshot(`
+		[
+		  {
+		    "comments": [],
+		    "content": "Apples",
+		    "image": null,
+		    "purchased": false,
+		    "tags": [],
+		  },
+		  {
+		    "comments": [],
+		    "content": "Grapes",
+		    "image": null,
+		    "purchased": false,
+		    "tags": [],
+		  },
+		  {
+		    "comments": [],
+		    "content": "Oranges",
+		    "image": null,
+		    "purchased": false,
+		    "tags": [],
+		  },
+		  {
+		    "comments": [],
+		    "content": "Unknown",
+		    "image": null,
+		    "purchased": false,
+		    "tags": [],
+		  },
+		]
+	`);
+
+	clientA.sync.stop();
+	clientB.sync.stop();
+	clientC.sync.stop();
 });

@@ -44,6 +44,7 @@ export interface DurableObjectLibraryConfig {
 export class DurableObjectLibrary {
 	#app: Hono<any>;
 	#socketInfoCache: WeakMap<WebSocket, SocketMeta> = new WeakMap();
+	#initializePromise: Promise<void> | null = null;
 	#initialized = false;
 	#config: DurableObjectLibraryConfig;
 
@@ -72,10 +73,6 @@ export class DurableObjectLibrary {
 
 		this.#app = new Hono()
 			.onError(errorHandler)
-			.use(async (ctx, next) => {
-				console.log(`[verdant object]`, ctx.req.url);
-				await next();
-			})
 			.use(tokenMiddleware(new TokenVerifier({ secret: verdant.tokenSecret })))
 			.use(async (ctx, next) => {
 				// only after authorization, migrate the database
@@ -212,46 +209,57 @@ export class DurableObjectLibrary {
 
 	#noop = () => {};
 	get log() {
-		return this.#config.log || this.#noop;
+		if (this.#config.log) {
+			return (level: string, ...args: any[]) =>
+				this.#config.log!(level, this.library?.id, ...args);
+		}
+		return this.#noop;
 	}
 
 	initialize = async (libraryId: string) => {
 		if (this.#initialized) {
 			return;
 		}
-		const storedLibraryId = await this.ctx.storage.get<string>('libraryId');
-		if (storedLibraryId && storedLibraryId !== libraryId) {
-			throw new VerdantError(
-				VerdantError.Code.InvalidRequest,
-				undefined,
-				'Library ID does not match existing storage',
-			);
+		if (this.#initializePromise) {
+			return this.#initializePromise;
 		}
-		await this.ctx.storage.put('libraryId', libraryId);
-		this.#initialized = true;
-		const db = createDurableObjectSqliteExecutor(this.ctx.storage, {
-			log: this.log,
-		});
-		await db.migrate();
-		const storage = new SqlShardStorage(db, {
-			libraryId,
-			fileDeleteExpirationDays:
-				this.#config.storageOptions?.fileDeleteExpirationDays ?? 14,
-			replicaTruancyMinutes:
-				this.#config.storageOptions?.replicaTruancyTimeout ?? 14 * 24 * 60,
-		});
-		this.library = new Library({
-			id: libraryId,
-			storage,
-			sender: this.clientConnections,
-			events: this.events,
-			disableRebasing: this.#config.disableRebasing,
-			fileStorage: this.#config.fileStorage
-				? new FileStorageLibraryDelegate(libraryId, this.#config.fileStorage)
-				: undefined,
-			log: this.log,
-			presence: this.clientConnections.presence,
-		});
+
+		this.#initializePromise = (async () => {
+			const storedLibraryId = await this.ctx.storage.get<string>('libraryId');
+			if (storedLibraryId && storedLibraryId !== libraryId) {
+				throw new VerdantError(
+					VerdantError.Code.InvalidRequest,
+					undefined,
+					'Library ID does not match existing storage',
+				);
+			}
+			this.ctx.storage.put('libraryId', libraryId);
+			const db = createDurableObjectSqliteExecutor(this.ctx.storage, {
+				log: this.log,
+			});
+			db.migrate();
+			const storage = new SqlShardStorage(db, {
+				libraryId,
+				fileDeleteExpirationDays:
+					this.#config.storageOptions?.fileDeleteExpirationDays ?? 14,
+				replicaTruancyMinutes:
+					this.#config.storageOptions?.replicaTruancyTimeout ?? 14 * 24 * 60,
+			});
+			this.library = new Library({
+				id: libraryId,
+				storage,
+				sender: this.clientConnections,
+				events: this.events,
+				disableRebasing: this.#config.disableRebasing,
+				fileStorage: this.#config.fileStorage
+					? new FileStorageLibraryDelegate(libraryId, this.#config.fileStorage)
+					: undefined,
+				log: this.log,
+				presence: this.clientConnections.presence,
+			});
+			this.#initialized = true;
+		})();
+		await this.#initializePromise;
 	};
 	#restore = async () => {
 		if (this.#initialized) {
@@ -261,9 +269,8 @@ export class DurableObjectLibrary {
 		if (storedLibraryId) {
 			await this.initialize(storedLibraryId);
 		} else {
-			throw new VerdantError(
-				VerdantError.Code.InvalidRequest,
-				undefined,
+			this.log(
+				'error',
 				'A Verdant Durable Object Library was accessed before being initialized. Before using a Verdant Library DO, you must either call .initialize(libraryId) or receive a valid client request to seed the library.',
 			);
 		}
@@ -324,27 +331,35 @@ export class DurableObjectLibrary {
 	// public library API
 	getDocumentSnapshot = async (collection: string, id: string) => {
 		await this.#restore();
+		if (!this.library) return null;
 		return this.library.getDocumentSnapshot(
 			createOid(collection, id),
 		) as Promise<{} | null>;
 	};
 	getFileInfo = async (fileId: string) => {
 		await this.#restore();
+		if (!this.library) return null;
 		return this.library.getFileInfo(fileId);
 	};
 	evict = async () => {
-		await this.#restore();
 		await this.clientConnections.disconnectAll();
+		await this.ctx
+			.getWebSockets()
+			.forEach((ws) => ws.close(1001, 'Server reset'));
+		await this.#restore();
+		if (!this.library) return false;
 		await this.library?.destroy();
 		await this.ctx.storage.deleteAll();
 		this.#initialized = false;
+		return true;
 	};
 	forceTruant = async (replicaId: string) => {
 		await this.#restore();
-		return this.library.forceTruant(replicaId);
+		return this.library?.forceTruant(replicaId);
 	};
 	getInfo = async () => {
 		await this.#restore();
+		if (!this.library) return null;
 		return this.library.getInfo();
 	};
 

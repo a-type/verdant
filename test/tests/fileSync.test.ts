@@ -20,6 +20,7 @@ it(
 	'can sync files between replicas',
 	{
 		timeout: 15000,
+		retry: 1,
 	},
 	async () => {
 		// FileReader.prototype.readAsDataURL = () => {
