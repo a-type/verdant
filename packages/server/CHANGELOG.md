@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.0.3
+
+### Patch Changes
+
+- ad19b53: fix typing of replicas
+
 ## 4.0.2
 
 ### Patch Changes
