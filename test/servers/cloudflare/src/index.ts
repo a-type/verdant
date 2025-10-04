@@ -25,7 +25,7 @@ export class VerdantLibrary extends DurableObject<Env> implements LibraryApi {
 				},
 			},
 			log: (...args) => {
-				console.log(`☁️`, ...args);
+				// console.log(`☁️`, ...args);
 			},
 		});
 	}

@@ -40,7 +40,7 @@ app.use(
 const { storage, databaseLocation } = shardedStorage(keepDb);
 
 const log = (...args) => {
-	console.log('🧊', ...args);
+	// console.log('🧊', ...args);
 };
 
 const fileDir = resolve(process.cwd(), 'test-files');

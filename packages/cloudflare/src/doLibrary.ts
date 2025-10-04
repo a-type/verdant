@@ -258,6 +258,8 @@ export class DurableObjectLibrary {
 				presence: this.clientConnections.presence,
 			});
 			this.#initialized = true;
+			this.#initializePromise = null;
+			this.log('info', 'Library initialized', { libraryId: this.library.id });
 		})();
 		await this.#initializePromise;
 	};
