@@ -32,7 +32,7 @@ export function createVerdantWorkerApp(config: VerdantWorkerConfig) {
 			});
 			return tokenMiddleware(tokenVerifier)(ctx as any, next);
 		})
-		.all((ctx) => {
+		.all('*', (ctx) => {
 			if (ctx.req.method === 'OPTIONS') {
 				// preflight request, np
 				return ctx.newResponse(null, { status: 204 });
@@ -44,7 +44,7 @@ export function createVerdantWorkerApp(config: VerdantWorkerConfig) {
 			);
 			const obj = ctx.env[config.durableObjectBindingName].get(id);
 			// remove the base path so the DO sees the correct routing
-			const path = routePath(ctx);
+			const path = routePath(ctx).replace('/*', '');
 			const thisUrl = new URL(ctx.req.url);
 			thisUrl.pathname = thisUrl.pathname.replace(path, '') || '/';
 			const modifiedReq: Request = new Request(thisUrl.toString(), ctx.req.raw);

@@ -260,6 +260,12 @@ export class DurableObjectLibrary {
 		const storedLibraryId = await this.ctx.storage.get<string>('libraryId');
 		if (storedLibraryId) {
 			await this.initialize(storedLibraryId);
+		} else {
+			throw new VerdantError(
+				VerdantError.Code.InvalidRequest,
+				undefined,
+				'A Verdant Durable Object Library was accessed before being initialized. Before using a Verdant Library DO, you must either call .initialize(libraryId) or receive a valid client request to seed the library.',
+			);
 		}
 	};
 
@@ -315,15 +321,6 @@ export class DurableObjectLibrary {
 		this.#socketInfoCache.delete(ws);
 	};
 
-	handleMessage = async (
-		key: string,
-		info: TokenInfo,
-		message: ClientMessage,
-	) => {
-		await this.#restore();
-		return this.library.handleMessage(message, key, info);
-	};
-
 	// public library API
 	getDocumentSnapshot = async (collection: string, id: string) => {
 		await this.#restore();
@@ -349,5 +346,10 @@ export class DurableObjectLibrary {
 	getInfo = async () => {
 		await this.#restore();
 		return this.library.getInfo();
+	};
+
+	// helpers
+	getIsInitialized = () => {
+		return !!this.library;
 	};
 }
