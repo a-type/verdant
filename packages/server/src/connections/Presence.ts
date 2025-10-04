@@ -20,7 +20,7 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 	private userToConnection: Record<string, Set<string>> = {};
 	private keepalives = new Map<string, NodeJS.Timeout>();
 
-	constructor(private profiles: UserProfiles<any>) {
+	constructor(readonly profiles: UserProfiles<any>) {
 		super();
 	}
 

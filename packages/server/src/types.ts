@@ -37,6 +37,7 @@ export type LibraryInfo = {
 		ackedServerOrder: number;
 		type: ReplicaType;
 		truant: boolean;
+		userId: string;
 	}[];
 	latestServerOrder: number;
 	operationsCount: number;
