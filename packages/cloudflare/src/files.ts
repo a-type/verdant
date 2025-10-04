@@ -7,7 +7,7 @@ export class R2FileStorage implements FileStorage {
 
 	constructor({ host, bucket }: { host: string; bucket: R2Bucket }) {
 		this.bucket = bucket;
-		this.host = host;
+		this.host = host.endsWith('/') ? host.slice(0, -1) : host;
 	}
 	private getDirectory = (data: FileInfo) => {
 		return `${data.libraryId}/${data.id}`;
