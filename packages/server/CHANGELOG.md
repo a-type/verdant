@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.0.1
+
+### Patch Changes
+
+- 71f884f: Put profiles back on replica info
+
 ## 4.0.0
 
 ### Major Changes
