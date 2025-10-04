@@ -1,5 +1,12 @@
 # @verdant-web/cloudflare
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [ad19b53]
+  - @verdant-web/server@4.0.3
+
 ## 0.1.4
 
 ### Patch Changes
