@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.0.2
+
+### Patch Changes
+
+- 6d79912: Refine some server reset sync logic
+
 ## 4.0.1
 
 ### Patch Changes

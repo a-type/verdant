@@ -1,5 +1,13 @@
 # @verdant-web/cloudflare
 
+## 0.1.4
+
+### Patch Changes
+
+- 6d79912: Refine some server reset sync logic
+- Updated dependencies [6d79912]
+  - @verdant-web/server@4.0.2
+
 ## 0.1.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 4.6.1
+
+### Patch Changes
+
+- 6d79912: Refine some server reset sync logic
+
 ## 4.6.0
 
 ### Minor Changes
