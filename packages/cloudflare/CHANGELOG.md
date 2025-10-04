@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.1.3
+
+### Patch Changes
+
+- 88a8b31: Fix mounting router on nested paths
+
 ## 0.1.2
 
 ### Patch Changes
