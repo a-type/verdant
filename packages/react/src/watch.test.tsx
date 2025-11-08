@@ -9,7 +9,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { createHooks } from './hooks.js';
 
-const testSchema = schema({
+export const testSchema = schema({
 	version: 1,
 	collections: {
 		posts: schema.collection({
@@ -32,9 +32,9 @@ const testSchema = schema({
 	},
 });
 
-const hooks = createHooks(testSchema);
+export const hooks = createHooks(testSchema);
 
-let clientDesc: ClientDescriptor;
+export let clientDesc: ClientDescriptor;
 let client: ClientWithCollections;
 beforeAll(async () => {
 	clientDesc = new ClientDescriptor({
