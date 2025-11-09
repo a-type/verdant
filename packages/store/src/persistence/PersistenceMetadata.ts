@@ -2,14 +2,14 @@ import {
 	applyPatch,
 	assert,
 	assignOid,
-	ClientMessage,
 	DocumentBaseline,
-	EventSubscriber,
 	getOidRoot,
 	ObjectIdentifier,
 	Operation,
 	substituteRefsWithObjects,
 } from '@verdant-web/common';
+import cuid from 'cuid';
+import { ContextWithoutPersistence } from '../context/context.js';
 import {
 	AbstractTransaction,
 	ClientOperation,
@@ -18,20 +18,18 @@ import {
 	MetadataExport,
 	PersistenceMetadataDb,
 } from './interfaces.js';
-import { InitialContext } from '../context/context.js';
-import { PersistenceRebaser } from './PersistenceRebaser.js';
 import { MessageCreator } from './MessageCreator.js';
-import cuid from 'cuid';
+import { PersistenceRebaser } from './PersistenceRebaser.js';
 
 export class PersistenceMetadata {
 	private rebaser: PersistenceRebaser;
 	/** Available to others, like sync... */
 	readonly messageCreator: MessageCreator;
-	readonly events = new EventSubscriber<{
-		syncMessage: (message: ClientMessage) => void;
-	}>();
 
-	constructor(private db: PersistenceMetadataDb, private ctx: InitialContext) {
+	constructor(
+		private db: PersistenceMetadataDb,
+		private ctx: ContextWithoutPersistence,
+	) {
 		this.rebaser = new PersistenceRebaser(db, this, ctx);
 		this.messageCreator = new MessageCreator(db, this, ctx);
 	}
@@ -82,7 +80,7 @@ export class PersistenceMetadata {
 			`Inserted ${operations.length} local operations; sending sync message`,
 		);
 		const message = await this.messageCreator.createOperation({ operations });
-		this.events.emit('syncMessage', message);
+		this.ctx.internalEvents.emit('outgoingSyncMessage', message);
 	};
 
 	private insertRemoteOperations = async (
@@ -500,7 +498,7 @@ export class PersistenceMetadata {
 		// can't ack timestamps from the future.
 		if (timestamp > this.ctx.time.now) return;
 
-		this.events.emit('syncMessage', {
+		this.ctx.internalEvents.emit('outgoingSyncMessage', {
 			type: 'ack',
 			replicaId: localReplicaInfo.id,
 			timestamp,

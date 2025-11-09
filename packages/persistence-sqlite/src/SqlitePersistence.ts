@@ -3,7 +3,14 @@ import {
 	PersistenceImplementation,
 	PersistenceNamespace,
 } from '@verdant-web/store';
-import { Context, InitialContext } from '@verdant-web/store/internal';
+import {
+	Context,
+	ContextWithoutPersistence,
+} from '@verdant-web/store/internal';
+import { sql, type Kysely } from 'kysely';
+import { SqlitePersistenceDocumentDb } from './documents/SqlitePersistenceDocumentDb.js';
+import { SqlitePersistenceFileDb } from './files/SqlitePersistenceFileDb.js';
+import { FilesystemImplementation } from './interfaces.js';
 import {
 	collectionIndexName,
 	collectionMultiValueIndexTableName,
@@ -11,11 +18,7 @@ import {
 	Database,
 	migrateToLatest,
 } from './kysely.js';
-import { SqlitePersistenceFileDb } from './files/SqlitePersistenceFileDb.js';
 import { SqlitePersistenceMetadataDb } from './metadata/SqlitePersistenceMetadataDb.js';
-import { SqlitePersistenceDocumentDb } from './documents/SqlitePersistenceDocumentDb.js';
-import { FilesystemImplementation } from './interfaces.js';
-import { sql, type Kysely } from 'kysely';
 import { SqlContext } from './sqlContext.js';
 
 export interface SqlitePersistenceConfig {
@@ -90,7 +93,7 @@ export class SqlitePersistence implements PersistenceImplementation {
 	};
 	deleteNamespace = async (
 		namespace: string,
-		ctx: InitialContext,
+		ctx: ContextWithoutPersistence,
 	): Promise<void> => {
 		ctx.log('debug', 'Deleting namespace', namespace);
 		const open = this.openNamespaceDbs.get(namespace)?.deref();
@@ -102,7 +105,11 @@ export class SqlitePersistence implements PersistenceImplementation {
 			`${this.databasesDirectory}/${namespace}.sqlite`,
 		);
 	};
-	copyNamespace = async (from: string, to: string, ctx: InitialContext) => {
+	copyNamespace = async (
+		from: string,
+		to: string,
+		ctx: ContextWithoutPersistence,
+	) => {
 		await this.filesystem.copyFile({
 			from: `${this.databasesDirectory}/${from}.sqlite`,
 			to: `${this.databasesDirectory}/${to}.sqlite`,
@@ -159,7 +166,7 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 		await this.db.destroy();
 	};
 
-	openFiles = async (ctx: Omit<Context, 'files' | 'documents'>) => {
+	openFiles = async (ctx: ContextWithoutPersistence) => {
 		return new SqlitePersistenceFileDb(
 			{
 				db: this.db,
@@ -169,14 +176,14 @@ class SqlitePersistenceNamespace implements PersistenceNamespace {
 			ctx,
 		);
 	};
-	openMetadata = async (ctx: InitialContext) => {
+	openMetadata = async (ctx: ContextWithoutPersistence) => {
 		return new SqlitePersistenceMetadataDb(this.db);
 	};
-	openDocuments = async (ctx: Omit<Context, 'documents' | 'files'>) => {
+	openDocuments = async (ctx: ContextWithoutPersistence) => {
 		return new SqlitePersistenceDocumentDb(this.db, ctx);
 	};
 	applyMigration = async (
-		ctx: InitialContext,
+		ctx: ContextWithoutPersistence,
 		migration: Migration<any>,
 	): Promise<void> => {
 		ctx.log(

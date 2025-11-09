@@ -13,17 +13,20 @@ import {
 	getOid,
 	removeOidPropertiesFromAllSubObjects,
 } from '@verdant-web/common';
+import { ContextWithoutPersistence } from '../../context/context.js';
 import { PersistenceDocumentDb, PersistenceNamespace } from '../interfaces.js';
-import { OpenDocumentDbContext } from './types.js';
+import { PersistenceMetadata } from '../PersistenceMetadata.js';
 
 function getMigrationMutations({
 	migration,
 	newOids,
 	ctx,
+	meta,
 }: {
 	migration: Migration<any>;
 	newOids: string[];
-	ctx: OpenDocumentDbContext;
+	ctx: ContextWithoutPersistence;
+	meta: PersistenceMetadata;
 }) {
 	return migration.allCollections.reduce((acc, collectionName) => {
 		acc[collectionName] = {
@@ -36,7 +39,7 @@ function getMigrationMutations({
 				newOids.push(oid);
 
 				await ctx.time.withMigrationTime(migration.version, () =>
-					ctx.meta.insertData({
+					meta.insertData({
 						operations: ctx.patchCreator.createInitialize(
 							doc,
 							oid,
@@ -50,7 +53,7 @@ function getMigrationMutations({
 			delete: async (id: string) => {
 				const rootOid = createOid(collectionName, id);
 				await ctx.time.withMigrationTime(migration.version, () =>
-					ctx.meta.deleteDocument(rootOid),
+					meta.deleteDocument(rootOid),
 				);
 			},
 		};
@@ -62,16 +65,18 @@ function getMigrationQueries({
 	migration,
 	context,
 	documents,
+	meta,
 }: {
 	migration: Migration<any>;
-	context: OpenDocumentDbContext;
+	context: ContextWithoutPersistence;
 	documents: PersistenceDocumentDb;
+	meta: PersistenceMetadata;
 }) {
 	return migration.oldCollections.reduce((acc, collectionName) => {
 		acc[collectionName] = {
 			get: async (id: string) => {
 				const oid = createOid(collectionName, id);
-				const doc = await context.meta.getDocumentSnapshot(oid, {
+				const doc = await meta.getDocumentSnapshot(oid, {
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: context.time.nowWithVersion(migration.oldSchema.version),
 				});
@@ -83,7 +88,7 @@ function getMigrationQueries({
 					index: filter,
 				});
 				if (!oid) return null;
-				const doc = await context.meta.getDocumentSnapshot(oid, {
+				const doc = await meta.getDocumentSnapshot(oid, {
 					// only get the snapshot up to the previous version (newer operations may have synced)
 					to: context.time.nowWithVersion(migration.oldSchema.version),
 				});
@@ -95,8 +100,8 @@ function getMigrationQueries({
 					index: filter,
 				});
 				const docs = await Promise.all(
-					oids.map((oid) =>
-						context.meta.getDocumentSnapshot(oid, {
+					oids.map(async (oid) =>
+						meta.getDocumentSnapshot(oid, {
 							// only get the snapshot up to the previous version (newer operations may have synced)
 							to: context.time.nowWithVersion(migration.oldSchema.version),
 						}),
@@ -113,18 +118,23 @@ export async function getMigrationEngine({
 	migration,
 	context,
 	ns,
+	meta,
 }: {
 	log?: (...args: any[]) => void;
 	migration: Migration;
-	context: OpenDocumentDbContext;
+	context: ContextWithoutPersistence;
 	ns: PersistenceNamespace;
+	meta: PersistenceMetadata;
 }): Promise<MigrationEngine> {
-	const migrationContext = {
-		...context,
+	const migrationContext = context.cloneWithOptions({
 		schema: migration.oldSchema,
-	};
+	});
 	if (migration.oldSchema.version === 0) {
-		return getInitialMigrationEngine({ migration, context: migrationContext });
+		return getInitialMigrationEngine({
+			migration,
+			context: migrationContext,
+			meta,
+		});
 	}
 
 	const newOids = new Array<ObjectIdentifier>();
@@ -134,14 +144,16 @@ export async function getMigrationEngine({
 		migration,
 		context: migrationContext,
 		documents,
+		meta,
 	});
 	const mutations = getMigrationMutations({
 		migration,
 		newOids,
 		ctx: migrationContext,
+		meta,
 	});
 	const deleteCollection = async (collection: string) => {
-		await context.meta.deleteCollection(collection);
+		await meta.deleteCollection(collection);
 	};
 	const awaitables = new Array<Promise<any>>();
 	const engine: MigrationEngine = {
@@ -166,7 +178,7 @@ export async function getMigrationEngine({
 					// when the snapshots themselves are derived from the same data...)
 					// maybe don't use the findAll query, and instead go a level
 					// lower to retain access to lower level data here?
-					const authz = await context.meta.getDocumentAuthz(rootOid);
+					const authz = await meta.getDocumentAuthz(rootOid);
 					const original = cloneDeep(doc);
 					// @ts-ignore - excessive type resolution
 					const newValue = await strategy(doc);
@@ -196,7 +208,7 @@ export async function getMigrationEngine({
 							},
 						);
 						if (patches.length > 0) {
-							await context.meta.insertData({
+							await meta.insertData({
 								operations: patches,
 								isLocal: true,
 							});
@@ -218,9 +230,11 @@ export async function getMigrationEngine({
 function getInitialMigrationEngine({
 	migration,
 	context,
+	meta,
 }: {
-	context: OpenDocumentDbContext;
+	context: ContextWithoutPersistence;
 	migration: Migration;
+	meta: PersistenceMetadata;
 }): MigrationEngine {
 	const newOids = new Array<ObjectIdentifier>();
 
@@ -236,6 +250,7 @@ function getInitialMigrationEngine({
 		migration,
 		newOids,
 		ctx: context,
+		meta,
 	});
 	const engine: MigrationEngine = {
 		log: context.log,

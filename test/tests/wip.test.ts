@@ -15,7 +15,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		// logId: 'A',
 		oldSchemas: [defaultSchema],
 	};
-	const client = await createGenericClient(baseClientOptions);
+	const client = createGenericClient(baseClientOptions);
 
 	await client.items.put({
 		id: '1',
@@ -55,7 +55,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	});
 
 	log('opening wip client');
-	const wipClient = await createGenericClient({
+	const wipClient = createGenericClient({
 		...baseClientOptions,
 		schema: wipSchema,
 		oldSchemas: [defaultSchema, wipSchema],
@@ -92,7 +92,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	log('closed wip client');
 
 	// what happens when we open v1 again?
-	const client1Again = await createGenericClient(baseClientOptions);
+	const client1Again = createGenericClient(baseClientOptions);
 	log('opened v1 client again');
 
 	const item1Again = await client1Again.items.get('1').resolved;
@@ -138,14 +138,15 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		},
 	});
 
-	const client2 = await createGenericClient({
+	const client2 = createGenericClient({
 		...baseClientOptions,
 		schema: v2Schema,
 		oldSchemas: [defaultSchema, v2Schema],
 		migrations: [
 			...baseClientOptions.migrations,
-			createMigration(defaultSchema, v2Schema, async () => {}),
+			createMigration(defaultSchema, v2Schema),
 		],
+		// logId: 'A2',
 	});
 	log('opened v2 client');
 
@@ -179,14 +180,16 @@ it('applies a WIP schema over an old schema and discards it once the new version
 		wip: true,
 	});
 
-	const client3 = await createGenericClient({
+	const client3 = createGenericClient({
 		...baseClientOptions,
 		schema: wipSchema3,
 		oldSchemas: [defaultSchema, v2Schema, wipSchema3],
 		migrations: [
 			...baseClientOptions.migrations,
-			createMigration(v2Schema, wipSchema3, async () => {}),
+			createMigration(defaultSchema, v2Schema),
+			createMigration(v2Schema, wipSchema3),
 		],
+		// logId: 'A3 wip',
 	});
 
 	// data is copied.
@@ -214,14 +217,16 @@ it('applies a WIP schema over an old schema and discards it once the new version
 	// close and reopen to confirm it's still there
 	await client3.close();
 
-	const client3Again = await createGenericClient({
+	const client3Again = createGenericClient({
 		...baseClientOptions,
 		schema: v2Schema,
 		oldSchemas: [defaultSchema, v2Schema, wipSchema3],
 		migrations: [
 			...baseClientOptions.migrations,
+			createMigration(defaultSchema, v2Schema, async () => {}),
 			createMigration(v2Schema, wipSchema3, async () => {}),
 		],
+		logId: 'A3',
 	});
 
 	const item3Again = await client3Again.items.get('1').resolved;
@@ -247,7 +252,7 @@ it('applies a WIP schema over an old schema and discards it once the new version
 });
 
 it('can start a WIP schema from no pre-existing client', async () => {
-	const { log, createGenericClient } = createTestContext({
+	const { createGenericClient } = createTestContext({
 		library: 'wip-from-scratch',
 	});
 	// create a WIP schema with some proposed changes.
@@ -271,7 +276,7 @@ it('can start a WIP schema from no pre-existing client', async () => {
 		wip: true,
 	});
 
-	const wipClient = await createGenericClient({
+	const wipClient = createGenericClient({
 		user: 'A',
 		schema: wipSchema,
 		migrations: [createMigration(wipSchema)],
@@ -289,7 +294,7 @@ it('can start a WIP schema from no pre-existing client', async () => {
 	expect(await wipClient.categories.findAll().resolved).toHaveLength(1);
 
 	// then it can go to v1, which will have no data
-	const client = await createGenericClient({
+	const client = createGenericClient({
 		user: 'A',
 		schema: defaultSchema,
 		oldSchemas: [defaultSchema],

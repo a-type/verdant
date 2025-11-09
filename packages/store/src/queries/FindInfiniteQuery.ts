@@ -37,7 +37,9 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result, hasNextPage } = await this.context.documents.findAllOids({
+		const { result, hasNextPage } = await (
+			await this.context.documents
+		).findAllOids({
 			collection: this.collection,
 			limit: this._pageSize * this._upToPage,
 			offset: 0,
@@ -48,7 +50,9 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	};
 
 	public loadMore = async () => {
-		const { result, hasNextPage } = await this.context.documents.findAllOids({
+		const { result, hasNextPage } = await (
+			await this.context.documents
+		).findAllOids({
 			collection: this.collection,
 			limit: this._pageSize,
 			offset: this._pageSize * this._upToPage,

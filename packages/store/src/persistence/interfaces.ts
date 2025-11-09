@@ -6,7 +6,7 @@ import {
 	ObjectIdentifier,
 	Operation,
 } from '@verdant-web/common';
-import { Context, InitialContext } from '../context/context.js';
+import { Context, ContextWithoutPersistence } from '../context/context.js';
 
 export interface AckInfo {
 	globalAckTimestamp: string | null;
@@ -187,21 +187,22 @@ export interface PersistenceFileDb {
 	iterateOverPendingDelete(
 		iterator: (file: PersistedFileData) => void,
 	): Promise<void>;
-	loadFileContents(file: FileData, ctx: Context): Promise<Blob>;
+	loadFileContents(
+		file: FileData,
+		ctx: Omit<Context, 'queries'>,
+	): Promise<Blob>;
 	getAll(): Promise<PersistedFileData[]>;
 	stats(): Promise<{ size: { count: number; size: number } }>;
 }
 
 export interface PersistenceNamespace {
-	openMetadata(ctx: InitialContext): Promise<PersistenceMetadataDb>;
+	openMetadata(ctx: ContextWithoutPersistence): Promise<PersistenceMetadataDb>;
 	/**
 	 * Open the Documents database according to the schema in the given
 	 * context. By the time this is called with a version, relevant migrations
 	 * will have been applied.
 	 */
-	openDocuments(
-		ctx: Omit<Context, 'documents' | 'files'>,
-	): Promise<PersistenceDocumentDb>;
+	openDocuments(ctx: ContextWithoutPersistence): Promise<PersistenceDocumentDb>;
 	/**
 	 * Apply a migration to the namespace provided in ctx.
 	 * This should make any transformations necessary to the
@@ -212,10 +213,11 @@ export interface PersistenceNamespace {
 	 * This method should also store the new version to persisted
 	 * metadata, however your implementation chooses to do that.
 	 */
-	applyMigration(ctx: InitialContext, migration: Migration<any>): Promise<void>;
-	openFiles(
-		ctx: Omit<Context, 'files' | 'documents'>,
-	): Promise<PersistenceFileDb>;
+	applyMigration(
+		ctx: ContextWithoutPersistence,
+		migration: Migration<any>,
+	): Promise<void>;
+	openFiles(ctx: ContextWithoutPersistence): Promise<PersistenceFileDb>;
 }
 
 export interface PersistenceImplementation {
@@ -227,7 +229,10 @@ export interface PersistenceImplementation {
 	/** Returns a list of all persisted namespaces visible to this app. */
 	getNamespaces(): Promise<string[]>;
 	/** Deletes all data from a particular namespace. */
-	deleteNamespace(namespace: string, ctx: InitialContext): Promise<void>;
+	deleteNamespace(
+		namespace: string,
+		ctx: ContextWithoutPersistence,
+	): Promise<void>;
 	/** Gets the schema version of the given namespace */
 	getNamespaceVersion(namespace: string): Promise<number>;
 	/**
@@ -235,5 +240,9 @@ export interface PersistenceImplementation {
 	 * overwrite the target namespace such that data and database
 	 * schema are identical.
 	 */
-	copyNamespace(from: string, to: string, ctx: InitialContext): Promise<void>;
+	copyNamespace(
+		from: string,
+		to: string,
+		ctx: ContextWithoutPersistence,
+	): Promise<void>;
 }

@@ -1,5 +1,5 @@
 import {
-	ClientDescriptor,
+	Client,
 	ClientWithCollections,
 	createMigration,
 	schema,
@@ -34,17 +34,15 @@ const testSchema = schema({
 
 const hooks = createHooks(testSchema);
 
-let clientDesc: ClientDescriptor;
 let client: ClientWithCollections;
 beforeAll(async () => {
-	clientDesc = new ClientDescriptor({
+	client = new Client({
 		schema: testSchema,
 		oldSchemas: [testSchema],
 		migrations: [createMigration(testSchema)],
 		namespace: 'suspense-test',
 		log: console.log,
-	});
-	client = await (clientDesc.open() as Promise<ClientWithCollections>);
+	}) as any as ClientWithCollections;
 	await Promise.all(
 		new Array(1000)
 			.fill(null)
@@ -58,7 +56,7 @@ function renderWithProvider(content: React.ReactElement) {
 	return render(content, {
 		wrapper: ({ children }) => (
 			<Suspense>
-				<hooks.Provider value={clientDesc}>
+				<hooks.Provider value={client}>
 					<Suspense fallback={<div data-testid="suspense">Loading...</div>}>
 						{children}
 					</Suspense>

@@ -267,7 +267,15 @@ export async function overwriteDatabase(
 	}
 
 	const to = await new Promise<IDBDatabase>((resolve, reject) => {
-		ctx.log('debug', 'Opening reset database', toName, 'at', from.version);
+		ctx.log(
+			'debug',
+			'Copying to database',
+			toName,
+			'at',
+			from.version,
+			'from',
+			from.name,
+		);
 		const openRequest = indexedDB.open(toName, from.version);
 		openRequest.onupgradeneeded = () => {
 			ctx.log(
@@ -284,6 +292,7 @@ export async function overwriteDatabase(
 				throw new Error('No transaction');
 			}
 			for (const storeName of Array.from(original.objectStoreNames)) {
+				ctx.log('debug', 'Copying object store', storeName);
 				const originalObjectStore = original
 					.transaction(storeName)
 					.objectStore(storeName);
@@ -314,31 +323,35 @@ export async function overwriteDatabase(
 			reject(openRequest.error ?? new Error('Unknown database upgrade error'));
 	});
 
-	const records = await getAllFromObjectStores(
-		from,
-		Array.from(from.objectStoreNames),
-	);
-	await new Promise<void>((resolve, reject) => {
-		const writeTx = to.transaction(
-			Array.from(to.objectStoreNames),
-			'readwrite',
+	// only copy data to new database if there are object stores to
+	// copy to
+	if (to.objectStoreNames.length > 0) {
+		const records = await getAllFromObjectStores(
+			from,
+			Array.from(from.objectStoreNames),
 		);
-		for (let i = 0; i < records.length; i++) {
-			const store = writeTx.objectStore(from.objectStoreNames[i]);
-			for (const record of records[i]) {
-				store.add(record);
+		await new Promise<void>((resolve, reject) => {
+			const writeTx = to.transaction(
+				Array.from(to.objectStoreNames),
+				'readwrite',
+			);
+			for (let i = 0; i < records.length; i++) {
+				const store = writeTx.objectStore(from.objectStoreNames[i]);
+				for (const record of records[i]) {
+					store.add(record);
+				}
 			}
-		}
-		writeTx.oncomplete = () => resolve();
-		writeTx.onerror = (ev) => {
-			const err =
-				writeTx.error ??
-				(ev.target as any).transaction?.error ??
-				new Error('Unknown error');
-			ctx.log('critical', 'Error copying data', err);
-			reject(err);
-		};
-	});
+			writeTx.oncomplete = () => resolve();
+			writeTx.onerror = (ev) => {
+				const err =
+					writeTx.error ??
+					(ev.target as any).transaction?.error ??
+					new Error('Unknown error');
+				ctx.log('critical', 'Error copying data', err);
+				reject(err);
+			};
+		});
+	}
 
 	await closeDatabase(to);
 }
@@ -351,6 +364,15 @@ export function openDatabase(
 	return new Promise<IDBDatabase>((resolve, reject) => {
 		const req = indexedDB.open(name, expectedVersion);
 		req.onsuccess = () => {
+			if (req.result.version !== expectedVersion) {
+				req.result.close();
+				reject(
+					new Error(
+						`Migration error: opened database version ${req.result.version} but expected version ${expectedVersion} for database ${name}`,
+					),
+				);
+				return;
+			}
 			resolve(req.result);
 		};
 		req.onerror = () => {

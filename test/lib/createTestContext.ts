@@ -12,10 +12,10 @@ export function createTestContext({
 }) {
 	const nonce = Math.random().toString(36).slice(2, 7);
 	const library = `${rawLibrary}-${nonce}`;
-	const createClient = async (
+	const createClient = (
 		config: Omit<Parameters<typeof createTestClient>[0], 'library'>,
 	) => {
-		const client = await createTestClient({
+		const client = createTestClient({
 			server: context.server,
 			library,
 			...config,
@@ -29,7 +29,7 @@ export function createTestContext({
 		clients: [] as (Client | ClientWithCollections)[],
 		server: testServerApi,
 		createTestClient: createClient,
-		createGenericClient: async (
+		createGenericClient: (
 			config: Omit<Parameters<typeof createTestClient>[0], 'library'>,
 		) => {
 			return createClient(config) as unknown as ClientWithCollections;

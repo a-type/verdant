@@ -1,11 +1,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { ClientDescriptor } from './.generated/index.js';
+import { Client } from './.generated/index.js';
 import { createHooks } from './.generated/react.js';
 
 function makeClient() {
-	const desc = new ClientDescriptor({
+	return new Client<{ baz: number }, { foo: string }>({
 		namespace: 'test',
 		environment: {
 			indexedDB: new IDBFactory(),
@@ -19,8 +19,6 @@ function makeClient() {
 			autoStart: false,
 		},
 	});
-
-	return desc.open();
 }
 
 async function readFile(file: string) {
@@ -29,7 +27,7 @@ async function readFile(file: string) {
 
 describe('generated client', () => {
 	it('should expose model accessors which produce usable models', async () => {
-		const client = await makeClient();
+		const client = makeClient();
 
 		client.sync.presence.update({
 			baz: 3,

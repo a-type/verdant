@@ -1,10 +1,10 @@
 import { Client } from './client/Client.js';
-import {
-	ClientDescriptor,
-	ClientDescriptorOptions,
-} from './client/ClientDescriptor.js';
+import type { ContextInit } from './context/context.js';
 export type { ClientWithCollections } from './client/Client.js';
-export { Client, ClientDescriptor };
+export { Client, type ClientDescriptorOptions, type ClientInitOptions };
+type ClientInitOptions = ContextInit;
+/** @deprecated - use ClientInitOptions alias */
+type ClientDescriptorOptions = ClientInitOptions;
 // backward compat
 export { createMigration, schema } from '@verdant-web/common';
 export type {
@@ -54,8 +54,4 @@ export { ServerSync, type ServerSyncOptions } from './sync/Sync.js';
 export type { SyncTransportMode } from './sync/Sync.js';
 export { UndoHistory } from './UndoHistory.js';
 export * from './utils/id.js';
-export { Client as Storage, ClientDescriptor as StorageDescriptor };
-export type {
-	ClientDescriptorOptions,
-	ClientDescriptorOptions as StorageInitOptions,
-};
+export { Client as Storage };

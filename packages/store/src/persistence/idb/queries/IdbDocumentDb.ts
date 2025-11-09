@@ -5,7 +5,7 @@ import {
 	getIndexValues,
 	ObjectIdentifier,
 } from '@verdant-web/common';
-import { InitialContext } from '../../../context/context.js';
+import { ContextWithoutPersistence } from '../../../context/context.js';
 import { PersistenceDocumentDb } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
 import {
@@ -17,10 +17,17 @@ import {
 import { getRange } from './ranges.js';
 
 export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
-	constructor(db: IDBDatabase, context: InitialContext) {
+	constructor(
+		db: IDBDatabase,
+		private context: ContextWithoutPersistence,
+	) {
 		super(db, context);
 		this.addDispose(() => {
-			this.ctx.log('info', 'Closing document database for', this.ctx.namespace);
+			this.context.log(
+				'info',
+				'Closing document database for',
+				context.namespace,
+			);
 			return closeDatabase(this.db);
 		});
 	}
@@ -32,7 +39,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 	stats = async (): Promise<
 		Record<string, { count: number; size: number }>
 	> => {
-		const collectionNames = Object.keys(this.ctx.schema.collections);
+		const collectionNames = Object.keys(this.context.schema.collections);
 		const collections: Record<string, { count: number; size: number }> = {};
 		await Promise.all(
 			collectionNames.map(async (name) => {
@@ -54,7 +61,11 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 					? store.index(opts.index.where)
 					: store;
 				const direction = opts.index?.order === 'desc' ? 'prev' : 'next';
-				const range = getRange(this.ctx.schema, opts.collection, opts.index);
+				const range = getRange(
+					this.context.schema,
+					opts.collection,
+					opts.index,
+				);
 				return source.openCursor(range, direction);
 			},
 			{ mode: 'readonly' },
@@ -82,7 +93,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 		const store = tx.objectStore(collection);
 		const source = index?.where ? store.index(index.where) : store;
 		const direction = index?.order === 'desc' ? 'prev' : 'next';
-		const range = getRange(this.ctx.schema, collection, index);
+		const range = getRange(this.context.schema, collection, index);
 		const request = source.openCursor(range, direction);
 
 		let hasNextPage = false;
@@ -124,7 +135,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 
 			request.onerror = () => {
 				if (request.error?.name === 'InvalidStateError') {
-					this.ctx.log(
+					this.context.log(
 						'error',
 						`find query failed with InvalidStateError`,
 						request.error,
@@ -161,7 +172,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 				try {
 					await this.saveDocument(e.oid, snapshot, options);
 				} catch (err) {
-					this.ctx.log(
+					this.context.log(
 						'error',
 						`Error saving document ${e.oid} (${JSON.stringify(snapshot)})`,
 						err,
@@ -186,7 +197,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 					'Failed to save any documents. Something must be quite wrong.',
 				);
 			}
-			this.ctx.log(
+			this.context.log(
 				'error',
 				'Failed to save documents:',
 				failures,
@@ -198,15 +209,15 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 	};
 
 	reset = async (): Promise<void> => {
-		const names = Object.keys(this.ctx.schema.collections);
+		const names = Object.keys(this.context.schema.collections);
 		const tx = this.createTransaction(names, { mode: 'readwrite' });
 		await Promise.all(
 			names.map((name) =>
 				this.run(name, (store) => store.clear(), { transaction: tx }),
 			),
 		);
-		this.ctx.entityEvents.emit('collectionsChanged', names);
-		this.ctx.log('info', '💨 Reset queryable storage');
+		this.context.entityEvents.emit('collectionsChanged', names);
+		this.context.log('info', '💨 Reset queryable storage');
 	};
 
 	private saveDocument = async (
@@ -214,7 +225,7 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 		doc: any,
 		{ transaction }: { transaction?: IDBTransaction },
 	) => {
-		this.ctx.log('debug', `Saving document indexes for querying ${oid}`);
+		this.context.log('debug', `Saving document indexes for querying ${oid}`);
 		const { collection, id } = decomposeOid(oid);
 		try {
 			if (!doc) {
@@ -222,9 +233,12 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 					mode: 'readwrite',
 					transaction,
 				});
-				this.ctx.log('debug', `Deleted document indexes for querying ${oid}`);
+				this.context.log(
+					'debug',
+					`Deleted document indexes for querying ${oid}`,
+				);
 			} else {
-				const schema = this.ctx.schema.collections[collection];
+				const schema = this.context.schema.collections[collection];
 				// no need to validate before storing; the entity's snapshot is already validated.
 				const indexes = getIndexValues(schema, doc);
 				indexes['@@@snapshot'] = JSON.stringify(doc);
@@ -232,10 +246,10 @@ export class IdbDocumentDb extends IdbService implements PersistenceDocumentDb {
 					mode: 'readwrite',
 					transaction,
 				});
-				this.ctx.log('debug', `Save complete for ${oid}`, indexes);
+				this.context.log('debug', `Save complete for ${oid}`, indexes);
 			}
 		} catch (err) {
-			this.ctx.log('error', `Error saving document ${oid}`, err);
+			this.context.log('error', `Error saving document ${oid}`, err);
 			throw err;
 		}
 	};

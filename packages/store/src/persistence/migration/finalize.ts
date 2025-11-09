@@ -4,17 +4,20 @@ import {
 	Migration,
 	MigrationEngine,
 } from '@verdant-web/common';
+import { ContextWithoutPersistence } from '../../context/context.js';
 import { ClientOperation, PersistenceDocumentDb } from '../interfaces.js';
-import { OpenDocumentDbContext } from './types.js';
+import { PersistenceMetadata } from '../PersistenceMetadata.js';
 
 export async function finalizeMigration({
 	ctx,
 	documents,
 	migration,
+	meta,
 	engine,
 }: {
-	ctx: OpenDocumentDbContext;
+	ctx: ContextWithoutPersistence;
 	documents: PersistenceDocumentDb;
+	meta: PersistenceMetadata;
 	migration: Migration<any>;
 	engine: MigrationEngine;
 }) {
@@ -37,6 +40,7 @@ export async function finalizeMigration({
 		currentVersion: migration.oldSchema.version,
 		newVersion: migration.newSchema.version,
 		ctx,
+		meta,
 	});
 
 	// once the schema is ready, we can write back the migrated documents
@@ -58,7 +62,7 @@ export async function finalizeMigration({
 		const snapshots = await Promise.all(
 			oids.map(async (oid) => {
 				try {
-					const snap = await ctx.meta.getDocumentSnapshot(oid);
+					const snap = await meta.getDocumentSnapshot(oid);
 					return [oid, snap];
 				} catch (e) {
 					// this seems to happen with baselines/ops which are not fully
@@ -103,16 +107,18 @@ async function getDocsWithUnappliedMigrations({
 	currentVersion,
 	newVersion: _,
 	ctx,
+	meta,
 }: {
 	currentVersion: number;
 	newVersion: number;
-	ctx: OpenDocumentDbContext;
+	ctx: ContextWithoutPersistence;
+	meta: PersistenceMetadata;
 }) {
 	// scan for all operations in metadata after the current version.
 	// this could be more efficient if also filtering below or equal newVersion but
 	// that seems so unlikely in practice...
 	const unappliedOperations: ClientOperation[] = [];
-	await ctx.meta.iterateAllOperations(
+	await meta.iterateAllOperations(
 		(op) => {
 			unappliedOperations.push(op);
 		},

@@ -67,12 +67,22 @@ export async function openDatabase({
 	version: number;
 	log?: Context['log'];
 }): Promise<IDBDatabase> {
+	if (version <= 0) {
+		throw new Error('Cannot open database at version less than 1');
+	}
 	log?.('debug', 'Opening database', namespace, 'at version', version);
 	const db = await baseOpenDatabase(
 		getDocumentDbName(namespace),
 		version,
 		indexedDB,
 	);
+	log?.('debug', 'Database opened', namespace, 'at version', db.version);
+	if (db.version !== version) {
+		log?.(
+			'warn',
+			`Opened database version ${db.version} but expected version ${version} for namespace ${namespace}`,
+		);
+	}
 
 	db.addEventListener('versionchange', (event) => {
 		db.close();

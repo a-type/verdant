@@ -6,7 +6,7 @@ import {
 	StorageStringFieldSchema,
 } from '@verdant-web/common';
 import { describe, expect, it } from 'vitest';
-import { ClientDescriptor } from '../client/ClientDescriptor.js';
+import { Client } from '../client/Client.js';
 import { ClientWithCollections } from '../index.js';
 import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
 
@@ -53,13 +53,13 @@ describe('schema', () => {
 			},
 		});
 
-		const storage: ClientWithCollections = (await new ClientDescriptor({
+		const storage: ClientWithCollections = new Client({
 			schema: testSchema,
 			migrations: [createMigration<{}>(testSchema)],
 			namespace: 'schematest',
 			oldSchemas: [testSchema],
 			persistence: new IdbPersistence(new IDBFactory()),
-		}).open()) as any;
+		}) as any;
 
 		const doc = await storage.tests.put({
 			id: 'test',

@@ -3,30 +3,117 @@ import {
 	EventSubscriber,
 	FileData,
 	FileRef,
+	HybridLogicalClockTimestampProvider,
 	Migration,
 	ObjectIdentifier,
 	Operation,
 	PatchCreator,
 	StorageSchema,
+	VerdantError,
 } from '@verdant-web/common';
+import { FakeWeakRef } from '../FakeWeakRef.js';
 import { UndoHistory } from '../UndoHistory.js';
 import type { Client } from '../client/Client.js';
-import { VerdantLogger } from '../logger.js';
+import { debugLogger, noLogger, VerdantLogger } from '../logger.js';
 import { PersistenceFiles } from '../persistence/PersistenceFiles.js';
 import type { PersistenceMetadata } from '../persistence/PersistenceMetadata.js';
 import type { PersistenceDocuments } from '../persistence/PersistenceQueries.js';
+import { IdbPersistence } from '../persistence/idb/idbPersistence.js';
 import {
 	PersistedFileData,
 	PersistenceImplementation,
 } from '../persistence/interfaces.js';
+import { initializePersistence } from '../persistence/persistence.js';
+import { ServerSyncOptions } from '../sync/Sync.js';
 import { ShutdownHandler } from './ShutdownHandler.js';
 import { Time } from './Time.js';
+
+export interface ContextEnvironment {
+	WebSocket: typeof WebSocket;
+	fetch: typeof fetch;
+	indexedDB: typeof indexedDB;
+	location: Location;
+	history: History;
+}
+
+export const defaultBrowserEnvironment: ContextEnvironment = {
+	WebSocket: typeof WebSocket !== 'undefined' ? WebSocket : (undefined as any),
+	fetch: typeof window !== 'undefined' ? window.fetch.bind(window) : fetch!,
+	indexedDB: typeof indexedDB !== 'undefined' ? indexedDB : (undefined as any),
+	location:
+		typeof window !== 'undefined' ? window.location : (undefined as any),
+	history: typeof window !== 'undefined' ? window.history : (undefined as any),
+};
+
+export interface ContextInit {
+	/** The schema used to create this client */
+	schema: StorageSchema<any>;
+	oldSchemas: StorageSchema<any>[];
+	/** Migrations, in order, to upgrade to each successive version of the schema */
+	migrations: Migration<any>[];
+	/** Provide a sync config to turn on synchronization with a server */
+	sync?: ServerSyncOptions;
+	/**
+	 * Namespaces are used to separate data from different clients in IndexedDB.
+	 */
+	namespace: string;
+	/**
+	 * Provide your own UndoHistory to have a unified undo system across multiple
+	 * clients if you so desire.
+	 */
+	undoHistory?: UndoHistory;
+	/**
+	 * Provide a log function to log internal debug messages
+	 */
+	log?: VerdantLogger | false;
+	disableRebasing?: boolean;
+	rebaseTimeout?: number;
+	/**
+	 * Provide a specific schema number to override the schema version
+	 * in the database. This is useful for testing migrations or recovering
+	 * from a mistakenly deployed incorrect schema. A specific version is required
+	 * so that you don't leave this on accidentally for all new schemas.
+	 */
+	overrideSchemaConflict?: number;
+	/**
+	 * Configuration for file management
+	 */
+	files?: FileConfig;
+
+	/**
+	 * Override the default IndexedDB persistence implementation.
+	 */
+	persistence?: PersistenceImplementation;
+
+	/**
+	 * Specify the environment dependencies needed for the client.
+	 * Normally these are provided by the browser, but in other
+	 * runtimes you may need to provide your own.
+	 */
+	environment?: Partial<ContextEnvironment>;
+
+	/**
+	 * Enables experimental WeakRef usage to cull documents
+	 * from cache that aren't being used. This is a performance
+	 * optimization which has been tested under all Verdant's test
+	 * suites but I still want to keep testing it in the real world
+	 * before turning it on.
+	 */
+	EXPERIMENTAL_weakRefs?: boolean;
+
+	/**
+	 * Customize querying behavior.
+	 */
+	queries?: QueryConfig;
+
+	persistenceShutdownHandler?: ShutdownHandler;
+}
 
 /**
  * Common components utilized across various client
  * services.
  */
-export interface Context {
+export class Context {
 	namespace: string;
 	/**
 	 * when in WIP mode, namespace might be set to a temporary value. This will always point to the
@@ -35,9 +122,16 @@ export interface Context {
 	originalNamespace: string;
 	time: Time;
 
-	meta: PersistenceMetadata;
-	documents: PersistenceDocuments;
-	files: PersistenceFiles;
+	// async initialized services
+	get meta(): Promise<PersistenceMetadata> {
+		return this.initializedPromise.then((init) => init.meta);
+	}
+	get documents(): Promise<PersistenceDocuments> {
+		return this.initializedPromise.then((init) => init.documents);
+	}
+	get files(): Promise<PersistenceFiles> {
+		return this.initializedPromise.then((init) => init.files);
+	}
 
 	undoHistory: UndoHistory;
 	schema: StorageSchema;
@@ -57,6 +151,7 @@ export interface Context {
 		fileAdded: (file: FileData) => void;
 		[ev: `fileUploaded:${string}`]: (file: FileData) => void;
 		fileUploaded: (file: FileData) => void;
+		outgoingSyncMessage: (message: ClientMessage) => void;
 	}>;
 	globalEvents: EventSubscriber<{
 		/**
@@ -86,14 +181,21 @@ export interface Context {
 		rebase: () => void;
 		fileSaved: (file: FileData) => void;
 	}>;
-	weakRef<T extends object>(value: T): WeakRef<T>;
+	weakRef = <T extends object>(value: T): WeakRef<T> => {
+		if (this.init.EXPERIMENTAL_weakRefs) {
+			return new WeakRef(value);
+		}
+		return new FakeWeakRef(value) as any;
+	};
 	migrations: Migration<any>[];
-	closing: boolean;
 	/** If this is present, any attempt to close the client should await it first. */
 	closeLock?: Promise<void>;
-	pauseRebasing: boolean;
 	patchCreator: PatchCreator;
 	persistenceShutdownHandler: ShutdownHandler;
+
+	// state
+	closing: boolean = false;
+	pauseRebasing: boolean = false;
 
 	config: {
 		files?: FileConfig;
@@ -102,13 +204,7 @@ export interface Context {
 		queries?: QueryConfig;
 	};
 
-	environment: {
-		WebSocket: typeof WebSocket;
-		fetch: typeof fetch;
-		indexedDB: typeof indexedDB;
-		location: Location;
-		history: History;
-	};
+	environment: ContextEnvironment;
 
 	persistence: PersistenceImplementation;
 
@@ -116,7 +212,80 @@ export interface Context {
 	 * Must be defined by the Client once it exists. Attempts to use this before
 	 * it's ready will rightfully throw an error.
 	 */
-	getClient: () => Client;
+	getClient = (): Client => {
+		throw new VerdantError(
+			VerdantError.Code.Unexpected,
+			undefined,
+			'Client not yet initialized. This is a Verdant bug, please report it.',
+		);
+	};
+
+	constructor(
+		private init: ContextInit,
+		initPersistence?: ReturnType<typeof initializePersistence>,
+	) {
+		// if server-side and no alternative IndexedDB implementation was provided,
+		// we can't initialize the storage
+		if (typeof window === 'undefined' && !this.init.environment) {
+			throw new Error(
+				'A Verdant client was initialized in an environment without a global Window or `environment` configuration. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of the environment to the ClientDescriptor options.',
+			);
+		}
+		// set static values
+		this.namespace = this.init.namespace;
+		this.originalNamespace = this.init.namespace;
+		this.time = new Time(
+			new HybridLogicalClockTimestampProvider(),
+			this.init.schema.version,
+		);
+		this.log =
+			this.init.log === false ? noLogger : this.init.log || debugLogger('🌿');
+		this.migrations = init.migrations;
+		this.undoHistory = init.undoHistory || new UndoHistory();
+		this.entityEvents = new EventSubscriber();
+		this.internalEvents = new EventSubscriber();
+		this.globalEvents = new EventSubscriber();
+		this.schema = init.schema;
+		this.oldSchemas = init.oldSchemas;
+		this.patchCreator = new PatchCreator(() => this.time.now);
+		this.persistenceShutdownHandler =
+			init.persistenceShutdownHandler || new ShutdownHandler(this.log);
+		this.config = {
+			files: init.files,
+			sync: init.sync,
+			persistence: {
+				disableRebasing: init.disableRebasing,
+				rebaseTimeout: init.rebaseTimeout,
+			},
+			queries: init.queries,
+		};
+		this.environment = {
+			...defaultBrowserEnvironment,
+			...init.environment,
+		};
+		this.persistence =
+			init.persistence || new IdbPersistence(this.environment.indexedDB);
+		this.initializedPromise = initPersistence || initializePersistence(this);
+		this.initializedPromise.then(() => {
+			this.log('info', 'Persistence initialized');
+		});
+	}
+	private initializedPromise;
+	get waitForInitialization(): Promise<void> {
+		return this.initializedPromise.then(() => {});
+	}
+	reinitialize = async (): Promise<void> => {
+		this.initializedPromise = initializePersistence(this);
+		await this.initializedPromise;
+	};
+
+	cloneWithOptions(options: Partial<ContextInit>): Context {
+		const copy = new Context(
+			{ ...this.init, ...options },
+			this.initializedPromise,
+		);
+		return copy;
+	}
 }
 
 export interface FileConfig {
@@ -231,4 +400,7 @@ export interface QueryConfig {
 	evictionTime?: number;
 }
 
-export type InitialContext = Omit<Context, 'documents' | 'meta' | 'files'>;
+export type ContextWithoutPersistence = Omit<
+	Context,
+	'meta' | 'documents' | 'files'
+>;

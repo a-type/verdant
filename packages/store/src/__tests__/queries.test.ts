@@ -61,7 +61,7 @@ afterEach(() => {
 
 describe('storage queries', () => {
 	it('can query synthetic indexes', async () => {
-		const storage = await createTestStorage();
+		const storage = createTestStorage();
 
 		const items = await addTestingItems(storage);
 
@@ -77,7 +77,7 @@ describe('storage queries', () => {
 	});
 
 	it('can query simple compound indexes by match and order', async () => {
-		const storage = await createTestStorage();
+		const storage = createTestStorage();
 
 		const items = await addTestingItems(storage);
 
@@ -124,10 +124,8 @@ describe('storage queries', () => {
 	});
 
 	it('can query starts-with on a string', async () => {
-		const storage = await createTestStorage();
-
+		const storage = createTestStorage();
 		const items = await addTestingItems(storage);
-
 		const query = storage.todos.findAll({
 			index: {
 				where: 'content',

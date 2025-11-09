@@ -1,13 +1,13 @@
 import {
-	ServerMessage,
-	EventSubscriber,
-	Batcher,
 	Batch,
+	Batcher,
+	EventSubscriber,
+	ServerMessage,
 	VerdantInternalPresence,
 	initialInternalPresence,
 } from '@verdant-web/common';
-import type { UserInfo } from '../index.js';
 import { Context } from '../context/context.js';
+import type { UserInfo } from '../index.js';
 import { LocalReplicaInfo } from '../persistence/interfaces.js';
 
 export const HANDLE_MESSAGE = Symbol('handleMessage');
@@ -90,9 +90,12 @@ export class PresenceManager<
 		this.self.replicaId = '';
 
 		// set the local replica ID as soon as it's loaded
-		ctx.meta.getLocalReplica().then((info) => {
-			this.self.replicaId = info.id;
-		});
+		ctx.waitForInitialization
+			.then(() => ctx.meta)
+			.then((meta) => meta.getLocalReplica())
+			.then((info) => {
+				this.self.replicaId = info.id;
+			});
 
 		this._updateBatcher = new Batcher(this.flushPresenceUpdates);
 		this._updateBatch = this._updateBatcher.add({

@@ -8,7 +8,7 @@ import {
 	getOidSubIdRange,
 	ObjectIdentifier,
 } from '@verdant-web/common';
-import { InitialContext } from '../../../context/context.js';
+import { ContextWithoutPersistence } from '../../../context/context.js';
 import {
 	AbstractTransaction,
 	AckInfo,
@@ -37,10 +37,10 @@ export class IdbMetadataDb
 	extends IdbService
 	implements PersistenceMetadataDb<IDBTransaction>
 {
-	constructor(db: IDBDatabase, ctx: InitialContext) {
+	constructor(db: IDBDatabase, ctx: ContextWithoutPersistence) {
 		super(db, ctx);
 		this.addDispose(() => {
-			this.ctx.log('info', `Closing metadata DB for`, this.ctx.namespace);
+			this.ctx.log('info', `Closing metadata DB for`, ctx.namespace);
 			return closeDatabase(db);
 		});
 	}

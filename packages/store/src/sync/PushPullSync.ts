@@ -140,7 +140,9 @@ export class PushPullSync
 			if (message.ackThisNonce) {
 				this.ctx.log('debug', 'Sending sync ack', message.ackThisNonce);
 				await this.sendRequest([
-					await this.ctx.meta.messageCreator.createAck(message.ackThisNonce),
+					await (
+						await this.ctx.meta
+					).messageCreator.createAck(message.ackThisNonce),
 				]);
 			}
 		}
@@ -210,10 +212,10 @@ export class PushPullSync
 		// will include the client's own presence info and fill in missing profile
 		// data on the first request. otherwise it would have to wait for the second.
 		this.sendRequest([
-			await this.ctx.meta.messageCreator.createPresenceUpdate(
-				this.presence.self,
-			),
-			await this.ctx.meta.messageCreator.createSyncStep1(),
+			await (
+				await this.ctx.meta
+			).messageCreator.createPresenceUpdate(this.presence.self),
+			await (await this.ctx.meta).messageCreator.createSyncStep1(),
 		]);
 	};
 
@@ -227,7 +229,7 @@ export class PushPullSync
 
 	syncOnce = async () => {
 		await this.sendRequest([
-			await this.ctx.meta.messageCreator.createSyncStep1(),
+			await (await this.ctx.meta).messageCreator.createSyncStep1(),
 		]);
 	};
 

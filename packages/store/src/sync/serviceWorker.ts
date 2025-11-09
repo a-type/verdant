@@ -1,19 +1,17 @@
-import type { ClientDescriptor } from '../client/ClientDescriptor.js';
+import type { Client } from '../client/Client.js';
 
-export async function registerBackgroundSync(clientDesc: ClientDescriptor) {
+export async function registerBackgroundSync(client: Client) {
 	self.addEventListener('periodicsync', (event: any) => {
 		if (event.tag === 'verdant-sync') {
 			// See the "Think before you sync" section for
 			// checks you could perform before syncing.
-			event.waitUntil(sync(clientDesc));
+			event.waitUntil(sync(client));
 		}
 	});
 }
 
-async function sync(clientDesc: ClientDescriptor) {
+async function sync(client: Client) {
 	try {
-		const client = await clientDesc.open();
-
 		await client.sync.syncOnce();
 	} catch (err) {
 		console.error('Failed to sync:', err);

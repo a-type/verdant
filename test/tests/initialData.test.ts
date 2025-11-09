@@ -13,13 +13,15 @@ async function fakeApi() {
 }
 
 it('can load initial data before the client opens', async () => {
-	const { createGenericClient } = createTestContext({
+	const { createGenericClient, log } = createTestContext({
 		library: 'initial-data',
+		// testLog: true,
 	});
 	// using a custom v1 migration to create the initial data
 	let migrationsInvokedCount = 0;
 	const migrations = [
 		createMigration(v1, async ({ mutations }) => {
+			log('migrate!');
 			migrationsInvokedCount++;
 			const category = await mutations.categories.put({
 				name: 'default',
@@ -32,12 +34,13 @@ it('can load initial data before the client opens', async () => {
 		}),
 	];
 
-	const client = await createGenericClient({
+	const client = createGenericClient({
 		user: 'a',
 		migrations,
-		// logId: 'A',
+		// logId: 'A
 	});
 
+	await client.__persistenceReady;
 	expect(migrationsInvokedCount).toBe(1);
 
 	const category = await client.categories.findOne({

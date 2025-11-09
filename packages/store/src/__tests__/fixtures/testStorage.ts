@@ -1,11 +1,7 @@
 import { createMigration, schema } from '@verdant-web/common';
 // @ts-ignore
 import { IDBFactory } from 'fake-indexeddb';
-import {
-	ClientDescriptor,
-	ClientWithCollections,
-	IdbPersistence,
-} from '../../index.js';
+import { Client, ClientWithCollections, IdbPersistence } from '../../index.js';
 
 const test = schema.fields.object({
 	fields: {
@@ -109,7 +105,7 @@ export function createTestStorage({
 	disableRebasing?: boolean;
 	log?: (...args: any[]) => void;
 } = {}) {
-	const storage = new ClientDescriptor({
+	const storage = new Client({
 		schema: testSchema,
 		migrations: [createMigration<{}>(testSchema)],
 		namespace: 'test',
@@ -117,6 +113,6 @@ export function createTestStorage({
 		oldSchemas: [testSchema],
 		log,
 		persistence: new IdbPersistence(idb),
-	}).open();
-	return storage as Promise<ClientWithCollections>;
+	});
+	return storage as ClientWithCollections;
 }

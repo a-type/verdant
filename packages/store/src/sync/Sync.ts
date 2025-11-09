@@ -10,16 +10,16 @@ import {
 	VerdantError,
 	VerdantInternalPresence,
 } from '@verdant-web/common';
-import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
+import { Context } from '../context/context.js';
+import { attemptToRegisterBackgroundSync } from './background.js';
 import { FilePullResult, FileSync, FileUploadResult } from './FileSync.js';
+import { HANDLE_MESSAGE, PresenceManager } from './PresenceManager.js';
 import { PushPullSync } from './PushPullSync.js';
 import {
 	ServerSyncEndpointProvider,
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
-import { Context } from '../context/context.js';
-import { attemptToRegisterBackgroundSync } from './background.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
@@ -282,6 +282,11 @@ export class ServerSync<Presence = any, Profile = any>
 				this.handleBroadcastChannelMessage,
 			);
 		}
+		ctx.log(
+			'info',
+			'Sync initialized with transport:',
+			initialTransport ?? 'pull',
+		);
 		if (initialTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
 		} else {
@@ -290,8 +295,7 @@ export class ServerSync<Presence = any, Profile = any>
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
 
-		ctx.meta.events.subscribe('syncMessage', this.send);
-
+		ctx.internalEvents.subscribe('outgoingSyncMessage', this.send);
 		this.webSocketSync.subscribe('message', this.handleMessage);
 		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
 
@@ -384,11 +388,11 @@ export class ServerSync<Presence = any, Profile = any>
 					baselines: message.baselines,
 				});
 				if (message.globalAckTimestamp) {
-					await this.ctx.meta.setGlobalAck(message.globalAckTimestamp);
+					await (await this.ctx.meta).setGlobalAck(message.globalAckTimestamp);
 				}
 				break;
 			case 'global-ack':
-				await this.ctx.meta.setGlobalAck(message.timestamp);
+				await (await this.ctx.meta).setGlobalAck(message.timestamp);
 				break;
 			case 'sync-resp':
 				this._activelySyncing = true;
@@ -400,10 +404,10 @@ export class ServerSync<Presence = any, Profile = any>
 				});
 
 				if (message.globalAckTimestamp) {
-					await this.ctx.meta.setGlobalAck(message.globalAckTimestamp);
+					await (await this.ctx.meta).setGlobalAck(message.globalAckTimestamp);
 				}
 
-				await this.ctx.meta.updateLastSynced(message.ackedTimestamp);
+				await (await this.ctx.meta).updateLastSynced(message.ackedTimestamp);
 				this._activelySyncing = false;
 				this.emit('syncingChange', false);
 				this._hasSynced = true;
@@ -411,13 +415,15 @@ export class ServerSync<Presence = any, Profile = any>
 				break;
 			case 'need-since':
 				this.emit('serverReset', message.since);
-				this.ctx.files.onServerReset(message.since);
+				(await this.ctx.files).onServerReset(message.since);
 				this.activeSync.send(
-					await this.ctx.meta.messageCreator.createSyncStep1(message.since),
+					await (
+						await this.ctx.meta
+					).messageCreator.createSyncStep1(message.since),
 				);
 				break;
 			case 'server-ack':
-				await this.ctx.meta.updateLastSynced(message.timestamp);
+				await (await this.ctx.meta).updateLastSynced(message.timestamp);
 		}
 
 		// avoid rebroadcasting messages
@@ -430,7 +436,7 @@ export class ServerSync<Presence = any, Profile = any>
 
 		// update presence if necessary
 		this.presence[HANDLE_MESSAGE](
-			await this.ctx.meta.getLocalReplica(),
+			await (await this.ctx.meta).getLocalReplica(),
 			message,
 		);
 	};
@@ -439,7 +445,7 @@ export class ServerSync<Presence = any, Profile = any>
 
 		// if online, attempt to upload any unsynced files.
 		if (online) {
-			const unsyncedFiles = await this.ctx.files.listUnsynced();
+			const unsyncedFiles = await (await this.ctx.files).listUnsynced();
 			const results = await Promise.allSettled(
 				unsyncedFiles.map((file) => this.fileSync.uploadFile(file)),
 			);
@@ -458,7 +464,9 @@ export class ServerSync<Presence = any, Profile = any>
 		presence?: Presence;
 		internal?: VerdantInternalPresence;
 	}) => {
-		this.send(await this.ctx.meta.messageCreator.createPresenceUpdate(data));
+		this.send(
+			await (await this.ctx.meta).messageCreator.createPresenceUpdate(data),
+		);
 	};
 
 	setMode = (transport: SyncTransportMode) => {
@@ -512,7 +520,7 @@ export class ServerSync<Presence = any, Profile = any>
 			if (message.type === 'sync' || message.type === 'op') {
 				rewriteAuthzOriginator(message, userId);
 			}
-			await this.activeSync.send(message);
+			this.activeSync.send(message);
 			this.onOutgoingMessage?.(message);
 		}
 	};
@@ -570,10 +578,12 @@ export class ServerSync<Presence = any, Profile = any>
 	};
 
 	public start = () => {
+		this.ctx.log('info', 'Starting sync');
 		return this.activeSync.start();
 	};
 
 	public stop = () => {
+		this.ctx.log('info', 'Stopping sync');
 		return this.activeSync.stop();
 	};
 

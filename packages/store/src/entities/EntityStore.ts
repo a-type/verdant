@@ -134,7 +134,7 @@ export class EntityStore extends Disposable {
 	};
 
 	empty = async () => {
-		await this.ctx.documents.reset();
+		await (await this.ctx.documents).reset();
 		this.events.resetAll.invoke(this);
 		this.cache.clear();
 	};
@@ -144,8 +144,8 @@ export class EntityStore extends Disposable {
 			this.ctx.log('warn', 'EntityStore is disposed, not resetting local data');
 			return;
 		}
-		await this.ctx.meta.reset();
-		await this.ctx.documents.reset();
+		await (await this.ctx.meta).reset();
+		await (await this.ctx.documents).reset();
 		this.events.resetAll.invoke(this);
 	};
 
@@ -223,7 +223,7 @@ export class EntityStore extends Disposable {
 		// TODO: could messages be sent to sync before storage,
 		// so that realtime is lower latency? What would happen
 		// if the storage failed?
-		await this.ctx.meta.insertData(data, abortOptions);
+		await (await this.ctx.meta).insertData(data, abortOptions);
 		this.ctx.log(
 			'debug',
 			'Data processing complete, all data saved to metadata db.',
@@ -247,7 +247,7 @@ export class EntityStore extends Disposable {
 		);
 		try {
 			this.ctx.log('debug', 'Saving entities to queryable storage');
-			await this.ctx.documents.saveEntities(entities, abortOptions);
+			await (await this.ctx.documents).saveEntities(entities, abortOptions);
 		} catch (err) {
 			if (this.disposed) {
 				this.ctx.log(
@@ -522,10 +522,9 @@ export class EntityStore extends Disposable {
 		entity: Entity,
 		opts?: { abort: AbortSignal },
 	) => {
-		const { operations, baselines } = await this.ctx.meta.getDocumentData(
-			entity.oid,
-			opts,
-		);
+		const { operations, baselines } = await (
+			await this.ctx.meta
+		).getDocumentData(entity.oid, opts);
 
 		if (!baselines.length && !Object.keys(operations).length) {
 			this.ctx.log('debug', 'No data found for entity', entity.oid);

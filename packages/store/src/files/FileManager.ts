@@ -37,7 +37,7 @@ export class FileManager extends Disposable {
 		}
 		// this will download any original remote file and trigger a re-upload to the
 		// new file's identity, in addition to storing it on disk
-		const processedFile = await this.context.files.add(file);
+		const processedFile = await (await this.context.files).add(file);
 		entityFile[UPDATE](processedFile);
 	};
 
@@ -59,7 +59,7 @@ export class FileManager extends Disposable {
 	};
 
 	private load = async (file: EntityFile) => {
-		const fileData = await this.context.files.get(file.id);
+		const fileData = await (await this.context.files).get(file.id);
 		if (fileData) {
 			file[UPDATE](fileData);
 		} else {
@@ -84,7 +84,7 @@ export class FileManager extends Disposable {
 
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
-					await this.context.files.add(result.data);
+					await (await this.context.files).add(result.data);
 					file[UPDATE](result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
@@ -97,8 +97,8 @@ export class FileManager extends Disposable {
 		}
 	};
 
-	private onFileUploaded = (data: FileData) => {
+	private onFileUploaded = async (data: FileData) => {
 		this.context.log('debug', 'Marking file as uploaded', data.id);
-		this.context.files.onUploaded(data.id);
+		(await this.context.files).onUploaded(data.id);
 	};
 }

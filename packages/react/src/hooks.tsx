@@ -5,12 +5,10 @@ import {
 } from '@verdant-web/common';
 import {
 	Client,
-	ClientDescriptor,
 	ClientWithCollections,
 	Entity,
 	Query,
 	QueryStatus,
-	StorageDescriptor,
 	SyncTransportMode,
 	UserInfo,
 } from '@verdant-web/store';
@@ -90,22 +88,18 @@ export function createHooks<Presence = any, Profile = any>(
 	schema: StorageSchema<any>,
 	options: {
 		/** you can provide your own context to use instead of the generated one */
-		Context?: React.Context<StorageDescriptor<Presence, Profile> | null>;
+		Context?: React.Context<Client<Presence, Profile> | null>;
 	} = {},
 ) {
 	const Context =
-		options.Context ??
-		createContext<StorageDescriptor<Presence, Profile> | null>(null);
+		options.Context ?? createContext<Client<Presence, Profile> | null>(null);
 
 	function useStorage(): ClientWithCollections {
 		const ctx = use(Context);
 		if (!ctx) {
 			throw new Error('No verdant provider was found');
 		}
-		return suspend(
-			() => ctx.readyPromise,
-			[`verdant_${ctx.namespace}`],
-		) as ClientWithCollections;
+		return ctx as any as ClientWithCollections;
 	}
 
 	function useSelf() {
@@ -459,18 +453,12 @@ export function createHooks<Presence = any, Profile = any>(
 		);
 	}
 
+	/**
+	 * @deprecated - no longer necessary, use useClient() instead, it
+	 * will not suspend.
+	 */
 	function useUnsuspendedClient() {
-		const desc = useContext(Context);
-
-		const client = desc?.current;
-
-		const [_, forceUpdate] = useState(0);
-		useEffect(() => {
-			if (desc && !client) {
-				desc.readyPromise.then(() => forceUpdate((n) => n + 1));
-			}
-		}, [desc, client]);
-
+		const client = useContext(Context);
 		return client || null;
 	}
 
@@ -518,14 +506,9 @@ export function createHooks<Presence = any, Profile = any>(
 		return null;
 	}
 
-	function useDeveloperError(clientDesc: ClientDescriptor) {
+	function useDeveloperError(client: Client) {
 		const [error, setError] = useState<Error | null>(null);
-		useEffect(() => {
-			let unsub: (() => void) | null = null;
-			clientDesc.open().then((client) => {
-				unsub = client.subscribe('developerError', setError);
-			});
-		}, [clientDesc]);
+		useEffect(() => client.subscribe('developerError', setError), [client]);
 		return error;
 	}
 
@@ -558,14 +541,10 @@ export function createHooks<Presence = any, Profile = any>(
 			...rest
 		}: {
 			children?: ReactNode;
-			value: StorageDescriptor;
+			value: Client;
 			sync?: boolean;
 			errorFallback?: ReactNode;
 		}) => {
-			// auto-open storage when used in provider
-			useMemo(() => {
-				value.open();
-			}, [value]);
 			const error = useDeveloperError(value);
 
 			if (error && errorFallback) {
