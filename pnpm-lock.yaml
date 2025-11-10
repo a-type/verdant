@@ -30,6 +30,9 @@ catalogs:
     hono:
       specifier: ^4.9.9
       version: 4.9.9
+    kysely:
+      specifier: 0.28.7
+      version: 0.28.7
     playwright:
       specifier: 1.56.1
       version: 1.56.1
@@ -680,8 +683,8 @@ importers:
         specifier: ^1.1.5
         version: 1.1.5
       '@hono/node-server':
-        specifier: ^1.19.4
-        version: 1.19.4(hono@4.9.9)
+        specifier: 'catalog:'
+        version: 1.19.5(hono@4.9.9)
       '@types/express':
         specifier: ^4.17.14
         version: 4.17.21
@@ -711,7 +714,7 @@ importers:
         version: link:../packages/tiptap
       '@vitest/browser-playwright':
         specifier: 'catalog:'
-        version: 4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(playwright@1.55.1)(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))(vitest@4.0.8)
+        version: 4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(playwright@1.56.1)(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))(vitest@4.0.8)
       '@whatwg-node/server':
         specifier: ^0.9.67
         version: 0.9.67
@@ -737,11 +740,11 @@ importers:
         specifier: ^26.0.0
         version: 26.0.0
       kysely:
-        specifier: ^0.27.4
-        version: 0.27.5
+        specifier: 'catalog:'
+        version: 0.28.7
       playwright:
-        specifier: ^1.55.1
-        version: 1.55.1
+        specifier: 'catalog:'
+        version: 1.56.1
       tsx:
         specifier: ^4.16.2
         version: 4.19.2
@@ -3418,12 +3421,6 @@ packages:
 
   '@hapi/topo@5.1.0':
     resolution: {integrity: sha512-foQZKJig7Ob0BMAYBfcJk8d77QtOe7Wo4ox7ff1lQYoNNAb6jwcY1ncdoy2e9wQZzvNy7ODZCYJkK8kzmcAnAg==}
-
-  '@hono/node-server@1.19.4':
-    resolution: {integrity: sha512-AWKQZ/YkHUBSHeL/5Ld8FWgUs6wFf4TxGYxqp9wLZxRdFuHBpXmgOq+CuDoL4vllkZLzovCf5HBJnypiy3EtHA==}
-    engines: {node: '>=18.14.1'}
-    peerDependencies:
-      hono: ^4
 
   '@hono/node-server@1.19.5':
     resolution: {integrity: sha512-iBuhh+uaaggeAuf+TftcjZyWh2GEgZcVGXkNtskLVoWaXhnJtC5HLHrU8W1KHDoucqO1MswwglmkWLFyiDn4WQ==}
@@ -7253,6 +7250,10 @@ packages:
     resolution: {integrity: sha512-s7hZHcQeSNKpzCkHRm8yA+0JPLjncSWnjb+2TIElwS2JAqYr+Kv3Ess+9KFfJS0C1xcQ1i9NkNHpWwCYpHMWsA==}
     engines: {node: '>=14.0.0'}
 
+  kysely@0.28.7:
+    resolution: {integrity: sha512-u/cAuTL4DRIiO2/g4vNGRgklEKNIj5Q3CG7RoUB5DV5SfEC2hMvPxKi0GWPmnzwL2ryIeud2VTcEEmqzTzEPNw==}
+    engines: {node: '>=20.0.0'}
+
   latest-version@7.0.0:
     resolution: {integrity: sha512-KvNT4XqAMzdcL6ka6Tl3i2lYeFDgXNCuIX+xNx6ZMVR1dFq+idXd9FLKNMOIx0t9mJ9/HudyX4oZWXZQ0UJHeg==}
     engines: {node: '>=14.16'}
@@ -8138,18 +8139,8 @@ packages:
     resolution: {integrity: sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA==}
     engines: {node: '>=8'}
 
-  playwright-core@1.55.1:
-    resolution: {integrity: sha512-Z6Mh9mkwX+zxSlHqdr5AOcJnfp+xUWLCt9uKV18fhzA8eyxUd8NUWzAjxUh55RZKSYwDGX0cfaySdhZJGMoJ+w==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   playwright-core@1.56.1:
     resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright@1.55.1:
-    resolution: {integrity: sha512-cJW4Xd/G3v5ovXtJJ52MAOclqeac9S/aGGgRzLabuF8TnIb6xHvMzKIa6JmrRzUkeXJgfL1MhukP0NK6l39h3A==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -13865,10 +13856,6 @@ snapshots:
     dependencies:
       '@hapi/hoek': 9.3.0
 
-  '@hono/node-server@1.19.4(hono@4.9.9)':
-    dependencies:
-      hono: 4.9.9
-
   '@hono/node-server@1.19.5(hono@4.9.9)':
     dependencies:
       hono: 4.9.9
@@ -15388,19 +15375,6 @@ snapshots:
       - utf-8-validate
       - vite
     optional: true
-
-  '@vitest/browser-playwright@4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(playwright@1.55.1)(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))(vitest@4.0.8)':
-    dependencies:
-      '@vitest/browser': 4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))(vitest@4.0.8)
-      '@vitest/mocker': 4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))
-      playwright: 1.55.1
-      tinyrainbow: 3.0.3
-      vitest: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@26.0.0)(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(terser@5.37.0)(tsx@4.19.2)
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
 
   '@vitest/browser-playwright@4.0.8(msw@2.7.3(@types/node@24.6.1)(typescript@5.9.3))(playwright@1.56.1)(vite@6.1.1(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2))(vitest@4.0.8)':
     dependencies:
@@ -18521,6 +18495,8 @@ snapshots:
 
   kysely@0.27.5: {}
 
+  kysely@0.28.7: {}
+
   latest-version@7.0.0:
     dependencies:
       package-json: 8.1.1
@@ -19707,15 +19683,7 @@ snapshots:
     dependencies:
       find-up: 3.0.0
 
-  playwright-core@1.55.1: {}
-
   playwright-core@1.56.1: {}
-
-  playwright@1.55.1:
-    dependencies:
-      playwright-core: 1.55.1
-    optionalDependencies:
-      fsevents: 2.3.2
 
   playwright@1.56.1:
     dependencies:
