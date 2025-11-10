@@ -81,7 +81,7 @@
 		"@verdant-web/common": "workspace:*"
 	},
 	"devDependencies": {
-		"@hono/node-server": "1.14.0",
+		"@hono/node-server": "catalog:",
 		"@tiptap/core": "^2.11.5",
 		"@tiptap/html": "^2.11.5",
 		"@tiptap/pm": "^2.11.5",
@@ -96,7 +96,7 @@
 		"@vitejs/plugin-basic-ssl": "2.1.0",
 		"@vitejs/plugin-react": "catalog:",
 		"@vitest/browser-playwright": "catalog:",
-		"hono": "4.7.5",
+		"hono": "catalog:",
 		"playwright": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
