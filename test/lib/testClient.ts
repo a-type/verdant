@@ -134,7 +134,7 @@ function defaultLog(logId: string, level: string, ...args: any[]) {
 	} else if (level === 'error') {
 		console.trace(logId, ConsoleColors.red, ...args, ConsoleColors.reset);
 	} else if (level === 'warn') {
-		console.log(logId, ConsoleColors.yellow, ...args, ConsoleColors.reset);
+		console.trace(logId, ConsoleColors.yellow, ...args, ConsoleColors.reset);
 	} else {
 		console.log(logId, ...args);
 	}

@@ -274,12 +274,23 @@ export class EntityMetadata {
 			if (op.data.op === 'delete') {
 				deleted = true;
 			} else {
-				base = applyPatch(base, op.data);
-				if (op.data.op === 'initialize') {
-					deleted = false;
-					if (op.authz) {
-						authz = op.authz;
+				try {
+					base = applyPatch(base, op.data);
+					if (op.data.op === 'initialize') {
+						deleted = false;
+						if (op.authz) {
+							authz = op.authz;
+						}
 					}
+				} catch (err) {
+					this.ctx.log(
+						'critical',
+						`Failed to apply operation to entity ${this.oid}: ${JSON.stringify(
+							op,
+						)}`,
+						err,
+					);
+					throw err;
 				}
 			}
 

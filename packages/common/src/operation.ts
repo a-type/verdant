@@ -257,15 +257,17 @@ export type NormalizedObject =
 	  }
 	| Array<PropertyValue>;
 
-function listCheck(obj: any): obj is Array<unknown> {
+function listCheck(obj: any, patch: OperationPatch): obj is Array<unknown> {
 	if (!Array.isArray(obj)) {
-		console.error(
-			`Cannot apply list patch; expected array, received ${JSON.stringify(
-				obj,
-			)}. This suggests your data is changing from a list to an object over time. (OID: ${maybeGetOid(
-				obj,
-			)})`,
-		);
+		if (obj === undefined) {
+			console.error(
+				`Cannot apply list patch; expected array, received ${JSON.stringify(
+					obj,
+				)}. This suggests your data is changing from a list to an object over time. (OID: ${maybeGetOid(
+					obj,
+				)})\nPatch that was not applied: ${JSON.stringify(patch)}`,
+			);
+		}
 		return false;
 	} else {
 		return true;
@@ -316,30 +318,30 @@ export function applyPatch<T extends NormalizedObject>(
 			delete baseAsAny[patch.name];
 			break;
 		case 'list-set':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				checkRef(base[patch.index]);
 				base[patch.index] = patch.value;
 			}
 			break;
 		case 'list-push':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				base.push(patch.value);
 			}
 			break;
 		case 'list-delete':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				checkRef(base[patch.index]);
 				base.splice(patch.index, patch.count);
 			}
 			break;
 		case 'list-move-by-index':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				spliceResult = base.splice(patch.from, 1);
 				base.splice(patch.to, 0, spliceResult[0]);
 			}
 			break;
 		case 'list-remove':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				do {
 					const valueToRemove = patch.value;
 					if (patch.only === 'last') {
@@ -368,7 +370,7 @@ export function applyPatch<T extends NormalizedObject>(
 			}
 			break;
 		case 'list-add':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				const alreadyHas = base.some((item: any) => {
 					if (isObjectRef(item) && isObjectRef(patch.value)) {
 						return item.id === patch.value.id;
@@ -382,14 +384,14 @@ export function applyPatch<T extends NormalizedObject>(
 			}
 			break;
 		case 'list-move-by-ref':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				index = base.findIndex((v) => compareRefs(v, patch.value));
 				spliceResult = base.splice(index, 1);
 				base.splice(patch.index, 0, spliceResult[0]);
 			}
 			break;
 		case 'list-insert':
-			if (listCheck(base)) {
+			if (listCheck(base, patch)) {
 				if (!patch.value && !patch.values) {
 					throw new Error(
 						`Cannot apply list insert patch; expected value or values, received ${JSON.stringify(

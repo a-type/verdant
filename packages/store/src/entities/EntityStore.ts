@@ -319,6 +319,7 @@ export class EntityStore extends Disposable {
 	};
 
 	destroy = async () => {
+		this.ctx.log('warn', 'Disposing EntityStore');
 		this.dispose();
 		await this.batcher.flushAll();
 	};
@@ -469,7 +470,11 @@ export class EntityStore extends Disposable {
 		}
 
 		if (this.disposed) {
-			throw new Error('Cannot hydrate entity after store has been disposed');
+			this.ctx.log(
+				'warn',
+				'Cannot hydrate entity after store has been disposed',
+			);
+			return null;
 		}
 
 		const metadataFamily = new EntityFamilyMetadata({

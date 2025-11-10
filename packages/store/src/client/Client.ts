@@ -150,6 +150,13 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
+		if (this.context.closing) {
+			this.context.log(
+				'warn',
+				'Client is closing; ignoring incoming sync data',
+			);
+			return;
+		}
 		// always wait for an ongoing import to complete before handling data.
 		await this.importingPromise;
 
