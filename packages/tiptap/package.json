@@ -45,7 +45,7 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"build:client": "tsc --project tsconfig.json",
+		"build:client": "tsc --project tsconfig.json --customConditions production",
 		"build:server": "tsc --project tsconfig.server.json",
 		"build": "pnpm run build:client && pnpm run build:server",
 		"prepublish": "pnpm run build",

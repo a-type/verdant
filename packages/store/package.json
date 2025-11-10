@@ -54,7 +54,7 @@
 	"scripts": {
 		"test": "vitest",
 		"ci:test:unit": "vitest run",
-		"build:lib": "tsc -p tsconfig.json",
+		"build:lib": "tsc -p tsconfig.json --customConditions production",
 		"build:bundle": "esbuild src/vanilla.ts --bundle --format=cjs --outfile=dist/bundle/index.js --sourcemap --minify --platform=browser",
 		"build": "pnpm run build:lib && pnpm run build:bundle",
 		"prepublish": "pnpm run build",
