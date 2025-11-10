@@ -44,7 +44,7 @@ const todoItems = collection({
 export default schema({
 	version: 1,
 	collections: {
-		todoItems: todoItems,
+		todoItems,
 	},
 });
 ```

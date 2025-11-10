@@ -101,7 +101,7 @@ export class Client<Presence = any, Profile = any> {
 	 * Export all data, then re-import it. This might resolve
 	 * some issues with the local database, but it should
 	 * only be done as a second-to-last resort. The last resort
-	 * would be __dangerous__resetLocal on ClientDescriptor, which
+	 * would be __dangerous__resetLocal on Client, which
 	 * clears all local data.
 	 *
 	 * Unlike __dangerous__resetLocal, this method allows local-only

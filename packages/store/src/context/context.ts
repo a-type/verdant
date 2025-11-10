@@ -228,7 +228,7 @@ export class Context {
 		// we can't initialize the storage
 		if (typeof window === 'undefined' && !this.init.environment) {
 			throw new Error(
-				'A Verdant client was initialized in an environment without a global Window or `environment` configuration. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of the environment to the ClientDescriptor options.',
+				'A Verdant client was initialized in an environment without a global Window or `environment` configuration. If you are using verdant in a server-rendered framework, you must enforce that all clients are initialized on the client-side, or you must provide some mock interface of the environment to the Client options.',
 			);
 		}
 		// set static values

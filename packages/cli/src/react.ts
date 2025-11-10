@@ -11,7 +11,7 @@ export function getReactTypings({
 	return `
 import { Context, ComponentType, ReactNode, ChangeEvent, FocusEvent } from 'react';
 import type {
-	Client, ClientDescriptor, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityInit, EntityFile,
+	Client, Schema, QueryStatus, UserInfo, ObjectEntity, ListEntity, Entity, AccessibleEntityProperty, EntityShape, AnyEntity, EntityDestructured, EntityInit, EntityFile,
   ${Object.values(schema.collections)
 		.map((v) => v.name)
 		.map((n) => pascalCase(n))
@@ -39,11 +39,11 @@ export interface GeneratedHooks<Presence, Profile> {
 	 * Render this context Provider at the top level of your
 	 * React tree to provide a Client to all hooks.
 	 */
-  Provider: ComponentType<{ value: ClientDescriptor<any, any>; children: ReactNode; sync?: boolean }>;
+  Provider: ComponentType<{ value: Client<any, any>; children: ReactNode; sync?: boolean }>;
 	/**
 	 * Direct access to the React Context, if needed.
 	 */
-	Context: Context<ClientDescriptor<any, any>>;
+	Context: Context<Client<any, any>>;
 	/** @deprecated use useClient instead */
   useStorage: () => Client<Presence, Profile>;
 	useClient: () => Client<Presence, Profile>;
