@@ -1,11 +1,12 @@
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
 	test: {
 		browser: {
-			provider: 'playwright',
+			provider: playwright(),
 			enabled: true,
 			// headless: true,
 

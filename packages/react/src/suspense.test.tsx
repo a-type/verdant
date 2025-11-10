@@ -5,7 +5,7 @@ import {
 	schema,
 } from '@verdant-web/store';
 import { Suspense } from 'react';
-import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { createHooks } from './hooks.js';
 
@@ -34,45 +34,52 @@ const testSchema = schema({
 
 const hooks = createHooks(testSchema);
 
-let client: ClientWithCollections;
-beforeAll(async () => {
-	client = new Client({
+let clients: ClientWithCollections[] = [];
+async function setup(namespace: string) {
+	const client = new Client({
 		schema: testSchema,
 		oldSchemas: [testSchema],
 		migrations: [createMigration(testSchema)],
-		namespace: 'suspense-test',
-		log: console.log,
+		namespace: `${namespace}-${crypto.randomUUID()}`,
 	}) as any as ClientWithCollections;
 	await Promise.all(
-		new Array(1000)
+		new Array(100)
 			.fill(null)
-			.map((_, i) => client.posts.put({ content: `hello ${i}` })),
+			.map((_, i) =>
+				client.posts.put({ content: `hello ${crypto.randomUUID()}` }),
+			),
 	);
+	clients.push(client);
+	return client;
+}
+
+afterAll(() => {
+	return Promise.all(clients.map((client) => client.close()));
 });
 
-afterAll(() => client.close());
-
-function renderWithProvider(content: React.ReactElement) {
+function renderWithProvider(
+	content: React.ReactElement,
+	client: ClientWithCollections,
+) {
 	return render(content, {
 		wrapper: ({ children }) => (
-			<Suspense>
-				<hooks.Provider value={client}>
-					<Suspense fallback={<div data-testid="suspense">Loading...</div>}>
-						{children}
-					</Suspense>
-				</hooks.Provider>
-			</Suspense>
+			<hooks.Provider value={client}>
+				<Suspense>{children}</Suspense>
+			</hooks.Provider>
 		),
 	});
 }
 
 it('suspends when loading a query', async () => {
+	const client = await setup('suspense-test');
 	const PostList = () => {
-		const posts = hooks.useAllPosts();
+		const posts = hooks.useAllPosts({
+			key: 'suspended-posts',
+		});
 		return (
 			<div>
 				{posts.map((post: any) => (
-					<div key={post.id} data-testid="post">
+					<div key={post.uid} data-testid="suspended-post">
 						{post.content}
 					</div>
 				))}
@@ -86,23 +93,30 @@ it('suspends when loading a query', async () => {
 		return <div data-testid="suspense">Loading...</div>;
 	};
 
-	const { getByTestId } = renderWithProvider(
+	const { getByTestId } = await renderWithProvider(
 		<Suspense fallback={<Fallback />}>
 			<PostList />
 		</Suspense>,
+		client,
 	);
 
-	expect(getByTestId('suspense')).toBeDefined();
+	await expect.element(getByTestId('suspense')).toBeDefined();
 	expect(suspenseSpy).toHaveBeenCalled();
+
+	await expect.element(getByTestId('suspended-post').first()).toBeDefined();
+	expect(getByTestId('suspended-post').all().length).toBe(100);
 });
 
 it('does not suspend when a query was prewarmed', async () => {
+	const client = await setup('suspense-prewarm-test');
 	const PostList = () => {
-		const posts = hooks.useAllPosts();
+		const posts = hooks.useAllPosts({
+			key: 'prewarmed-posts',
+		});
 		return (
 			<div>
 				{posts.map((post: any) => (
-					<div key={post.id} data-testid="post">
+					<div key={post.uid} data-testid="prewarmed-post">
 						{post.content}
 					</div>
 				))}
@@ -111,7 +125,10 @@ it('does not suspend when a query was prewarmed', async () => {
 	};
 
 	// prewarm the query
-	await client.posts.findAll().resolved;
+	client.queries.keepAlive('prewarmed-posts');
+	await client.posts.findAll({
+		key: 'prewarmed-posts',
+	}).resolved;
 
 	const suspenseSpy = vi.fn();
 	const Fallback = () => {
@@ -119,13 +136,14 @@ it('does not suspend when a query was prewarmed', async () => {
 		return <div data-testid="suspense">Loading...</div>;
 	};
 
-	const { getByTestId } = renderWithProvider(
+	const { getByTestId } = await renderWithProvider(
 		<Suspense fallback={<Fallback />}>
 			<PostList />
 		</Suspense>,
+		client,
 	);
 
-	expect(getByTestId('suspense')).not.toBeInTheDocument();
+	await expect.element(getByTestId('suspense')).not.toBeInTheDocument();
 	expect(suspenseSpy).not.toHaveBeenCalled();
-	expect(getByTestId('post').all().length).toBeGreaterThan(0);
+	expect(getByTestId('prewarmed-post').all().length).toBe(100);
 });

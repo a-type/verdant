@@ -14,7 +14,7 @@
 		"@verdant-web/server": "workspace:*",
 		"@verdant-web/store": "workspace:*",
 		"@verdant-web/tiptap": "workspace:*",
-		"@vitest/browser": "catalog:",
+		"@vitest/browser-playwright": "catalog:",
 		"@whatwg-node/server": "^0.9.67",
 		"better-sqlite3": "catalog:",
 		"express": "^4.21.2",
