@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.1.6
+
+### Patch Changes
+
+- deca7df: Support hosts ending in /
+
 ## 0.1.5
 
 ### Patch Changes
