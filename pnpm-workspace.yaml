@@ -12,14 +12,14 @@ catalog:
   better-sqlite3: ^11.10.0
   typescript: 5.9.3
   '@types/node': 24.6.1
-  vitest: 3.2.4
-  '@vitest/browser': 3.2.4
-  vitest-browser-react: 1.0.1
-  playwright: 1.55.1
+  vitest: ^4.0.8
+  '@vitest/browser-playwright': ^4.0.8
+  vitest-browser-react: ^2.0.2
+  playwright: 1.56.1
   react: 19.1.1
   '@types/react': 19.1.16
-  vite: 7.1.7
-  '@vitejs/plugin-react': 5.0.4
+  vite: ^7.2.2
+  '@vitejs/plugin-react': ^5.1.0
   react-dom: 19.1.1
   '@types/react-dom': 19.1.9
   kysely: 0.28.7

@@ -48,8 +48,9 @@ it('can export data and import it even after a schema migration', async () => {
 	});
 	client.subscribe('fileSaved', onFileAdded);
 
-	const originalLocalReplicaInfo =
-		await client.__persistence.meta.getLocalReplica();
+	const originalLocalReplicaInfo = await (
+		await client.__persistence.meta
+	).getLocalReplica();
 
 	// add test data
 	await client.items.put({
@@ -146,7 +147,9 @@ it('can export data and import it even after a schema migration', async () => {
 	});
 
 	// it gets assigned a new replica ID
-	const newLocalReplicaInfo = await client.__persistence.meta.getLocalReplica();
+	const newLocalReplicaInfo = await (
+		await client.__persistence.meta
+	).getLocalReplica();
 	expect(newLocalReplicaInfo.id).not.to.equal(originalLocalReplicaInfo.id);
 
 	// make some queries to see how they fare
@@ -178,8 +181,9 @@ it('can export data and import it even after a schema migration', async () => {
 	await client.lists.findAll().resolved;
 
 	// it should have the same replica ID, not overwritten
-	const finalLocalReplicaInfo =
-		await client.__persistence.meta.getLocalReplica();
+	const finalLocalReplicaInfo = await (
+		await client.__persistence.meta
+	).getLocalReplica();
 	expect(finalLocalReplicaInfo.id).not.to.equal(originalLocalReplicaInfo.id);
 
 	// make sure the data is correct

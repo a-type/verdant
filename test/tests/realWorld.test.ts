@@ -11,7 +11,7 @@ import defaultMigrations from '../migrations/index.js';
 import defaultSchema from '../schema.js';
 
 const context = createTestContext({
-	testLog: true,
+	// testLog: true,
 	library: 'longevity',
 });
 const log = context.log;
@@ -20,13 +20,14 @@ it('maintains consistency in real world scenarios', async () => {
 	function createClientA(
 		schema: StorageSchema,
 		migrations: Migration[],
+		logId?: string,
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
 			user: 'A',
 			schema,
 			migrations,
 			// log: context.filterLog('A', 'a6'),
-			// logId: 'A',
+			logId,
 			// try to keep it realistic
 			autoTransport: true,
 		}) as any;
@@ -34,12 +35,13 @@ it('maintains consistency in real world scenarios', async () => {
 	function createClientB(
 		schema: StorageSchema,
 		migrations: Migration[],
+		logId?: string,
 	): Promise<ClientWithCollections> {
 		return context.createTestClient({
 			user: 'B',
 			schema,
 			migrations,
-			// logId: 'B',
+			logId,
 			// log: context.filterLog('B', 'a6'),
 			// try to keep it realistic
 			autoTransport: true,

@@ -463,7 +463,9 @@ it(
 		// that we created delete operations for every existing item
 		// when dropping the table.
 		const localItemDeletes: Operation[] = [];
-		await client.__persistence.meta.iterateAllOperations((op) => {
+		await (
+			await client.__persistence.meta
+		).iterateAllOperations((op) => {
 			if (op.data.op === 'delete' && op.oid.startsWith('items')) {
 				localItemDeletes.push(op);
 			}

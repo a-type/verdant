@@ -19,32 +19,25 @@ The CLI takes `schema` (the path to your schema TS file), `output` (the director
 > - `collection` and `schema` are used to wrap all definitions
 > - It has a default export of the schema itself
 > - All collections are defined separately
-> - Collection key/values are specified with the verbose `todoItems: todoItems` syntax, not shorthand
->
-> Bear with me as I get through the backlog of improvements to make this less rigid!
 
-Now you can import your client from the output directory and construct its descriptor:
+Now you can import your client from the output directory and construct it:
 
 ```ts
-import { ClientDescriptor } from './client/index.js';
+import { Client } from './client/index.js';
 // see next section!
 import migrations from './migrations.js';
 
-const clientDesc = new ClientDescriptor({
+const client = new Client({
 	namespace: 'todos',
 	migrations,
 });
 
-clientDesc.open().then((client) => {
-	client.todoItems.put({
-		id: '1',
-		details: 'Create a Verdant client',
-		done: true,
-	});
+client.todoItems.put({
+	id: '1',
+	details: 'Create a Verdant client',
+	done: true,
 });
 ```
-
-Client startup is asynchronous, but you can access metadata on StorageDescriptor or pass it around to anything which needs storage context synchronously. Synchronous code which will need access to the same Storage instance can await `StorageDescriptor.open()` individually; they will all get the same final instance.
 
 If you are building in React, be sure to pass `--react` to the CLI and see the [docs](#react) on how to use it, since the built-in React support effectively hides the async waits for a much better DX!
 

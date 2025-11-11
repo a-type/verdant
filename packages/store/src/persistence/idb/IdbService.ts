@@ -1,4 +1,4 @@
-import { Context, InitialContext } from '../../context/context.js';
+import { Context } from '../../context/context.js';
 import { Disposable } from '../../utils/Disposable.js';
 import {
 	createAbortableTransaction,
@@ -13,11 +13,10 @@ export class IdbService extends Disposable {
 
 	constructor(
 		protected db: IDBDatabase,
-		protected readonly ctx: InitialContext,
+		protected readonly ctx: Pick<Context, 'log' | 'environment'>,
 	) {
 		super();
 		const abortController = new AbortController();
-		const abort = abortController.abort.bind(abortController);
 		this.globalAbortController = abortController;
 		// FIXME: replace with event? I can't get this to work.
 		// this.addDispose(abort);

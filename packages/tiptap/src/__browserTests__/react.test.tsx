@@ -2,11 +2,11 @@ import { EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { createMigration, schema } from '@verdant-web/common';
 import { createHooks } from '@verdant-web/react';
-import { ClientDescriptor, ClientWithCollections } from '@verdant-web/store';
-import { userEvent } from '@vitest/browser/context';
+import { Client, ClientWithCollections } from '@verdant-web/store';
 import { ChangeEvent, ReactNode, Suspense } from 'react';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { userEvent } from 'vitest/browser';
 import {
 	createTipTapFieldSchema,
 	createTipTapFileMapSchema,
@@ -49,17 +49,15 @@ function safeLogger(level: string, ...args: any[]) {
 	}
 }
 
-let clientDesc: ClientDescriptor;
 let client: ClientWithCollections;
 beforeAll(async () => {
-	clientDesc = new ClientDescriptor({
+	client = new Client({
 		schema: testSchema,
 		oldSchemas: [testSchema],
 		migrations: [createMigration(testSchema)],
 		namespace: 'tiptatp-test',
 		// log: safeLogger,
-	});
-	client = await (clientDesc.open() as Promise<ClientWithCollections>);
+	}) as any as ClientWithCollections;
 });
 
 afterAll(() => client.close());
@@ -68,7 +66,7 @@ function renderWithProvider(content: ReactNode) {
 	return render(content, {
 		wrapper: ({ children }) => (
 			<Suspense>
-				<hooks.Provider value={clientDesc}>
+				<hooks.Provider value={client}>
 					<Suspense fallback={<div data-testid="suspense">Loading...</div>}>
 						{children}
 					</Suspense>
@@ -531,7 +529,7 @@ it('should support media nodes', async () => {
 		});
 
 		const insertMedia = async (ev: ChangeEvent<HTMLInputElement>) => {
-			const file = ev.target.files?.[0];
+			const file = ev.currentTarget.files?.[0];
 			if (!file) return;
 			editor?.chain().insertMedia(file).run();
 		};
@@ -661,7 +659,7 @@ it('can re-render with a different backing entity', async () => {
 		});
 
 		const insertMedia = async (ev: ChangeEvent<HTMLInputElement>) => {
-			const file = ev.target.files?.[0];
+			const file = ev.currentTarget.files?.[0];
 			if (!file) return;
 			editor?.chain().insertMedia(file).run();
 		};

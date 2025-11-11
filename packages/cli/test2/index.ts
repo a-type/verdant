@@ -1,9 +1,9 @@
-import { ClientDescriptor } from './.generated/index';
+import { Client } from './.generated/index';
 
-const client = await new ClientDescriptor({
+const client = new Client({
 	migrations: [],
 	namespace: 'test2',
-}).open();
+});
 
 const todo = await client.todos.put({
 	id: '1',

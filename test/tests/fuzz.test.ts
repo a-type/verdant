@@ -8,11 +8,11 @@ import { expect, it } from 'vitest';
 // @ts-ignore
 import { stableStringify } from '@verdant-web/common';
 import { createTestContext } from '../lib/createTestContext.js';
-import { createTestClient } from '../lib/testClient.js';
 import { waitForCondition } from '../lib/waits.js';
 
-const { server, log, library } = createTestContext({
+const { server, log, createGenericClient } = createTestContext({
 	library: 'fuzz',
+	// testLog: true,
 });
 
 const fuzzCollectionSchema = schema.collection({
@@ -40,7 +40,7 @@ async function createClient({
 	logId?: string;
 	server?: { port: number };
 }) {
-	const client = await createTestClient({
+	const client = await createGenericClient({
 		// disableRebasing: true,
 		schema: fuzzSchema,
 		oldSchemas: [fuzzSchema],
@@ -51,7 +51,6 @@ async function createClient({
 				await mutations.fuzz.put({ id: 'default', data: {} });
 			}),
 		],
-		library,
 		user,
 		server,
 		logId,

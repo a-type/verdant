@@ -315,6 +315,49 @@ export function useSearchParams() {
 }
 
 /**
+ * Simpler form of useSearchParams, pass an object
+ * of params to apply instead of mutating a URLSearchParams object.
+ */
+export function useSearch() {
+	const [params, updateParams] = useSearchParams();
+
+	const setSearch = useCallback(
+		(
+			update: Record<string, string | null | undefined> | null,
+			options: {
+				state?: any;
+				skipTransition?: boolean;
+				replace?: boolean;
+				overwrite?: boolean;
+			} = {},
+		) => {
+			if (update === null) {
+				if (options.overwrite) {
+					return updateParams(() => new URLSearchParams(), options);
+				} else {
+					return;
+				}
+			}
+			updateParams((old) => {
+				const toUpdate = options.overwrite ? new URLSearchParams() : old;
+				for (const key of Object.keys(update)) {
+					const value = update[key];
+					if (value == null) {
+						toUpdate.delete(key);
+					} else {
+						toUpdate.set(key, value);
+					}
+				}
+				return toUpdate;
+			}, options);
+		},
+		[params, updateParams],
+	);
+
+	return [params, setSearch] as const;
+}
+
+/**
  * Returns the current route state (additional data you can attach
  * to route changes in useNavigate or as a prop to Link).
  */
@@ -351,16 +394,16 @@ export function useScrollRestoration({
 	 */
 	id?: string;
 }) {
-	const [routeId, setRouteId] = useState(() => {
+	const [historyItemId, setHistoryItemId] = useState(() => {
 		return history.state?.id ?? 'initial';
 	});
 	useOnLocationChange((_, state) => {
-		setRouteId(state?.id ?? 'initial');
+		setHistoryItemId(state?.id ?? 'initial');
 	});
 	// don't restore scroll until after transition is complete
 	const transitioning = useIsRouteTransitioning();
 
-	const restoreKey = `${id ?? 'default'}__${routeId}`;
+	const restoreKey = `${id ?? 'default'}__${historyItemId}`;
 
 	const stableOnScrollRestored = useStableCallback(onScrollRestored);
 	const stableOnGetScrollPosition = useStableCallback(onGetScrollPosition);

@@ -1,13 +1,15 @@
-import { Context, InitialContext } from '../../context/context.js';
+import { Migration } from '@verdant-web/common';
+import { ContextWithoutPersistence } from '../../context/context.js';
 import {
-	PersistenceImplementation,
 	PersistenceFileDb,
+	PersistenceImplementation,
 	PersistenceNamespace,
 } from '../interfaces.js';
 import { IdbPersistenceFileDb } from './files/IdbPersistenceFileDb.js';
 import { IdbMetadataDb } from './metadata/IdbMetadataDb.js';
 import { openMetadataDatabase } from './metadata/openMetadataDatabase.js';
 import { IdbDocumentDb } from './queries/IdbDocumentDb.js';
+import { openDatabase, upgradeDatabase } from './queries/migration/db.js';
 import {
 	closeDatabase,
 	deleteDatabase,
@@ -16,9 +18,6 @@ import {
 	getNamespaceFromDatabaseInfo,
 	overwriteDatabase,
 } from './util.js';
-import { openDatabase, upgradeDatabase } from './queries/migration/db.js';
-import { Migration } from '@verdant-web/common';
-import { OpenDocumentDbContext } from '../migration/types.js';
 
 export class IdbPersistence implements PersistenceImplementation {
 	name = 'IdbPersistence';
@@ -45,10 +44,7 @@ export class IdbPersistence implements PersistenceImplementation {
 		return 0;
 	};
 
-	deleteNamespace = async (
-		namespace: string,
-		ctx: InitialContext,
-	): Promise<void> => {
+	deleteNamespace = async (namespace: string): Promise<void> => {
 		await Promise.all([
 			deleteDatabase(getMetadataDbName(namespace), this.indexedDB),
 			deleteDatabase([namespace, 'collections'].join('_'), this.indexedDB),
@@ -64,10 +60,14 @@ export class IdbPersistence implements PersistenceImplementation {
 	copyNamespace = async (
 		from: string,
 		to: string,
-		ctx: InitialContext,
+		ctx: ContextWithoutPersistence,
 	): Promise<void> => {
-		const fromCtx = { ...ctx, namespace: from };
-		const toCtx = { ...ctx, namespace: to };
+		const fromCtx = ctx.cloneWithOptions({
+			namespace: from,
+		}) as ContextWithoutPersistence;
+		const toCtx = ctx.cloneWithOptions({
+			namespace: to,
+		}) as ContextWithoutPersistence;
 		const { db: fromMetaDb } = await openMetadataDatabase({
 			indexedDB: this.indexedDB,
 			log: fromCtx.log,
@@ -108,12 +108,13 @@ export class IdbPersistence implements PersistenceImplementation {
 }
 
 class IdbPersistenceNamespace implements PersistenceNamespace {
-	constructor(private indexedDB: IDBFactory, private namespace: string) {}
+	constructor(
+		private indexedDB: IDBFactory,
+		private namespace: string,
+	) {}
 	private metadataDb: IDBDatabase | undefined;
 
-	openFiles(
-		ctx: Omit<Context, 'files' | 'documents'>,
-	): Promise<PersistenceFileDb> {
+	openFiles(ctx: ContextWithoutPersistence): Promise<PersistenceFileDb> {
 		if (!this.metadataDb) {
 			throw new Error(
 				'Metadata database must be opened first. This is a bug in Verdant.',
@@ -122,7 +123,7 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 		return Promise.resolve(new IdbPersistenceFileDb(this.metadataDb, ctx));
 	}
 
-	openMetadata = async (ctx: InitialContext) => {
+	openMetadata = async (ctx: ContextWithoutPersistence) => {
 		const { db } = await openMetadataDatabase({
 			indexedDB: this.indexedDB,
 			log: ctx.log,
@@ -133,7 +134,7 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 		return new IdbMetadataDb(db, ctx);
 	};
 
-	openDocuments = async (ctx: OpenDocumentDbContext) => {
+	openDocuments = async (ctx: ContextWithoutPersistence) => {
 		const db = await openDatabase({
 			version: ctx.schema.version,
 			indexedDB: this.indexedDB,
@@ -145,7 +146,7 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 	};
 
 	applyMigration = async (
-		ctx: InitialContext,
+		ctx: ContextWithoutPersistence,
 		migration: Migration<any>,
 	): Promise<void> => {
 		ctx.log(
@@ -167,6 +168,11 @@ class IdbPersistenceNamespace implements PersistenceNamespace {
 				}
 
 				for (const collection of migration.allCollections) {
+					if (!db.objectStoreNames.contains(collection)) {
+						throw new Error(
+							`Expected object store for collection ${collection} to exist during migration, but it did not`,
+						);
+					}
 					const store = transaction.objectStore(collection);
 					// apply new indexes
 					for (const newIndex of migration.addedIndexes[collection] || []) {

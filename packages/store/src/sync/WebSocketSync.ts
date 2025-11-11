@@ -93,12 +93,12 @@ export class WebSocketSync
 			this.ctx.log('debug', 'Starting sync');
 			this.hasStartedSync = true;
 			this.synced = false;
+			const meta = await this.ctx.meta;
+			this.ctx.log('debug', 'HERE');
 			this.send(
-				await this.ctx.meta.messageCreator.createPresenceUpdate(
-					this.presence.self,
-				),
+				await meta.messageCreator.createPresenceUpdate(this.presence.self),
 			);
-			this.send(await this.ctx.meta.messageCreator.createSyncStep1());
+			this.send(await meta.messageCreator.createSyncStep1());
 			this.heartbeat.start();
 		}
 		this.emit('onlineChange', online);
@@ -122,7 +122,9 @@ export class WebSocketSync
 				if (message.ackThisNonce) {
 					// we need to send the ack to confirm we got the response
 					this.send(
-						await this.ctx.meta.messageCreator.createAck(message.ackThisNonce),
+						await (
+							await this.ctx.meta
+						).messageCreator.createAck(message.ackThisNonce),
 					);
 				}
 				this.hasStartedSync = true;
@@ -179,7 +181,7 @@ export class WebSocketSync
 	};
 
 	private onError = (event: Event) => {
-		this.ctx.log('error', 'Sync socket error', event);
+		this.ctx.log('error', 'Sync socket error', event, event.target);
 		if (this.disposed) return;
 		this.reconnectScheduler.next();
 
@@ -187,7 +189,7 @@ export class WebSocketSync
 	};
 
 	private onClose = (event: CloseEvent) => {
-		this.ctx.log('info', 'Sync socket disconnected');
+		this.ctx.log('info', 'Sync socket disconnected', event.code);
 		this.onOnlineChange(false);
 		if (this.disposed) return;
 		this.reconnectScheduler.next();
@@ -209,7 +211,7 @@ export class WebSocketSync
 	};
 
 	private sendHeartbeat = async () => {
-		this.send(await this.ctx.meta.messageCreator.createHeartbeat());
+		this.send(await (await this.ctx.meta).messageCreator.createHeartbeat());
 	};
 
 	reconnect = () => {
@@ -227,11 +229,25 @@ export class WebSocketSync
 	};
 
 	send = (message: ClientMessage) => {
-		if (this.status !== 'active') return;
+		if (this.status !== 'active') {
+			this.ctx.log(
+				'debug',
+				'Ignoring outgoing message',
+				message.type,
+				'sync is not active',
+			);
+			return;
+		}
 
 		// wait until a sync has started before doing anything other than sync.
 		// new "op" messages can arrive before sync has started, so we need to wait
 		if (!this.hasStartedSync && !this.canSkipSyncWait(message)) {
+			this.ctx.log(
+				'debug',
+				'Ignoring outgoing message',
+				message.type,
+				'still waiting to begin initial sync',
+			);
 			return;
 		}
 

@@ -1,13 +1,9 @@
 import { Operation, ReplicaType, StorageSchema } from '@verdant-web/common';
 import { expect, vi } from 'vitest';
 // import { WebSocket } from 'ws';
-import {
-	ClientDescriptor,
-	ClientDescriptorOptions,
-	Migration,
-} from '../client/index.js';
+import { Client, ClientInitOptions, Migration } from '../client/index.js';
 
-export async function createTestClient({
+export function createTestClient({
 	server,
 	library,
 	user,
@@ -32,7 +28,7 @@ export async function createTestClient({
 	type?: ReplicaType;
 	logId?: string;
 	migrations?: Migration<any>[];
-	files?: ClientDescriptorOptions['files'];
+	files?: ClientInitOptions['files'];
 	transport?: 'realtime' | 'pull';
 	onLog?: (messages: string) => void;
 	log?: (...args: any[]) => void;
@@ -42,7 +38,7 @@ export async function createTestClient({
 	oldSchemas?: StorageSchema[];
 	disableRebasing?: boolean;
 }) {
-	const desc = new ClientDescriptor({
+	const client = new Client({
 		migrations,
 		namespace: `${library}_${user}__${nonce ?? 'no_nonce'}`,
 		sync: server
@@ -60,7 +56,7 @@ export async function createTestClient({
 		log:
 			log ||
 			(logId
-				? (level, ...args: any[]) => {
+				? (level: string, ...args: any[]) => {
 						defaultLog(`[${logId}]`, level, ...args);
 						onLog?.(args.map((a) => JSON.stringify(a)).join('\n'));
 					}
@@ -96,7 +92,6 @@ export async function createTestClient({
 			} as History,
 		},
 	});
-	const client = await desc.open();
 	if (onOperation) {
 		client.subscribe('operation', onOperation);
 	}
@@ -139,7 +134,7 @@ function defaultLog(logId: string, level: string, ...args: any[]) {
 	} else if (level === 'error') {
 		console.trace(logId, ConsoleColors.red, ...args, ConsoleColors.reset);
 	} else if (level === 'warn') {
-		console.log(logId, ConsoleColors.yellow, ...args, ConsoleColors.reset);
+		console.trace(logId, ConsoleColors.yellow, ...args, ConsoleColors.reset);
 	} else {
 		console.log(logId, ...args);
 	}

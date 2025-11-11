@@ -1,11 +1,11 @@
-import { unlink, writeFile } from 'fs/promises';
+import { writeFile } from 'fs/promises';
+import path from 'path';
 import { getClientImplementation } from './client.js';
+import { rmIfExists } from './fs/rm.js';
 import { writeTS } from './fs/write.js';
 import { getReactImplementation, getReactTypings } from './react.js';
 import { readSchema } from './schema.js';
 import { getAllTypings } from './typings.js';
-import path from 'path';
-import { rmIfExists } from './fs/rm.js';
 import { validateSchema } from './validate.js';
 
 export async function generateClientCode({
@@ -50,10 +50,8 @@ export async function generateClientCode({
 		);
 		await writeTS(
 			path.join(output, './index.ts'),
-			`import { ClientDescriptorOptions } from './client${
-				commonjs ? '' : '.js'
-			}';
-			export * from './client${commonjs ? '' : '.js'}';\n` + indexImplementation,
+			`export * from './client${commonjs ? '' : '.js'}';\n` +
+				indexImplementation,
 		);
 		// remove any existing .js index files
 		await rmIfExists(path.join(output, 'index.js'));

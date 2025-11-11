@@ -11,7 +11,6 @@ import {
 } from '../lib/waits.js';
 
 const context = createTestContext({
-	// serverLog: true,
 	// testLog: true,
 	library: 'file-sync-1',
 });

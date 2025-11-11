@@ -261,7 +261,6 @@ describe('Entity', () => {
 			entity.update({ string: 'new world' });
 			expect(onPendingOperations).toHaveBeenCalledTimes(1);
 			const operation = onPendingOperations.mock.calls[0][0][0];
-			console.log(operation);
 
 			entity.__discardPendingOperation__(operation);
 

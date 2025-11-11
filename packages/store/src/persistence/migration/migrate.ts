@@ -1,16 +1,19 @@
 import { Migration } from '@verdant-web/common';
+import { ContextWithoutPersistence } from '../../context/context.js';
 import { ShutdownHandler } from '../../context/ShutdownHandler.js';
 import { PersistenceNamespace } from '../interfaces.js';
+import { PersistenceMetadata } from '../PersistenceMetadata.js';
 import { getMigrationEngine } from './engine.js';
 import { finalizeMigration } from './finalize.js';
 import { getMigrationPath } from './paths.js';
-import { OpenDocumentDbContext } from './types.js';
 
 export async function migrate({
 	context,
 	version,
+	meta,
 }: {
-	context: OpenDocumentDbContext;
+	context: ContextWithoutPersistence;
+	meta: PersistenceMetadata;
 	version: number;
 }) {
 	const ns = await context.persistence.openNamespace(
@@ -45,7 +48,7 @@ export async function migrate({
 				'Migrations to run:',
 				toRun.map((m) => m.version),
 			);
-			await runMigrations({ context, ns, toRun });
+			await runMigrations({ context, ns, toRun, meta });
 		}
 	});
 }
@@ -63,10 +66,12 @@ export async function runMigrations({
 	context,
 	toRun,
 	ns,
+	meta,
 }: {
-	context: OpenDocumentDbContext;
+	context: ContextWithoutPersistence;
 	toRun: Migration<any>[];
 	ns: PersistenceNamespace;
+	meta: PersistenceMetadata;
 }) {
 	// disable rebasing for the duration of migrations
 	context.pauseRebasing = true;
@@ -76,16 +81,16 @@ export async function runMigrations({
 			'info',
 			`🚀 Running migration v${migration.oldSchema.version} -> v${migration.newSchema.version}`,
 		);
-		const migrationContext = {
-			...context,
+		const migrationContext = context.cloneWithOptions({
 			schema: migration.oldSchema,
-			shutdownHandler: new ShutdownHandler(context.log),
-		};
+			persistenceShutdownHandler: new ShutdownHandler(context.log),
+		});
 		// this will only write to our metadata store via operations!
 		const engine = await getMigrationEngine({
 			migration,
 			context: migrationContext,
 			ns,
+			meta,
 		});
 		try {
 			context.log(
@@ -98,6 +103,7 @@ export async function runMigrations({
 				migration.newSchema.version,
 			);
 			await migration.migrate(engine);
+			context.log('debug', 'Awaiting remaining migration tasks');
 			// wait on any out-of-band async operations to complete
 			await Promise.all(engine.awaitables);
 		} catch (err) {
@@ -136,6 +142,7 @@ export async function runMigrations({
 			migration,
 			engine,
 			documents: upgradedDocuments,
+			meta,
 		});
 		await upgradedDocuments.close();
 

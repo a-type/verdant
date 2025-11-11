@@ -4,7 +4,7 @@
 		"rootDir": "./src",
 		"outDir": "./dist/esm",
 		"lib": ["dom", "esnext", "webworker"],
-		"types": ["@vitest/browser/providers/playwright"]
+		"types": ["vitest/browser"]
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"],
 	"exclude": [

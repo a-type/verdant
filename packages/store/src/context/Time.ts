@@ -11,11 +11,11 @@ export class Time {
 		return this.overrideNow ? this.overrideNow() : this.base.now(this.version);
 	}
 
-	withMigrationTime = async (version: number, run: () => Promise<void>) => {
+	withMigrationTime = async (version: number, run: () => void) => {
 		this.overrideNow = () => {
 			return this.base.zero(version);
 		};
-		await run();
+		run();
 		this.overrideNow = undefined;
 	};
 

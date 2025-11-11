@@ -6,7 +6,7 @@ import {
 	Operation,
 	VerdantError,
 } from '@verdant-web/common';
-import { Context } from '../context/context.js';
+import { Context, ContextInit } from '../context/context.js';
 import { DocumentManager } from '../entities/DocumentManager.js';
 import { EntityStore } from '../entities/EntityStore.js';
 import { FileManager } from '../files/FileManager.js';
@@ -67,36 +67,27 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	private _queryCache: QueryCache;
 	private _documentManager: DocumentManager<any>;
 	private _fileManager: FileManager;
+	private context: Context;
 
 	readonly collectionNames: string[];
 
 	private _sync!: Sync<Presence, Profile>;
 
-	get sync() {
-		return this._sync;
-	}
-
-	get entities() {
-		return this._entities;
-	}
-
-	get documentManager() {
-		return this._documentManager;
-	}
-
-	constructor(private context: Context) {
+	constructor(private contextInit: ContextInit) {
 		super();
-		context.getClient = () => this;
-		this.collectionNames = Object.keys(context.schema.collections);
+		this.context = new Context(this.contextInit);
+		this.context.getClient = () => this;
+
+		this.collectionNames = Object.keys(this.context.schema.collections);
 		this._sync =
-			this.context.config.sync && !context.schema.wip
+			this.context.config.sync && !this.context.schema.wip
 				? new ServerSync<Presence, Profile>(this.context.config.sync, {
 						onData: this.addData,
 						ctx: this.context,
 					})
 				: new NoSync<Presence, Profile>(this.context);
-		if (context.schema.wip && this.context.config.sync) {
-			context.log(
+		if (this.context.schema.wip && this.context.config.sync) {
+			this.context.log(
 				'warn',
 				'⚠️⚠️ Sync is disabled for WIP schemas. Commit your schema changes to start syncing again. ⚠️⚠️',
 			);
@@ -115,8 +106,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// refresh.
 		// FIXME: make this less fragile
 		this._queryCache = new QueryCache({
-			context,
-			evictionTime: context.config.queries?.evictionTime,
+			context: this.context,
+			evictionTime: this.context.config.queries?.evictionTime,
 		});
 		this._documentManager = new DocumentManager(this.schema, this._entities);
 
@@ -140,7 +131,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		// self-assign collection shortcuts. these are not typed
 		// here but are typed in the generated code...
 		for (const [name, _collection] of Object.entries(
-			context.schema.collections,
+			this.context.schema.collections,
 		)) {
 			const collectionName = name;
 			(this as any)[collectionName] = new CollectionQueries({
@@ -159,6 +150,13 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		baselines?: DocumentBaseline[];
 		reset?: boolean;
 	}) => {
+		if (this.context.closing) {
+			this.context.log(
+				'warn',
+				'Client is closing; ignoring incoming sync data',
+			);
+			return;
+		}
 		// always wait for an ongoing import to complete before handling data.
 		await this.importingPromise;
 
@@ -240,8 +238,20 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		return this._queryCache;
 	}
 
+	get sync() {
+		return this._sync;
+	}
+
+	get entities() {
+		return this._entities;
+	}
+
+	get documentManager() {
+		return this._documentManager;
+	}
+
 	async getReplicaId() {
-		const replica = await this.context.meta.getLocalReplica();
+		const replica = await (await this.context.meta).getLocalReplica();
 		return replica.id;
 	}
 
@@ -263,8 +273,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		if (this.disposed) {
 			return {} as any;
 		}
-		const collections = await this.context.documents.stats();
-		const meta = await this.context.meta.stats();
+		const collections = await (await this.context.documents).stats();
+		const meta = await (await this.context.meta).stats();
 		const storage =
 			typeof navigator !== 'undefined' &&
 			typeof navigator.storage !== 'undefined' &&
@@ -272,7 +282,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				? await navigator.storage.estimate()
 				: undefined;
 
-		const files = await this.context.files.stats();
+		const files = await (await this.context.files).stats();
 
 		// determine data:metadata ratio for total size of all collections vs metadata
 		const totalCollectionsSize = Object.values(collections).reduce(
@@ -338,9 +348,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		},
 	): Promise<ExportedData> => {
 		this.context.log('info', 'Exporting data...');
-		const metaExport = await this.context.meta.export();
-		const { fileData, files } =
-			await this.context.files.export(downloadRemoteFiles);
+		const metaExport = await (await this.context.meta).export();
+		const { fileData, files } = await (
+			await this.context.files
+		).export(downloadRemoteFiles);
 		return {
 			data: metaExport,
 			fileData,
@@ -387,7 +398,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * Export all data, then re-import it. This might resolve
 	 * some issues with the local database, but it should
 	 * only be done as a second-to-last resort. The last resort
-	 * would be __dangerous__resetLocal on ClientDescriptor, which
+	 * would be __dangerous__resetLocal, which
 	 * clears all local data.
 	 *
 	 * Unlike __dangerous__resetLocal, this method allows local-only
@@ -408,8 +419,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * on the client. So if you clean up files 3 days after delete,
 	 * invoking this manually will not skip that 3 day waiting period.
 	 */
-	__cleanupFilesImmediately = () => {
-		return this.context.files.cleanupDeletedFiles();
+	__cleanupFilesImmediately = async () => {
+		return (await this.context.files).cleanupDeletedFiles();
 	};
 
 	/**
@@ -417,8 +428,9 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 	 * rebasing rules. Rebases already happen automatically
 	 * during normal operation, so you probably don't need this.
 	 */
-	__manualRebase = () => {
-		this.context.meta.manualRebase();
+	__manualRebase = async () => {
+		// not awaiting; relying on event below as this method only schedules.
+		(await this.context.meta).manualRebase();
 		return new Promise<void>((resolve) => {
 			const unsub = this.subscribe('rebase', () => {
 				unsub();
@@ -438,6 +450,10 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			queries: this.context.documents,
 			files: this.context.files,
 		};
+	}
+
+	get __persistenceReady() {
+		return this.context.waitForInitialization;
 	}
 }
 
