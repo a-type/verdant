@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/persistence-capacitor-sqlite",
-	"version": "3.0.0",
+	"version": "4.0.0",
 	"type": "module",
 	"exports": {
 		".": {
@@ -35,7 +35,7 @@
 		"kysely": "^0.27.5"
 	},
 	"peerDependencies": {
-		"@verdant-web/store": "^4.3.0"
+		"@verdant-web/store": "^5.0.0"
 	},
 	"devDependencies": {
 		"@verdant-web/store": "workspace:*",

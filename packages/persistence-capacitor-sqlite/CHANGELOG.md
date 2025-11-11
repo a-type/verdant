@@ -1,5 +1,13 @@
 # @verdant-web/persistence-capacitor-sqlite
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [1209a38]
+  - @verdant-web/persistence-sqlite@4.0.0
+  - @verdant-web/store@5.0.0
+
 ## 3.0.0
 
 ### Patch Changes
