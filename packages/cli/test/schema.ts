@@ -6,7 +6,65 @@ import {
 	StorageObjectFieldSchema,
 	StorageStringFieldSchema,
 } from '@verdant-web/store';
-import { createTipTapFieldSchema } from '@verdant-web/tiptap';
+
+// can't depend on real lib due to circular
+function createTipTapFieldSchema(options: { default: any }) {
+	if (options.default === undefined) {
+		throw new Error(
+			'createTiptapFieldSchema requires a default value. Specify "null" to make the field nullable.',
+		);
+	}
+
+	const baseField = schema.fields.object({
+		fields: {},
+	});
+	const nestedContent = schema.fields.replaceObjectFields(baseField, {
+		type: schema.fields.string(),
+		from: schema.fields.number({ nullable: true }),
+		to: schema.fields.number({ nullable: true }),
+		attrs: schema.fields.map({
+			values: schema.fields.any(),
+		}),
+		content: schema.fields.array({
+			items: baseField,
+			nullable: true,
+		}),
+		text: schema.fields.string({ nullable: true }),
+		marks: schema.fields.array({
+			items: baseField,
+			nullable: true,
+		}),
+	});
+
+	const rootField = schema.fields.object({
+		fields: {
+			type: schema.fields.string(),
+			from: schema.fields.number({ nullable: true }),
+			to: schema.fields.number({ nullable: true }),
+			attrs: schema.fields.map({
+				values: schema.fields.any(),
+			}),
+			content: schema.fields.array({
+				items: nestedContent,
+				nullable: true,
+			}),
+			text: schema.fields.string({ nullable: true }),
+			marks: schema.fields.array({
+				items: nestedContent,
+				nullable: true,
+			}),
+		},
+		default: () => {
+			if (options.default === null) {
+				return null;
+			}
+			return structuredClone(options.default);
+		},
+		nullable: options.default === null,
+	});
+
+	return rootField as any;
+}
 
 export const todo = schema.collection({
 	name: 'todo',

@@ -176,9 +176,6 @@ importers:
       '@verdant-web/store':
         specifier: workspace:*
         version: link:../store
-      '@verdant-web/tiptap':
-        specifier: workspace:*
-        version: link:../tiptap
       fake-indexeddb:
         specifier: ^5.0.1
         version: 5.0.2
