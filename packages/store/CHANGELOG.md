@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.0.1
+
+### Patch Changes
+
+- b03026a: Snapshots of files now prefer the remote URL over the blob:// one if available.
+
 ## 5.0.0
 
 ### Major Changes
