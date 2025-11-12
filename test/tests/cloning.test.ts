@@ -40,16 +40,19 @@ it(
 		await waitForFileUpload(originalImage, 5000, 'upload original image');
 		ctx.log('Uploaded file', originalImage.id);
 
+		const originalImageUrl = await ctx.server.getFileInfo(
+			ctx.library,
+			originalImage.id,
+		);
+		expect(originalImageUrl).toBeTruthy();
+		ctx.log('Original image URL:', originalImageUrl);
+
 		const clone = await clientA.items.clone(original);
 		expect(clone.get('image')).not.toBeNull();
 		const cloneImage = clone.get('image')!;
 		await waitForFileLoaded(cloneImage);
 		await waitForFileUpload(cloneImage, 5000, 'upload clone image');
 		expect(cloneImage.url).not.toBeNull();
-		// at this point it's blob URLs, so they will be the same as the
-		// file is the same
-		// UPDATE: not actually true in a real browser.
-		// expect(cloneImage.url).toEqual(originalImage.url);
 		clone.set('content', 'clone');
 
 		// there should be 2 files in the database now
@@ -58,7 +61,8 @@ it(
 		ctx.log('2 files in the db');
 
 		// delete the original
-		await clientA.items.delete(original.get('id'));
+		const originalItemId = original.get('id');
+		await clientA.items.delete(originalItemId);
 
 		// check that the clone file is still there... resetting the whole
 		// client just to be sure here.
@@ -80,6 +84,17 @@ it(
 		const clientAAgainCloneImage = clientAAgainClone.get('image')!;
 		await waitForFileLoaded(clientAAgainCloneImage);
 		expect(clientAAgainCloneImage.url).not.toBeNull();
+		expect(clientAAgainCloneImage.error).toBeNull();
+
+		const cloneImageUrl = await ctx.server.getFileInfo(
+			ctx.library,
+			clientAAgainCloneImage.id,
+		);
+		ctx.log(
+			'Clone image survived original deletion',
+			clientAAgainCloneImage.id,
+			cloneImageUrl,
+		);
 
 		// we will also test with a remote client to make sure it
 		// downloads the file to clone

@@ -37,7 +37,9 @@ export class FileManager extends Disposable {
 		}
 		// this will download any original remote file and trigger a re-upload to the
 		// new file's identity, in addition to storing it on disk
-		const processedFile = await (await this.context.files).add(file);
+		const processedFile = await (
+			await this.context.files
+		).add(file, { cloneRemote: true });
 		entityFile[UPDATE](processedFile);
 	};
 
@@ -60,9 +62,12 @@ export class FileManager extends Disposable {
 
 	private load = async (file: EntityFile) => {
 		const fileData = await (await this.context.files).get(file.id);
+		// immediately apply any file data we have
 		if (fileData) {
 			file[UPDATE](fileData);
-		} else {
+		}
+
+		if (!fileData?.url && (!fileData || fileData.remote)) {
 			// maybe we don't have it yet, it might be on the server still.
 			try {
 				// if not online, enqueue this for whenever we go online.
@@ -84,15 +89,27 @@ export class FileManager extends Disposable {
 
 				const result = await this.sync.getFile(file.id);
 				if (result.success) {
-					await (await this.context.files).add(result.data);
+					// avoid overwriting local values except for url
+					const copyWithUrl: FileData = {
+						...result.data,
+						...fileData,
+						url: result.data.url,
+					};
+					await (await this.context.files).update(copyWithUrl);
 					file[UPDATE](result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
-					file[MARK_FAILED](result.error?.toString());
+					if (!fileData) {
+						// only mark failed if we have no local data to fall back to
+						file[MARK_FAILED](result.error?.toString());
+					}
 				}
 			} catch (err) {
 				this.context.log('error', 'Failed to load file', err);
-				file[MARK_FAILED](err instanceof Error ? err.message : String(err));
+				if (!fileData) {
+					// only mark failed if we have no local data to fall back to
+					file[MARK_FAILED](err instanceof Error ? err.message : String(err));
+				}
 			}
 		}
 	};

@@ -118,7 +118,7 @@ export class IdbPersistenceFileDb
 			},
 			{ mode: 'readonly' },
 		);
-		return raw.map(this.hydrateFileData);
+		return raw?.map(this.hydrateFileData) ?? [];
 	};
 	resetSyncedStatusSince = async (since: string | null): Promise<void> => {
 		const tx: IDBTransaction = this.createTransaction(['files'], {

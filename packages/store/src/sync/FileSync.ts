@@ -156,7 +156,7 @@ export class FileSync extends Disposable {
 				};
 			} else {
 				this.ctx.log(
-					'error',
+					'warn',
 					'File information fetch failed',
 					fileEndpoint + `/${id}`,
 					response.status,
@@ -180,7 +180,7 @@ export class FileSync extends Disposable {
 			}
 		} catch (e) {
 			this.ctx.log(
-				'error',
+				'warn',
 				'File information fetch failed',
 				`${fileEndpoint}/${id}`,
 				e,

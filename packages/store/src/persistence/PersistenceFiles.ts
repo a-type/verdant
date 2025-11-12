@@ -26,7 +26,11 @@ export class PersistenceFiles {
 
 	onServerReset = (since: string | null) =>
 		this.db.resetSyncedStatusSince(since);
-	add = async (file: FileData) => {
+	/**
+	 * Adds a file to persistence.
+	 * Optionally download and re-upload remote files to create a new copy.
+	 */
+	add = async (file: FileData, options?: { cloneRemote?: boolean }) => {
 		// this method accepts a FileData which refers to a remote
 		// file, as well as local files. in the case of a remote file,
 		// we actually re-download and upload the file again. this powers
@@ -34,10 +38,10 @@ export class PersistenceFiles {
 		// and re-upload to a new file ID. otherwise, when the cloned
 		// filedata was marked deleted, the original file would be deleted
 		// and the clone would refer to a missing file.
-		if (file.url && !(file.localPath || file.file)) {
+		if (file.url && !(file.localPath || file.file) && options?.cloneRemote) {
 			this.context.log(
 				'debug',
-				'Remote file added to an entity. This usually means an entity was cloned. Downloading remote file...',
+				'Cloning remote file added to a new entity. Downloading remote file...',
 				file.id,
 			);
 			const blob = await this.loadFileContents(file, 0, 3);
@@ -86,6 +90,11 @@ export class PersistenceFiles {
 						: 'with no data',
 		);
 		return file;
+	};
+	update = async (file: FileData) => {
+		await this.db.add(file);
+		this.context.globalEvents.emit('fileSaved', file);
+		this.context.log('debug', 'File updated', file.id, file.name);
 	};
 	onUploaded = this.db.markUploaded.bind(this.db);
 	get = this.db.get.bind(this.db);

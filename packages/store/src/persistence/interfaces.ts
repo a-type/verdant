@@ -177,6 +177,11 @@ export interface PersistedFileData extends FileData {
 }
 
 export interface PersistenceFileDb {
+	/**
+	 * Should add a file to local persistence. This is idempotent;
+	 * the same file being added multiple times should not create duplicates
+	 * and should update the existing file entry.
+	 */
 	add(file: FileData, options?: { downloadRemote?: boolean }): Promise<void>;
 	markUploaded(fileId: string): Promise<void>;
 	get(fileId: string): Promise<PersistedFileData | null>;
