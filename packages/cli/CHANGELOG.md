@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 5.1.0
+
+### Minor Changes
+
+- 9f396fb: Fix CLI typings bug with TipTap schema fields (and, generally recursive array structures in schemas)
+
 ## 5.0.0
 
 ### Major Changes
