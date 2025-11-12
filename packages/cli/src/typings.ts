@@ -215,9 +215,9 @@ function cyclicToName(collectionName: string, cyclic: CyclicReference) {
 		if (i % 2 === 0) {
 			name += pascalCase(parts[i]);
 		} else {
-			if (parts[i] === 'items') {
+			if (parts[i] === '"items"') {
 				name += 'Item';
-			} else if (parts[i] === 'values') {
+			} else if (parts[i] === '"values"') {
 				name += 'Value';
 			}
 		}
@@ -240,11 +240,17 @@ function getFieldTypings({
 	childSuffix?: string;
 	mode: 'init' | 'snapshot' | 'destructured';
 	collectionName: string;
-}): { alias: string; optional?: boolean; declarations: string } {
+}): {
+	alias: string;
+	optional?: boolean;
+	declarations: string;
+	reference?: boolean;
+} {
 	if ('$ref' in field) {
 		return {
 			alias: cyclicToName(collectionName, field) + childSuffix,
 			declarations: '',
+			reference: true,
 		};
 	}
 
@@ -320,6 +326,7 @@ function getFieldTypings({
 				mode,
 				collectionName,
 			});
+
 			const baseList = aliasBuilder(
 				name + suffix,
 				arrayBuilder(itemTypings.alias).build(),

@@ -169,6 +169,58 @@ export type TodoMeta = ObjectEntity<
 >;
 export type TodoMetaComment = string;
 export type TodoFile = EntityFile;
+export type TodoRichText = ObjectEntity<
+  TodoRichTextInit,
+  TodoRichTextDestructured,
+  TodoRichTextSnapshot
+>;
+export type TodoRichTextType = string;
+export type TodoRichTextFrom = number;
+export type TodoRichTextTo = number;
+export type TodoRichTextAttrs = ObjectEntity<
+  TodoRichTextAttrsInit,
+  TodoRichTextAttrsDestructured,
+  TodoRichTextAttrsSnapshot
+>;
+export type TodoRichTextAttrsValue = any;
+export type TodoRichTextContent = ListEntity<
+  TodoRichTextContentInit,
+  TodoRichTextContentDestructured,
+  TodoRichTextContentSnapshot
+>;
+export type TodoRichTextContentItem = ObjectEntity<
+  TodoRichTextContentItemInit,
+  TodoRichTextContentItemDestructured,
+  TodoRichTextContentItemSnapshot
+>;
+export type TodoRichTextContentItemType = string;
+export type TodoRichTextContentItemFrom = number;
+export type TodoRichTextContentItemTo = number;
+export type TodoRichTextContentItemAttrs = ObjectEntity<
+  TodoRichTextContentItemAttrsInit,
+  TodoRichTextContentItemAttrsDestructured,
+  TodoRichTextContentItemAttrsSnapshot
+>;
+export type TodoRichTextContentItemAttrsValue = any;
+export type TodoRichTextContentItemContent = ListEntity<
+  TodoRichTextContentItemContentInit,
+  TodoRichTextContentItemContentDestructured,
+  TodoRichTextContentItemContentSnapshot
+>;
+
+export type TodoRichTextContentItemText = string;
+export type TodoRichTextContentItemMarks = ListEntity<
+  TodoRichTextContentItemMarksInit,
+  TodoRichTextContentItemMarksDestructured,
+  TodoRichTextContentItemMarksSnapshot
+>;
+
+export type TodoRichTextText = string;
+export type TodoRichTextMarks = ListEntity<
+  TodoRichTextMarksInit,
+  TodoRichTextMarksDestructured,
+  TodoRichTextMarksSnapshot
+>;
 export type TodoInit = {
   id?: string;
   content?: string;
@@ -178,12 +230,45 @@ export type TodoInit = {
   attachments?: TodoAttachmentsInit;
   meta?: TodoMetaInit | null;
   file?: File | null;
+  richText?: TodoRichTextInit | null;
 };
 
 export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
 export type TodoMetaInit = { comment: string };
+export type TodoRichTextAttrsInit = {
+  [key: string]: TodoRichTextAttrsValueInit;
+};
+export type TodoRichTextContentItemAttrsInit = {
+  [key: string]: TodoRichTextContentItemAttrsValueInit;
+};
+export type TodoRichTextContentItemContentInit =
+  | TodoRichTextContentItemInit[]
+  | null;
+export type TodoRichTextContentItemMarksInit =
+  | TodoRichTextContentItemInit[]
+  | null;
+export type TodoRichTextContentItemInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: TodoRichTextContentItemAttrsInit;
+  content?: TodoRichTextContentItemContentInit | null;
+  text?: string | null;
+  marks?: TodoRichTextContentItemMarksInit | null;
+};
+export type TodoRichTextContentInit = TodoRichTextContentItemInit[] | null;
+export type TodoRichTextMarksInit = TodoRichTextContentItemInit[] | null;
+export type TodoRichTextInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: TodoRichTextAttrsInit;
+  content?: TodoRichTextContentInit | null;
+  text?: string | null;
+  marks?: TodoRichTextMarksInit | null;
+};
 export type TodoDestructured = {
   id: string;
   content: string;
@@ -193,12 +278,43 @@ export type TodoDestructured = {
   attachments: TodoAttachments;
   meta: TodoMeta | null;
   file: EntityFile | null;
+  richText: TodoRichText | null;
 };
 
 export type TodoTagsDestructured = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemDestructured = { name: string; test: number };
 export type TodoAttachmentsDestructured = TodoAttachmentsItem[];
 export type TodoMetaDestructured = { comment: string };
+export type TodoRichTextAttrsDestructured = {
+  [key: string]: TodoRichTextAttrsValue | undefined;
+};
+export type TodoRichTextContentItemAttrsDestructured = {
+  [key: string]: TodoRichTextContentItemAttrsValue | undefined;
+};
+export type TodoRichTextContentItemContentDestructured =
+  TodoRichTextContentItem[];
+export type TodoRichTextContentItemMarksDestructured =
+  TodoRichTextContentItem[];
+export type TodoRichTextContentItemDestructured = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextContentItemAttrs;
+  content: TodoRichTextContentItemContent | null;
+  text: string | null;
+  marks: TodoRichTextContentItemMarks | null;
+};
+export type TodoRichTextContentDestructured = TodoRichTextContentItem[];
+export type TodoRichTextMarksDestructured = TodoRichTextContentItem[];
+export type TodoRichTextDestructured = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextAttrs;
+  content: TodoRichTextContent | null;
+  text: string | null;
+  marks: TodoRichTextMarks | null;
+};
 export type TodoSnapshot = {
   id: string;
   content: string;
@@ -208,12 +324,49 @@ export type TodoSnapshot = {
   attachments: TodoAttachmentsSnapshot;
   meta: TodoMetaSnapshot | null;
   file: EntityFileSnapshot | null;
+  richText: TodoRichTextSnapshot | null;
 };
 
 export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
 export type TodoMetaSnapshot = { comment: string };
+export type TodoRichTextAttrsSnapshot = {
+  [key: string]: TodoRichTextAttrsValueSnapshot;
+};
+export type TodoRichTextContentItemAttrsSnapshot = {
+  [key: string]: TodoRichTextContentItemAttrsValueSnapshot;
+};
+export type TodoRichTextContentItemContentSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextContentItemMarksSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextContentItemSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextContentItemAttrsSnapshot;
+  content: TodoRichTextContentItemContentSnapshot | null;
+  text: string | null;
+  marks: TodoRichTextContentItemMarksSnapshot | null;
+};
+export type TodoRichTextContentSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextMarksSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextAttrsSnapshot;
+  content: TodoRichTextContentSnapshot | null;
+  text: string | null;
+  marks: TodoRichTextMarksSnapshot | null;
+};
 
 /** Index filters for Todo **/
 
@@ -565,6 +718,7 @@ exports[`generated client > should produce consistent output code 4`] = `
 import {
   schema
 } from "@verdant-web/store";
+import { createTipTapFieldSchema } from "@verdant-web/tiptap";
 var todo = schema.collection({
   name: "todo",
   primaryKey: "id",
@@ -605,6 +759,9 @@ var todo = schema.collection({
     }),
     file: schema.fields.file({
       nullable: true
+    }),
+    richText: createTipTapFieldSchema({
+      default: null
     })
   },
   indexes: {
@@ -711,12 +868,49 @@ export type TodoSnapshot = {
   attachments: TodoAttachmentsSnapshot;
   meta: TodoMetaSnapshot | null;
   file: EntityFileSnapshot | null;
+  richText: TodoRichTextSnapshot | null;
 };
 
 export type TodoTagsSnapshot = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemSnapshot = { name: string; test: number };
 export type TodoAttachmentsSnapshot = TodoAttachmentsItemSnapshot[];
 export type TodoMetaSnapshot = { comment: string };
+export type TodoRichTextAttrsSnapshot = {
+  [key: string]: TodoRichTextAttrsValueSnapshot;
+};
+export type TodoRichTextContentItemAttrsSnapshot = {
+  [key: string]: TodoRichTextContentItemAttrsValueSnapshot;
+};
+export type TodoRichTextContentItemContentSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextContentItemMarksSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextContentItemSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextContentItemAttrsSnapshot;
+  content: TodoRichTextContentItemContentSnapshot | null;
+  text: string | null;
+  marks: TodoRichTextContentItemMarksSnapshot | null;
+};
+export type TodoRichTextContentSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextMarksSnapshot =
+  | TodoRichTextContentItemSnapshot[]
+  | null;
+export type TodoRichTextSnapshot = {
+  type: string;
+  from: number | null;
+  to: number | null;
+  attrs: TodoRichTextAttrsSnapshot;
+  content: TodoRichTextContentSnapshot | null;
+  text: string | null;
+  marks: TodoRichTextMarksSnapshot | null;
+};
 export type TodoInit = {
   id?: string;
   content?: string;
@@ -726,12 +920,45 @@ export type TodoInit = {
   attachments?: TodoAttachmentsInit;
   meta?: TodoMetaInit | null;
   file?: File | null;
+  richText?: TodoRichTextInit | null;
 };
 
 export type TodoTagsInit = ("work" | "home" | "other")[];
 export type TodoAttachmentsItemInit = { name: string; test?: number };
 export type TodoAttachmentsInit = TodoAttachmentsItemInit[];
 export type TodoMetaInit = { comment: string };
+export type TodoRichTextAttrsInit = {
+  [key: string]: TodoRichTextAttrsValueInit;
+};
+export type TodoRichTextContentItemAttrsInit = {
+  [key: string]: TodoRichTextContentItemAttrsValueInit;
+};
+export type TodoRichTextContentItemContentInit =
+  | TodoRichTextContentItemInit[]
+  | null;
+export type TodoRichTextContentItemMarksInit =
+  | TodoRichTextContentItemInit[]
+  | null;
+export type TodoRichTextContentItemInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: TodoRichTextContentItemAttrsInit;
+  content?: TodoRichTextContentItemContentInit | null;
+  text?: string | null;
+  marks?: TodoRichTextContentItemMarksInit | null;
+};
+export type TodoRichTextContentInit = TodoRichTextContentItemInit[] | null;
+export type TodoRichTextMarksInit = TodoRichTextContentItemInit[] | null;
+export type TodoRichTextInit = {
+  type: string;
+  from?: number | null;
+  to?: number | null;
+  attrs?: TodoRichTextAttrsInit;
+  content?: TodoRichTextContentInit | null;
+  text?: string | null;
+  marks?: TodoRichTextMarksInit | null;
+};
 
 export type PersonSnapshot = {
   id: string;

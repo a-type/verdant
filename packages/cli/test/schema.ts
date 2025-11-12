@@ -6,6 +6,7 @@ import {
 	StorageObjectFieldSchema,
 	StorageStringFieldSchema,
 } from '@verdant-web/store';
+import { createTipTapFieldSchema } from '@verdant-web/tiptap';
 
 export const todo = schema.collection({
 	name: 'todo',
@@ -47,6 +48,9 @@ export const todo = schema.collection({
 		}),
 		file: schema.fields.file({
 			nullable: true,
+		}),
+		richText: createTipTapFieldSchema({
+			default: null,
 		}),
 	},
 	indexes: {

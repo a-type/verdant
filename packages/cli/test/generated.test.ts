@@ -96,6 +96,36 @@ describe('generated client', () => {
 			},
 		});
 
+		// testing tiptap schema
+		const testRichText = await client.todos.put({
+			done: false,
+			richText: {
+				type: 'document',
+				content: [
+					{
+						type: 'paragraph',
+						content: [
+							{
+								type: 'text',
+								text: 'Hello, world!',
+							},
+						],
+					},
+				],
+				attrs: {
+					'data-test': true,
+				},
+				marks: [
+					{
+						type: 'bold',
+						from: 0,
+						to: 5,
+					},
+				],
+			},
+		});
+		testRichText.getSnapshot().richText.content[0].content[0].text;
+
 		await expect(
 			client.posts.put({
 				title: 'fails',
