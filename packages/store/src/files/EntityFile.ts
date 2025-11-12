@@ -138,7 +138,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	getSnapshot(): FileData {
 		return {
 			id: this.id,
-			url: this._objectUrl ?? this._fileData?.url ?? undefined,
+			url: this._fileData?.url ?? this._objectUrl ?? undefined,
 			name: this.name ?? 'unknown-file',
 			remote: this._fileData?.remote ?? false,
 			type: this.type ?? '',
