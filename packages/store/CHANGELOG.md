@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.0.2
+
+### Patch Changes
+
+- 2d19be5: Fix bug where files would be repeatedly reuploaded by new replicas. File snapshots now reliably include the uploaded URL instead of the local one after a file has settled.
+
 ## 5.0.1
 
 ### Patch Changes
