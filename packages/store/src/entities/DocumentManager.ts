@@ -1,14 +1,14 @@
 import {
 	addFieldDefaults,
-	constrainEntity,
 	assert,
+	AuthorizationKey,
+	constrainEntity,
 	createOid,
+	isRootOid,
 	SchemaCollection,
 	StorageCollectionSchema,
 	StorageDocument,
 	StorageSchema,
-	isRootOid,
-	AuthorizationKey,
 } from '@verdant-web/common';
 import { EntityCreateOptions, EntityStore } from '../entities/EntityStore.js';
 import { ObjectEntity } from '../index.js';
@@ -119,20 +119,31 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 		);
 	};
 
-	clone = async (
+	/**
+	 * Creates a clone of the given document entity, returning a new
+	 * document entity in the given collection. The primary key of
+	 * the original document will be regenerated automatically and
+	 * access will be copied from the original. Both can be overridden
+	 * explicitly via options.
+	 */
+	clone = async <TInit>(
 		collection: string,
-		entity: ObjectEntity<any, any>,
+		entity: ObjectEntity<TInit, any>,
 		options: {
 			undoable?: boolean;
 			access?: AuthorizationKey;
 			primaryKey?: string;
+			/**
+			 * Modify the data before cloning
+			 */
+			update?: (init: TInit) => TInit;
 		} = {},
 	) => {
 		if (!isRootOid(entity.uid)) {
 			throw new Error('Cannot clone non-root documents');
 		}
 		// take the entity snapshot
-		const snapshot = entity.getSnapshot();
+		const snapshot = entity.getSnapshot() as any;
 		// remove the primary key
 		const collectionSchema = this.schema.collections[collection];
 		delete snapshot[collectionSchema.primaryKey];
@@ -146,6 +157,11 @@ export class DocumentManager<Schema extends StorageSchema<any>> {
 			}
 			snapshot[collectionSchema.primaryKey] = options.primaryKey;
 		}
-		return this.create(collection, snapshot, options);
+		// copy authorization of original unless user supplied override
+		if (entity.access && !options.access) {
+			options.access = entity.access;
+		}
+		const final = options.update ? options.update(snapshot) : snapshot;
+		return this.create(collection, final, options);
 	};
 }

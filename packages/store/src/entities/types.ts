@@ -1,4 +1,8 @@
-import { ObjectIdentifier, StorageFieldSchema } from '@verdant-web/common';
+import {
+	AuthorizationKey,
+	ObjectIdentifier,
+	StorageFieldSchema,
+} from '@verdant-web/common';
 import type { Entity } from './Entity.js';
 
 export type AccessibleEntityProperty<T> =
@@ -112,7 +116,7 @@ export interface BaseEntity<
 	/** If true, this Entity has authorization rules applied to it. */
 	readonly isAuthorized: boolean;
 	/** The authorization configuration string applied to this entity. */
-	readonly access: string | undefined;
+	readonly access: AuthorizationKey | undefined;
 	readonly invalid: boolean;
 	/** The Verdant store namespace which contains this object */
 	readonly namespace: string;
