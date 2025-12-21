@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.1.0
+
+### Minor Changes
+
+- a66bebd: Improve clone feature, it now copies access behavior from original doc and allows changing data before application
+
 ## 5.0.2
 
 ### Patch Changes
