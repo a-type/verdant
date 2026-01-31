@@ -316,7 +316,7 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		if (this.context.closeLock) {
 			await this.context.closeLock;
 		}
-		this.sync.stop();
+		await this.sync.stop();
 		this.sync.destroy();
 		// this step does have the potential to flush
 		// changes to storage, so don't close metadata db yet

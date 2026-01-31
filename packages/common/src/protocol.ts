@@ -127,6 +127,13 @@ export type PresenceUpdateMessage = {
 	internal?: VerdantInternalPresence;
 };
 
+/** Can't be relied on, but helpful to have */
+export type DisconnectingMessage = {
+	type: 'disconnecting';
+	replicaId: string;
+	reason?: string;
+};
+
 export type PresenceChangedMessage = {
 	type: 'presence-changed';
 	/** The client's replica ID */
@@ -171,7 +178,8 @@ export type ClientMessage =
 	| OperationMessage
 	| AckMessage
 	| SyncAckMessage
-	| PresenceUpdateMessage;
+	| PresenceUpdateMessage
+	| DisconnectingMessage;
 export type ServerMessage =
 	| HeartbeatResponseMessage
 	| SyncResponseMessage

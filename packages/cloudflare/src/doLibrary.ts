@@ -301,10 +301,10 @@ export class DurableObjectLibrary {
 		return this.#socketInfoCache.get(ws)!;
 	};
 
-	webSocketMessage = (
+	webSocketMessage = async (
 		ws: WebSocket,
 		message: string | ArrayBuffer,
-	): void | Promise<void> => {
+	): Promise<void | Promise<void>> => {
 		const { tokenInfo, key } = this.#getSocketInfo(ws);
 		const msg = JSON.parse(message.toString()) as ClientMessage | null;
 		if (!msg) {
@@ -314,7 +314,7 @@ export class DurableObjectLibrary {
 				'Invalid message format',
 			);
 		}
-		this.library.handleMessage(msg, key, tokenInfo);
+		await this.library.handleMessage(msg, key, tokenInfo);
 	};
 
 	webSocketClose = (
@@ -325,7 +325,8 @@ export class DurableObjectLibrary {
 	): void | Promise<void> => {
 		const { key } = this.#getSocketInfo(ws);
 		this.log('info', 'WebSocket closed', { key, code, reason, wasClean });
-		this.clientConnections.remove(key);
+		// this event happens even on hibernation, so we can't
+		// consider the client disconnected from presence.
 		this.#socketInfoCache.delete(ws);
 	};
 

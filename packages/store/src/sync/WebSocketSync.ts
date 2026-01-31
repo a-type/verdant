@@ -53,6 +53,9 @@ export class WebSocketSync
 
 		this.reconnectScheduler.subscribe('trigger', this.initializeSocket);
 		this.heartbeat.subscribe('beat', this.sendHeartbeat);
+		window.addEventListener('beforeunload', () => {
+			return this.sendDisconnecting();
+		});
 	}
 
 	get hasSynced() {
@@ -183,6 +186,9 @@ export class WebSocketSync
 	private onError = (event: Event) => {
 		this.ctx.log('error', 'Sync socket error', event, event.target);
 		if (this.disposed) return;
+		// this could be an auth error which requires us to get a new token
+		// so clearing the endpoint cache to force a refresh of the token too
+		this.endpointProvider.clearCache();
 		this.reconnectScheduler.next();
 
 		this.ctx.log('info', `Attempting reconnect to websocket sync`);
@@ -286,6 +292,12 @@ export class WebSocketSync
 		}
 	};
 
+	sendDisconnecting = async (reason = 'client-shutdown') => {
+		return this.send(
+			await (await this.ctx.meta).messageCreator.createDisconnecting(reason),
+		);
+	};
+
 	destroy = () => {
 		this.dispose();
 		this.stop();
@@ -299,7 +311,8 @@ export class WebSocketSync
 		this._status = 'active';
 	};
 
-	stop = () => {
+	stop = async () => {
+		await this.sendDisconnecting();
 		this.socket?.removeEventListener('message', this.onMessage);
 		this.socket?.removeEventListener('close', this.onClose);
 		if (this.socket?.readyState === WEBSOCKET_OPEN) {

@@ -2,6 +2,7 @@ import {
 	AckMessage,
 	applyOperations,
 	ClientMessage,
+	DisconnectingMessage,
 	DocumentBaseline,
 	EventSubscriber,
 	HeartbeatMessage,
@@ -138,6 +139,9 @@ export class Library {
 			case 'presence-update':
 				await this.handlePresenceUpdate(message, clientKey, info);
 				break;
+			case 'disconnecting':
+				await this.handleDisconnecting(message, clientKey, info);
+				break;
 			default:
 				this.log('error', 'Unknown message type', (message as any).type);
 				break;
@@ -152,7 +156,7 @@ export class Library {
 	};
 
 	private rebroadcastOperations = async (
-		libraryId: string,
+		_libraryId: string,
 		clientKey: string,
 		replicaId: string,
 		ops: Operation[],
@@ -527,7 +531,7 @@ export class Library {
 
 	private handleAck = async (
 		message: AckMessage,
-		clientKey: string,
+		_clientKey: string,
 		info: TokenInfo,
 	) => {
 		if (message.nonce) {
@@ -567,6 +571,14 @@ export class Library {
 				});
 			}
 		}
+	};
+
+	private handleDisconnecting = async (
+		_message: DisconnectingMessage,
+		clientKey: string,
+		_info: TokenInfo,
+	) => {
+		this.presence.removeConnection(clientKey);
 	};
 
 	private updateHighwater = async (

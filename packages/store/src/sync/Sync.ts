@@ -43,7 +43,7 @@ export interface SyncTransport extends EventSubscriber<SyncTransportEvents> {
 
 	start(): Promise<void>;
 	ignoreIncoming(): void;
-	stop(): void;
+	stop(): Promise<void> | void;
 
 	destroy(): void;
 
@@ -63,7 +63,7 @@ export interface Sync<Presence = any, Profile = any>
 	readonly presence: PresenceManager<Profile, Presence>;
 	send(message: ClientMessage): void;
 	start(): Promise<void>;
-	stop(): void;
+	stop(): Promise<void> | void;
 	ignoreIncoming(): void;
 	destroy(): void;
 	reconnect(): void;

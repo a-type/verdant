@@ -191,7 +191,7 @@ export class ClientConnectionManager implements MessageSender {
 			subscribeToSocketEvent(socket, 'messsage', () => {
 				// sockets get a long keepalive for message activity
 				// since they have a reliable close event
-				this.presence.keepAlive(key, 10 * 60 * 1000);
+				this.presence.keepAlive(key, 60 * 1000);
 			}),
 		);
 	};

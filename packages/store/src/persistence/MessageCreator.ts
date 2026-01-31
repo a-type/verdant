@@ -1,5 +1,6 @@
 import {
 	AckMessage,
+	DisconnectingMessage,
 	DocumentBaseline,
 	getOidRoot,
 	HeartbeatMessage,
@@ -153,6 +154,17 @@ export class MessageCreator {
 			timestamp: this.ctx.time.now,
 			replicaId: localReplicaInfo.id,
 			nonce,
+		};
+	};
+
+	createDisconnecting = async (
+		reason: string,
+	): Promise<DisconnectingMessage> => {
+		const localReplicaInfo = await this.meta.getLocalReplica();
+		return {
+			type: 'disconnecting',
+			replicaId: localReplicaInfo.id,
+			reason,
 		};
 	};
 }
