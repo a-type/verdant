@@ -39,6 +39,7 @@ export interface DurableObjectLibraryConfig {
 		fileDeleteExpirationDays?: number;
 		replicaTruancyTimeout?: number;
 	};
+	EXPERIMENTAL_autoHeartbeatResponses?: boolean;
 }
 
 export class DurableObjectLibrary {
@@ -200,14 +201,16 @@ export class DurableObjectLibrary {
 			});
 
 		// set auto-response for pings
-		this.ctx.setWebSocketAutoResponse(
-			new WebSocketRequestResponsePair(
-				JSON.stringify({ type: 'heartbeat' }),
-				JSON.stringify({
-					type: 'heartbeat-response',
-				}),
-			),
-		);
+		if (verdant.EXPERIMENTAL_autoHeartbeatResponses) {
+			this.ctx.setWebSocketAutoResponse(
+				new WebSocketRequestResponsePair(
+					JSON.stringify({ type: 'heartbeat' }),
+					JSON.stringify({
+						type: 'heartbeat-response',
+					}),
+				),
+			);
+		}
 	}
 
 	#noop = () => {};
