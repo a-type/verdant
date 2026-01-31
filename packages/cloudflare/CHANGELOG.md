@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.1.8
+
+### Patch Changes
+
+- 5beee50: turn off auto heartbeat response by default
+
 ## 0.1.7
 
 ### Patch Changes
