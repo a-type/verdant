@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.0.4
+
+### Patch Changes
+
+- 8a1e494: Improvements for DO websocket presence
+
 ## 4.0.3
 
 ### Patch Changes
