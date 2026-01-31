@@ -1,5 +1,13 @@
 # @verdant-web/cloudflare
 
+## 0.1.7
+
+### Patch Changes
+
+- 8a1e494: Improvements for DO websocket presence
+- Updated dependencies [8a1e494]
+  - @verdant-web/server@4.0.4
+
 ## 0.1.6
 
 ### Patch Changes

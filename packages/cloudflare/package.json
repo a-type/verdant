@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/cloudflare",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"access": "public",
 	"type": "module",
 	"exports": {
