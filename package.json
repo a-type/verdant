@@ -25,7 +25,7 @@
 	"repository": "https://github.com/a-type/verdant",
 	"author": "Grant Forrest <gaforres@gmail.com>",
 	"devDependencies": {
-		"@changesets/cli": "^2.26.2",
+		"@changesets/cli": "^2.29.8",
 		"@types/node": "20.10.5",
 		"tsx": "^3.12.1",
 		"turbo": "^2.0.11",
