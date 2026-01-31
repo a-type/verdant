@@ -188,7 +188,10 @@ export class DurableObjectLibrary {
 				server.serializeAttachment(meta);
 				this.#socketInfoCache.set(client, meta);
 
-				this.clientConnections.addSocket(meta.key, server, info);
+				this.clientConnections.addSocket(meta.key, server, info, {
+					// we manually remove when the DO detects close instead
+					disableAutoRemoveOnClose: true,
+				});
 
 				return new Response(null, {
 					status: 101,

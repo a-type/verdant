@@ -68,6 +68,7 @@ export class SingleNodeLibraryManager {
 	private constructMicroserver = async (libraryId: string) => {
 		const clientConnections = new ClientConnectionManager({
 			profiles: this.ctx.profiles,
+			log: this.ctx.log,
 		});
 		const storage = await this.ctx.storage(libraryId);
 		const library = new Library({

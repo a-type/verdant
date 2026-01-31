@@ -48,7 +48,7 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		return this.presences[userId]!;
 	};
 
-	keepAlive = (connectionKey: string) => {
+	keepAlive = (connectionKey: string, duration = 60 * 1000) => {
 		const existing = this.keepalives.get(connectionKey);
 		if (existing) {
 			clearTimeout(existing);
@@ -59,7 +59,7 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 			setTimeout(() => {
 				this.removeConnection(connectionKey);
 				this.keepalives.delete(connectionKey);
-			}, 30 * 1000),
+			}, duration),
 		);
 	};
 

@@ -1,6 +1,7 @@
 import { authz, ServerMessage } from '@verdant-web/common';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WebSocket as WSWebSocket } from 'ws';
+import { Logger } from '../logger.js';
 import { UserProfileLoader } from '../Profiles.js';
 import { TokenInfo } from '../TokenVerifier.js';
 import { MessageSender } from './MessageSender.js';
@@ -150,31 +151,47 @@ class WebSocketClientConnection extends ClientConnection {
 export class ClientConnectionManager implements MessageSender {
 	private readonly connections: Map<string, ClientConnection> = new Map();
 	readonly presence: Presence;
+	private readonly log?: Logger;
 
-	constructor({ profiles }: { profiles: UserProfileLoader<any> }) {
+	constructor({
+		profiles,
+		log,
+	}: {
+		profiles: UserProfileLoader<any>;
+		log?: Logger;
+	}) {
 		this.presence = new Presence(profiles);
+		this.log = log;
 	}
 
 	addSocket = (
 		key: string,
 		socket: WebSocket | WSWebSocket,
 		info: TokenInfo,
+		options?: {
+			disableAutoRemoveOnClose?: boolean;
+		},
 	) => {
 		const connection = new WebSocketClientConnection(key, socket, info);
 
 		this.connections.set(key, connection);
 
 		const unsubscribes: (() => void)[] = [];
-		unsubscribes.push(
-			subscribeToSocketEvent(socket, 'close', () => {
-				this.connections.delete(key);
-				this.presence.removeConnection(key);
-				unsubscribes.forEach((u) => u());
-			}),
-		);
+		if (!options?.disableAutoRemoveOnClose) {
+			unsubscribes.push(
+				subscribeToSocketEvent(socket, 'close', () => {
+					this.log?.('info', `Socket closed: ${key}`);
+					this.connections.delete(key);
+					this.presence.removeConnection(key);
+					unsubscribes.forEach((u) => u());
+				}),
+			);
+		}
 		unsubscribes.push(
 			subscribeToSocketEvent(socket, 'messsage', () => {
-				this.presence.keepAlive(key);
+				// sockets get a long keepalive for message activity
+				// since they have a reliable close event
+				this.presence.keepAlive(key, 10 * 60 * 1000);
 			}),
 		);
 	};
