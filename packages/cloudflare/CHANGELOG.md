@@ -1,5 +1,16 @@
 # @verdant-web/cloudflare
 
+## 0.4.0
+
+### Minor Changes
+
+- 38e3c3a: Support different presence storage backends
+
+### Patch Changes
+
+- Updated dependencies [38e3c3a]
+  - @verdant-web/server@4.2.0
+
 ## 0.3.1
 
 ### Patch Changes

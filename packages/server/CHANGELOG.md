@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.2.0
+
+### Minor Changes
+
+- 38e3c3a: Support different presence storage backends
+
 ## 4.1.1
 
 ### Patch Changes
