@@ -29,14 +29,16 @@ const baseOptions = async () => ({
 		fileDeleteExpirationDays: 7,
 		replicaTruancyMinutes: 60 * 24,
 	})('library-1'),
-	presence: new Presence({
-		get: async (userId: string) => {
-			return {
-				id: userId,
-				name: 'Alice',
-			};
-		},
-	}),
+	clientConnections: {
+		presence: new Presence({
+			get: async (userId: string) => {
+				return {
+					id: userId,
+					name: 'Alice',
+				};
+			},
+		}),
+	} as any,
 });
 
 let time = 0;

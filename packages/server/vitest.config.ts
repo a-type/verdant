@@ -4,6 +4,7 @@ export default defineConfig({
 	test: {
 		clearMocks: true,
 		environment: 'node',
+		dir: 'src',
 	},
 	resolve: {
 		conditions: ['development', 'default'],
