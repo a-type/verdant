@@ -1,5 +1,12 @@
 # @lo-fi/server
 
+## 4.2.2
+
+### Patch Changes
+
+- f3aacef: Tweak presence timings for more robustness
+- 7549577: Add log for message handling
+
 ## 4.2.1
 
 ### Patch Changes
