@@ -127,6 +127,8 @@ export class Library {
 
 		if (!allowed) return;
 
+		this.log('debug', 'Handling message', message.type, 'from', clientKey);
+
 		switch (message.type) {
 			case 'op':
 				await this.handleOperation(message, clientKey, info);

@@ -30,7 +30,6 @@ export class DurableObjectPresenceStorage implements PresenceStorage {
 	private getMap = async (): Promise<Record<string, PresenceStorageItem>> => {
 		const map: Record<string, PresenceStorageItem> | null =
 			(await this.ctx.storage.get(this.key)) ?? {};
-		this.log?.('debug', 'Presence map loaded:', map);
 		// clear entries that have expired
 		const now = Date.now();
 		for (const [userId, item] of Object.entries(map)) {
