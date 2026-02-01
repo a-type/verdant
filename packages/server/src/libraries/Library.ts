@@ -17,8 +17,8 @@ import {
 	SyncMessage,
 } from '@verdant-web/common';
 import { MessageSender } from '../connections/MessageSender.js';
-import { Presence } from '../connections/Presence.js';
 import { FileInfo, FileStorageLibraryDelegate } from '../files/FileStorage.js';
+import { ClientConnectionManager } from '../internals.js';
 import { Logger } from '../logger.js';
 import { Storage } from '../storage/Storage.js';
 import { TokenInfo } from '../TokenVerifier.js';
@@ -52,7 +52,10 @@ export class Library {
 	private fileStorage;
 	private events;
 	readonly id: string;
-	private presence: Presence;
+	private clientConnections: ClientConnectionManager;
+	private get presence() {
+		return this.clientConnections.presence;
+	}
 
 	private log: Logger;
 
@@ -64,7 +67,7 @@ export class Library {
 		fileStorage,
 		events,
 		id,
-		presence,
+		clientConnections,
 	}: {
 		storage: Storage;
 		sender: MessageSender;
@@ -73,7 +76,7 @@ export class Library {
 		fileStorage?: FileStorageLibraryDelegate;
 		events?: EventSubscriber<LibraryEvents>;
 		id: string;
-		presence: Presence;
+		clientConnections: ClientConnectionManager;
 	}) {
 		this.id = id;
 		this.storage = storage;
@@ -82,7 +85,7 @@ export class Library {
 		this.disableRebasing = !!disableRebasing;
 		this.fileStorage = fileStorage;
 		this.events = events;
-		this.presence = presence;
+		this.clientConnections = clientConnections;
 		this.presence.subscribe('lost', this.onPresenceLost);
 	}
 
@@ -578,7 +581,7 @@ export class Library {
 		clientKey: string,
 		_info: TokenInfo,
 	) => {
-		await this.presence.removeConnection(clientKey);
+		await this.clientConnections.remove(clientKey);
 	};
 
 	private updateHighwater = async (

@@ -87,6 +87,8 @@ export class PresenceMemoryStorage implements PresenceStorage {
  * clients
  */
 export class Presence extends EventSubscriber<PresenceEvents> {
+	// TODO: remove need for these mappings by moving presence deletion
+	// upward to ClientConnectionManager
 	private connectionToUser: Record<string, string> = {};
 	private userToConnection: Record<string, Set<string>> = {};
 
@@ -129,7 +131,7 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		const userId = this.connectionToUser[connectionKey];
 		if (!userId) return;
 
-		this.userToConnection[userId].delete(connectionKey);
+		this.userToConnection[userId]?.delete(connectionKey);
 		if (this.userToConnection[userId].size === 0) {
 			await this.storage.remove(userId);
 			delete this.userToConnection[userId];
