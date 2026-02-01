@@ -75,8 +75,7 @@ export class SingleNodeLibraryManager {
 			storage,
 			id: libraryId,
 			events: this.events,
-			sender: clientConnections,
-			presence: clientConnections.presence,
+			clientConnections,
 			log: (level, ...args) =>
 				this.ctx.log?.(level, `[Library ${libraryId}]`, ...args),
 			fileStorage: this.ctx.fileStorage

@@ -256,14 +256,13 @@ export class DurableObjectLibrary {
 			this.library = new Library({
 				id: libraryId,
 				storage,
-				sender: this.clientConnections,
 				events: this.events,
 				disableRebasing: this.#config.disableRebasing,
 				fileStorage: this.#config.fileStorage
 					? new FileStorageLibraryDelegate(libraryId, this.#config.fileStorage)
 					: undefined,
 				log: this.log,
-				presence: this.clientConnections.presence,
+				clientConnections: this.clientConnections,
 			});
 			this.#initialized = true;
 			this.#initializePromise = null;

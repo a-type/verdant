@@ -16,7 +16,6 @@ import {
 	rewriteAuthzOriginator,
 	SyncMessage,
 } from '@verdant-web/common';
-import { MessageSender } from '../connections/MessageSender.js';
 import { FileInfo, FileStorageLibraryDelegate } from '../files/FileStorage.js';
 import { ClientConnectionManager } from '../internals.js';
 import { Logger } from '../logger.js';
@@ -47,7 +46,6 @@ export interface LibraryFileInfo {
 
 export class Library {
 	private storage;
-	private sender;
 	private disableRebasing: boolean;
 	private fileStorage;
 	private events;
@@ -56,12 +54,14 @@ export class Library {
 	private get presence() {
 		return this.clientConnections.presence;
 	}
+	private get sender() {
+		return this.clientConnections;
+	}
 
 	private log: Logger;
 
 	constructor({
 		storage,
-		sender,
 		log = () => {},
 		disableRebasing,
 		fileStorage,
@@ -70,7 +70,6 @@ export class Library {
 		clientConnections,
 	}: {
 		storage: Storage;
-		sender: MessageSender;
 		log?: Logger;
 		disableRebasing?: boolean;
 		fileStorage?: FileStorageLibraryDelegate;
@@ -80,7 +79,6 @@ export class Library {
 	}) {
 		this.id = id;
 		this.storage = storage;
-		this.sender = sender;
 		this.log = log;
 		this.disableRebasing = !!disableRebasing;
 		this.fileStorage = fileStorage;
