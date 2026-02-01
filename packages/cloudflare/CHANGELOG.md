@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.4.2
+
+### Patch Changes
+
+- 2ce8029: Fix bug with message wakeup for hibernation in DO leading to uninitialized library
+
 ## 0.4.1
 
 ### Patch Changes
