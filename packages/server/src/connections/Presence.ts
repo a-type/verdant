@@ -29,7 +29,7 @@ export interface PresenceStorage {
 	clear: () => Promise<void>;
 }
 
-const DEFAULT_EXPIRATION_TIME = 60 * 1000;
+const DEFAULT_EXPIRATION_TIME = 5 * 60 * 1000;
 
 export class PresenceMemoryStorage implements PresenceStorage {
 	private presences: Record<string, PresenceStorageItem> = {};

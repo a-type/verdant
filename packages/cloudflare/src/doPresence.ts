@@ -9,6 +9,8 @@ import {
 	PresenceStorageItem,
 } from '@verdant-web/server/internals';
 
+const REMOVAL_TIMEOUT = 60 * 60 * 1000; // 1 hour
+
 export class DurableObjectPresenceStorage implements PresenceStorage {
 	private key;
 	private log;
@@ -33,11 +35,11 @@ export class DurableObjectPresenceStorage implements PresenceStorage {
 		// clear entries that have expired
 		const now = Date.now();
 		for (const [userId, item] of Object.entries(map)) {
-			if (item.expiresAt <= now) {
+			if (item.expiresAt <= now - REMOVAL_TIMEOUT) {
 				delete map[userId];
 				this.log?.(
 					'debug',
-					`Presence for user ${userId} has expired and was removed.`,
+					`Presence for user ${userId} is very old was removed.`,
 				);
 			}
 		}
