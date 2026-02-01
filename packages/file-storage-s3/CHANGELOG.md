@@ -1,5 +1,13 @@
 # @verdant-web/s3-file-storage
 
+## 1.0.48
+
+### Patch Changes
+
+- Updated dependencies [f3aacef]
+- Updated dependencies [7549577]
+  - @verdant-web/server@4.2.2
+
 ## 1.0.47
 
 ### Patch Changes

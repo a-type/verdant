@@ -1,5 +1,15 @@
 # @verdant-web/cloudflare
 
+## 0.4.3
+
+### Patch Changes
+
+- e7021f2: reduce log spam from presence loading
+- f3aacef: Tweak presence timings for more robustness
+- Updated dependencies [f3aacef]
+- Updated dependencies [7549577]
+  - @verdant-web/server@4.2.2
+
 ## 0.4.2
 
 ### Patch Changes
