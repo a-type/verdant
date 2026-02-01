@@ -27,8 +27,8 @@ export function createNodeWebsocketHandler(core: SingleNodeLibraryManager) {
 				await microserver.handleMessage(key, info, data);
 			});
 
-			ws.on('close', () => {
-				microserver.clientConnections.remove(key);
+			ws.on('close', async () => {
+				await microserver.clientConnections.remove(key);
 				core.log('debug', 'Connection closed', { key, userId: info.userId });
 			});
 		},

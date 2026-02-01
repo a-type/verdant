@@ -5,7 +5,7 @@ import { Logger } from '../logger.js';
 import { UserProfileLoader } from '../Profiles.js';
 import { TokenInfo } from '../TokenVerifier.js';
 import { MessageSender } from './MessageSender.js';
-import { Presence } from './Presence.js';
+import { Presence, PresenceStorage } from './Presence.js';
 
 abstract class ClientConnection {
 	constructor(
@@ -155,12 +155,14 @@ export class ClientConnectionManager implements MessageSender {
 
 	constructor({
 		profiles,
+		presenceStorage,
 		log,
 	}: {
 		profiles: UserProfileLoader<any>;
+		presenceStorage?: PresenceStorage;
 		log?: Logger;
 	}) {
-		this.presence = new Presence(profiles);
+		this.presence = new Presence(profiles, presenceStorage);
 		this.log = log;
 	}
 
@@ -179,10 +181,10 @@ export class ClientConnectionManager implements MessageSender {
 		const unsubscribes: (() => void)[] = [];
 		if (!options?.disableAutoRemoveOnClose) {
 			unsubscribes.push(
-				subscribeToSocketEvent(socket, 'close', () => {
+				subscribeToSocketEvent(socket, 'close', async () => {
 					this.log?.('info', `Socket closed: ${key}`);
 					this.connections.delete(key);
-					this.presence.removeConnection(key);
+					await this.presence.removeConnection(key);
 					unsubscribes.forEach((u) => u());
 				}),
 			);
@@ -191,7 +193,7 @@ export class ClientConnectionManager implements MessageSender {
 			subscribeToSocketEvent(socket, 'messsage', () => {
 				// sockets get a long keepalive for message activity
 				// since they have a reliable close event
-				this.presence.keepAlive(key, 60 * 1000);
+				this.presence.keepAlive(info.userId, 60 * 1000);
 			}),
 		);
 	};
@@ -229,9 +231,9 @@ export class ClientConnectionManager implements MessageSender {
 		};
 	};
 
-	remove = (key: string) => {
+	remove = async (key: string) => {
 		this.connections.delete(key);
-		this.presence.removeConnection(key);
+		await this.presence.removeConnection(key);
 	};
 
 	respond = (key: string, message: ServerMessage) => {

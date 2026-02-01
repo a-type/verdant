@@ -2,6 +2,7 @@ export { errorHandler } from './adapters/node/errorHandler.js';
 export { createHttpRouter as createHonoRouter } from './adapters/node/httpRouter.js';
 export { tokenMiddleware } from './adapters/node/tokenMiddleware.js';
 export { ClientConnectionManager } from './connections/ClientConnection.js';
+export type * from './connections/Presence.js';
 export { FileStorageLibraryDelegate } from './files/FileStorage.js';
 export type * from './libraries/generic.js';
 export { Library, type LibraryEvents } from './libraries/Library.js';

@@ -22,6 +22,7 @@ import {
 	UserProfileLoader,
 } from '@verdant-web/server/internals';
 import { Hono } from 'hono';
+import { DurableObjectPresenceStorage } from './doPresence.js';
 import { createDurableObjectSqliteExecutor } from './sql.js';
 
 interface SocketMeta {
@@ -62,6 +63,7 @@ export class DurableObjectLibrary {
 
 		this.clientConnections = new ClientConnectionManager({
 			profiles: new UserProfileLoader(this.#config.profiles),
+			presenceStorage: new DurableObjectPresenceStorage(this.ctx),
 		});
 
 		ctx.getWebSockets().forEach((ws) => {

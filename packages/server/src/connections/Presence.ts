@@ -10,17 +10,90 @@ export type PresenceEvents = {
 	lost: (connectionKey: string, userId: string) => void;
 };
 
+export type PresenceStorageItem = UserInfo<any, any> & { expiresAt: number };
+
+export interface PresenceStorage {
+	set: (
+		userId: string,
+		userInfo: UserInfoUpdate,
+		profile: any,
+		expiresAt: number,
+	) => Promise<UserInfo<any, any>>;
+	setExpiresAt: (userId: string, expiresAt: number) => Promise<void>;
+	get: (
+		userId: string,
+		time: number,
+	) => Promise<UserInfo<any, any> | undefined>;
+	remove: (userId: string) => Promise<void>;
+	all: () => Promise<Record<string, UserInfo<any, any>>>;
+	clear: () => Promise<void>;
+}
+
+export class PresenceMemoryStorage implements PresenceStorage {
+	private presences: Record<string, PresenceStorageItem> = {};
+
+	set = async (
+		userId: string,
+		userInfo: UserInfoUpdate,
+		profile: any,
+		expiresAt: number,
+	) => {
+		if (!this.presences[userId]) {
+			this.presences[userId] = {
+				...userInfo,
+				expiresAt,
+				profile,
+				internal: userInfo.internal || initialInternalPresence,
+			};
+		} else {
+			Object.assign(this.presences[userId], userInfo);
+		}
+		return this.presences[userId]!;
+	};
+
+	setExpiresAt = async (userId: string, expiresAt: number) => {
+		const presence = this.presences[userId];
+		if (presence) {
+			presence.expiresAt = expiresAt;
+		}
+	};
+
+	get = async (userId: string, time: number) => {
+		const value = this.presences[userId];
+		if (value && value.expiresAt > time) {
+			return value;
+		}
+		return undefined;
+	};
+
+	remove = async (userId: string) => {
+		delete this.presences[userId];
+		if (Object.keys(this.presences).length === 0) {
+			this.clear();
+		}
+	};
+
+	all = async () => {
+		return this.presences;
+	};
+
+	clear = async () => {
+		this.presences = {};
+	};
+}
+
 /**
  * Stores client presence in-memory for connected
  * clients
  */
 export class Presence extends EventSubscriber<PresenceEvents> {
-	private presences: Record<string, UserInfo<any, any>> = {};
 	private connectionToUser: Record<string, string> = {};
 	private userToConnection: Record<string, Set<string>> = {};
-	private keepalives = new Map<string, NodeJS.Timeout>();
 
-	constructor(readonly profiles: UserProfiles<any>) {
+	constructor(
+		readonly profiles: UserProfiles<any>,
+		readonly storage: PresenceStorage = new PresenceMemoryStorage(),
+	) {
 		super();
 	}
 
@@ -29,66 +102,49 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		userId: string,
 		userInfo: UserInfoUpdate,
 	) => {
-		if (!this.presences[userId]) {
-			this.presences[userId] = {
-				...userInfo,
-				profile: await this.profiles.get(userId),
-				internal: userInfo.internal || initialInternalPresence,
-			};
-		} else {
-			Object.assign(this.presences[userId], userInfo);
-		}
+		const value = await this.storage.set(
+			userId,
+			userInfo,
+			await this.profiles.get(userId),
+			Date.now(),
+		);
 		this.connectionToUser[connectionKey] = userId;
 		this.userToConnection[userId] =
 			this.userToConnection[userId] || new Set<string>();
 		this.userToConnection[userId].add(connectionKey);
 
-		this.keepAlive(connectionKey);
-
-		return this.presences[userId]!;
+		return value;
 	};
 
-	keepAlive = (connectionKey: string, duration = 60 * 1000) => {
-		const existing = this.keepalives.get(connectionKey);
-		if (existing) {
-			clearTimeout(existing);
-		}
-
-		this.keepalives.set(
-			connectionKey,
-			setTimeout(() => {
-				this.removeConnection(connectionKey);
-				this.keepalives.delete(connectionKey);
-			}, duration),
-		);
+	keepAlive = (userId: string, duration = 60 * 1000) => {
+		const time = Date.now() + duration;
+		this.storage.setExpiresAt(userId, time);
 	};
 
 	get = (userId: string) => {
-		return this.presences[userId];
+		return this.storage.get(userId, Date.now());
 	};
 
-	removeConnection = (connectionKey: string) => {
+	removeConnection = async (connectionKey: string) => {
 		const userId = this.connectionToUser[connectionKey];
 		if (!userId) return;
 
 		this.userToConnection[userId].delete(connectionKey);
 		if (this.userToConnection[userId].size === 0) {
-			delete this.presences[userId];
-			this.emit('lost', connectionKey, userId);
+			await this.storage.remove(userId);
+			delete this.userToConnection[userId];
+			delete this.connectionToUser[connectionKey];
 
-			// memory cleanup
-			if (Object.keys(this.presences).length === 0) {
-				this.clear();
-			}
+			this.emit('lost', connectionKey, userId);
 		}
 	};
 
 	all = () => {
-		return this.presences;
+		return this.storage.all();
 	};
 
 	clear = () => {
-		this.presences = {};
+		this.storage.clear();
 		this.connectionToUser = {};
 		this.userToConnection = {};
 	};

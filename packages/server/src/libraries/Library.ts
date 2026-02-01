@@ -511,7 +511,7 @@ export class Library {
 				baselines: this.removeBaselineExtras(baselines),
 				globalAckTimestamp:
 					(await this.storage.replicas.getGlobalAck()) ?? undefined,
-				peerPresence: this.presence.all(),
+				peerPresence: await this.presence.all(),
 				// only request the client to overwrite local data if a reset is requested
 				// and there is data to overwrite it. otherwise the client may still
 				// send its own history to us.
@@ -578,7 +578,7 @@ export class Library {
 		clientKey: string,
 		_info: TokenInfo,
 	) => {
-		this.presence.removeConnection(clientKey);
+		await this.presence.removeConnection(clientKey);
 	};
 
 	private updateHighwater = async (
@@ -633,7 +633,7 @@ export class Library {
 		// for global ack, to determine consensus, also allow
 		// for all actively connected replicas to ack regardless of their
 		// type.
-		const activeReplicaIds = Object.values(this.presence.all()).map(
+		const activeReplicaIds = Object.values(await this.presence.all()).map(
 			(p) => p.replicaId,
 		);
 		const globalAck =
@@ -741,7 +741,7 @@ export class Library {
 			replicaId,
 			userId,
 		});
-		if (Object.keys(this.presence.all()).length === 0) {
+		if (Object.keys(await this.presence.all()).length === 0) {
 			this.log('info', `All users have disconnected`);
 			// could happen - if the server is shutting down manually
 			if (!this.storage.open) {
@@ -809,7 +809,7 @@ export class Library {
 	};
 
 	getPresence = () => {
-		return Promise.resolve(this.presence.all());
+		return this.presence.all();
 	};
 
 	getInfo = async (): Promise<LibraryInfo | null> => {
