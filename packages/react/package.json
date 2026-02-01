@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/react",
-	"version": "43.0.1",
+	"version": "43.0.2",
 	"access": "public",
 	"type": "module",
 	"exports": {

@@ -1,5 +1,16 @@
 # @lo-fi/web
 
+## 5.3.0
+
+### Minor Changes
+
+- 8c3ff5d: Remove replicaId from presence-offline message
+
+### Patch Changes
+
+- Updated dependencies [8c3ff5d]
+  - @verdant-web/common@3.2.0
+
 ## 5.2.0
 
 ### Minor Changes

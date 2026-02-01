@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 3.2.0
+
+### Minor Changes
+
+- 8c3ff5d: Remove replicaId from presence-offline message
+
 ## 3.1.0
 
 ### Minor Changes
