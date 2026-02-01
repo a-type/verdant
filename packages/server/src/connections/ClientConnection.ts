@@ -1,4 +1,4 @@
-import { authz, ServerMessage } from '@verdant-web/common';
+import { authz, EventSubscriber, ServerMessage } from '@verdant-web/common';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WebSocket as WSWebSocket } from 'ws';
 import { Logger } from '../logger.js';
@@ -148,8 +148,17 @@ class WebSocketClientConnection extends ClientConnection {
 	};
 }
 
-export class ClientConnectionManager implements MessageSender {
+export type ClientConnectionsManagerEvents = {
+	replicaLost: (replicaId: string, connectionKey: string) => void;
+};
+
+export class ClientConnectionManager
+	extends EventSubscriber<ClientConnectionsManagerEvents>
+	implements MessageSender
+{
 	private readonly connections: Map<string, ClientConnection> = new Map();
+	private connectionToUser: Map<string, string> = new Map();
+	private userToConnections: Map<string, Set<string>> = new Map();
 	readonly presence: Presence;
 	private readonly log?: Logger;
 
@@ -162,8 +171,37 @@ export class ClientConnectionManager implements MessageSender {
 		presenceStorage?: PresenceStorage;
 		log?: Logger;
 	}) {
+		super();
 		this.presence = new Presence(profiles, presenceStorage);
 		this.log = log;
+	}
+
+	private addMappings(userId: string, connectionKey: string) {
+		this.connectionToUser.set(connectionKey, userId);
+		if (!this.userToConnections.has(userId)) {
+			this.userToConnections.set(userId, new Set());
+		}
+		this.userToConnections.get(userId)!.add(connectionKey);
+	}
+	/**
+	 * Removes back-mappings and, if all are deleted,
+	 * also removes user presence.
+	 */
+	private removeMappings(connectionKey: string, autoRemoveOnEmpty = true) {
+		const userId = this.connectionToUser.get(connectionKey);
+		if (userId) {
+			this.connectionToUser.delete(connectionKey);
+			const connections = this.userToConnections.get(userId);
+			if (connections) {
+				connections.delete(connectionKey);
+				if (connections.size === 0) {
+					this.userToConnections.delete(userId);
+					if (autoRemoveOnEmpty) {
+						return this.presence.remove(userId);
+					}
+				}
+			}
+		}
 	}
 
 	addSocket = (
@@ -177,18 +215,28 @@ export class ClientConnectionManager implements MessageSender {
 		const connection = new WebSocketClientConnection(key, socket, info);
 
 		this.connections.set(key, connection);
+		this.addMappings(info.userId, key);
 
 		const unsubscribes: (() => void)[] = [];
-		if (!options?.disableAutoRemoveOnClose) {
-			unsubscribes.push(
-				subscribeToSocketEvent(socket, 'close', async () => {
-					this.log?.('info', `Socket closed: ${key}`);
-					this.connections.delete(key);
-					await this.presence.removeConnection(key);
-					unsubscribes.forEach((u) => u());
-				}),
-			);
-		}
+		/**
+		 * Listen for websocket close and remove connection and mappings.
+		 * If not disabled, also broadcast presence offline for the final
+		 * connection per user.
+		 *
+		 * This may be disabled for environments where a closed connection
+		 * doesn't necessarily indicate offline - Cloudflare is like this
+		 * since it "hibernates" sockets but keeps them connected to the
+		 * client side.
+		 */
+		unsubscribes.push(
+			subscribeToSocketEvent(socket, 'close', async () => {
+				this.log?.('info', `Socket closed: ${key}`);
+				if (!options?.disableAutoRemoveOnClose) {
+					await this.remove(key);
+				}
+				unsubscribes.forEach((u) => u());
+			}),
+		);
 		unsubscribes.push(
 			subscribeToSocketEvent(socket, 'messsage', () => {
 				// sockets get a long keepalive for message activity
@@ -212,6 +260,7 @@ export class ClientConnectionManager implements MessageSender {
 		);
 
 		this.connections.set(key, connection);
+		this.addMappings(info.userId, key);
 
 		return () => {
 			connection.end();
@@ -223,6 +272,7 @@ export class ClientConnectionManager implements MessageSender {
 		const connection = new FetchClientConnection(key, req, info);
 
 		this.connections.set(key, connection);
+		this.addMappings(info.userId, key);
 
 		return () => {
 			connection.end();
@@ -233,15 +283,20 @@ export class ClientConnectionManager implements MessageSender {
 
 	remove = async (key: string) => {
 		this.connections.delete(key);
-		await this.presence.removeConnection(key);
+		await this.removeMappings(key);
 	};
 
 	respond = (key: string, message: ServerMessage) => {
 		const connection = this.connections.get(key);
 		if (connection) {
 			connection.respond(message);
+			return true;
 		} else {
-			throw new Error(`No connection found for key ${key}`);
+			this.log?.(
+				'warn',
+				`Could not respond: no connection found for key: ${key}`,
+			);
+			return false;
 		}
 	};
 

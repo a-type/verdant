@@ -149,8 +149,6 @@ export type PresenceChangedMessage = {
 export type PresenceOfflineMessage = {
 	type: 'presence-offline';
 	userId: string;
-	/** The last replicaID seen by the server before the user was offline */
-	replicaId: string;
 };
 
 export type GlobalAckMessage = {

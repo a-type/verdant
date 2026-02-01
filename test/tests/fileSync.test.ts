@@ -33,7 +33,7 @@ it(
 
 		const clientB = await context.createTestClient({
 			user: 'User B',
-			logId: 'B',
+			// logId: 'B',
 		});
 		clientB.sync.start();
 

@@ -712,7 +712,7 @@ export class Library {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		const updated = await this.presence.set(clientKey, info.userId, {
+		const updated = await this.presence.set(info.userId, {
 			presence: message.presence,
 			internal: message.internal,
 			replicaId: message.replicaId,
@@ -729,17 +729,10 @@ export class Library {
 		);
 	};
 
-	private onPresenceLost = async (replicaId: string, userId: string) => {
-		this.log(
-			'info',
-			'User disconnected from all replicas:',
-			userId,
-			'replica:',
-			replicaId,
-		);
+	private onPresenceLost = async (userId: string) => {
+		this.log('info', 'User disconnected from all replicas:', userId);
 		this.sender.broadcast({
 			type: 'presence-offline',
-			replicaId,
 			userId,
 		});
 		if (Object.keys(await this.presence.all()).length === 0) {

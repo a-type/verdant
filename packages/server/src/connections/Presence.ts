@@ -7,7 +7,7 @@ import {
 import { UserProfiles } from '../Profiles.js';
 
 export type PresenceEvents = {
-	lost: (connectionKey: string, userId: string) => void;
+	lost: (userId: string) => void;
 };
 
 export type PresenceStorageItem = UserInfo<any, any> & { expiresAt: number };
@@ -83,15 +83,10 @@ export class PresenceMemoryStorage implements PresenceStorage {
 }
 
 /**
- * Stores client presence in-memory for connected
+ * Stores client presence for connected
  * clients
  */
 export class Presence extends EventSubscriber<PresenceEvents> {
-	// TODO: remove need for these mappings by moving presence deletion
-	// upward to ClientConnectionManager
-	private connectionToUser: Record<string, string> = {};
-	private userToConnection: Record<string, Set<string>> = {};
-
 	constructor(
 		readonly profiles: UserProfiles<any>,
 		readonly storage: PresenceStorage = new PresenceMemoryStorage(),
@@ -99,21 +94,13 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		super();
 	}
 
-	set = async (
-		connectionKey: string,
-		userId: string,
-		userInfo: UserInfoUpdate,
-	) => {
+	set = async (userId: string, userInfo: UserInfoUpdate) => {
 		const value = await this.storage.set(
 			userId,
 			userInfo,
 			await this.profiles.get(userId),
 			Date.now(),
 		);
-		this.connectionToUser[connectionKey] = userId;
-		this.userToConnection[userId] =
-			this.userToConnection[userId] || new Set<string>();
-		this.userToConnection[userId].add(connectionKey);
 
 		return value;
 	};
@@ -127,18 +114,9 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 		return this.storage.get(userId, Date.now());
 	};
 
-	removeConnection = async (connectionKey: string) => {
-		const userId = this.connectionToUser[connectionKey];
-		if (!userId) return;
-
-		this.userToConnection[userId]?.delete(connectionKey);
-		if (this.userToConnection[userId].size === 0) {
-			await this.storage.remove(userId);
-			delete this.userToConnection[userId];
-			delete this.connectionToUser[connectionKey];
-
-			this.emit('lost', connectionKey, userId);
-		}
+	remove = async (userId: string) => {
+		await this.storage.remove(userId);
+		this.emit('lost', userId);
 	};
 
 	all = () => {
@@ -147,7 +125,5 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 
 	clear = () => {
 		this.storage.clear();
-		this.connectionToUser = {};
-		this.userToConnection = {};
 	};
 }

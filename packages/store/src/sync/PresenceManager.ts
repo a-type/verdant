@@ -166,7 +166,6 @@ export class PresenceManager<
 			}
 		} else if (message.type === 'presence-offline') {
 			peerIdsSet.delete(message.userId);
-			this._selfReplicaIds.delete(message.replicaId);
 			const lastPresence = this._peers[message.userId];
 			delete this._peers[message.userId];
 			peersChanged = true;
