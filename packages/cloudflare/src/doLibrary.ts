@@ -332,8 +332,8 @@ export class DurableObjectLibrary {
 
 	webSocketError = (ws: WebSocket, error: unknown): void | Promise<void> => {
 		this.log('error', 'WebSocket error', error);
-		const { key } = this.#getSocketInfo(ws);
-		this.clientConnections.remove(key);
+		// this event seems to happen even on hibernation, so we can't
+		// consider the client disconnected from presence.
 		this.#socketInfoCache.delete(ws);
 	};
 

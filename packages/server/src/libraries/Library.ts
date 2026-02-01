@@ -729,7 +729,13 @@ export class Library {
 	};
 
 	private onPresenceLost = async (replicaId: string, userId: string) => {
-		this.log('info', 'User disconnected from all replicas:', userId);
+		this.log(
+			'info',
+			'User disconnected from all replicas:',
+			userId,
+			'replica:',
+			replicaId,
+		);
 		this.sender.broadcast({
 			type: 'presence-offline',
 			replicaId,
