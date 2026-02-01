@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.1.1
+
+### Patch Changes
+
+- 73e0e86: make do websocket presence sturdier
+
 ## 4.1.0
 
 ### Minor Changes

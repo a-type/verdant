@@ -1,5 +1,13 @@
 # @verdant-web/cloudflare
 
+## 0.3.1
+
+### Patch Changes
+
+- 73e0e86: make do websocket presence sturdier
+- Updated dependencies [73e0e86]
+  - @verdant-web/server@4.1.1
+
 ## 0.3.0
 
 ### Minor Changes
