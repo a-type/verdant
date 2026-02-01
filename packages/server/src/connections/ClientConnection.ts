@@ -305,6 +305,14 @@ export class ClientConnectionManager
 	 * This does not reach push/pull clients.
 	 */
 	broadcast = (message: ServerMessage, omitKeys: string[] = []) => {
+		this.log?.(
+			'debug',
+			`Broadcasting message to ${this.connections.size} potential clients`,
+			{
+				omitKeys,
+				messageType: message.type,
+			},
+		);
 		for (const [key, connection] of this.connections) {
 			if (!omitKeys.includes(key)) {
 				connection.respond(message);

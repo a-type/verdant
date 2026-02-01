@@ -75,6 +75,11 @@ export class DurableObjectLibrary {
 			const info = ws.deserializeAttachment() as SocketMeta | undefined;
 			if (info) {
 				this.#socketInfoCache.set(ws, info);
+				// restore clientConnections mappings
+				this.clientConnections.addSocket(info.key, ws, info.tokenInfo, {
+					// we manually remove when the DO detects close instead
+					disableAutoRemoveOnClose: true,
+				});
 			}
 		});
 
