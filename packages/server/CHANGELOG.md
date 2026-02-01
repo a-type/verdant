@@ -1,5 +1,11 @@
 # @lo-fi/server
 
+## 4.2.3
+
+### Patch Changes
+
+- c94dbe9: Restore hibernated websocket connections to fix rebroadcasting problem after hibernation
+
 ## 4.2.2
 
 ### Patch Changes

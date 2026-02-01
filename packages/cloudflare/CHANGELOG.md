@@ -1,5 +1,13 @@
 # @verdant-web/cloudflare
 
+## 0.4.4
+
+### Patch Changes
+
+- c94dbe9: Restore hibernated websocket connections to fix rebroadcasting problem after hibernation
+- Updated dependencies [c94dbe9]
+  - @verdant-web/server@4.2.3
+
 ## 0.4.3
 
 ### Patch Changes
