@@ -29,6 +29,8 @@ export interface PresenceStorage {
 	clear: () => Promise<void>;
 }
 
+const DEFAULT_EXPIRATION_TIME = 60 * 1000;
+
 export class PresenceMemoryStorage implements PresenceStorage {
 	private presences: Record<string, PresenceStorageItem> = {};
 
@@ -99,13 +101,13 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 			userId,
 			userInfo,
 			await this.profiles.get(userId),
-			Date.now(),
+			Date.now() + DEFAULT_EXPIRATION_TIME,
 		);
 
 		return value;
 	};
 
-	keepAlive = (userId: string, duration = 60 * 1000) => {
+	keepAlive = (userId: string, duration = DEFAULT_EXPIRATION_TIME) => {
 		const time = Date.now() + duration;
 		this.storage.setExpiresAt(userId, time);
 	};

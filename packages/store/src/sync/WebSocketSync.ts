@@ -97,7 +97,6 @@ export class WebSocketSync
 			this.hasStartedSync = true;
 			this.synced = false;
 			const meta = await this.ctx.meta;
-			this.ctx.log('debug', 'HERE');
 			this.send(
 				await meta.messageCreator.createPresenceUpdate(this.presence.self),
 			);

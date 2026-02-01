@@ -4,27 +4,45 @@ import {
 	UserInfoUpdate,
 } from '@verdant-web/common';
 import {
+	Logger,
 	PresenceStorage,
 	PresenceStorageItem,
 } from '@verdant-web/server/internals';
 
 export class DurableObjectPresenceStorage implements PresenceStorage {
+	private key;
+	private log;
+
 	constructor(
 		private ctx: DurableObjectState,
-		private key: string = 'verdant-presence',
-	) {}
+		{
+			storageKey = 'presence-storage',
+			log,
+		}: {
+			storageKey?: string;
+			log?: Logger;
+		} = {},
+	) {
+		this.key = storageKey;
+		this.log = log;
+	}
 
 	private getMap = async (): Promise<Record<string, PresenceStorageItem>> => {
 		const map: Record<string, PresenceStorageItem> | null =
 			(await this.ctx.storage.get(this.key)) ?? {};
+		this.log?.('debug', 'Presence map loaded:', map);
 		// clear entries that have expired
 		const now = Date.now();
 		for (const [userId, item] of Object.entries(map)) {
 			if (item.expiresAt <= now) {
 				delete map[userId];
+				this.log?.(
+					'debug',
+					`Presence for user ${userId} has expired and was removed.`,
+				);
 			}
 		}
-		return map || {};
+		return map;
 	};
 
 	set = async (

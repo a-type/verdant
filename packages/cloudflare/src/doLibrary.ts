@@ -41,6 +41,7 @@ export interface DurableObjectLibraryConfig {
 		replicaTruancyTimeout?: number;
 	};
 	EXPERIMENTAL_autoHeartbeatResponses?: boolean;
+	presenceStorageKey?: string;
 }
 
 export class DurableObjectLibrary {
@@ -63,7 +64,10 @@ export class DurableObjectLibrary {
 
 		this.clientConnections = new ClientConnectionManager({
 			profiles: new UserProfileLoader(this.#config.profiles),
-			presenceStorage: new DurableObjectPresenceStorage(this.ctx),
+			presenceStorage: new DurableObjectPresenceStorage(this.ctx, {
+				log: this.#config.log,
+				storageKey: this.#config.presenceStorageKey,
+			}),
 		});
 
 		ctx.getWebSockets().forEach((ws) => {
@@ -305,7 +309,7 @@ export class DurableObjectLibrary {
 	webSocketMessage = async (
 		ws: WebSocket,
 		message: string | ArrayBuffer,
-	): Promise<void | Promise<void>> => {
+	): Promise<void> => {
 		const { tokenInfo, key } = this.#getSocketInfo(ws);
 		const msg = JSON.parse(message.toString()) as ClientMessage | null;
 		if (!msg) {

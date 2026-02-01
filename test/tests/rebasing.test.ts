@@ -140,22 +140,26 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	});
 	const clientA = await context.createTestClient({
 		user: 'A',
+		logId: 'A',
 	});
 	const clientB = await context.createTestClient({
 		user: 'B',
+		logId: 'B',
 	});
 
-	clientA.sync.start();
-	clientA.items.put({
+	await clientA.sync.start();
+	await clientA.items.put({
 		id: '1',
 		content: 'Item 1',
 	});
 	// we want to make sure A 'wins' the library
 	await waitForOnline(clientA);
 
-	clientB.sync.start();
+	await clientB.sync.start();
 	await waitForPeerCount(clientA, 1);
+	context.log('Client A has 1 peer');
 	await waitForPeerCount(clientB, 1);
+	context.log('Client B has 1 peer');
 	await waitForQueryResult(
 		clientB.items.get('1'),
 		(res) => !!res,
@@ -191,11 +195,11 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	await clientB.sync.stop();
 	await waitForTime(500);
 
-	clientA.sync.start();
+	await clientA.sync.start();
 
 	await waitForTime(500);
 
-	clientB.sync.start();
+	await clientB.sync.start();
 
 	await waitForQueryResult(clientB.items.get('3'));
 	await waitForQueryResult(clientB.items.get('4'));

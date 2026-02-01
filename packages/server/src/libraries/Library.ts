@@ -491,13 +491,16 @@ export class Library {
 
 		// respond to client
 
+		const peerPresence = await this.presence.all();
+
 		this.log(
 			'info',
 			'Sending sync response with',
-			ops.length,
-			'operations and',
-			baselines.length,
-			'baselines',
+			{
+				ops: ops.length,
+				baselines: baselines.length,
+				peers: Object.keys(peerPresence),
+			},
 			'to client key',
 			clientKey,
 		);
@@ -512,7 +515,7 @@ export class Library {
 				baselines: this.removeBaselineExtras(baselines),
 				globalAckTimestamp:
 					(await this.storage.replicas.getGlobalAck()) ?? undefined,
-				peerPresence: await this.presence.all(),
+				peerPresence,
 				// only request the client to overwrite local data if a reset is requested
 				// and there is data to overwrite it. otherwise the client may still
 				// send its own history to us.

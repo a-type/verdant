@@ -61,7 +61,11 @@ export function waitForPeerCount(
 			return;
 		}
 		const timeout = setTimeout(() => {
-			reject(new Error('Timed out waiting for connections ' + count));
+			reject(
+				new Error(
+					`[${client.namespace}] Timed out waiting for ${count} peers (have: ${client.sync.presence.peerIds.length})`,
+				),
+			);
 		}, 15000);
 		const unsubscribe = client.sync.presence.subscribe(
 			'peersChanged',

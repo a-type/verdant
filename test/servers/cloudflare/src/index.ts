@@ -44,11 +44,8 @@ export class VerdantLibrary extends DurableObject<Env> implements LibraryApi {
 	webSocketError(ws: WebSocket, error: Error): void | Promise<void> {
 		return this.verdant.webSocketError(ws, error);
 	}
-	webSocketMessage(
-		ws: WebSocket,
-		message: string | ArrayBuffer,
-	): void | Promise<void> {
-		return this.verdant.webSocketMessage(ws, message);
+	async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+		await this.verdant.webSocketMessage(ws, message);
 	}
 
 	getDocumentSnapshot(collection: string, id: string) {
