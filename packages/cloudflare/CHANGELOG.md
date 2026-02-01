@@ -1,5 +1,17 @@
 # @verdant-web/cloudflare
 
+## 0.2.0
+
+### Minor Changes
+
+- c105238: explicit disconnect message, looser presence enforcement in DO
+
+### Patch Changes
+
+- Updated dependencies [c105238]
+  - @verdant-web/common@3.1.0
+  - @verdant-web/server@4.1.0
+
 ## 0.1.8
 
 ### Patch Changes
