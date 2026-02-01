@@ -310,6 +310,9 @@ export class DurableObjectLibrary {
 		ws: WebSocket,
 		message: string | ArrayBuffer,
 	): Promise<void> => {
+		// the DO may be woken up from hibernation by a message, never
+		// going through the fetch path, so ensure initialization here.
+		await this.#restore();
 		const { tokenInfo, key } = this.#getSocketInfo(ws);
 		const msg = JSON.parse(message.toString()) as ClientMessage | null;
 		if (!msg) {
