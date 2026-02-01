@@ -1,5 +1,12 @@
 # @lo-fi/react
 
+## 43.0.1
+
+### Patch Changes
+
+- Updated dependencies [c105238]
+  - @verdant-web/common@3.1.0
+
 ## 43.0.0
 
 ### Major Changes
