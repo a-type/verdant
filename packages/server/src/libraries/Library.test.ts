@@ -21,7 +21,13 @@ const profiles = new UserProfileLoader<{ id: string; name: string }>({
 	},
 });
 
-const baseOptions = async () => ({
+const baseOptions = async ({
+	onBroadcast,
+	onRespond,
+}: {
+	onBroadcast?: (message: ServerMessage, omitKeys?: string[]) => void;
+	onRespond?: (clientKey: string, message: ServerMessage) => void;
+} = {}) => ({
 	id: 'library-1',
 	profiles,
 	storage: await sqlShardStorage({
@@ -37,6 +43,12 @@ const baseOptions = async () => ({
 					name: 'Alice',
 				};
 			},
+		}),
+		broadcast: vi.fn((message: ServerMessage, omitKeys?: string[]) => {
+			if (onBroadcast) onBroadcast(message, omitKeys);
+		}),
+		respond: vi.fn((clientKey: string, message: ServerMessage) => {
+			if (onRespond) onRespond(clientKey, message);
 		}),
 	} as any,
 });
@@ -82,11 +94,6 @@ function getAllReceivedReplicaOperations(replica: TestReplica) {
 describe('Library', () => {
 	describe('sync handling', () => {
 		it('should initialize a new library from a replica', async () => {
-			const sender: MessageSender = {
-				broadcast: vi.fn(),
-				respond: vi.fn((_: string, message: ServerMessage) => {}),
-			};
-
 			const tokenInfo: TokenInfo = {
 				libraryId: 'library-1',
 				syncEndpoint: 'http://localhost:3000/sync',
@@ -95,10 +102,9 @@ describe('Library', () => {
 				userId: 'user-1',
 			};
 
-			const library = new Library({
-				...(await baseOptions()),
-				sender,
-			});
+			const options = await baseOptions();
+
+			const library = new Library(options);
 
 			const messages: ClientMessage[] = [
 				{
@@ -148,7 +154,7 @@ describe('Library', () => {
 			);
 
 			// expect sender.broadcast for the operations, and a reply with sync response
-			expect(sender.broadcast).toHaveBeenCalledWith(
+			expect(options.clientConnections.broadcast).toHaveBeenCalledWith(
 				{
 					type: 'op-re',
 					baselines: [
@@ -189,16 +195,19 @@ describe('Library', () => {
 				['clientKey-1'],
 			);
 
-			expect(sender.respond).toHaveBeenCalledWith('clientKey-1', {
-				type: 'sync-resp',
-				operations: [],
-				baselines: [],
-				ackThisNonce: undefined,
-				ackedTimestamp: 'faketime-3',
-				globalAckTimestamp: undefined,
-				overwriteLocalData: false,
-				peerPresence: {},
-			});
+			expect(options.clientConnections.respond).toHaveBeenCalledWith(
+				'clientKey-1',
+				{
+					type: 'sync-resp',
+					operations: [],
+					baselines: [],
+					ackThisNonce: undefined,
+					ackedTimestamp: 'faketime-3',
+					globalAckTimestamp: undefined,
+					overwriteLocalData: false,
+					peerPresence: {},
+				},
+			);
 		});
 
 		it('should sync up to latest data, while also rebroadcasting concurrent new operations', async () => {
@@ -224,10 +233,23 @@ describe('Library', () => {
 				},
 			};
 
-			const library = new Library({
-				...(await baseOptions()),
-				sender,
+			const options = await baseOptions({
+				onBroadcast: (message: ServerMessage, omitKeys?: string[]) => {
+					replicas.forEach((replica) => {
+						if (!omitKeys?.includes(replica.key)) {
+							replica.messages.push(message);
+						}
+					});
+				},
+				onRespond: (clientKey: string, message: ServerMessage) => {
+					const replica = replicas.find((r) => r.key === clientKey);
+					if (replica) {
+						replica.messages.push(message);
+					}
+				},
 			});
+
+			const library = new Library(options);
 
 			// replica A sends a sync message to initialize library
 			const syncMessageA: ClientMessage = {
@@ -325,11 +347,6 @@ describe('Library', () => {
 		});
 
 		it('should reject syncs with data from read replicas', async () => {
-			const sender = {
-				broadcast: vi.fn(),
-				respond: vi.fn(),
-			};
-
 			const tokenInfo: TokenInfo = {
 				libraryId: 'library-1',
 				syncEndpoint: 'http://localhost:3000/sync',
@@ -338,10 +355,9 @@ describe('Library', () => {
 				userId: 'user-1',
 			};
 
-			const library = new Library({
-				...(await baseOptions()),
-				sender,
-			});
+			const options = await baseOptions();
+
+			const library = new Library(options);
 
 			const messages: ClientMessage[] = [
 				{
@@ -390,18 +406,16 @@ describe('Library', () => {
 				messages.map((m) => library.handleMessage(m, 'clientKey-1', tokenInfo)),
 			);
 
-			expect(sender.respond).toHaveBeenCalledOnce();
-			expect(sender.respond).toHaveBeenCalledWith('clientKey-1', {
-				type: 'forbidden',
-			});
+			expect(options.clientConnections.respond).toHaveBeenCalledOnce();
+			expect(options.clientConnections.respond).toHaveBeenCalledWith(
+				'clientKey-1',
+				{
+					type: 'forbidden',
+				},
+			);
 		});
 
 		it('should reject messages from a replica claimed by a user other than the one recorded on the server', async () => {
-			const sender = {
-				broadcast: vi.fn(),
-				respond: vi.fn((_: string, message: ServerMessage) => {}),
-			};
-
 			const tokenInfo: TokenInfo = {
 				libraryId: 'library-1',
 				syncEndpoint: 'http://localhost:3000/sync',
@@ -410,10 +424,9 @@ describe('Library', () => {
 				userId: 'user-1',
 			};
 
-			const library = new Library({
-				...(await baseOptions()),
-				sender,
-			});
+			const options = await baseOptions();
+
+			const library = new Library(options);
 
 			// purposefully do not await in order - these all come at the same time
 			await library.handleMessage(
@@ -429,7 +442,7 @@ describe('Library', () => {
 				'clientKey-1',
 				tokenInfo,
 			);
-			sender.respond.mockReset();
+			options.clientConnections.respond.mockReset();
 
 			// now try to send a message from a different user with the same replica
 			const tokenInfo2: TokenInfo = {
@@ -452,23 +465,19 @@ describe('Library', () => {
 
 			await library.handleMessage(message, 'clientKey-1', tokenInfo2);
 
-			expect(sender.respond).toHaveBeenCalledOnce();
-			expect(sender.respond).toHaveBeenCalledWith('clientKey-1', {
-				type: 'forbidden',
-			});
+			expect(options.clientConnections.respond).toHaveBeenCalledOnce();
+			expect(options.clientConnections.respond).toHaveBeenCalledWith(
+				'clientKey-1',
+				{
+					type: 'forbidden',
+				},
+			);
 		});
 	});
 
 	it('should fully destroy itself', async () => {
-		const sender = {
-			broadcast: vi.fn(),
-			respond: vi.fn(),
-		};
-
-		const library = new Library({
-			...(await baseOptions()),
-			sender,
-		});
+		const options = await baseOptions();
+		const library = new Library(options);
 
 		const opMessage: ClientMessage = {
 			type: 'op',
