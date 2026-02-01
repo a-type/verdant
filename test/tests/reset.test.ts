@@ -97,8 +97,8 @@ it('can re-initialize from replica after resetting server-side while replicas ar
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(ctx);
 
-	clientA.sync.stop();
-	clientB.sync.stop();
+	await clientA.sync.stop();
+	await clientB.sync.stop();
 
 	// reset server
 	await ctx.server.evict(ctx.library);
@@ -252,8 +252,8 @@ it('resets from replica over http sync', async () => {
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(ctx);
 
-	clientA.sync.stop();
-	clientB.sync.stop();
+	await clientA.sync.stop();
+	await clientB.sync.stop();
 
 	await ctx.server.evict(ctx.library);
 
@@ -392,8 +392,8 @@ it('resets from replica over http sync when client had queued unsynced operation
 	const { clientA, clientB, a_unknownItem, a_produceCategory } =
 		await connectAndSeedData(ctx);
 
-	clientA.sync.stop();
-	clientB.sync.stop();
+	await clientA.sync.stop();
+	await clientB.sync.stop();
 
 	await ctx.server.evict(ctx.library);
 	const info = await ctx.server.info(ctx.library);
@@ -451,7 +451,7 @@ it('resets from replica over http sync when client had queued unsynced operation
 		]
 	`);
 
-	clientA.sync.stop();
-	clientB.sync.stop();
-	clientC.sync.stop();
+	await clientA.sync.stop();
+	await clientB.sync.stop();
+	await clientC.sync.stop();
 });

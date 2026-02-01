@@ -98,7 +98,7 @@ it('passive clients do not interfere with rebasing when offline', async () => {
 	await waitForBaselineCount(clientC, 4, 'client c 4 baselines');
 
 	context.log('🔺 --- Disconnecting passive replica ---');
-	clientC.sync.stop();
+	await clientC.sync.stop();
 
 	const oranges = await clientA.items.put({
 		content: 'Oranges',
@@ -169,7 +169,7 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	});
 	await waitForQueryResult(clientA.items.get('2'));
 
-	clientA.sync.stop();
+	await clientA.sync.stop();
 
 	await waitForTime(500);
 
@@ -188,7 +188,7 @@ it("server does not rebase old offline operations that haven't yet synced to onl
 	// b goes offline, but only after it's sent a new operation
 	// which is after item 3. if we only went by timestamp, b
 	// has "seen" 3, but it hasn't.
-	clientB.sync.stop();
+	await clientB.sync.stop();
 	await waitForTime(500);
 
 	clientA.sync.start();

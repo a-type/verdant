@@ -200,8 +200,8 @@ it('can sync multiple clients even if they go offline', async () => {
 	log('🔺--- Offline sync actions ---');
 	// go offline on two clients and push different items to the comments
 	// array. both items should end up synced.
-	clientA.sync.stop();
-	clientB.sync.stop();
+	await clientA.sync.stop();
+	await clientB.sync.stop();
 
 	a_unknownItem.get('comments').push({
 		authorId: 'User A',

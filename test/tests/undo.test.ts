@@ -46,8 +46,8 @@ it(
 		assert(b_itemA);
 		log('🔺 --- Client B has item ---');
 
-		clientA.sync.stop();
-		clientB.sync.stop();
+		await clientA.sync.stop();
+		await clientB.sync.stop();
 
 		await waitForOnline(clientA, false);
 		await waitForOnline(clientB, false);

@@ -37,7 +37,7 @@ it('supports the server requesting more history if it has lost data', async () =
 
 	await waitForFileUpload(image, 5_000);
 
-	client.sync.stop();
+	await client.sync.stop();
 
 	const fileData = await ctx.server.getFileInfo(ctx.library, image.id);
 	expect(fileData).not.toBeNull();

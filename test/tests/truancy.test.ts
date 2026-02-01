@@ -28,7 +28,7 @@ it('should reset truant replicas upon their reconnection', async () => {
 	// that's probably enough to demonstrate...
 	await truantClient.entities.flushAllBatches();
 	await waitForSync(truantClient);
-	truantClient.sync.stop();
+	await truantClient.sync.stop();
 
 	await ctx.server.forceTruant(ctx.library, await truantClient.getReplicaId());
 
@@ -104,7 +104,7 @@ it('should not reset truant replicas with up to date server order', async () => 
 	// that's probably enough to demonstrate...
 	await truantClient.entities.flushAllBatches();
 	await waitForSync(truantClient);
-	truantClient.sync.stop();
+	await truantClient.sync.stop();
 
 	await ctx.server.forceTruant(library, await truantClient.getReplicaId());
 

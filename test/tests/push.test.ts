@@ -50,7 +50,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	await waitForQueryResult(client.items.get(orange.get('id')));
 	context.log('Client 1 received oranges');
 
-	clientB.sync.stop();
+	await clientB.sync.stop();
 	// await waitForOnline(clientB, false);
 
 	const pears = await clientB.items.put({
@@ -89,7 +89,7 @@ it("doesn't receive back its own ops after pushing them", async () => {
 	await waitAndAssertNoOperationsReturned();
 	context.log('End wait for no operations 1');
 
-	client.sync.stop();
+	await client.sync.stop();
 	context.log('Client 1 offline');
 
 	client.items.put({

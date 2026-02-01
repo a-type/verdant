@@ -38,7 +38,7 @@ it('overwrites superseded operations to the same key before syncing', async () =
 	});
 	truantClient.sync.start();
 	await waitForOnline(truantClient);
-	truantClient.sync.stop();
+	await truantClient.sync.stop();
 	await waitForOnline(truantClient, false);
 
 	await clientA

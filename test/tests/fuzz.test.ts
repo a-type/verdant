@@ -275,8 +275,8 @@ it(
 
 		await fuzzPromise;
 
-		client1.sync.stop();
-		client2.sync.stop();
+		await client1.sync.stop();
+		await client2.sync.stop();
 
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 

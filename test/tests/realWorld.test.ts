@@ -137,7 +137,7 @@ it('maintains consistency in real world scenarios', async () => {
 
 	log('Initial data ready');
 
-	clientB1.sync.stop();
+	await clientB1.sync.stop();
 	await waitForOnline(clientB1, false);
 	log('Client B offline');
 
