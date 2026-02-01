@@ -1,5 +1,11 @@
 # @verdant-web/cloudflare
 
+## 0.3.0
+
+### Minor Changes
+
+- 0d921de: don't remove webscockets during hibernation
+
 ## 0.2.0
 
 ### Minor Changes
