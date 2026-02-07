@@ -5,19 +5,23 @@ import { areIndexesEqual } from './utils.js';
 export class FindAllQuery<T> extends BaseQuery<T[]> {
 	private index;
 	private hydrate;
+	private limit;
 
 	constructor({
 		index,
 		hydrate,
+		limit,
 		...rest
 	}: {
 		index?: CollectionFilter;
 		hydrate: (oid: string) => Promise<T>;
+		limit?: number;
 	} & Omit<BaseQueryOptions<T[]>, 'initial'>) {
 		super({
 			initial: [],
 			...rest,
 		});
+		this.limit = limit;
 		this.index = index;
 		this.hydrate = hydrate;
 	}
@@ -28,6 +32,7 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 		).findAllOids({
 			collection: this.collection,
 			index: this.index,
+			limit: this.limit,
 		});
 		this.context.log(
 			'debug',

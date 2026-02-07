@@ -633,18 +633,21 @@ export function createHooks<Presence = any, Profile = any>(
 			index: unstableIndex,
 			skip,
 			key,
+			limit,
 		}: {
 			index?: CollectionIndexFilter;
 			skip?: boolean;
 			key?: string;
+			limit?: number;
 		} = {}) {
 			const storage = useStorage();
 			const index = useStableIndex(unstableIndex);
 			// assumptions: this query getter is fast and returns the same
 			// query identity for subsequent calls.
 			const liveQuery = useMemo(
-				() => (skip ? null : storage[pluralName].findAll({ index, key })),
-				[index, skip, storage, key],
+				() =>
+					skip ? null : storage[pluralName].findAll({ index, key, limit }),
+				[index, skip, storage, key, limit],
 			);
 			const data = useLiveQueryResult(liveQuery);
 			return data || [];

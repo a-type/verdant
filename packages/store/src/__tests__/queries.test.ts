@@ -123,6 +123,29 @@ describe('storage queries', () => {
 		]);
 	});
 
+	it('can limit query results of find all queries', async () => {
+		const storage = await createTestStorage();
+
+		const items = await addTestingItems(storage);
+
+		const query = storage.todos.findAll({
+			index: {
+				where: 'categorySortedByDone',
+				match: {
+					category: 'general',
+				},
+				order: 'asc',
+			},
+			limit: 2,
+		});
+		const results = await query.resolved;
+
+		expect(results.map((i: any) => i.get('id'))).toEqual([
+			items[0].get('id'),
+			items[2].get('id'),
+		]);
+	});
+
 	it('can query starts-with on a string', async () => {
 		const storage = createTestStorage();
 		const items = await addTestingItems(storage);
