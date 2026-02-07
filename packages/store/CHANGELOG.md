@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.4.0
+
+### Minor Changes
+
+- 24fd182: Add 'limit' parameter to Find All queries
+
 ## 5.3.0
 
 ### Minor Changes

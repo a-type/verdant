@@ -1,6 +1,6 @@
 {
 	"name": "@verdant-web/tiptap",
-	"version": "10.0.0",
+	"version": "11.0.0",
 	"access": "public",
 	"type": "module",
 	"main": "dist/esm/index.js",
