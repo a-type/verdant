@@ -1233,10 +1233,10 @@ export interface GeneratedHooks<Presence, Profile> {
     config?: Config,
   ) => { data: Todo | null; status: QueryStatus };
   useAllTodos: <Config extends HookConfig<TodoFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => Todo[];
   useAllTodosUnsuspended: <Config extends HookConfig<TodoFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => { data: Todo[]; status: QueryStatus };
   useAllTodosPaginated: <
     Config extends HookConfig<TodoFilter> & {
@@ -1280,10 +1280,10 @@ export interface GeneratedHooks<Presence, Profile> {
     config?: Config,
   ) => { data: Person | null; status: QueryStatus };
   useAllPeople: <Config extends HookConfig<PersonFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => Person[];
   useAllPeopleUnsuspended: <Config extends HookConfig<PersonFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => { data: Person[]; status: QueryStatus };
   useAllPeoplePaginated: <
     Config extends HookConfig<PersonFilter> & {
@@ -1327,10 +1327,10 @@ export interface GeneratedHooks<Presence, Profile> {
     config?: Config,
   ) => { data: Post | null; status: QueryStatus };
   useAllPosts: <Config extends HookConfig<PostFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => Post[];
   useAllPostsUnsuspended: <Config extends HookConfig<PostFilter>>(
-    config?: Config,
+    config?: Config & { limit?: number },
   ) => { data: Post[]; status: QueryStatus };
   useAllPostsPaginated: <
     Config extends HookConfig<PostFilter> & {
