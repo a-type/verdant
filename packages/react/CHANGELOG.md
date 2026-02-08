@@ -1,5 +1,11 @@
 # @lo-fi/react
 
+## 43.1.0
+
+### Minor Changes
+
+- c23a3aa: Support limit on findAll queries
+
 ## 43.0.2
 
 ### Patch Changes
