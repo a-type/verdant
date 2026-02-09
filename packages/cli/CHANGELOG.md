@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 5.2.0
+
+### Minor Changes
+
+- c23a3aa: Support limit in findAll query hooks
+
 ## 5.1.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @verdant-web/tiptap
 
+## 12.0.0
+
+### Patch Changes
+
+- Updated dependencies [c23a3aa]
+  - @verdant-web/react@43.1.0
+
 ## 11.0.0
 
 ### Patch Changes
