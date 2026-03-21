@@ -136,7 +136,7 @@ export class PersistenceRebaser {
 		await this.db.iterateEntityOperations(
 			oid,
 			(patch) => {
-				// FIXME: this seems like the wrong place to do this
+				// seems like the wrong place to do this
 				// but it's here as a safety measure...
 				if (!baseline || patch.timestamp > baseline.timestamp) {
 					current = applyPatch(current, patch.data, deletedRefs);
