@@ -124,7 +124,7 @@ export class IdbMetadataDb
 			(store) => {
 				const root = getOidRoot(rootOid);
 				const [start, end] = getOidSubIdRange(rootOid);
-				// FIXME: get rid of legacy dot OIDs...
+				// TODO: get rid of legacy dot OIDs...
 				const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(rootOid);
 				return [
 					store.openCursor(IDBKeyRange.only(root)),
