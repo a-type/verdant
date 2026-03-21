@@ -19,13 +19,14 @@ import {
 	PersistenceMetadataDb,
 } from '../../interfaces.js';
 import { IdbService } from '../IdbService.js';
+import { OPERATION_INDEX_NAMES } from '../indexNames.js';
 import { closeDatabase, getSizeOfObjectStore } from '../util.js';
 
 export type StoredClientOperation = ClientOperation & {
 	/** This acts as the primary key */
-	oid_timestamp: string;
-	l_t: string;
-	d_t: string;
+	[OPERATION_INDEX_NAMES.OID__TIMESTAMP]: string;
+	[OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP]: string;
+	[OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP]: string;
 };
 
 export type StoredSchema = {
@@ -204,7 +205,7 @@ export class IdbMetadataDb
 		return this.iterate<StoredClientOperation>(
 			'operations',
 			(store) => {
-				const index = store.index('d_t');
+				const index = store.index(OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP);
 				const start = createLowerBoundIndexValue(rootOid);
 				const end = opts?.to
 					? createCompoundIndexValue(rootOid, opts.to)
@@ -296,7 +297,7 @@ export class IdbMetadataDb
 					? createCompoundIndexValue(true, opts.after)
 					: createLowerBoundIndexValue(true);
 				const end = createUpperBoundIndexValue(true);
-				const index = store.index('l_t');
+				const index = store.index(OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP);
 				return index.openCursor(
 					// NOTE: differs from original impl -- last arg is 'false' instead of 'true'
 					IDBKeyRange.bound(start, end, !!opts?.after, false),
@@ -425,9 +426,18 @@ export class IdbMetadataDb
 	): StoredClientOperation => {
 		return {
 			...op,
-			oid_timestamp: createCompoundIndexValue(op.oid, op.timestamp) as string,
-			l_t: createCompoundIndexValue(op.isLocal, op.timestamp) as string,
-			d_t: createCompoundIndexValue(getOidRoot(op.oid), op.timestamp) as string,
+			[OPERATION_INDEX_NAMES.OID__TIMESTAMP]: createCompoundIndexValue(
+				op.oid,
+				op.timestamp,
+			) as string,
+			[OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP]: createCompoundIndexValue(
+				op.isLocal,
+				op.timestamp,
+			) as string,
+			[OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP]: createCompoundIndexValue(
+				getOidRoot(op.oid),
+				op.timestamp,
+			) as string,
 		};
 	};
 }

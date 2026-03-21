@@ -1,6 +1,7 @@
 import { replaceLegacyOidsInObject } from '@verdant-web/common';
-import { getMetadataDbName } from '../util.js';
 import { Context } from '../../../context/context.js';
+import { OPERATION_INDEX_NAMES } from '../indexNames.js';
+import { getMetadataDbName } from '../util.js';
 
 const migrations = [version1, version2, version3, version4, version5, version6];
 export const CURRENT_METADATA_VERSION = migrations.length;
@@ -55,7 +56,7 @@ async function version1(db: IDBDatabase, tx: IDBTransaction) {
 		keyPath: 'oid',
 	});
 	const operationsStore = db.createObjectStore('operations', {
-		keyPath: 'oid_timestamp',
+		keyPath: OPERATION_INDEX_NAMES.OID__TIMESTAMP,
 	});
 	const infoStore = db.createObjectStore('info', { keyPath: 'type' });
 	baselinesStore.createIndex('timestamp', 'timestamp');
@@ -84,8 +85,8 @@ async function version2(db: IDBDatabase, tx: IDBTransaction) {
 					cursor.value;
 				cursor.update({
 					...value,
-					l_t: isLocal_timestamp,
-					d_t: documentOid_timestamp,
+					[OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP]: isLocal_timestamp,
+					[OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP]: documentOid_timestamp,
 				});
 				cursor.continue();
 			} else {
@@ -100,9 +101,16 @@ async function version2(db: IDBDatabase, tx: IDBTransaction) {
 	operations.deleteIndex('isLocal_timestamp');
 	operations.deleteIndex('documentOid_timestamp');
 	// create the new indexes
-	operations.createIndex('l_t', 'l_t', { unique: false });
-	operations.createIndex('o_t', 'o_t', { unique: false });
-	operations.createIndex('d_t', 'd_t', { unique: false });
+	operations.createIndex(
+		OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP,
+		OPERATION_INDEX_NAMES.IS_LOCAL__TIMESTAMP,
+		{ unique: false },
+	);
+	operations.createIndex(
+		OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP,
+		OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP,
+		{ unique: false },
+	);
 }
 
 /**
