@@ -18,7 +18,7 @@ export class IdbService extends Disposable {
 		super();
 		const abortController = new AbortController();
 		this.globalAbortController = abortController;
-		// FIXME: replace with event? I can't get this to work.
+		// TODO: replace with event? I can't get this to work. (Illegal invocation on abort?)
 		// this.addDispose(abort);
 		this.db.addEventListener('versionchange', this.onVersionChange);
 		this.addDispose(() => {
