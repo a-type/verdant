@@ -272,14 +272,12 @@ export function migrate(
 		);
 		if (added.length > 0) {
 			addedIndexes[changed] = added;
-			// FIXME: don't o(n^2) this
 			if (changedCollections.includes(changed)) {
 				autoMigratedCollections.add(changed);
 			}
 		}
 		if (removed.length > 0) {
 			removedIndexes[changed] = removed;
-			// FIXME: don't o(n^2) this
 			if (changedCollections.includes(changed)) {
 				autoMigratedCollections.add(changed);
 			}
@@ -724,14 +722,12 @@ function getMigrationInfo(oldSchema: StorageSchema, newSchema: StorageSchema) {
 		);
 		if (added.length > 0) {
 			addedIndexes[changed] = added;
-			// FIXME: don't o(n^2) this
 			if (changedCollections.includes(changed)) {
 				autoMigratedCollections.add(changed);
 			}
 		}
 		if (removed.length > 0) {
 			removedIndexes[changed] = removed;
-			// FIXME: don't o(n^2) this
 			if (changedCollections.includes(changed)) {
 				autoMigratedCollections.add(changed);
 			}

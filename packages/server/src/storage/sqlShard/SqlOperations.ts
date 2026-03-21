@@ -79,9 +79,13 @@ export class SqlOperations implements OperationStorage {
 	): Promise<number> => {
 		const db = this.db;
 		// inserts all operations and updates server order
-		// FIXME: this whole thing is kinda sus
+		// since SQL operations are synchronous, we rely on the returned result of each
+		// operation to update the current server order and increment it in JS...
+		// SQLite does not have autoincrement for non-primary keys.
+		// I suppose I could potentially make a new table to track server order, idk if this
+		// would be faster.
 		return db.transaction((tx): number => {
-			let orderResult = tx.first<Pick<OperationHistoryRow, 'serverOrder'>>(
+			const orderResult = tx.first<Pick<OperationHistoryRow, 'serverOrder'>>(
 				`SELECT serverOrder FROM OperationHistory ORDER BY serverOrder DESC LIMIT 1`,
 			);
 			let currentServerOrder = orderResult?.serverOrder ?? 0;

@@ -376,10 +376,10 @@ it(
 
 					// we have to create a list for non-assigned items and assign them
 					// so they're not lost!
-					// FIXME: allow querying directly for listId=null
-					const unassignedItems = (await queries.items.findAll()).filter(
-						(item) => !item.listId,
-					);
+					const unassignedItems = await queries.items.findAll({
+						where: 'listId',
+						equals: null,
+					});
 					await mutations.lists.put({
 						id: 'uncategorized',
 						name: 'Uncategorized',

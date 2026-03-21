@@ -607,7 +607,7 @@ describe('generating diff operations', () => {
 			expectDiffProducesResult(from, patches, to);
 		});
 		it('moves an item from the start to the end of the list', () => {
-			// FIXME: the operations end up very inefficient for this. each
+			// TODO: the operations end up very inefficient for this. each
 			// other item in the list gets moved before the target item is
 			// moved to the end. can this be improved?
 			const from = assignOid(
@@ -1008,7 +1008,6 @@ describe('generating diff operations', () => {
 		});
 	});
 	describe('on lists of files', () => {
-		// FIXME: file refs should work the same as object refs
 		it('pushes items', () => {
 			const from = assignOid(
 				[createFileRef('file-1'), createFileRef('file-2')],
@@ -1106,7 +1105,7 @@ describe('generating diff operations', () => {
 			expectDiffProducesResult(from, patches, to);
 		});
 		it('moves an item from the start to the end of the list', () => {
-			// FIXME: the operations end up very inefficient for this. each
+			// TODO: the operations end up very inefficient for this. each
 			// other item in the list gets moved before the target item is
 			// moved to the end. can this be improved?
 			const from = assignOid(

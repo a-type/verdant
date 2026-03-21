@@ -1,15 +1,5 @@
-import {
-	useCallback,
-	useContext,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react';
+import { Key, pathToRegexp } from 'path-to-regexp';
 import { IndexRouteConfig, RouteConfig, RouteMatch } from './types.js';
-import { pathToRegexp, Key } from 'path-to-regexp';
-import { RouteLevelContext, useRootMatch, useLocationPath } from './context.js';
-import { joinPaths } from './util.js';
 
 function isIndexRoute(route: RouteConfig): route is IndexRouteConfig {
 	return (route as any).index === true;
@@ -52,14 +42,17 @@ export function matchPath(
 	if (!match) {
 		return null;
 	}
-	const params = keys.reduce((params, key, index) => {
-		params[key.name] = match[index + 1];
-		return params;
-	}, {} as Record<string, string>);
+	const params = keys.reduce(
+		(params, key, index) => {
+			params[key.name] = match[index + 1];
+			return params;
+		},
+		{} as Record<string, string>,
+	);
 	let remainingPath;
 
 	// special case: don't consume if match is '/'
-	// FIXME: this probably means the logic around this is not as
+	// TODO: this probably means the logic around this is not as
 	// straightforward as it should be.
 	if (match[0] === '/') {
 		remainingPath = comparePath;
