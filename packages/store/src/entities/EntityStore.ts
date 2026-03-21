@@ -414,6 +414,7 @@ export class EntityStore extends Disposable {
 					op.authz = entity.access;
 				}
 				operations.push(...deletes);
+				entity.__markDeleting__();
 			}
 		}
 

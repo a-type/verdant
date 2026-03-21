@@ -1,7 +1,7 @@
-import { it, expect } from 'vitest';
+import { assert } from '@verdant-web/common';
+import { expect, it } from 'vitest';
 import { createTestClient } from '../lib/testClient.js';
 import { waitForQueryResult } from '../lib/waits.js';
-import { assert } from '@verdant-web/common';
 
 it('cleans up metadata after deletion but can still restore the document', async () => {
 	const client = await createTestClient({
@@ -52,4 +52,102 @@ it('cleans up metadata after deletion but can still restore the document', async
 
 	one.set('content', 'changed');
 	expect(one.get('content')).toBe('changed');
+});
+
+it("correctly deleteSelf's various sub-objects", async () => {
+	const client = await createTestClient({
+		library: 'test',
+		user: 'test',
+		// logId: 'B',
+	});
+
+	const item = await client.items.put({
+		id: '1',
+		content: 'test',
+	});
+
+	const comments = item.get('comments');
+
+	comments.push({
+		id: '1',
+		content: 'first',
+		authorId: 'foo',
+	});
+	comments.push({
+		id: '2',
+		content: 'second',
+		authorId: 'foo',
+	});
+	comments.push({
+		id: '3',
+		content: 'third',
+		authorId: 'foo',
+	});
+
+	expect(comments.getSnapshot()).toEqual([
+		{
+			id: '1',
+			content: 'first',
+			authorId: 'foo',
+		},
+		{
+			id: '2',
+			content: 'second',
+			authorId: 'foo',
+		},
+		{
+			id: '3',
+			content: 'third',
+			authorId: 'foo',
+		},
+	]);
+
+	comments.get(1).deleteSelf();
+
+	expect(comments.getSnapshot()).toEqual([
+		{
+			id: '1',
+			content: 'first',
+			authorId: 'foo',
+		},
+		{
+			id: '3',
+			content: 'third',
+			authorId: 'foo',
+		},
+	]);
+
+	comments.get(0).deleteSelf();
+
+	expect(comments.getSnapshot()).toEqual([
+		{
+			id: '3',
+			content: 'third',
+			authorId: 'foo',
+		},
+	]);
+
+	expect(comments.getSnapshot()).toEqual([
+		{
+			id: '3',
+			content: 'third',
+			authorId: 'foo',
+		},
+	]);
+
+	const category = await client.categories.put({
+		id: 'cat1',
+		name: 'cat1',
+		metadata: {
+			color: 'red',
+		},
+	});
+
+	category.get('metadata')?.deleteSelf();
+
+	expect(category.getSnapshot()).toEqual({
+		id: 'cat1',
+		name: 'cat1',
+		metadata: null,
+	});
 });

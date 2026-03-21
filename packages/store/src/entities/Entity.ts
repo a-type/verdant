@@ -103,6 +103,9 @@ export class Entity<
 	// provided from external creators, this is a method to delete
 	// this entity.
 	private _deleteSelf: () => void;
+	// set manually when deleting the entity, this silences pruning warnings
+	// for missing data while the deletion is being processed.
+	private _deleting = false;
 
 	constructor({
 		oid,
@@ -239,13 +242,15 @@ export class Entity<
 				for (let i = 0; i < rawView.length; i++) {
 					const child = this.get(i);
 					if (this.childIsNull(child) && !isNullable(schema)) {
-						this.ctx.log(
-							'error',
-							'Child missing in non-nullable field',
-							this.oid,
-							'index:',
-							i,
-						);
+						if (!this._deleting) {
+							this.ctx.log(
+								'error',
+								'Child missing in non-nullable field',
+								this.oid,
+								'index:',
+								i,
+							);
+						}
 
 						// this item will be pruned.
 					} else {
@@ -286,13 +291,15 @@ export class Entity<
 				}
 				const child = this.get(key as any);
 				if (this.childIsNull(child) && !isNullable(schema)) {
-					this.ctx.log(
-						'error',
-						'Child entity is missing for non-nullable field',
-						this.oid,
-						'key:',
-						key,
-					);
+					if (!this._deleting) {
+						this.ctx.log(
+							'error',
+							'Child entity is missing for non-nullable field',
+							this.oid,
+							'key:',
+							key,
+						);
+					}
 					if (this.schema.type !== 'map') {
 						/**
 						 * PRUNE - this is a prune point. we can't continue
@@ -332,14 +339,6 @@ export class Entity<
 
 	get deleted() {
 		return this.viewData.deleted || this.view === null;
-	}
-
-	/**
-	 * Doesn't compute view data; simply uses available cached
-	 * view info to determine deletion status.
-	 */
-	private get quickDeleted() {
-		return this._viewData?.deleted || this.cachedView === null;
 	}
 
 	get invalid() {
@@ -603,6 +602,12 @@ export class Entity<
 		if (this.access) {
 			for (const op of operations) {
 				op.authz = this.access;
+
+				// if op is init, reset _deleting flag - this is not a functional flag, only
+				// hides some warnings. if we're here, we must be re-initializing and we can reset it.
+				if (op.data.op === 'initialize') {
+					this._deleting = false;
+				}
 			}
 		}
 
@@ -1396,6 +1401,10 @@ export class Entity<
 	__discardPendingOperation__ = (operation: Operation) => {
 		this.metadataFamily.discardPendingOperation(operation);
 		this.invalidateCachedView();
+	};
+
+	__markDeleting__ = () => {
+		this._deleting = true;
 	};
 }
 
