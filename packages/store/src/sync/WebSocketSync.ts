@@ -314,6 +314,8 @@ export class WebSocketSync
 		await this.sendDisconnecting();
 		this.socket?.removeEventListener('message', this.onMessage);
 		this.socket?.removeEventListener('close', this.onClose);
+		this.socket?.removeEventListener('error', this.onError);
+		this.socket?.removeEventListener('open', this.onOpen);
 		if (this.socket?.readyState === WEBSOCKET_OPEN) {
 			this.socket.close();
 		}
