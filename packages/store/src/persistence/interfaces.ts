@@ -105,7 +105,7 @@ export interface PersistenceMetadataDb<
 	iterateEntityOperations(
 		oid: string,
 		iterator: Iterator<ClientOperation>,
-		opts?: CommonQueryOptions<Tx> & { to?: string | null },
+		opts?: CommonQueryOptions<Tx> & { to?: string | null; reverse?: boolean },
 	): Promise<void>;
 	iterateCollectionOperations(
 		collection: string,

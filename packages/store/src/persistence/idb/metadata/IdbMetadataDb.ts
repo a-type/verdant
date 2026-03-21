@@ -222,7 +222,7 @@ export class IdbMetadataDb
 	iterateEntityOperations = (
 		oid: string,
 		iterator: (op: StoredClientOperation) => void,
-		opts?: CommonQueryOptions & { to?: string | null },
+		opts?: CommonQueryOptions & { to?: string | null; reverse?: boolean },
 	): Promise<void> => {
 		// NOTE: this is simplified from original impl.
 		// perhaps I missed some nuance as to why it was
@@ -237,7 +237,7 @@ export class IdbMetadataDb
 					: createUpperBoundIndexValue(oid);
 
 				const range = IDBKeyRange.bound(start, end, false, false);
-				return store.openCursor(range);
+				return store.openCursor(range, opts?.reverse ? 'prev' : 'next');
 			},
 			iterator,
 			opts,

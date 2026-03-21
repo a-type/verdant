@@ -293,19 +293,31 @@ export class PersistenceMetadata {
 		);
 	};
 
+	// worst case of this is rather expensive but currently only used for migration
+	// and deletion. if usage is expanded, consider caching...
 	getDocumentAuthz = async (oid: ObjectIdentifier) => {
 		let authz;
+
+		// find the latest initialize op - this is most up to date authz.
+		await this.db.iterateEntityOperations(
+			oid,
+			(op) => {
+				if (op.data.op === 'initialize') {
+					authz = op.authz;
+					return true;
+				}
+			},
+			{
+				reverse: true,
+			},
+		);
+
+		// found initialize, this is the answer.
+		if (authz) return authz;
+
+		// all initialize ops may have been rebased, in which case we use the baseline.
 		const baseline = await this.db.getBaseline(oid);
-		if (baseline) {
-			authz = baseline.authz;
-		}
-		await this.db.iterateEntityOperations(oid, (op) => {
-			if (op.data.op === 'initialize') {
-				authz = op.authz;
-				return true;
-			}
-		});
-		return authz;
+		return baseline?.authz;
 	};
 
 	insertData = async (
