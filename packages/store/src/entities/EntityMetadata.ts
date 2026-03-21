@@ -37,6 +37,10 @@ export class EntityMetadata {
 	// soon as the user makes modifications to the entity, this
 	// ephemeral pruned data is applied underneath it.
 	private ephemeralOperations?: Operation[] = [];
+	// pending operations are 'in flight' into persistence, but
+	// if you killed the power now they'd be lost. they don't have an
+	// officially applied timestamp yet either, so they are applied
+	// last, after all confirmed/ephemerals.
 	private pendingOperations: Operation[] = [];
 	readonly oid;
 
@@ -209,7 +213,6 @@ export class EntityMetadata {
 				this.confirmedOperations.push(op);
 				totalAdded++;
 			}
-			// FIXME: seems inefficient
 			// remove this incoming op from pending if it's in there
 			const pendingPrior = this.pendingOperations.length;
 			this.discardPendingOperation(op);
@@ -235,10 +238,19 @@ export class EntityMetadata {
 		return old;
 	};
 
+	// while this may not be the most efficient way to remove an operation,
+	// in practice the ops we discard are generally some of the first in
+	// the list, so the find is quick.
 	discardPendingOperation = (operation: Operation) => {
-		this.pendingOperations = this.pendingOperations.filter(
-			(op) => op.timestamp !== operation.timestamp,
+		// only one op can match, so - avoiding filter() here,
+		// we want short circuiting.
+		const indexOfOperation = this.pendingOperations.findIndex(
+			(op) => op.timestamp === operation.timestamp,
 		);
+		if (indexOfOperation === -1) {
+			return;
+		}
+		this.pendingOperations.splice(indexOfOperation, 1);
 	};
 
 	private applyOperations = (

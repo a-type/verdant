@@ -101,10 +101,8 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 			ctx: this.context,
 			files: this._fileManager,
 		});
-		// note: query cache must be initialized after EntityStore,
-		// since EntityStore needs to clear its cache before queries
-		// refresh.
-		// FIXME: make this less fragile
+		// note: historically querycache needed to be constructed after entities,
+		// not sure if this is still the case.
 		this._queryCache = new QueryCache({
 			context: this.context,
 			evictionTime: this.context.config.queries?.evictionTime,
