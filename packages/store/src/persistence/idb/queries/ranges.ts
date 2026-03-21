@@ -46,15 +46,14 @@ const rangeIndexToIdbKeyRange = (filter: RangeCollectionIndexFilter) => {
 };
 
 const compoundIndexToIdbKeyRange = (
-	// FIXME:
-	schema: any,
+	schema: StorageSchema,
 	collection: string,
 	filter: CollectionCompoundIndexFilter,
 ) => {
 	// validate the usage of the compound index:
 	// - all match fields must be contiguous at the start of the compound order
 	const indexDefinition =
-		schema.collections[collection].compounds[filter.where];
+		schema.collections[collection].compounds?.[filter.where];
 	assert(
 		indexDefinition,
 		`Index ${filter.where} does not exist on collection ${collection}`,
