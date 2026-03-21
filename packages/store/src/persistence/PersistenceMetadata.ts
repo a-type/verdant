@@ -295,6 +295,10 @@ export class PersistenceMetadata {
 
 	getDocumentAuthz = async (oid: ObjectIdentifier) => {
 		let authz;
+		const baseline = await this.db.getBaseline(oid);
+		if (baseline) {
+			authz = baseline.authz;
+		}
 		await this.db.iterateEntityOperations(oid, (op) => {
 			if (op.data.op === 'initialize') {
 				authz = op.authz;

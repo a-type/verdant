@@ -174,10 +174,9 @@ export async function getMigrationEngine({
 						!!rootOid,
 						`Document is missing an OID: ${JSON.stringify(doc)}`,
 					);
-					// FIXME: this could be optimized (making n queries for authz
-					// when the snapshots themselves are derived from the same data...)
-					// maybe don't use the findAll query, and instead go a level
-					// lower to retain access to lower level data here?
+					// while querying again for data we already discarded in the findAll
+					// above isn't ideal, in practice the get authz method is
+					// fairly quick because it short-circuits.
 					const authz = await meta.getDocumentAuthz(rootOid);
 					const original = cloneDeep(doc);
 					// @ts-ignore - excessive type resolution
