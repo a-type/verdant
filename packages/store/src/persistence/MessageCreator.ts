@@ -59,7 +59,7 @@ export class MessageCreator {
 				storeNames: ['operations', 'baselines'],
 			},
 			async (tx) => {
-				// FIXME: this branch gives bad vibes. should we always
+				// TODO: this branch gives bad vibes. should we always
 				// send all operations from other replicas too? is there
 				// ever a case where we have a "since" timestamp and there
 				// are foreign ops that match it?
