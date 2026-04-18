@@ -705,7 +705,7 @@ export function createHooks<Presence = any, Profile = any>(
 							}),
 				[index, skip, pageSize, storage, key],
 			);
-			const data = useLiveQueryResult(liveQuery, suspend === false);
+			const data = useLiveQueryResult(liveQuery, suspend === false) || [];
 			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
@@ -758,7 +758,7 @@ export function createHooks<Presence = any, Profile = any>(
 							}),
 				[index, skip, pageSize, storage, key],
 			);
-			const data = useLiveQueryResult(liveQuery, suspend === false);
+			const data = useLiveQueryResult(liveQuery, suspend === false) || [];
 			const status = useLiveQueryStatus(liveQuery);
 
 			const tools = useMemo(
