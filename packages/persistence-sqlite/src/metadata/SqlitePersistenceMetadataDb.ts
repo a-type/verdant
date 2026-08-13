@@ -3,16 +3,16 @@ import {
 	AckInfo,
 	ClientOperation,
 	CommonQueryOptions,
+	DocumentBaseline,
 	Iterator,
 	LocalReplicaInfo,
-	PersistenceMetadataDb,
-	DocumentBaseline,
 	ObjectIdentifier,
+	PersistenceMetadataDb,
 } from '@verdant-web/store';
 import { createOid, decomposeOid } from '@verdant-web/store/internal';
+import { sql } from 'kysely';
 import { SqliteService } from '../SqliteService.js';
 import { StoredBaseline, StoredOperation, Transaction } from '../kysely.js';
-import { sql } from 'kysely';
 
 export class SqlitePersistenceMetadataDb
 	extends SqliteService
@@ -320,6 +320,23 @@ export class SqlitePersistenceMetadataDb
 				size: 0, // not supported
 			},
 		};
+	};
+
+	purgeDocumentData = async (
+		oid: ObjectIdentifier,
+		opts?: CommonQueryOptions<Transaction> | undefined,
+	): Promise<void> => {
+		const { transaction } = opts ?? {};
+		const db = transaction ?? this.db;
+		const { collection, id } = decomposeOid(oid);
+		await db
+			.deleteFrom('__verdant__operations')
+			.where('documentOid', '=', createOid(collection, id))
+			.execute();
+		await db
+			.deleteFrom('__verdant__baselines')
+			.where('documentOid', '=', createOid(collection, id))
+			.execute();
 	};
 }
 
