@@ -35,3 +35,4 @@ catalog:
   vite: ^7.2.2
   vitest: ^4.0.8
   vitest-browser-react: ^2.0.2
+  web-ext: ^8.10.0

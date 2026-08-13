@@ -22,7 +22,7 @@ export class GetQuery<T> extends BaseQuery<T | null> {
 	}
 
 	protected run = async () => {
-		const value = await this.hydrate(this.oid);
+		const value = await this.measureHydration(() => this.hydrate(this.oid));
 		this.setValue(value);
 	};
 }

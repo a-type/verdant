@@ -1,6 +1,7 @@
 import { Context } from '../context/context.js';
 import { Disposable } from '../utils/Disposable.js';
 import { BaseQuery, ON_ALL_UNSUBSCRIBED } from './BaseQuery.js';
+import { QueryDiagnostic, QueryDiagnostics } from './diagnostics.js';
 
 export class QueryCache extends Disposable {
 	private _cache: Map<string, BaseQuery<any>> = new Map();
@@ -8,6 +9,7 @@ export class QueryCache extends Disposable {
 	private context;
 	/** A set of query keys to keep alive even if they unsubscribe */
 	private _holds = new Set<string>();
+	private _inactiveDiagnostics = new Map<string, QueryDiagnostic>();
 
 	constructor({
 		evictionTime = 5 * 1000,
@@ -38,6 +40,7 @@ export class QueryCache extends Disposable {
 
 	set<V extends BaseQuery<any>>(value: V) {
 		this._cache.set(value.key, value);
+		this._inactiveDiagnostics.delete(value.key);
 		value[ON_ALL_UNSUBSCRIBED](this.enqueueQueryEviction);
 		// immediately enqueue a check to see if this query should be evicted --
 		// this basically gives code X seconds to subscribe to the query before
@@ -45,6 +48,15 @@ export class QueryCache extends Disposable {
 		this.enqueueQueryEviction(value);
 
 		return value;
+	}
+
+	get diagnostics(): QueryDiagnostics {
+		return {
+			queries: [
+				...this._cache.values().map((query) => query.getDiagnostic(true)),
+				...this._inactiveDiagnostics.values(),
+			],
+		};
 	}
 
 	getOrSet<V extends BaseQuery<any>>(
@@ -78,19 +90,23 @@ export class QueryCache extends Disposable {
 			// got a different version of this query.
 			if (this._cache.get(query.key) === query) {
 				this._cache.delete(query.key);
+				this._inactiveDiagnostics.set(query.key, query.getDiagnostic(false));
 				this.context.log('debug', 'QueryCache: evicted query', query.key);
 			}
 		}, this._evictionTime);
 	};
 
-	dropAll = () => {
+		dropAll = () => {
 		this.context.log(
 			'debug',
 			'QueryCache: drop all',
 			this._cache.size,
 			'queries',
 		);
-		this._cache.forEach((query) => query.dispose());
+		this._cache.forEach((query) => {
+			this._inactiveDiagnostics.set(query.key, query.getDiagnostic(false));
+			query.dispose();
+		});
 		this._cache.clear();
 	};
 
@@ -135,4 +151,5 @@ export type PublicQueryCacheAPI = Pick<
 	| 'keepAlives'
 	| 'forceRefreshAll'
 	| 'activeKeys'
+	| 'diagnostics'
 >;

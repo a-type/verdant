@@ -37,32 +37,36 @@ export class FindInfiniteQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result, hasNextPage } = await (
-			await this.context.documents
-		).findAllOids({
-			collection: this.collection,
-			limit: this._pageSize * this._upToPage,
-			offset: 0,
-			index: this.index,
-		});
+		const { result, hasNextPage } = await this.measureSweep(async () =>
+			(await this.context.documents).findAllOids({
+				collection: this.collection,
+				limit: this._pageSize * this._upToPage,
+				offset: 0,
+				index: this.index,
+			}),
+		);
 		this._hasNextPage = hasNextPage;
-		this.setValue(await Promise.all(result.map(this.hydrate)));
+		this.setValue(
+			await this.measureHydration(() => Promise.all(result.map(this.hydrate))),
+		);
 	};
 
 	public loadMore = async () => {
-		const { result, hasNextPage } = await (
-			await this.context.documents
-		).findAllOids({
-			collection: this.collection,
-			limit: this._pageSize,
-			offset: this._pageSize * this._upToPage,
-			index: this.index,
-		});
+		const { result, hasNextPage } = await this.measureSweep(async () =>
+			(await this.context.documents).findAllOids({
+				collection: this.collection,
+				limit: this._pageSize,
+				offset: this._pageSize * this._upToPage,
+				index: this.index,
+			}),
+		);
 		this._hasNextPage = hasNextPage;
 		this._upToPage++;
 		this.setValue([
 			...this.current,
-			...(await Promise.all(result.map(this.hydrate))),
+			...(await this.measureHydration(() =>
+				Promise.all(result.map(this.hydrate)),
+			)),
 		]);
 	};
 

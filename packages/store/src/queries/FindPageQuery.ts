@@ -48,16 +48,18 @@ export class FindPageQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result, hasNextPage } = await (
-			await this.context.documents
-		).findAllOids({
-			collection: this.collection,
-			index: this.index,
-			limit: this._pageSize,
-			offset: this._page * this._pageSize,
-		});
+		const { result, hasNextPage } = await this.measureSweep(async () =>
+			(await this.context.documents).findAllOids({
+				collection: this.collection,
+				index: this.index,
+				limit: this._pageSize,
+				offset: this._page * this._pageSize,
+			}),
+		);
 		this._hasNextPage = hasNextPage;
-		this.setValue(await Promise.all(result.map(this.hydrate)));
+		this.setValue(
+			await this.measureHydration(() => Promise.all(result.map(this.hydrate))),
+		);
 	};
 
 	nextPage = async () => {

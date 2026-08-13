@@ -140,6 +140,11 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 				documentManager: this.documentManager,
 			});
 		}
+
+		if (typeof window !== 'undefined') {
+			(window as Window & { __VERDANT_CLIENT__?: Client }).__VERDANT_CLIENT__ =
+				this;
+		}
 	}
 
 	private importingPromise = Promise.resolve();
@@ -323,6 +328,14 @@ export class Client<Presence = any, Profile = any> extends EventSubscriber<{
 		this.context.persistenceShutdownHandler.shutdown();
 		this.context.internalEvents.disable();
 		this.context.entityEvents.disable();
+		if (typeof window !== 'undefined') {
+			const browserWindow = window as Window & {
+				__VERDANT_CLIENT__?: Client;
+			};
+			if (browserWindow.__VERDANT_CLIENT__ === this) {
+				delete browserWindow.__VERDANT_CLIENT__;
+			}
+		}
 
 		// the idea here is to flush the microtask queue -
 		// we may have queued tasks related to queries that

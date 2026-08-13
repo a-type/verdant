@@ -27,18 +27,20 @@ export class FindAllQuery<T> extends BaseQuery<T[]> {
 	}
 
 	protected run = async () => {
-		const { result: oids } = await (
-			await this.context.documents
-		).findAllOids({
-			collection: this.collection,
-			index: this.index,
-			limit: this.limit,
-		});
+		const { result: oids } = await this.measureSweep(async () =>
+			(await this.context.documents).findAllOids({
+				collection: this.collection,
+				index: this.index,
+				limit: this.limit,
+			}),
+		);
 		this.context.log(
 			'debug',
 			`FindAllQuery: ${oids.length} oids found: ${oids}`,
 		);
-		this.setValue(await Promise.all(oids.map(this.hydrate)));
+		this.setValue(
+			await this.measureHydration(() => Promise.all(oids.map(this.hydrate))),
+		);
 	};
 
 	[UPDATE] = (index: CollectionFilter | undefined) => {

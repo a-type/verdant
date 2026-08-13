@@ -2,6 +2,7 @@ import { EventSubscriber } from '@verdant-web/common';
 import { Context } from '../context/context.js';
 import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../utils/Disposable.js';
+import { getDiagnosticResult, QueryDiagnostic, QueryTiming } from './diagnostics.js';
 import { filterResultSet } from './utils.js';
 
 export type BaseQueryEvents = {
@@ -37,12 +38,18 @@ export abstract class BaseQuery<T> extends Disposable {
 	private _allUnsubscribedHandler?: (query: BaseQuery<T>) => void;
 	private _status: QueryStatus = 'initial';
 	private _executionPromise: Promise<T> | null = null;
+	private _timing: QueryTiming = {
+		sweep: null,
+		hydration: null,
+		total: null,
+	};
 
 	protected context;
 
 	readonly collection;
 	readonly key;
 	readonly isListQuery;
+	readonly type;
 
 	constructor({
 		initial,
@@ -65,6 +72,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		this.context = context;
 		this.key = key;
 		this.collection = collection;
+		this.type = this.constructor.name;
 		const shouldUpdateFn =
 			shouldUpdate ||
 			((collections: string[]) => collections.includes(collection));
@@ -223,10 +231,9 @@ export abstract class BaseQuery<T> extends Disposable {
 	};
 
 	execute = () => {
-		const startTime = new Date();
+		const startTime = performance.now();
 		this.context.log(
 			'debug',
-			`[${startTime.toLocaleTimeString()}]`,
 			'Executing query',
 			this.key,
 		);
@@ -255,11 +262,10 @@ export abstract class BaseQuery<T> extends Disposable {
 				}
 			})
 			.finally(() => {
-				const endTime = new Date();
-				const duration = endTime.getTime() - startTime.getTime();
+				const duration = performance.now() - startTime;
+				this._timing.total = duration;
 				this.context.log(
 					'debug',
-					`[${endTime.toLocaleTimeString()}]`,
 					'Query executed',
 					this.key,
 					`Duration: ${duration}ms`,
@@ -267,6 +273,36 @@ export abstract class BaseQuery<T> extends Disposable {
 			});
 		return this._executionPromise;
 	};
+
+	protected measureSweep = async <V>(work: () => Promise<V>): Promise<V> => {
+		const start = performance.now();
+		try {
+			return await work();
+		} finally {
+			this._timing.sweep = performance.now() - start;
+		}
+	};
+
+	protected measureHydration = async <V>(
+		work: () => Promise<V>,
+	): Promise<V> => {
+		const start = performance.now();
+		try {
+			return await work();
+		} finally {
+			this._timing.hydration = performance.now() - start;
+		}
+	};
+
+	getDiagnostic = (active: boolean): QueryDiagnostic => ({
+		key: this.key,
+		collection: this.collection,
+		type: this.type,
+		status: this.status,
+		active,
+		result: getDiagnosticResult(this.current),
+		timing: { ...this._timing },
+	});
 	protected abstract run(): Promise<void>;
 
 	[ON_ALL_UNSUBSCRIBED] = (handler: (query: BaseQuery<T>) => void) => {

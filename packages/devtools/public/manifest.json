@@ -1,0 +1,15 @@
+{
+	"manifest_version": 3,
+	"name": "Verdant DevTools",
+	"version": "0.1.0",
+	"description": "Inspect active Verdant queries and their performance.",
+	"devtools_page": "devtools.html",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "verdant-devtools@verdant.dev",
+			"data_collection_permissions": {
+				"required": ["none"]
+			}
+		}
+	}
+}

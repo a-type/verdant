@@ -25,6 +25,10 @@
 			"path": "packages/react",
 		},
 		{
+			"name": "🛠️ Devtools",
+			"path": "packages/devtools",
+		},
+		{
 			"name": "⌨️ Tiptap",
 			"path": "packages/tiptap",
 		},

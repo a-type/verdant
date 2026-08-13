@@ -1,0 +1,24 @@
+{
+	"name": "@verdant-web/devtools",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"dev": "vite build --watch",
+		"test": "vitest",
+		"ci:test:unit": "vitest run",
+		"typecheck": "tsc --noEmit",
+		"ext:run": "web-ext run --source-dir dist",
+		"ext:lint": "web-ext lint --source-dir dist",
+		"ext:build": "web-ext build --source-dir dist --overwrite-dest",
+		"ext:sign": "web-ext sign --source-dir dist --api-key ${WEB_EXT_API_KEY} --api-secret ${WEB_EXT_API_SECRET} --overwrite-dest"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:",
+		"web-ext": "catalog:"
+	}
+}

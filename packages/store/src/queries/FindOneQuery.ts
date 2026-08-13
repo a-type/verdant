@@ -23,13 +23,15 @@ export class FindOneQuery<T> extends BaseQuery<T | null> {
 	}
 
 	protected run = async () => {
-		const oid = await (
-			await this.context.documents
-		).findOneOid({
-			collection: this.collection,
-			index: this.index,
-		});
-		this.setValue(oid ? await this.hydrate(oid) : null);
+		const oid = await this.measureSweep(async () =>
+			(await this.context.documents).findOneOid({
+				collection: this.collection,
+				index: this.index,
+			}),
+		);
+		this.setValue(
+			oid ? await this.measureHydration(() => this.hydrate(oid)) : null,
+		);
 	};
 
 	[UPDATE] = (index: CollectionFilter | undefined) => {

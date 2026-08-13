@@ -76,6 +76,25 @@ describe('storage queries', () => {
 		expect(results.map((i: any) => i.get('id'))).toEqual([items[3].get('id')]);
 	});
 
+	it('exposes query diagnostics with result data and phase timings', async () => {
+		const storage = createTestStorage();
+		await storage.todos.put({ id: '1', content: 'item' });
+
+		await storage.todos.findAll().resolved;
+
+		const diagnostics = storage.queries.diagnostics.queries;
+		expect(diagnostics).toHaveLength(1);
+		expect(diagnostics[0]).toMatchObject({
+			key: 'findAll:todos:undefined:',
+			collection: 'todos',
+			type: 'FindAllQuery',
+			active: true,
+			result: [{ id: '1', content: 'item' }],
+		});
+		expect(diagnostics[0].timing.sweep).toBeTypeOf('number');
+		expect(diagnostics[0].timing.hydration).toBeTypeOf('number');
+	});
+
 	it('can query simple compound indexes by match and order', async () => {
 		const storage = createTestStorage();
 
