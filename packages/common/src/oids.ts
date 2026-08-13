@@ -443,3 +443,15 @@ export function getAllOids(root: any) {
 	}
 	return Array.from(oids);
 }
+
+export function forceNormalizeOid(oid: ObjectIdentifier) {
+	const { collection, id, subId } = decomposeOid(oid);
+	return createOid(collection, id, subId);
+}
+
+export function isNonNormalizedOid(oid: ObjectIdentifier) {
+	const slashCount = (oid.match(/\//g) || []).length;
+	const colonCount = (oid.match(/:/g) || []).length;
+
+	return slashCount > 1 || colonCount > 1;
+}

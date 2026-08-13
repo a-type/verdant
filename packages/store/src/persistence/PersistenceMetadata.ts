@@ -2,6 +2,7 @@ import {
 	applyPatch,
 	assert,
 	assignOid,
+	decomposeOid,
 	DocumentBaseline,
 	getOidRoot,
 	ObjectIdentifier,
@@ -527,5 +528,48 @@ export class PersistenceMetadata {
 		) {
 			this.updateLocalReplica({ ackedLogicalTime: timestamp });
 		}
+	};
+
+	// upkeep - not called automatically as of today
+
+	/**
+	 * Removes all metadata entries related to collections which are no
+	 * longer present in the schema.
+	 */
+	__unstable__purgeRemovedCollections = async () => {
+		const schema = this.ctx.schema;
+		const collectionsInSchema = new Set(Object.keys(schema.collections));
+		const oidsToPurge = new Set<ObjectIdentifier>();
+		await this.db.iterateAllBaselines((baseline) => {
+			const { collection } = decomposeOid(baseline.oid);
+			if (!collectionsInSchema.has(collection)) {
+				this.ctx.log(
+					'debug',
+					`Deleting baseline for removed collection ${collection}`,
+					baseline.oid,
+				);
+				oidsToPurge.add(baseline.oid);
+			}
+		});
+		await this.db.iterateAllOperations((op) => {
+			const { collection } = decomposeOid(op.oid);
+			if (!collectionsInSchema.has(collection)) {
+				this.ctx.log(
+					'debug',
+					`Deleting operation for removed collection ${collection}`,
+					op.oid,
+				);
+				oidsToPurge.add(op.oid);
+			}
+		});
+
+		for (const oid of oidsToPurge) {
+			await this.db.purgeDocumentData(oid);
+		}
+
+		this.ctx.log(
+			'debug',
+			`Purged ${oidsToPurge.size} document metadata groups for removed collections`,
+		);
 	};
 }

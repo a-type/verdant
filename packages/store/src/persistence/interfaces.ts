@@ -138,6 +138,10 @@ export interface PersistenceMetadataDb<
 		ops: ClientOperation[],
 		opts?: CommonQueryOptions<Tx>,
 	): Promise<ObjectIdentifier[]>;
+	purgeDocumentData(
+		oid: ObjectIdentifier,
+		opts?: CommonQueryOptions<Tx>,
+	): Promise<void>;
 
 	/* WARNING: deletes all data */
 	reset(opts?: { clearReplica?: boolean; transaction?: Tx }): Promise<void>;

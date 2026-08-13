@@ -5,6 +5,7 @@ import {
 	assignOidsToAllSubObjects,
 	createOid,
 	decomposeOid,
+	forceNormalizeOid,
 	getOidSubIdRange,
 	hasOid,
 	normalize,
@@ -295,5 +296,12 @@ describe('assigning OIDs to sub-objects', () => {
 
 		expect(hasOid(obj.foo.file)).toBe(false);
 		expect(hasOid(obj.bar[0])).toBe(false);
+	});
+});
+
+describe('force normalizing an OID', () => {
+	it('should normalize an OID by removing any subId', () => {
+		const normalized = forceNormalizeOid('test/a string with / in it oh no');
+		expect(normalized).toEqual('test/a string with &slash; in it oh no');
 	});
 });

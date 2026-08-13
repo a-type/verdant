@@ -3,7 +3,6 @@ import {
 	createLowerBoundIndexValue,
 	createUpperBoundIndexValue,
 	DocumentBaseline,
-	getLegacyDotOidSubIdRange,
 	getOidRoot,
 	getOidSubIdRange,
 	ObjectIdentifier,
@@ -124,12 +123,9 @@ export class IdbMetadataDb
 			(store) => {
 				const root = getOidRoot(rootOid);
 				const [start, end] = getOidSubIdRange(rootOid);
-				// TODO: get rid of legacy dot OIDs...
-				const [dotStart, dotEnd] = getLegacyDotOidSubIdRange(rootOid);
 				return [
 					store.openCursor(IDBKeyRange.only(root)),
 					store.openCursor(IDBKeyRange.bound(start, end, false, false)),
-					store.openCursor(IDBKeyRange.bound(dotStart, dotEnd, false, false)),
 				];
 			},
 			iterator,
@@ -440,6 +436,57 @@ export class IdbMetadataDb
 			) as string,
 		};
 	};
+
+	purgeDocumentData(
+		oid: ObjectIdentifier,
+		opts?: CommonQueryOptions<IDBTransaction> | undefined,
+	): Promise<void> {
+		const rootOid = getOidRoot(oid);
+		const tx = opts?.transaction as IDBTransaction | undefined;
+
+		return this.transaction(
+			{
+				mode: 'readwrite',
+				storeNames: ['baselines', 'operations'],
+			},
+			async (ownedTx) => {
+				const transaction = tx ?? ownedTx;
+
+				await this.iterate<DocumentBaseline>(
+					'baselines',
+					(store) => {
+						const [start, end] = getOidSubIdRange(rootOid);
+						return [
+							store.openCursor(IDBKeyRange.only(rootOid)),
+							store.openCursor(IDBKeyRange.bound(start, end, false, false)),
+						];
+					},
+					(baseline, store) => {
+						store.delete(baseline.oid);
+					},
+					{ mode: 'readwrite', transaction },
+				);
+
+				await this.iterate<StoredClientOperation>(
+					'operations',
+					(store) => {
+						const index = store.index(
+							OPERATION_INDEX_NAMES.ROOT_OID__TIMESTAMP,
+						);
+						const start = createLowerBoundIndexValue(rootOid);
+						const end = createUpperBoundIndexValue(rootOid);
+						return index.openCursor(
+							IDBKeyRange.bound(start, end, false, false),
+						);
+					},
+					(op, store) => {
+						store.delete(op[OPERATION_INDEX_NAMES.OID__TIMESTAMP]);
+					},
+					{ mode: 'readwrite', transaction },
+				);
+			},
+		);
+	}
 }
 
 const writeOpts = { mode: 'readwrite' } as const;
