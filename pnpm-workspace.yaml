@@ -7,21 +7,31 @@ packages:
   - 'scaleTest'
   - 'scratchpad'
   - 'configs'
+allowBuilds:
+  '@swc/core': true
+  better-sqlite3: true
+  core-js: true
+  core-js-pure: true
+  esbuild: true
+  msw: true
+  puppeteer: true
+  sharp: true
+  workerd: true
 
 catalog:
-  better-sqlite3: ^11.10.0
-  typescript: 5.9.3
+  '@hono/node-server': ^1.19.5
   '@types/node': 24.6.1
-  vitest: ^4.0.8
+  '@types/react': 19.1.16
+  '@types/react-dom': 19.1.9
+  '@vitejs/plugin-react': ^5.1.0
   '@vitest/browser-playwright': ^4.0.8
-  vitest-browser-react: ^2.0.2
+  better-sqlite3: ^11.10.0
+  hono: ^4.9.9
+  kysely: 0.28.7
   playwright: 1.56.1
   react: 19.1.1
-  '@types/react': 19.1.16
-  vite: ^7.2.2
-  '@vitejs/plugin-react': ^5.1.0
   react-dom: 19.1.1
-  '@types/react-dom': 19.1.9
-  kysely: 0.28.7
-  hono: ^4.9.9
-  '@hono/node-server': ^1.19.5
+  typescript: 5.9.3
+  vite: ^7.2.2
+  vitest: ^4.0.8
+  vitest-browser-react: ^2.0.2
