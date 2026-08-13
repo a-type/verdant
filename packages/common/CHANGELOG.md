@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 3.2.1
+
+### Patch Changes
+
+- b77c9ab: Added a utility which can be manually invoked to purge data from dropped collections from history
+
 ## 3.2.0
 
 ### Minor Changes

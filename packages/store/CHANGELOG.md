@@ -1,5 +1,14 @@
 # @lo-fi/web
 
+## 5.4.1
+
+### Patch Changes
+
+- 72c1740: Maintenance and minor tidying
+- b77c9ab: Added a utility which can be manually invoked to purge data from dropped collections from history
+- Updated dependencies [b77c9ab]
+  - @verdant-web/common@3.2.1
+
 ## 5.4.0
 
 ### Minor Changes
