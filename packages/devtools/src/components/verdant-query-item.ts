@@ -1,7 +1,10 @@
 import { css, html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { QueryDiagnostic } from '../lib/diagnostics.js';
+import { isDocumentList, isPlainObject } from '../lib/documents.js';
 import { formatTiming, sharedStyles } from '../lib/format.js';
+import './verdant-document-card.js';
+import './verdant-document-list.js';
 
 @customElement('verdant-query-item')
 export class VerdantQueryItem extends LitElement {
@@ -92,9 +95,27 @@ export class VerdantQueryItem extends LitElement {
 						<dd>${formatTiming(query.timing.total)}</dd>
 					</div>
 				</dl>
-				<pre>${JSON.stringify(query.result, null, 2)}</pre>
+				${this.renderResult()}
 			</article>
 		`;
+	}
+
+	private renderResult() {
+		const { result } = this.query;
+
+		if (isDocumentList(result)) {
+			return html`<verdant-document-list
+				.documents=${result}
+			></verdant-document-list>`;
+		}
+
+		if (isPlainObject(result)) {
+			return html`<verdant-document-card
+				.document=${result}
+			></verdant-document-card>`;
+		}
+
+		return html`<pre>${JSON.stringify(result, null, 2)}</pre>`;
 	}
 }
 
