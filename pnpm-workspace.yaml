@@ -7,6 +7,7 @@ packages:
   - 'scaleTest'
   - 'scratchpad'
   - 'configs'
+
 allowBuilds:
   '@swc/core': true
   better-sqlite3: true
@@ -16,6 +17,7 @@ allowBuilds:
   msw: true
   puppeteer: true
   sharp: true
+  spawn-sync: true
   workerd: true
 
 catalog:
