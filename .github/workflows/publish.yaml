@@ -66,7 +66,7 @@ jobs:
         id: app-token
         with:
           client-id: ${{ vars.GH_APP_CLIENT_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVAT_KEY }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           permission-contents: write # to commit version changes (changesets/action/version)
           permission-pull-requests: write # to create pull request (changesets/action/version)
 
