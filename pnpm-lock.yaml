@@ -403,43 +403,6 @@ importers:
         specifier: 'catalog:'
         version: 2.0.2(@types/react-dom@19.1.9(@types/react@19.1.16))(@types/react@19.1.16)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(vitest@4.0.8)
 
-  packages/react-router:
-    dependencies:
-      path-to-regexp:
-        specifier: ^6.2.1
-        version: 6.3.0
-    devDependencies:
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.1.16
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.1.9(@types/react@19.1.16)
-      '@types/use-sync-external-store':
-        specifier: ^0.0.6
-        version: 0.0.6
-      '@vitejs/plugin-react':
-        specifier: 'catalog:'
-        version: 5.1.0(supports-color@10.2.2)(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0))
-      jsdom:
-        specifier: ^20.0.0
-        version: 20.0.3(supports-color@10.2.2)
-      react:
-        specifier: 'catalog:'
-        version: 19.1.1
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.1.1(react@19.1.1)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: 7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@20.0.3(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
-
   packages/server:
     dependencies:
       '@hono/node-server':
@@ -15973,7 +15936,7 @@ snapshots:
       '@vitest/mocker': 4.0.8(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0))
       playwright: 1.56.1
       tinyrainbow: 3.0.3
-      vitest: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@20.0.3(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
+      vitest: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@26.0.0(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -16077,7 +16040,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.0.3
-      vitest: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@20.0.3(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
+      vitest: 4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@26.0.0(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
@@ -18335,9 +18298,9 @@ snapshots:
     dependencies:
       pend: 1.2.0
 
-  fdir@6.5.0(picomatch@4.0.3):
+  fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
-      picomatch: 4.0.3
+      picomatch: 4.0.5
 
   feed@4.2.2:
     dependencies:
@@ -22493,8 +22456,8 @@ snapshots:
 
   tinyglobby@0.2.15:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.5)
+      picomatch: 4.0.5
 
   tinypool@1.0.2: {}
 
@@ -22974,8 +22937,8 @@ snapshots:
   vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.25.10
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.5)
+      picomatch: 4.0.5
       postcss: 8.5.6
       rollup: 4.52.2
       tinyglobby: 0.2.15
@@ -22990,8 +22953,8 @@ snapshots:
   vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@4.19.2)(yaml@2.9.0):
     dependencies:
       esbuild: 0.25.10
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.5)
+      picomatch: 4.0.5
       postcss: 8.5.6
       rollup: 4.52.2
       tinyglobby: 0.2.15
@@ -23186,47 +23149,6 @@ snapshots:
       '@types/node': 20.10.5
       '@vitest/browser-playwright': 4.0.8(msw@2.7.3(@types/node@20.10.5)(typescript@5.7.2))(playwright@1.56.1)(vite@6.1.1(@types/node@20.10.5)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0))(vitest@4.0.8)
       jsdom: 26.0.0(supports-color@10.2.2)
-    transitivePeerDependencies:
-      - jiti
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vitest@4.0.8(@types/debug@4.1.12)(@types/node@24.6.1)(@vitest/browser-playwright@4.0.8)(jiti@1.21.6)(jsdom@20.0.3(supports-color@10.2.2))(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(supports-color@10.2.2)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0):
-    dependencies:
-      '@vitest/expect': 4.0.8
-      '@vitest/mocker': 4.0.8(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(vite@6.1.1(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0))
-      '@vitest/pretty-format': 4.0.8
-      '@vitest/runner': 4.0.8
-      '@vitest/snapshot': 4.0.8
-      '@vitest/spy': 4.0.8
-      '@vitest/utils': 4.0.8
-      debug: 4.4.3(supports-color@10.2.2)
-      es-module-lexer: 1.7.0
-      expect-type: 1.2.2
-      magic-string: 0.30.21
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      std-env: 3.10.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vite: 6.1.1(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/debug': 4.1.12
-      '@types/node': 24.6.1
-      '@vitest/browser-playwright': 4.0.8(msw@2.7.3(@types/node@20.10.5)(typescript@5.9.3))(playwright@1.56.1)(vite@7.2.2(@types/node@24.6.1)(jiti@1.21.6)(terser@5.37.0)(tsx@3.14.0)(yaml@2.9.0))(vitest@4.0.8)
-      jsdom: 20.0.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - jiti
       - less

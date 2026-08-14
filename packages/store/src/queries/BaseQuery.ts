@@ -2,7 +2,12 @@ import { EventSubscriber } from '@verdant-web/common';
 import { Context } from '../context/context.js';
 import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../utils/Disposable.js';
-import { getDiagnosticResult, QueryDiagnostic, QueryTiming } from './diagnostics.js';
+import {
+	getDiagnosticResult,
+	QueryDiagnostic,
+	QueryRun,
+	QueryTiming,
+} from './diagnostics.js';
 import { filterResultSet } from './utils.js';
 
 export type BaseQueryEvents = {
@@ -43,6 +48,8 @@ export abstract class BaseQuery<T> extends Disposable {
 		hydration: null,
 		total: null,
 	};
+	private _startedAt: number | null = null;
+	private _timingHistory: QueryRun[] = [];
 
 	protected context;
 
@@ -232,11 +239,8 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	execute = () => {
 		const startTime = performance.now();
-		this.context.log(
-			'debug',
-			'Executing query',
-			this.key,
-		);
+		this._startedAt = Date.now();
+		this.context.log('debug', 'Executing query', this.key);
 
 		if (this.status === 'initial') {
 			this.status = 'initializing';
@@ -264,6 +268,10 @@ export abstract class BaseQuery<T> extends Disposable {
 			.finally(() => {
 				const duration = performance.now() - startTime;
 				this._timing.total = duration;
+				this._timingHistory = [
+					...this._timingHistory,
+					{ startedAt: this._startedAt ?? Date.now(), ...this._timing },
+				].slice(-100);
 				this.context.log(
 					'debug',
 					'Query executed',
@@ -296,12 +304,14 @@ export abstract class BaseQuery<T> extends Disposable {
 
 	getDiagnostic = (active: boolean): QueryDiagnostic => ({
 		key: this.key,
+		startedAt: this._startedAt,
 		collection: this.collection,
 		type: this.type,
 		status: this.status,
 		active,
 		result: getDiagnosticResult(this.current),
 		timing: { ...this._timing },
+		runs: this._timingHistory.map((run) => ({ ...run })),
 	});
 	protected abstract run(): Promise<void>;
 

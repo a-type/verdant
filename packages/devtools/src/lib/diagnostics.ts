@@ -8,16 +8,29 @@ export type QueryTiming = {
 
 export type QueryDiagnostic = {
 	key: string;
+	startedAt: number | null;
 	collection: string;
 	type: string;
 	status: string;
 	active: boolean;
 	result: unknown;
 	timing: QueryTiming;
+	runs?: QueryRun[];
 };
 
 export type QueryDiagnostics = {
 	queries: QueryDiagnostic[];
+};
+
+export type QueryRun = QueryTiming & {
+	key: string;
+	startedAt: number;
+};
+
+export type QueryHistory = {
+	initial: QueryRun;
+	latest: QueryRun;
+	runs: QueryRun[];
 };
 
 /**

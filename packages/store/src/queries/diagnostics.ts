@@ -7,14 +7,20 @@ export type QueryTiming = {
 	total: number | null;
 };
 
+export type QueryRun = QueryTiming & {
+	startedAt: number;
+};
+
 export type QueryDiagnostic = {
 	key: string;
+	startedAt: number | null;
 	collection: string;
 	type: string;
 	status: QueryStatus;
 	active: boolean;
 	result: unknown;
 	timing: QueryTiming;
+	runs: QueryRun[];
 };
 
 export type QueryDiagnostics = {

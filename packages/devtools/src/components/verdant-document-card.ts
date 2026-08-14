@@ -19,27 +19,30 @@ export class VerdantDocumentCard extends LitElement {
 		}
 		.card {
 			border: 1px solid #d0d7de;
+		}
+		summary {
+			align-items: baseline;
+			display: flex;
+			cursor: pointer;
+			gap: 6px;
+			list-style-position: inside;
 			padding: 10px 12px;
 		}
-		header {
-			align-items: baseline;
-			border-bottom: 1px solid #d0d7de;
-			display: flex;
-			gap: 6px;
-			margin-bottom: 8px;
-			padding-bottom: 6px;
-		}
-		header .key-label {
+		summary .key-label {
 			color: #57606a;
 			font-size: 11px;
 			text-transform: uppercase;
 		}
-		header .key-value {
+		summary .key-value {
 			font-weight: 600;
 			overflow-wrap: anywhere;
 			flex: 1;
 		}
-		header .actions {
+		.details {
+			border-top: 1px solid #d0d7de;
+			padding: 10px 12px;
+		}
+		.actions {
 			display: flex;
 			gap: 6px;
 		}
@@ -110,36 +113,50 @@ export class VerdantDocumentCard extends LitElement {
 		const fields = Object.keys(doc).filter((key) => key !== primaryKeyField);
 
 		return html`
-			<div class="card">
-				<header>
+			<details class="card">
+				<summary>
 					<span class="key-label">${primaryKeyField ?? 'key'}</span>
 					<span class="key-value"
 						>${primaryKeyField ? String(primaryKeyValue) : '?'}</span
 					>
+				</summary>
+				<div class="details">
 					<div class="actions">
-						<button @click=${() => (this.editOpen = true)}>Edit</button>
+						<button
+							@click=${(event: Event) => {
+								event.preventDefault();
+								this.editOpen = true;
+							}}
+						>
+							Edit
+						</button>
 						<button
 							class="delete"
-							@click=${() => (this.confirmDeleteOpen = true)}
+							@click=${(event: Event) => {
+								event.preventDefault();
+								this.confirmDeleteOpen = true;
+							}}
 						>
 							Delete
 						</button>
 					</div>
-				</header>
-				${this.deleteError
-					? html`<p style="color:#cf222e">${this.deleteError}</p>`
-					: ''}
-				<dl>
-					${fields.map(
-						(field) => html`
-							<dt>${field}</dt>
-							<dd>
-								<verdant-field-value .value=${doc[field]}></verdant-field-value>
-							</dd>
-						`,
-					)}
-				</dl>
-			</div>
+					${this.deleteError
+						? html`<p style="color:#cf222e">${this.deleteError}</p>`
+						: ''}
+					<dl>
+						${fields.map(
+							(field) => html`
+								<dt>${field}</dt>
+								<dd>
+									<verdant-field-value
+										.value=${doc[field]}
+									></verdant-field-value>
+								</dd>
+							`,
+						)}
+					</dl>
+				</div>
+			</details>
 			${this.editOpen
 				? html`
 						<verdant-edit-dialog
