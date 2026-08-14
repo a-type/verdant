@@ -46,6 +46,12 @@ export class VerdantDocumentList extends LitElement {
 	@property({ attribute: false })
 	documents: Record<string, unknown>[] = [];
 
+	@property()
+	collection!: string;
+
+	@property()
+	primaryKeyField: string | null = null;
+
 	@state()
 	private page = 0;
 
@@ -80,6 +86,8 @@ export class VerdantDocumentList extends LitElement {
 					(doc) =>
 						html`<verdant-document-card
 							.document=${doc}
+							.collection=${this.collection}
+							.primaryKeyField=${this.primaryKeyField}
 						></verdant-document-card>`,
 				)}
 			</div>

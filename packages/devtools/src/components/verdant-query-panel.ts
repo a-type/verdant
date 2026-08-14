@@ -4,6 +4,7 @@ import {
 	pollQueryDiagnostics,
 	type QueryDiagnostics,
 } from '../lib/diagnostics.js';
+import { fetchCollectionPrimaryKeys } from '../lib/entityBridge.js';
 import { sharedStyles } from '../lib/format.js';
 import './verdant-query-list.js';
 
@@ -42,19 +43,37 @@ export class VerdantQueryPanel extends LitElement {
 	@state()
 	private diagnostics: QueryDiagnostics | null = null;
 
+	@state()
+	private collectionPrimaryKeys: Record<string, string> | null = null;
+
 	private stopPolling: (() => void) | null = null;
+	private schemaPollHandle: number | null = null;
 
 	connectedCallback() {
 		super.connectedCallback();
 		this.stopPolling = pollQueryDiagnostics((diagnostics) => {
 			this.diagnostics = diagnostics;
 		});
+		this.refreshSchema();
+		this.schemaPollHandle = window.setInterval(() => this.refreshSchema(), 5000);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
 		this.stopPolling?.();
 		this.stopPolling = null;
+		if (this.schemaPollHandle !== null) {
+			window.clearInterval(this.schemaPollHandle);
+			this.schemaPollHandle = null;
+		}
+	}
+
+	private async refreshSchema() {
+		try {
+			this.collectionPrimaryKeys = await fetchCollectionPrimaryKeys();
+		} catch {
+			// client may not be connected yet - diagnostics polling will surface that
+		}
 	}
 
 	render() {
@@ -72,6 +91,7 @@ export class VerdantQueryPanel extends LitElement {
 				</header>
 				<verdant-query-list
 					.queries=${this.diagnostics.queries}
+					.collectionPrimaryKeys=${this.collectionPrimaryKeys}
 				></verdant-query-list>
 			</main>
 		`;

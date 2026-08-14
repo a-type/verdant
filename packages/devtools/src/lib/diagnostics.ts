@@ -1,3 +1,5 @@
+import { evalJson } from './bridge.js';
+
 export type QueryTiming = {
 	sweep: number | null;
 	hydration: number | null;
@@ -18,25 +20,14 @@ export type QueryDiagnostics = {
 	queries: QueryDiagnostic[];
 };
 
-declare const chrome: any;
-
 /**
  * Polls the inspected window for Verdant client query diagnostics via the
  * chrome.devtools.inspectedWindow.eval bridge.
  */
 export function fetchQueryDiagnostics(): Promise<QueryDiagnostics | null> {
-	return new Promise((resolve) => {
-		chrome.devtools.inspectedWindow.eval(
-			'JSON.stringify(window.__VERDANT_CLIENT__?.queries.diagnostics ?? null)',
-			(result: unknown, exceptionInfo: { isException?: boolean }) => {
-				if (exceptionInfo?.isException || typeof result !== 'string') {
-					resolve(null);
-					return;
-				}
-				resolve(JSON.parse(result) as QueryDiagnostics | null);
-			},
-		);
-	});
+	return evalJson<QueryDiagnostics | null>(
+		'JSON.stringify(window.__VERDANT_CLIENT__?.queries.diagnostics ?? null)',
+	).catch(() => null);
 }
 
 /**

@@ -272,6 +272,9 @@ importers:
 
   packages/devtools:
     dependencies:
+      '@verdant-web/common':
+        specifier: workspace:*
+        version: link:../common
       lit:
         specifier: 'catalog:'
         version: 3.3.3

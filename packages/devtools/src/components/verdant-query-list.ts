@@ -19,6 +19,9 @@ export class VerdantQueryList extends LitElement {
 	@property({ attribute: false })
 	queries: QueryDiagnostic[] = [];
 
+	@property({ attribute: false })
+	collectionPrimaryKeys: Record<string, string> | null = null;
+
 	render() {
 		if (this.queries.length === 0) {
 			return html`<p>No queries have run yet.</p>`;
@@ -27,7 +30,12 @@ export class VerdantQueryList extends LitElement {
 		return repeat(
 			this.queries,
 			(query) => query.key,
-			(query) => html`<verdant-query-item .query=${query}></verdant-query-item>`,
+			(query) =>
+				html`<verdant-query-item
+					.query=${query}
+					.primaryKeyField=${this.collectionPrimaryKeys?.[query.collection] ??
+					null}
+				></verdant-query-item>`,
 		);
 	}
 }

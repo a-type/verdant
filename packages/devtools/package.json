@@ -15,6 +15,7 @@
 		"ext:sign": "web-ext sign --source-dir dist --api-key ${WEB_EXT_API_KEY} --api-secret ${WEB_EXT_API_SECRET} --overwrite-dest"
 	},
 	"dependencies": {
+		"@verdant-web/common": "workspace:*",
 		"lit": "catalog:"
 	},
 	"devDependencies": {

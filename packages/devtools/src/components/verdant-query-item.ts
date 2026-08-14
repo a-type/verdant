@@ -65,6 +65,9 @@ export class VerdantQueryItem extends LitElement {
 	@property({ attribute: false })
 	query!: QueryDiagnostic;
 
+	@property()
+	primaryKeyField: string | null = null;
+
 	render() {
 		const { query } = this;
 		return html`
@@ -106,12 +109,16 @@ export class VerdantQueryItem extends LitElement {
 		if (isDocumentList(result)) {
 			return html`<verdant-document-list
 				.documents=${result}
+				.collection=${this.query.collection}
+				.primaryKeyField=${this.primaryKeyField}
 			></verdant-document-list>`;
 		}
 
 		if (isPlainObject(result)) {
 			return html`<verdant-document-card
 				.document=${result}
+				.collection=${this.query.collection}
+				.primaryKeyField=${this.primaryKeyField}
 			></verdant-document-card>`;
 		}
 
