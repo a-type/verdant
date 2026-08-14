@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.4.3
+
+### Patch Changes
+
+- e3e6b07: Update diagnostics to include more timeline info
+
 ## 5.4.2
 
 ### Patch Changes
