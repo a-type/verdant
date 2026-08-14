@@ -5,7 +5,14 @@
 	"workspaces": [
 		"packages/*"
 	],
-	"packageManager": "pnpm@10.34.4",
+	"packageManager": "pnpm@11.20.0",
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": "^24.0.0",
+			"onFail": "download"
+		}
+	},
 	"scripts": {
 		"dev": "turbo run dev",
 		"build": "turbo run build",
