@@ -6,8 +6,8 @@
 	"scripts": {
 		"build": "vite build",
 		"dev": "vite build --watch",
-		"test": "vitest",
-		"ci:test:unit": "vitest run",
+		"test": "vitest --passWithNoTests",
+		"ci:test:unit": "vitest run --passWithNoTests",
 		"typecheck": "tsc --noEmit",
 		"ext:run": "web-ext run --source-dir dist",
 		"ext:lint": "web-ext lint --source-dir dist",
