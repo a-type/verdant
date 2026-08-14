@@ -32,7 +32,7 @@
 	"repository": "https://github.com/a-type/verdant",
 	"author": "Grant Forrest <gaforres@gmail.com>",
 	"devDependencies": {
-		"@changesets/cli": "^2.29.8",
+		"@changesets/cli": "^3.0.0",
 		"@types/node": "20.10.5",
 		"playwright": "catalog:",
 		"tsx": "^3.12.1",
