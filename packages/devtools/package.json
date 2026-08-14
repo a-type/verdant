@@ -14,6 +14,9 @@
 		"ext:build": "web-ext build --source-dir dist --overwrite-dest",
 		"ext:sign": "web-ext sign --source-dir dist --api-key ${WEB_EXT_API_KEY} --api-secret ${WEB_EXT_API_SECRET} --overwrite-dest"
 	},
+	"dependencies": {
+		"lit": "catalog:"
+	},
 	"devDependencies": {
 		"@types/node": "catalog:",
 		"typescript": "catalog:",

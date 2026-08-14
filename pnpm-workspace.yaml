@@ -28,6 +28,7 @@ catalog:
   better-sqlite3: ^11.10.0
   hono: ^4.9.9
   kysely: 0.28.7
+  lit: ^3.3.3
   playwright: 1.56.1
   react: 19.1.1
   react-dom: 19.1.1

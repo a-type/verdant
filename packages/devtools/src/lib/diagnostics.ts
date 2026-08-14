@@ -1,0 +1,64 @@
+export type QueryTiming = {
+	sweep: number | null;
+	hydration: number | null;
+	total: number | null;
+};
+
+export type QueryDiagnostic = {
+	key: string;
+	collection: string;
+	type: string;
+	status: string;
+	active: boolean;
+	result: unknown;
+	timing: QueryTiming;
+};
+
+export type QueryDiagnostics = {
+	queries: QueryDiagnostic[];
+};
+
+declare const chrome: any;
+
+/**
+ * Polls the inspected window for Verdant client query diagnostics via the
+ * chrome.devtools.inspectedWindow.eval bridge.
+ */
+export function fetchQueryDiagnostics(): Promise<QueryDiagnostics | null> {
+	return new Promise((resolve) => {
+		chrome.devtools.inspectedWindow.eval(
+			'JSON.stringify(window.__VERDANT_CLIENT__?.queries.diagnostics ?? null)',
+			(result: unknown, exceptionInfo: { isException?: boolean }) => {
+				if (exceptionInfo?.isException || typeof result !== 'string') {
+					resolve(null);
+					return;
+				}
+				resolve(JSON.parse(result) as QueryDiagnostics | null);
+			},
+		);
+	});
+}
+
+/**
+ * Repeatedly invokes fetchQueryDiagnostics on an interval, calling the
+ * callback with each result. Returns a function to stop polling.
+ */
+export function pollQueryDiagnostics(
+	callback: (diagnostics: QueryDiagnostics | null) => void,
+	intervalMs = 500,
+): () => void {
+	let cancelled = false;
+
+	const tick = async () => {
+		const diagnostics = await fetchQueryDiagnostics();
+		if (!cancelled) callback(diagnostics);
+	};
+
+	tick();
+	const handle = window.setInterval(tick, intervalMs);
+
+	return () => {
+		cancelled = true;
+		window.clearInterval(handle);
+	};
+}
