@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.4.2
+
+### Patch Changes
+
+- 83852c4: Add diagnostics instrumentation
+
 ## 5.4.1
 
 ### Patch Changes
