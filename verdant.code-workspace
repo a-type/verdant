@@ -33,10 +33,6 @@
 			"path": "packages/tiptap",
 		},
 		{
-			"name": "🔗 Router",
-			"path": "packages/react-router",
-		},
-		{
 			"name": "📦 Create App",
 			"path": "packages/create-app",
 		},

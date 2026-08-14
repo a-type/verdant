@@ -6,6 +6,11 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"repository": {
+		"url": "https://github.com/a-type/verdant",
+		"directory": "packages/create-app",
+		"type": "git"
+	},
 	"bin": {
 		"create-verdant-app": "dist/index.js"
 	},

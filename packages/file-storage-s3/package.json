@@ -19,6 +19,11 @@
 		},
 		"access": "public"
 	},
+	"repository": {
+		"url": "https://github.com/a-type/verdant",
+		"directory": "packages/file-storage-s3",
+		"type": "git"
+	},
 	"files": [
 		"dist/",
 		"src/"

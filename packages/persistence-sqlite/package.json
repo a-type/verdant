@@ -18,6 +18,11 @@
 		},
 		"access": "public"
 	},
+	"repository": {
+		"url": "https://github.com/a-type/verdant",
+		"directory": "packages/persistence-sqlite",
+		"type": "git"
+	},
 	"files": [
 		"dist/",
 		"src/"

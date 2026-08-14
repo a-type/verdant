@@ -45,6 +45,11 @@
 		},
 		"access": "public"
 	},
+	"repository": {
+		"url": "https://github.com/a-type/verdant",
+		"directory": "packages/server",
+		"type": "git"
+	},
 	"files": [
 		"dist/",
 		"src/",

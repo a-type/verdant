@@ -38,6 +38,11 @@
 		},
 		"access": "public"
 	},
+	"repository": {
+		"url": "https://github.com/a-type/verdant",
+		"directory": "packages/tiptap",
+		"type": "git"
+	},
 	"files": [
 		"dist/",
 		"src/"
