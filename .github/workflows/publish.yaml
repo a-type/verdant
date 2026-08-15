@@ -45,8 +45,7 @@ jobs:
     outputs:
       version-dir-artifact-id: ${{ steps.version.outputs.version-dir-artifact-id }}
     permissions:
-      contents: write # to check out repo (actions/checkout) and commit version changes (changesets/action/version)
-      pull-requests: write # to create pull request (changesets/action/version)
+      contents: read
     steps:
       - name: Check out repo
         uses: actions/checkout@v7

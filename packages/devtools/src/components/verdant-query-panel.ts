@@ -54,10 +54,21 @@ export class VerdantQueryPanel extends LitElement {
 
 	private stopPolling: (() => void) | null = null;
 	private schemaPollHandle: number | null = null;
+	private diagnosticsSessionId: number | null = null;
 
 	private recordDiagnostics(diagnostics: QueryDiagnostics | null) {
 		this.diagnostics = diagnostics;
 		if (!diagnostics) return;
+		if (
+			this.diagnosticsSessionId !== null &&
+			diagnostics.sessionId !== undefined &&
+			diagnostics.sessionId !== this.diagnosticsSessionId
+		) {
+			this.queryHistories = {};
+		}
+		if (diagnostics.sessionId !== undefined) {
+			this.diagnosticsSessionId = diagnostics.sessionId;
+		}
 		const observedAt = Date.now();
 		const histories = { ...this.queryHistories };
 		for (const query of diagnostics.queries) {

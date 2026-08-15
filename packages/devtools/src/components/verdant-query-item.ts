@@ -2,7 +2,7 @@ import { css, html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { QueryDiagnostic, QueryHistory } from '../lib/diagnostics.js';
 import { isDocumentList, isPlainObject } from '../lib/documents.js';
-import { formatTiming, sharedStyles } from '../lib/format.js';
+import { formatTimestamp, formatTiming, sharedStyles } from '../lib/format.js';
 import './verdant-document-card.js';
 import './verdant-document-list.js';
 
@@ -102,6 +102,10 @@ export class VerdantQueryItem extends LitElement {
 						<span>${query.active ? 'active' : 'inactive'}</span>
 					</div>
 					<dl>
+						<div>
+							<dt>Started</dt>
+							<dd>${formatTimestamp(query.startedAt)}</dd>
+						</div>
 						<div>
 							<dt>Type</dt>
 							<dd>${query.type}</dd>

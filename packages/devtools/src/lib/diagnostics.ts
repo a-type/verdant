@@ -19,6 +19,7 @@ export type QueryDiagnostic = {
 };
 
 export type QueryDiagnostics = {
+	sessionId?: number;
 	queries: QueryDiagnostic[];
 };
 
@@ -39,7 +40,7 @@ export type QueryHistory = {
  */
 export function fetchQueryDiagnostics(): Promise<QueryDiagnostics | null> {
 	return evalJson<QueryDiagnostics | null>(
-		'JSON.stringify(window.__VERDANT_CLIENT__?.queries.diagnostics ?? null)',
+		'JSON.stringify((() => { const diagnostics = window.__VERDANT_CLIENT__?.queries.diagnostics; return diagnostics ? { ...diagnostics, sessionId: performance.timeOrigin } : null; })())',
 	).catch(() => null);
 }
 
