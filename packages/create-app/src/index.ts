@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+/// <reference types="node" />
 
 import { confirm, intro, isCancel, outro, spinner, text } from '@clack/prompts';
-import { ExecOptions, exec } from 'child_process';
 import { cpTpl } from 'cp-tpl';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as url from 'url';
+import { ExecOptions, exec } from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as url from 'node:url';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 

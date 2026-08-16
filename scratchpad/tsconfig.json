@@ -14,7 +14,6 @@
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
 		"jsx": "preserve",
-		"downlevelIteration": true,
 		"experimentalDecorators": true,
 		"isolatedModules": true,
 		"customConditions": ["development"]
