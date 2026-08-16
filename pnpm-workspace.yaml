@@ -21,21 +21,21 @@ allowBuilds:
   workerd: true
 
 catalog:
-  '@hono/node-server': ^1.19.5
+  '@hono/node-server': ^1.19.17
   '@types/node': 24.6.1
-  '@types/react': 19.1.16
-  '@types/react-dom': 19.1.9
-  '@vitejs/plugin-react': ^5.1.0
-  '@vitest/browser-playwright': ^4.0.8
+  '@types/react': 19.2.18
+  '@types/react-dom': 19.2.4
+  '@vitejs/plugin-react': ^5.2.0
+  '@vitest/browser-playwright': ^4.1.10
   better-sqlite3: ^11.10.0
-  hono: ^4.9.9
+  hono: ^4.13.2
   kysely: 0.28.7
   lit: ^3.3.3
   playwright: 1.56.1
-  react: 19.1.1
-  react-dom: 19.1.1
-  typescript: 5.9.3
-  vite: ^7.2.2
-  vitest: ^4.0.8
-  vitest-browser-react: ^2.0.2
+  react: 19.2.8
+  react-dom: 19.2.8
+  typescript: 7.0.2
+  vite: ^7.3.6
+  vitest: ^4.1.10
+  vitest-browser-react: ^2.2.0
   web-ext: ^8.10.0

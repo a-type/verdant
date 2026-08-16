@@ -1229,7 +1229,7 @@ export interface GeneratedHooks<Presence, Profile> {
   useOneTodo: <Config extends HookConfig<TodoFilter>>(
     config?: Config,
   ) => Todo | null;
-  useOneTodosUnsuspended: <Config extends HookConfig<TodoFilter>>(
+  useOneTodoUnsuspended: <Config extends HookConfig<TodoFilter>>(
     config?: Config,
   ) => { data: Todo | null; status: QueryStatus };
   useAllTodos: <Config extends HookConfig<TodoFilter>>(
@@ -1276,7 +1276,7 @@ export interface GeneratedHooks<Presence, Profile> {
   useOnePerson: <Config extends HookConfig<PersonFilter>>(
     config?: Config,
   ) => Person | null;
-  useOnePeopleUnsuspended: <Config extends HookConfig<PersonFilter>>(
+  useOnePersonUnsuspended: <Config extends HookConfig<PersonFilter>>(
     config?: Config,
   ) => { data: Person | null; status: QueryStatus };
   useAllPeople: <Config extends HookConfig<PersonFilter>>(
@@ -1323,7 +1323,7 @@ export interface GeneratedHooks<Presence, Profile> {
   useOnePost: <Config extends HookConfig<PostFilter>>(
     config?: Config,
   ) => Post | null;
-  useOnePostsUnsuspended: <Config extends HookConfig<PostFilter>>(
+  useOnePostUnsuspended: <Config extends HookConfig<PostFilter>>(
     config?: Config,
   ) => { data: Post | null; status: QueryStatus };
   useAllPosts: <Config extends HookConfig<PostFilter>>(

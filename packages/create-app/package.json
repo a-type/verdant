@@ -28,7 +28,8 @@
 		"fs-extra": "^11.1.0"
 	},
 	"devDependencies": {
-		"@types/node": "^20.10.5",
-		"typescript": "^5.4.2"
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	}
 }

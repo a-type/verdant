@@ -133,7 +133,7 @@ export interface GeneratedHooks<Presence, Profile> {
 use${pascalName}(id: string, config?: { skip?: boolean }): ${pascalName} | null;
 use${pascalName}Unsuspended(id: string, config?: { skip?: boolean }): { data: ${pascalName} | null; status: QueryStatus };
 useOne${pascalName}: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => ${pascalName} | null;
-useOne${pascalPlural}Unsuspended: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => { data: ${pascalName} | null; status: QueryStatus };
+useOne${pascalName}Unsuspended: <Config extends HookConfig<${pascalName}Filter>>(config?: Config) => { data: ${pascalName} | null; status: QueryStatus };
 useAll${pascalPlural}: <Config extends HookConfig<${pascalName}Filter>>(config?: Config & { limit?: number }) => ${pascalName}[];
 useAll${pascalPlural}Unsuspended: <Config extends HookConfig<${pascalName}Filter>>(config?: Config & { limit?: number }) => { data: ${pascalName}[]; status: QueryStatus };
 useAll${pascalPlural}Paginated: <Config extends HookConfig<${pascalName}Filter> & { pageSize?: number, suspend?: false }>(config?: Config) => [
