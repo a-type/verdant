@@ -8,6 +8,7 @@ import {
 	QueryRun,
 	QueryTiming,
 } from './diagnostics.js';
+import { enqueueQueryRun } from './QueryBatcher.js';
 import { filterResultSet } from './utils.js';
 
 export type BaseQueryEvents = {
@@ -249,7 +250,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		}
 		// no status change needed if already in a 'running' status.
 
-		this._executionPromise = this.run()
+		this._executionPromise = enqueueQueryRun(this.context, this.run)
 			.then(() => this._value)
 			.catch((err) => {
 				if (err instanceof Error) {
