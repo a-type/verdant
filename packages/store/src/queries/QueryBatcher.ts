@@ -1,4 +1,4 @@
-import { Context } from '../context/context.js';
+import type { Context } from '../context/context.js';
 
 const BATCH_SIZE = 20;
 

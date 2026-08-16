@@ -404,6 +404,25 @@ describe('query reactivity', () => {
 		// revalidating on change is tested elsewhere below.
 	});
 
+	it('revalidates on the leading and trailing edges of collection changes', async () => {
+		const storage = await createTestStorage();
+		const query = storage.todos.findAll();
+		await query.resolved;
+		const execute = vi.spyOn(query, 'execute');
+		vi.useFakeTimers();
+
+		const entityEvents = (storage as any).context.entityEvents;
+		entityEvents.emit('collectionsChanged', ['todos']);
+		entityEvents.emit('collectionsChanged', ['todos']);
+		entityEvents.emit('collectionsChanged', ['todos']);
+		expect(execute).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(49);
+		expect(execute).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(execute).toHaveBeenCalledTimes(2);
+	});
+
 	it('updates a get query when the item is deleted', async () => {
 		const client = await createTestStorage();
 		const query = await getQuery(client);

@@ -1,5 +1,5 @@
 import { EventSubscriber } from '@verdant-web/common';
-import { Context } from '../context/context.js';
+import type { Context } from '../context/context.js';
 import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../utils/Disposable.js';
 import {
@@ -29,11 +29,7 @@ export type QueryStatus = 'initial' | 'initializing' | 'revalidating' | 'ready';
 export const ON_ALL_UNSUBSCRIBED = Symbol('ON_ALL_UNSUBSCRIBED');
 export const UPDATE = Symbol('UPDATE');
 
-// export interface BaseQuery<T> {
-// 	subscribe(event: 'change', callback: (value: T) => void): () => void;
-// 	subscribe(event: 'statusChange', callback: (status: QueryStatus) => void): () => void;
-// 	subscribe(callback: (value: T) => void): () => void;
-// }
+const REVALIDATION_DEBOUNCE = 50;
 
 export abstract class BaseQuery<T> extends Disposable {
 	private _rawValue;
@@ -51,6 +47,8 @@ export abstract class BaseQuery<T> extends Disposable {
 	};
 	private _startedAt: number | null = null;
 	private _timingHistory: QueryRun[] = [];
+	private _revalidationTimeout: ReturnType<typeof setTimeout> | undefined;
+	private _needsTrailingRevalidation = false;
 
 	protected context;
 
@@ -81,6 +79,7 @@ export abstract class BaseQuery<T> extends Disposable {
 		this.key = key;
 		this.collection = collection;
 		this.type = this.constructor.name;
+		this.addDispose(() => clearTimeout(this._revalidationTimeout));
 		const shouldUpdateFn =
 			shouldUpdate ||
 			((collections: string[]) => collections.includes(collection));
@@ -89,17 +88,30 @@ export abstract class BaseQuery<T> extends Disposable {
 				'collectionsChanged',
 				(collections) => {
 					if (shouldUpdateFn(collections)) {
-						this.context.log('info', 'Updating query', this.key);
-						// immediately refilter the result set - deleted
-						// entities will already be nulled out
-						// this.refreshValue();
-						this.execute();
+						this.revalidate();
 					}
 				},
 			),
 		);
 		// TODO: subscribe to document changes and update if necessary.
 	}
+
+	private revalidate = () => {
+		if (this._revalidationTimeout !== undefined) {
+			this._needsTrailingRevalidation = true;
+			clearTimeout(this._revalidationTimeout);
+		} else {
+			this.execute();
+		}
+
+		this._revalidationTimeout = setTimeout(() => {
+			this._revalidationTimeout = undefined;
+			if (this._needsTrailingRevalidation) {
+				this._needsTrailingRevalidation = false;
+				this.execute();
+			}
+		}, REVALIDATION_DEBOUNCE);
+	};
 
 	get current() {
 		return this._value;
