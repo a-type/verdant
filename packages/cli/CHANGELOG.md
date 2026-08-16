@@ -1,5 +1,11 @@
 # @verdant-web/cli
 
+## 5.2.1
+
+### Patch Changes
+
+- 01383c1: Fix incorrect React hook name generation for findOneXXXUnsuspended
+
 ## 5.2.0
 
 ### Minor Changes
