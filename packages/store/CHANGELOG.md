@@ -1,5 +1,11 @@
 # @lo-fi/web
 
+## 5.4.4
+
+### Patch Changes
+
+- f4fc6b1: Batch query execution starts to yield to the event loop when many queries run at once, and debounce repeated query revalidation during bursts of incoming changes.
+
 ## 5.4.3
 
 ### Patch Changes
