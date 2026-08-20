@@ -63,12 +63,13 @@ it('can export data and import it even after a schema migration', async () => {
 		tags: ['a', 'b', 'c'],
 		file: createTestFile('file 1'),
 	});
-	await client.items.put({
+	const item3 = await client.items.put({
 		id: '3',
 		contents: 'foo',
 		tags: ['a', 'b'],
 		file: createTestFile('file 2 a different file'),
 	});
+	item3.get('file')!.setAlt('A file with an alt text');
 
 	await client.entities.flushAllBatches();
 
@@ -208,6 +209,7 @@ it('can export data and import it even after a schema migration', async () => {
 		{
 			contents: 'world',
 			file: {
+				alt: null,
 				id: expect.any(String),
 				url: expect.any(String),
 				name: 'test.txt',
@@ -222,6 +224,7 @@ it('can export data and import it even after a schema migration', async () => {
 		{
 			contents: 'foo',
 			file: {
+				alt: 'A file with an alt text',
 				id: expect.any(String),
 				url: expect.any(String),
 				name: 'test.txt',

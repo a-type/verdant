@@ -48,6 +48,12 @@ it(
 		// when initially uploaded, files have a local blob: URL
 		const aFileSnapshot = a_item.get('image')!.getSnapshot();
 		expect(aFileSnapshot.url?.startsWith('blob:')).toBe(true);
+		expect(aFileSnapshot.alt).toBeNull();
+
+		const aFile = a_item.get('image')!;
+		aFile.setAlt('A basket of apples');
+		expect(aFile.alt).toBe('A basket of apples');
+		expect(aFile.getSnapshot().alt).toBe('A basket of apples');
 
 		const b_itemQuery = clientB.items.get(a_item.get('id'));
 		await waitForQueryResult(b_itemQuery);
@@ -58,12 +64,18 @@ it(
 		context.log('image synced to B');
 		const file = b_item.get('image')!;
 		await waitForFileLoaded(file);
+		await waitForCondition(
+			() => file.alt === 'A basket of apples',
+			5000,
+			'file alt text to sync to B',
+		);
 		context.log('image loaded');
 		expect(file.error).toBeNull();
 		expect(file.failed).toBe(false);
 		expect(file.url).toBeTruthy();
 
 		const bFileSnapshot = file.getSnapshot();
+		expect(bFileSnapshot.alt).toBe('A basket of apples');
 		// after sync, the file URL should be a remote URL, not a blob:
 		expect(bFileSnapshot.url).not.toMatch(/^blob/);
 

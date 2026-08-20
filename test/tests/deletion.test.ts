@@ -5,7 +5,7 @@ import { waitForQueryResult } from '../lib/waits.js';
 
 it('cleans up metadata after deletion but can still restore the document', async () => {
 	const client = await createTestClient({
-		library: 'test',
+		library: 'deletion-1',
 		user: 'test',
 		// logId: 'A',
 	});
@@ -56,7 +56,7 @@ it('cleans up metadata after deletion but can still restore the document', async
 
 it("correctly deleteSelf's various sub-objects", async () => {
 	const client = await createTestClient({
-		library: 'test',
+		library: 'deletion-2',
 		user: 'test',
 		// logId: 'B',
 	});

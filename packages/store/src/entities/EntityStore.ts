@@ -389,7 +389,7 @@ export class EntityStore extends Disposable {
 			'files to new entity',
 			oid,
 		);
-		fileRefs.forEach((file) => this.files.add(file, entity));
+		fileRefs.forEach((file) => this.files.add(file));
 		return entity;
 	};
 

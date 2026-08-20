@@ -27,7 +27,7 @@ import {
 	validateEntityField,
 } from '@verdant-web/common';
 import { Context } from '../context/context.js';
-import { CHILD_FILE_CHANGED } from '../files/EntityFile.js';
+import { EntityFileContext } from '../files/EntityFile.js';
 import { FileManager } from '../files/FileManager.js';
 import { processValueFiles } from '../files/utils.js';
 import { ClientWithCollections, EntityFile } from '../index.js';
@@ -751,10 +751,26 @@ export class Entity<
 		this.emit('changeDeep', target, ev);
 		this.parent?.deepChange(target, ev);
 	};
-	[CHILD_FILE_CHANGED] = (file: EntityFile) => {
-		// consistent with prior behavior, but kind of arbitrary.
-		this.deepChange(this, { isLocal: false, oid: this.oid });
-	};
+	private createFileContext = (key: any): EntityFileContext => ({
+		oid: this.oid,
+		key,
+		getFileRef: () => {
+			const file = this.rawView?.[key];
+			return isFileRef(file) ? file : null;
+		},
+		applyFileRef: (file) => {
+			if (this.readonlyKeys.includes(key as string)) {
+				throw new Error(`Cannot set readonly key ${key.toString()}`);
+			}
+			this.addPendingOperations(
+				this.isList
+					? this.patchCreator.createListSet(this.oid, key, file)
+					: this.patchCreator.createSet(this.oid, key, file),
+			);
+		},
+		subscribe: (callback) => this.subscribe('change', callback),
+		onChange: () => this.deepChange(this, { isLocal: false, oid: this.oid }),
+	});
 
 	private getChild = (key: any, oid: ObjectIdentifier) => {
 		const schema = getChildFieldSchema(this.schema, key);
@@ -834,7 +850,7 @@ export class Entity<
 				const file = this.files.get(child.id, {
 					downloadRemote: !!fieldSchema.downloadRemote,
 					ctx: this.ctx,
-					parent: this,
+					fileContext: this.createFileContext(key),
 				});
 
 				return file as KeyValue[Key];
@@ -1019,7 +1035,7 @@ export class Entity<
 				});
 			}
 		}
-		return processValueFiles(value, (file) => this.files.add(file, this));
+		return processValueFiles(value, (file) => this.files.add(file));
 	};
 
 	private getDeleteMode = (key: any) => {

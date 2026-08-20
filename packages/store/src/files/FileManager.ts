@@ -1,15 +1,20 @@
 import { FileData } from '@verdant-web/common';
 import { Context } from '../context/context.js';
-import { Entity } from '../entities/Entity.js';
 import { Disposable } from '../internal.js';
 import { Sync } from '../sync/Sync.js';
-import { EntityFile, MARK_FAILED, UPDATE } from './EntityFile.js';
+import {
+	EntityFile,
+	EntityFileContext,
+	MARK_FAILED,
+	UPDATE,
+} from './EntityFile.js';
 
 export class FileManager extends Disposable {
 	private sync;
 	private context;
 
-	private cache = new Map<string, EntityFile>();
+	private cache = new Map<string, WeakRef<EntityFile>>();
+	private fileData = new Map<string, WeakRef<FileData>>();
 
 	constructor({ sync, context }: { sync: Sync; context: Context }) {
 		super();
@@ -23,24 +28,17 @@ export class FileManager extends Disposable {
 		);
 	}
 
-	add = async (file: FileData, parent: Entity) => {
-		// immediately cache the file
-		let entityFile = this.cache.get(file.id);
-		if (!entityFile) {
-			entityFile = new EntityFile(file.id, { ctx: this.context, parent });
-			this.cache.set(file.id, entityFile);
-		}
-
+	add = async (file: FileData) => {
 		if (!file.remote) {
 			// immediately update local files.
-			entityFile[UPDATE](file);
+			this.updateFileData(file);
 		}
 		// this will download any original remote file and trigger a re-upload to the
 		// new file's identity, in addition to storing it on disk
 		const processedFile = await (
 			await this.context.files
 		).add(file, { cloneRemote: true });
-		entityFile[UPDATE](processedFile);
+		this.updateFileData(processedFile);
 	};
 
 	/**
@@ -49,22 +47,49 @@ export class FileManager extends Disposable {
 	 */
 	get = (
 		id: string,
-		options: { downloadRemote?: boolean; ctx: Context; parent: Entity },
+		options: {
+			downloadRemote?: boolean;
+			ctx: Context;
+			fileContext: EntityFileContext;
+		},
 	) => {
-		if (this.cache.has(id)) {
-			return this.cache.get(id)!;
+		const cacheKey = `${options.fileContext.oid}:${String(options.fileContext.key)}:${id}`;
+		const cachedFile = this.cache.get(cacheKey)?.deref();
+		if (cachedFile) {
+			return cachedFile;
 		}
+		this.cache.delete(cacheKey);
 		const file = new EntityFile(id, options);
-		this.cache.set(id, file);
-		this.load(file);
+		this.cache.set(cacheKey, this.context.weakRef(file));
+		const data = this.fileData.get(id)?.deref();
+		if (data) {
+			file[UPDATE](data);
+		} else {
+			this.fileData.delete(id);
+			this.load(file);
+		}
 		return file;
+	};
+
+	private updateFileData = (data: FileData) => {
+		this.fileData.set(data.id, this.context.weakRef(data));
+		for (const [key, fileRef] of this.cache) {
+			const file = fileRef.deref();
+			if (!file) {
+				this.cache.delete(key);
+				continue;
+			}
+			if (file.id === data.id) {
+				file[UPDATE](data);
+			}
+		}
 	};
 
 	private load = async (file: EntityFile) => {
 		const fileData = await (await this.context.files).get(file.id);
 		// immediately apply any file data we have
 		if (fileData) {
-			file[UPDATE](fileData);
+			this.updateFileData(fileData);
 		}
 
 		if (!fileData?.url && (!fileData || fileData.remote)) {
@@ -96,7 +121,7 @@ export class FileManager extends Disposable {
 						url: result.data.url,
 					};
 					await (await this.context.files).update(copyWithUrl);
-					file[UPDATE](result.data);
+					this.updateFileData(result.data);
 				} else {
 					this.context.log('error', 'Failed to load file', result);
 					if (!fileData) {

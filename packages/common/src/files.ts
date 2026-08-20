@@ -3,15 +3,17 @@ import { isObject } from './utils.js';
 export type FileRef = {
 	'@@type': 'file';
 	id: string;
+	alt?: string | null;
 };
 
 export function isFileRef(value: any): value is FileRef {
 	return value && value['@@type'] === 'file';
 }
-export function createFileRef(id: string): FileRef {
+export function createFileRef(id: string, alt?: string | null): FileRef {
 	return {
 		'@@type': 'file',
 		id,
+		alt,
 	};
 }
 

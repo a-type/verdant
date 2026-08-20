@@ -73,18 +73,36 @@ it('can store and cleanup local files', async () => {
 		// this only works in browsers where the url is the same
 		// expect(file2.url).toBe(file.url);
 	}
+	file2.setAlt('First description');
+	file2.setAlt('Second description');
+	file2.setAlt('Final description');
+	await clientA2.entities.flushAllBatches();
+	await clientA2.__manualRebase();
+	await waitForEverythingToRebase(clientA2);
+	expect(file2.getSnapshot().alt).toBe('Final description');
+
+	await clientA2.close();
+
+	const clientA2Reloaded = await createTestClient({
+		server,
+		user: 'User A',
+	});
+	const reloadedItem = await clientA2Reloaded.items.get(a_item.get('id'))
+		.resolved;
+	assert(!!reloadedItem);
+	expect(reloadedItem.get('image')!.alt).toBe('Final description');
 
 	// now try deleting the file
 	context.log('Deleting file');
-	a_item2.delete('image');
-	await clientA2.entities.flushAllBatches();
+	reloadedItem.delete('image');
+	await clientA2Reloaded.entities.flushAllBatches();
 
 	// rebase has to trigger to mark files for deletion
-	await clientA2.__manualRebase();
-	await waitForEverythingToRebase(clientA2);
+	await clientA2Reloaded.__manualRebase();
+	await waitForEverythingToRebase(clientA2Reloaded);
 
 	// need to restart the client to trigger deleted cleanup
-	await clientA2.close();
+	await clientA2Reloaded.close();
 
 	const clientA3 = await createTestClient({
 		server,

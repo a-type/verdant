@@ -1,6 +1,11 @@
-import { EventSubscriber, FileData } from '@verdant-web/common';
+import {
+	EventSubscriber,
+	FileData,
+	FileRef,
+	ObjectIdentifier,
+	PropertyName,
+} from '@verdant-web/common';
 import { Context } from '../context/context.js';
-import { Entity } from '../entities/Entity.js';
 
 export type EntityFileEvents = {
 	change: () => void;
@@ -9,12 +14,23 @@ export type EntityFileEvents = {
 export const UPDATE = Symbol('entity-file-update');
 export const MARK_FAILED = Symbol('entity-file-mark-failed');
 
-// this one goes on Entity
-export const CHILD_FILE_CHANGED = Symbol('child-file-changed');
+export interface EntityFileContext {
+	readonly oid: ObjectIdentifier;
+	readonly key: PropertyName;
+	getFileRef(): FileRef | null;
+	applyFileRef(file: FileRef): void;
+	subscribe(callback: () => void): () => void;
+	onChange(): void;
+}
 
 export type EntityFileSnapshot = {
 	id: string;
 	url?: string | null;
+	name: string;
+	remote: boolean;
+	type: string;
+	file?: Blob | null;
+	alt: string | null;
 };
 
 /**
@@ -30,26 +46,29 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	private _failedReason: string | undefined;
 	private _downloadRemote = false;
 	private _uploaded = false;
+	private _alt: string | null = null;
 	private ctx: Context;
 	private unsubscribes: (() => void)[] = [];
-	private parent: Entity;
+	private fileContext: EntityFileContext;
 
 	constructor(
 		public readonly id: string,
 		{
 			downloadRemote = false,
 			ctx,
-			parent,
+			fileContext,
 		}: {
 			downloadRemote?: boolean;
 			ctx: Context;
-			parent: Entity;
+			fileContext: EntityFileContext;
 		},
 	) {
 		super();
 		this.ctx = ctx;
-		this.parent = parent;
+		this.fileContext = fileContext;
 		this._downloadRemote = downloadRemote;
+		this._alt = fileContext.getFileRef()?.alt ?? null;
+		this.unsubscribes.push(fileContext.subscribe(this.onContextChange));
 
 		this.unsubscribes.push(
 			this.ctx.internalEvents.subscribe(`fileUploaded:${id}`, this.onUploaded),
@@ -68,9 +87,31 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 	get error() {
 		return this._failedReason || null;
 	}
+	get alt() {
+		return this._alt;
+	}
+
+	setAlt = (alt: string | null) => {
+		const file = this.fileContext.getFileRef();
+		if (!file || file.id !== this.id) {
+			throw new Error(
+				'Cannot set alt text on a file which is no longer present',
+			);
+		}
+		if ((file.alt ?? null) === alt) return;
+		this.fileContext.applyFileRef({ ...file, alt });
+	};
+
+	private onContextChange = () => {
+		const nextAlt = this.fileContext.getFileRef()?.alt ?? null;
+		if (nextAlt !== this._alt) {
+			this._alt = nextAlt;
+			this.emitChange();
+		}
+	};
 
 	private emitChange() {
-		this.parent[CHILD_FILE_CHANGED](this);
+		this.fileContext.onChange();
 		this.emit('change');
 	}
 
@@ -135,7 +176,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 		this.dispose();
 	};
 
-	getSnapshot(): FileData {
+	getSnapshot(): EntityFileSnapshot {
 		return {
 			id: this.id,
 			url: this._fileData?.url ?? this._objectUrl ?? undefined,
@@ -143,6 +184,7 @@ export class EntityFile extends EventSubscriber<EntityFileEvents> {
 			remote: this._fileData?.remote ?? false,
 			type: this.type ?? '',
 			file: this._fileData?.file,
+			alt: this.alt,
 		};
 	}
 }
