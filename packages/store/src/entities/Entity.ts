@@ -759,8 +759,14 @@ export class Entity<
 	private getChild = (key: any, oid: ObjectIdentifier) => {
 		const schema = getChildFieldSchema(this.schema, key);
 		if (!schema) {
+			let schemaString = '';
+			try {
+				schemaString = JSON.stringify(this.schema);
+			} catch {
+				schemaString = '<unable to stringify schema>';
+			}
 			throw new Error(
-				`No schema for key ${String(key)} in ${JSON.stringify(this.schema)}`,
+				`No schema for key ${String(key)} in ${schemaString} (${this.oid})`,
 			);
 		}
 		return this.entityFamily.get({
