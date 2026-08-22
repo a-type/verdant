@@ -1,5 +1,11 @@
 # @verdant-web/common
 
+## 3.2.2
+
+### Patch Changes
+
+- f3c0806: Add alt text built-in to files. All files have an optional `alt` property which is synchronized with them. Now it's easy to support alt text for images!
+
 ## 3.2.1
 
 ### Patch Changes

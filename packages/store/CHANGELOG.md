@@ -1,5 +1,17 @@
 # @lo-fi/web
 
+## 5.5.0
+
+### Minor Changes
+
+- f3c0806: Add alt text built-in to files. All files have an optional `alt` property which is synchronized with them. Now it's easy to support alt text for images!
+
+### Patch Changes
+
+- 9bf45d1: Guard against unserializable entity schemas when logging schema errors
+- Updated dependencies [f3c0806]
+  - @verdant-web/common@3.2.2
+
 ## 5.4.4
 
 ### Patch Changes
