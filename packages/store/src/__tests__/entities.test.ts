@@ -583,9 +583,9 @@ describe('entities', () => {
 
 		fileList.moveItem(file1Ref, 2);
 
-		expect(fileList.get(0)).toBe(file2Ref);
-		expect(fileList.get(1)).toBe(file3Ref);
-		expect(fileList.get(2)).toBe(file1Ref);
+		expect(fileList.get(0).uid).toBe(file2Ref.uid);
+		expect(fileList.get(1).uid).toBe(file3Ref.uid);
+		expect(fileList.get(2).uid).toBe(file1Ref.uid);
 	});
 
 	it('should return nullish for missing map items', async () => {

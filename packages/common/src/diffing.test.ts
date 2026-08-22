@@ -1030,6 +1030,7 @@ describe('generating diff operations', () => {
 				      "op": "list-push",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-3",
 				      },
 				    },
@@ -1068,6 +1069,7 @@ describe('generating diff operations', () => {
 				      "op": "list-insert",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1081,6 +1083,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1094,6 +1097,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-3",
 				      },
 				    },
@@ -1137,6 +1141,7 @@ describe('generating diff operations', () => {
 				      "op": "list-set",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-2",
 				      },
 				    },
@@ -1150,6 +1155,7 @@ describe('generating diff operations', () => {
 				      "op": "list-set",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-3",
 				      },
 				    },
@@ -1163,6 +1169,7 @@ describe('generating diff operations', () => {
 				      "op": "list-set",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1176,6 +1183,7 @@ describe('generating diff operations', () => {
 				      "op": "list-set",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-1",
 				      },
 				    },
@@ -1216,6 +1224,7 @@ describe('generating diff operations', () => {
 				      "op": "list-insert",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1229,6 +1238,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1269,6 +1279,7 @@ describe('generating diff operations', () => {
 				      "op": "list-insert",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-3",
 				      },
 				    },
@@ -1282,6 +1293,7 @@ describe('generating diff operations', () => {
 				      "op": "list-insert",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1295,6 +1307,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1308,6 +1321,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-3",
 				      },
 				    },
@@ -1348,6 +1362,7 @@ describe('generating diff operations', () => {
 				      "op": "list-insert",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1361,6 +1376,7 @@ describe('generating diff operations', () => {
 				      "op": "list-remove",
 				      "value": {
 				        "@@type": "file",
+				        "alt": undefined,
 				        "id": "file-4",
 				      },
 				    },
@@ -1614,6 +1630,7 @@ describe('generating diff operations', () => {
 			      "op": "set",
 			      "value": {
 			        "@@type": "file",
+			        "alt": undefined,
 			        "id": "abc456",
 			      },
 			    },
@@ -1627,6 +1644,7 @@ describe('generating diff operations', () => {
 			      "op": "list-remove",
 			      "value": {
 			        "@@type": "file",
+			        "alt": undefined,
 			        "id": "ghi789",
 			      },
 			    },
