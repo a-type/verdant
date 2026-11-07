@@ -1,5 +1,17 @@
 # @verdant-web/cloudflare
 
+## 0.5.0
+
+### Minor Changes
+
+- a084120: Presence now tracks all recently active replicas for each user (`UserInfo.replicaIds`), so multiple devices for the same user correctly upgrade from polling to WebSockets. The client's `selfReplicaIds` is rebuilt from server data so devices which leave are forgotten, and clients downgrade back to polling when they are alone. Push/pull clients also receive current presence in operation acknowledgements, letting them discover peers as soon as they make changes. Global ack consensus now considers every active replica of a user.
+
+### Patch Changes
+
+- Updated dependencies [a084120]
+  - @verdant-web/common@3.3.0
+  - @verdant-web/server@4.3.0
+
 ## 0.4.6
 
 ### Patch Changes
