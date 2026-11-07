@@ -134,35 +134,42 @@ export class PresenceManager<
 		let selfChanged = false;
 		const peerIdsSet = new Set<string>(this.peerIds);
 
+		const peerSnapshot =
+			message.type === 'sync-resp' ||
+			(message.type === 'server-ack' && message.peerPresence)
+				? message.peerPresence
+				: undefined;
+
 		if (message.type === 'presence-changed') {
 			if (this.isSelf(localReplicaInfo, message.userInfo)) {
-				this._self = message.userInfo;
-				this._selfReplicaIds.add(message.userInfo.replicaId);
+				this.updateSelf(localReplicaInfo, message.userInfo);
 				selfChanged = true;
-				this.emit('selfChanged', message.userInfo);
 			} else {
 				peerIdsSet.add(message.userInfo.id);
 				this._peers[message.userInfo.id] = message.userInfo;
 				peersChanged = true;
 				this.emit('peerChanged', message.userInfo.id, message.userInfo);
 			}
-		} else if (message.type === 'sync-resp') {
+		} else if (peerSnapshot) {
 			// reset to provided presence data, which includes all peers.
+			const previousPeerIds = this._peerIds;
 			this._peers = {};
 			peerIdsSet.clear();
 
-			for (const [id, userInfo] of Object.entries(message.peerPresence)) {
+			for (const [id, userInfo] of Object.entries(peerSnapshot)) {
 				if (this.isSelf(localReplicaInfo, userInfo)) {
-					this._self = userInfo;
-					this._selfReplicaIds.add(userInfo.replicaId);
+					this.updateSelf(localReplicaInfo, userInfo);
 					selfChanged = true;
-					this.emit('selfChanged', userInfo);
 				} else {
 					peersChanged = true;
 					peerIdsSet.add(id);
 					this._peers[id] = userInfo;
 					this.emit('peerChanged', id, userInfo);
 				}
+			}
+			// also notify when peers have all left
+			if (previousPeerIds.length !== peerIdsSet.size) {
+				peersChanged = true;
 			}
 		} else if (message.type === 'presence-offline') {
 			peerIdsSet.delete(message.userId);
@@ -180,6 +187,25 @@ export class PresenceManager<
 		if (peersChanged || selfChanged) {
 			this.emit('change');
 		}
+	};
+
+	private updateSelf = (
+		localReplicaInfo: LocalReplicaInfo,
+		userInfo: UserInfo<Profile, Presence>,
+	) => {
+		this._self = userInfo;
+		if (userInfo.replicaIds) {
+			// the server reports the full set of this user's active replicas,
+			// so replace rather than accumulate; that way replicas which go
+			// away are forgotten.
+			this._selfReplicaIds = new Set([
+				localReplicaInfo.id,
+				...userInfo.replicaIds,
+			]);
+		} else {
+			this._selfReplicaIds.add(userInfo.replicaId);
+		}
+		this.emit('selfChanged', userInfo);
 	};
 
 	update = async (presence: Partial<Presence>) => {

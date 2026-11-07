@@ -1,12 +1,9 @@
-import {
-	initialInternalPresence,
-	UserInfo,
-	UserInfoUpdate,
-} from '@verdant-web/common';
+import { initialInternalPresence } from '@verdant-web/common';
 import {
 	Logger,
 	PresenceStorage,
 	PresenceStorageItem,
+	PresenceStorageUpdate,
 } from '@verdant-web/server/internals';
 
 const REMOVAL_TIMEOUT = 60 * 60 * 1000; // 1 hour
@@ -48,7 +45,7 @@ export class DurableObjectPresenceStorage implements PresenceStorage {
 
 	set = async (
 		userId: string,
-		userInfo: UserInfoUpdate,
+		userInfo: PresenceStorageUpdate,
 		profile: any,
 		expiresAt: number,
 	) => {
@@ -79,7 +76,7 @@ export class DurableObjectPresenceStorage implements PresenceStorage {
 		return undefined;
 	};
 
-	all: () => Promise<Record<string, UserInfo<any, any>>> = () => {
+	all: () => Promise<Record<string, PresenceStorageItem>> = () => {
 		return this.getMap();
 	};
 

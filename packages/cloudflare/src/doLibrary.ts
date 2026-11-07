@@ -28,6 +28,7 @@ import { createDurableObjectSqliteExecutor } from './sql.js';
 interface SocketMeta {
 	tokenInfo: TokenInfo;
 	key: string;
+	replicaId?: string;
 }
 
 export interface DurableObjectLibraryConfig {
@@ -79,6 +80,7 @@ export class DurableObjectLibrary {
 				this.clientConnections.addSocket(info.key, ws, info.tokenInfo, {
 					// we manually remove when the DO detects close instead
 					disableAutoRemoveOnClose: true,
+					replicaId: info.replicaId,
 				});
 			}
 		});
@@ -318,7 +320,8 @@ export class DurableObjectLibrary {
 		// the DO may be woken up from hibernation by a message, never
 		// going through the fetch path, so ensure initialization here.
 		await this.#restore();
-		const { tokenInfo, key } = this.#getSocketInfo(ws);
+		const meta = this.#getSocketInfo(ws);
+		const { tokenInfo, key } = meta;
 		const msg = JSON.parse(message.toString()) as ClientMessage | null;
 		if (!msg) {
 			throw new VerdantError(
@@ -326,6 +329,17 @@ export class DurableObjectLibrary {
 				undefined,
 				'Invalid message format',
 			);
+		}
+		// remember the socket's replica across hibernation so messages
+		// without a replica ID (heartbeats) can still be attributed.
+		if (
+			'replicaId' in msg &&
+			msg.type !== 'disconnecting' &&
+			meta.replicaId !== msg.replicaId
+		) {
+			meta.replicaId = msg.replicaId;
+			ws.serializeAttachment(meta);
+			this.#socketInfoCache.set(ws, meta);
 		}
 		await this.library.handleMessage(msg, key, tokenInfo);
 	};

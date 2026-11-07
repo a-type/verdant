@@ -15,6 +15,13 @@ export interface UserInfo<Profile, Presence> {
 	replicaId: string;
 
 	/**
+	 * All replica clients for this user which the server has
+	 * seen recently, including `replicaId`. Older servers
+	 * may not provide this.
+	 */
+	replicaIds?: string[];
+
+	/**
 	 * This is the user's server profile. This data is associated
 	 * with the logged in user of the app and cannot be modified
 	 * by the local replica directly.

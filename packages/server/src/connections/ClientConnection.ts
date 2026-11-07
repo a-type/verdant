@@ -8,6 +8,8 @@ import { MessageSender } from './MessageSender.js';
 import { Presence, PresenceStorage } from './Presence.js';
 
 abstract class ClientConnection {
+	abstract readonly type: 'request' | 'fetch' | 'websocket';
+
 	constructor(
 		readonly key: string,
 		protected readonly info: TokenInfo,
@@ -158,6 +160,7 @@ export class ClientConnectionManager
 {
 	private readonly connections: Map<string, ClientConnection> = new Map();
 	private connectionToUser: Map<string, string> = new Map();
+	private connectionToReplica: Map<string, string> = new Map();
 	private userToConnections: Map<string, Set<string>> = new Map();
 	readonly presence: Presence;
 	private readonly log?: Logger;
@@ -210,12 +213,17 @@ export class ClientConnectionManager
 		info: TokenInfo,
 		options?: {
 			disableAutoRemoveOnClose?: boolean;
+			/** Restores a known replica for this socket, e.g. after hibernation */
+			replicaId?: string;
 		},
 	) => {
 		const connection = new WebSocketClientConnection(key, socket, info);
 
 		this.connections.set(key, connection);
 		this.addMappings(info.userId, key);
+		if (options?.replicaId) {
+			this.connectionToReplica.set(key, options.replicaId);
+		}
 
 		const unsubscribes: (() => void)[] = [];
 		/**
@@ -283,7 +291,30 @@ export class ClientConnectionManager
 
 	remove = async (key: string) => {
 		this.connections.delete(key);
+		this.connectionToReplica.delete(key);
 		await this.removeMappings(key);
+	};
+
+	/**
+	 * Associates a replica with a long-lived connection so messages
+	 * without a replica ID (like heartbeats) can be attributed to it.
+	 */
+	setConnectionReplica = (key: string, replicaId: string) => {
+		const connection = this.connections.get(key);
+		if (connection?.type !== 'websocket') return;
+		this.connectionToReplica.set(key, replicaId);
+	};
+
+	getConnectionReplica = (key: string) => {
+		return this.connectionToReplica.get(key);
+	};
+
+	/**
+	 * Whether this connection receives broadcasts. Push/pull
+	 * connections only receive responses to their own requests.
+	 */
+	isRealtimeConnection = (key: string) => {
+		return this.connections.get(key)?.type === 'websocket';
 	};
 
 	respond = (key: string, message: ServerMessage) => {
@@ -327,5 +358,6 @@ export class ClientConnectionManager
 			}
 		}
 		this.connections.clear();
+		this.connectionToReplica.clear();
 	};
 }

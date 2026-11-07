@@ -163,6 +163,11 @@ export type ForbiddenMessage = {
 export type ServerAckMessage = {
 	type: 'server-ack';
 	timestamp: string;
+	/**
+	 * Included for push/pull clients so they can discover
+	 * peers without waiting for their next full sync.
+	 */
+	peerPresence?: Record<string, UserInfo<any, any>>;
 };
 
 export type ServerNeedSinceMessage = {
