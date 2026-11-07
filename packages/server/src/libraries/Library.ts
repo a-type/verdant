@@ -116,6 +116,10 @@ export class Library {
 	) => {
 		if (message.type === 'heartbeat') {
 			this.handleHeartbeat(message, clientKey, info);
+			const replicaId = this.clientConnections.getConnectionReplica(clientKey);
+			if (replicaId) {
+				await this.presence.touchReplica(info.userId, replicaId);
+			}
 			return;
 		}
 
@@ -155,6 +159,12 @@ export class Library {
 		// truant before the presence-update.
 		if (message.type !== 'presence-update') {
 			await this.storage.replicas.updateLastSeen(message.replicaId);
+		}
+		if (message.type !== 'disconnecting') {
+			this.clientConnections.setConnectionReplica(clientKey, message.replicaId);
+			if (message.type !== 'presence-update') {
+				await this.presence.touchReplica(info.userId, message.replicaId);
+			}
 		}
 	};
 
@@ -233,10 +243,15 @@ export class Library {
 
 		this.enqueueRebase();
 
-		// tell sender we got and processed their operation
+		// tell sender we got and processed their operation. push/pull
+		// clients don't receive presence broadcasts, so include current
+		// presence to let them discover peers without waiting for a sync.
 		this.sender.respond(clientKey, {
 			type: 'server-ack',
 			timestamp: message.timestamp,
+			peerPresence: this.clientConnections.isRealtimeConnection(clientKey)
+				? undefined
+				: await this.presence.all(),
 		});
 
 		await this.updateHighwater(
@@ -580,11 +595,23 @@ export class Library {
 	};
 
 	private handleDisconnecting = async (
-		_message: DisconnectingMessage,
+		message: DisconnectingMessage,
 		clientKey: string,
-		_info: TokenInfo,
+		info: TokenInfo,
 	) => {
+		const updated = await this.presence.removeReplica(
+			info.userId,
+			message.replicaId,
+		);
 		await this.clientConnections.remove(clientKey);
+		if (updated) {
+			// let the user's other replicas know this one is gone
+			this.sender.broadcast({
+				type: 'presence-changed',
+				replicaId: updated.replicaId,
+				userInfo: updated,
+			});
+		}
 	};
 
 	private updateHighwater = async (
@@ -639,8 +666,8 @@ export class Library {
 		// for global ack, to determine consensus, also allow
 		// for all actively connected replicas to ack regardless of their
 		// type.
-		const activeReplicaIds = Object.values(await this.presence.all()).map(
-			(p) => p.replicaId,
+		const activeReplicaIds = Object.values(await this.presence.all()).flatMap(
+			(p) => p.replicaIds ?? [p.replicaId],
 		);
 		const globalAck =
 			await this.storage.replicas.getGlobalAck(activeReplicaIds);

@@ -50,6 +50,9 @@ const baseOptions = async ({
 		respond: vi.fn((clientKey: string, message: ServerMessage) => {
 			if (onRespond) onRespond(clientKey, message);
 		}),
+		setConnectionReplica: vi.fn(),
+		getConnectionReplica: vi.fn(),
+		isRealtimeConnection: vi.fn(() => true),
 	} as any,
 });
 
