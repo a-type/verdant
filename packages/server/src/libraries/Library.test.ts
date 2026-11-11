@@ -209,6 +209,10 @@ describe('Library', () => {
 					globalAckTimestamp: undefined,
 					overwriteLocalData: false,
 					peerPresence: {},
+					presenceVersion: {
+						epoch: expect.any(String),
+						revision: 0,
+					},
 				},
 			);
 		});

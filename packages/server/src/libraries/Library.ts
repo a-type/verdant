@@ -11,6 +11,7 @@ import {
 	Operation,
 	OperationMessage,
 	PresenceUpdateMessage,
+	PresenceVersion,
 	Ref,
 	ReplicaType,
 	rewriteAuthzOriginator,
@@ -246,12 +247,15 @@ export class Library {
 		// tell sender we got and processed their operation. push/pull
 		// clients don't receive presence broadcasts, so include current
 		// presence to let them discover peers without waiting for a sync.
+		const presenceSnapshot = this.clientConnections.isRealtimeConnection(
+			clientKey,
+		)
+			? undefined
+			: await this.presence.snapshot();
 		this.sender.respond(clientKey, {
 			type: 'server-ack',
 			timestamp: message.timestamp,
-			peerPresence: this.clientConnections.isRealtimeConnection(clientKey)
-				? undefined
-				: await this.presence.all(),
+			...presenceSnapshot,
 		});
 
 		await this.updateHighwater(
@@ -508,7 +512,7 @@ export class Library {
 
 		// respond to client
 
-		const peerPresence = await this.presence.all();
+		const { peerPresence, presenceVersion } = await this.presence.snapshot();
 
 		this.log(
 			'info',
@@ -533,6 +537,7 @@ export class Library {
 				globalAckTimestamp:
 					(await this.storage.replicas.getGlobalAck()) ?? undefined,
 				peerPresence,
+				presenceVersion,
 				// only request the client to overwrite local data if a reset is requested
 				// and there is data to overwrite it. otherwise the client may still
 				// send its own history to us.
@@ -599,7 +604,7 @@ export class Library {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		const updated = await this.presence.removeReplica(
+		const updated = await this.presence.removeReplicaWithVersion(
 			info.userId,
 			message.replicaId,
 		);
@@ -608,8 +613,9 @@ export class Library {
 			// let the user's other replicas know this one is gone
 			this.sender.broadcast({
 				type: 'presence-changed',
-				replicaId: updated.replicaId,
-				userInfo: updated,
+				replicaId: updated.userInfo.replicaId,
+				userInfo: updated.userInfo,
+				presenceVersion: updated.presenceVersion,
 			});
 		}
 	};
@@ -744,7 +750,7 @@ export class Library {
 		clientKey: string,
 		info: TokenInfo,
 	) => {
-		const updated = await this.presence.set(info.userId, {
+		const updated = await this.presence.setWithVersion(info.userId, {
 			presence: message.presence,
 			internal: message.internal,
 			replicaId: message.replicaId,
@@ -754,18 +760,23 @@ export class Library {
 			{
 				type: 'presence-changed',
 				replicaId: message.replicaId,
-				userInfo: updated,
+				userInfo: updated.userInfo,
+				presenceVersion: updated.presenceVersion,
 			},
 			// mirror back to the replica which sent it so it has profile
 			[],
 		);
 	};
 
-	private onPresenceLost = async (userId: string) => {
+	private onPresenceLost = async (
+		userId: string,
+		presenceVersion: PresenceVersion,
+	) => {
 		this.log('info', 'User disconnected from all replicas:', userId);
 		this.sender.broadcast({
 			type: 'presence-offline',
 			userId,
+			presenceVersion,
 		});
 		if (Object.keys(await this.presence.all()).length === 0) {
 			this.log('info', `All users have disconnected`);
@@ -810,7 +821,7 @@ export class Library {
 
 	destroy = async () => {
 		this.log('info', 'Destroying library');
-		this.presence.clear();
+		await this.presence.clear();
 		await Promise.all([
 			this.storage.replicas.deleteAll(),
 			this.storage.operations.deleteAll(),

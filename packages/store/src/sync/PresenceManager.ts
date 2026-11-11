@@ -37,12 +37,23 @@ export class PresenceManager<
 	load: () => void;
 	/** Fired on any change to a peer or the local user */
 	change: () => void;
+	/** The server's in-memory presence revision was reset. */
+	versionReset: () => void;
 }> {
 	private _peers = {} as Record<string, UserInfo<Profile, Presence>>;
 	private _self = { profile: {} } as UserInfo<Profile, Presence>;
 	// keep track of own replica IDs - applications may care if we're "alone" but with multiple devices.
 	private _selfReplicaIds = new Set<string>();
 	private _peerIds = new Array<string>();
+	private presenceEpoch: string | undefined;
+	private snapshotRevision = -1;
+	private newerUpdates = new Map<
+		string,
+		{
+			revision: number;
+			offline: boolean;
+		}
+	>();
 	private _updateBatcher;
 	private _updateBatch: Batch<{
 		presence?: Partial<Presence>;
@@ -134,11 +145,70 @@ export class PresenceManager<
 		let selfChanged = false;
 		const peerIdsSet = new Set<string>(this.peerIds);
 
-		const peerSnapshot =
+		let peerSnapshot =
 			message.type === 'sync-resp' ||
 			(message.type === 'server-ack' && message.peerPresence)
 				? message.peerPresence
 				: undefined;
+
+		const version =
+			message.type === 'presence-changed' ||
+			message.type === 'presence-offline' ||
+			message.type === 'sync-resp' ||
+			message.type === 'server-ack'
+				? message.presenceVersion
+				: undefined;
+		if (version) {
+			if (this.presenceEpoch !== version.epoch) {
+				const hadEpoch = this.presenceEpoch !== undefined;
+				this.presenceEpoch = version.epoch;
+				this.snapshotRevision = -1;
+				this.newerUpdates.clear();
+				if (hadEpoch) this.emit('versionReset');
+			}
+			if (peerSnapshot) {
+				if (version.revision < this.snapshotRevision) return;
+				this.snapshotRevision = version.revision;
+				peerSnapshot = { ...peerSnapshot };
+				for (const [userId, update] of this.newerUpdates) {
+					if (update.revision <= version.revision) {
+						this.newerUpdates.delete(userId);
+					} else if (update.offline) {
+						delete peerSnapshot[userId];
+					} else if (userId === this._self.id) {
+						peerSnapshot[userId] = this._self;
+					} else if (this._peers[userId]) {
+						peerSnapshot[userId] = this._peers[userId];
+					}
+				}
+			} else if (
+				message.type === 'presence-changed' ||
+				message.type === 'presence-offline'
+			) {
+				const userId =
+					message.type === 'presence-changed'
+						? message.userInfo.id
+						: message.userId;
+				if (
+					version.revision <= this.snapshotRevision ||
+					version.revision <= (this.newerUpdates.get(userId)?.revision ?? -1)
+				) {
+					return;
+				}
+				this.newerUpdates.set(userId, {
+					revision: version.revision,
+					offline: message.type === 'presence-offline',
+				});
+			}
+		} else if (
+			peerSnapshot ||
+			message.type === 'presence-changed' ||
+			message.type === 'presence-offline'
+		) {
+			// Unversioned messages can replace state that the revision metadata describes.
+			this.snapshotRevision = -1;
+			this.newerUpdates.clear();
+		}
 
 		if (message.type === 'presence-changed') {
 			if (this.isSelf(localReplicaInfo, message.userInfo)) {

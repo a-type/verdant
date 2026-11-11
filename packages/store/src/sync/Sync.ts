@@ -303,6 +303,7 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
+		this.presence.subscribe('versionReset', this.handlePresenceVersionReset);
 
 		ctx.internalEvents.subscribe('outgoingSyncMessage', this.send);
 		this.webSocketSync.subscribe('message', this.handleMessage);
@@ -457,6 +458,21 @@ export class ServerSync<Presence = any, Profile = any>
 		this.send(
 			await (await this.ctx.meta).messageCreator.createPresenceUpdate(data),
 		);
+	};
+
+	private handlePresenceVersionReset = async () => {
+		const activeSync = this.activeSync;
+		if (activeSync.status !== 'active' || !activeSync.hasSynced) return;
+		const message = await (
+			await this.ctx.meta
+		).messageCreator.createSyncStep1();
+		if (
+			this.activeSync === activeSync &&
+			activeSync.status === 'active' &&
+			activeSync.hasSynced
+		) {
+			activeSync.send(message);
+		}
 	};
 
 	setMode = (transport: SyncTransportMode) => {
