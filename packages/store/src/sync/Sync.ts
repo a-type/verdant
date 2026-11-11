@@ -20,6 +20,10 @@ import {
 	ServerSyncEndpointProviderConfig,
 } from './ServerSyncEndpointProvider.js';
 import { WebSocketSync } from './WebSocketSync.js';
+import {
+	AutomaticTransportSelection,
+	TransportSelector,
+} from './TransportSelector.js';
 
 type SyncEvents = {
 	onlineChange: (isOnline: boolean) => void;
@@ -163,8 +167,14 @@ export interface ServerSyncOptions<Profile = any, Presence = any>
 	 * The built-in behavior is essentially switching modes based on
 	 * the number of peers detected by client.sync.presence.
 	 */
-	automaticTransportSelection?: boolean | 'peers-only';
+	automaticTransportSelection?: AutomaticTransportSelection;
 	initialTransport?: SyncTransportMode;
+	/**
+	 * How long, in milliseconds, to keep a connected WebSocket without other
+	 * replicas before automatically switching to HTTP. Defaults to 1000.
+	 * Applies only when automatic transport selection is enabled.
+	 */
+	realtimeGracePeriod?: number;
 	autoStart?: boolean;
 	/**
 	 * Optionally specify an interval, in milliseconds, to poll the server
@@ -208,6 +218,7 @@ export class ServerSync<Presence = any, Profile = any>
 	private broadcastChannel: BroadcastChannel | null = null;
 	private _activelySyncing = false;
 	private _hasSynced = false;
+	private transportSelector: TransportSelector;
 
 	readonly presence: PresenceManager<Profile, Presence>;
 
@@ -223,6 +234,7 @@ export class ServerSync<Presence = any, Profile = any>
 			automaticTransportSelection = true,
 			autoStart,
 			initialTransport,
+			realtimeGracePeriod,
 			pullInterval,
 			presenceUpdateBatchTimeout,
 			defaultProfile,
@@ -282,12 +294,9 @@ export class ServerSync<Presence = any, Profile = any>
 				this.handleBroadcastChannelMessage,
 			);
 		}
-		ctx.log(
-			'info',
-			'Sync initialized with transport:',
-			initialTransport ?? 'pull',
-		);
-		if (initialTransport === 'realtime') {
+		const startingTransport = initialTransport ?? 'pull';
+		ctx.log('info', 'Sync initialized with transport:', startingTransport);
+		if (startingTransport === 'realtime') {
 			this.activeSync = this.webSocketSync;
 		} else {
 			this.activeSync = this.pushPullSync;
@@ -297,45 +306,22 @@ export class ServerSync<Presence = any, Profile = any>
 
 		ctx.internalEvents.subscribe('outgoingSyncMessage', this.send);
 		this.webSocketSync.subscribe('message', this.handleMessage);
-		this.webSocketSync.subscribe('onlineChange', this.handleOnlineChange);
+		this.webSocketSync.subscribe('onlineChange', (online) => {
+			this.transportSelector.socketOnlineChange(online);
+			this.handleOnlineChange(online);
+		});
 
 		this.pushPullSync.subscribe('message', this.handleMessage);
 		this.pushPullSync.subscribe('onlineChange', this.handleOnlineChange);
 
-		if (automaticTransportSelection && this.canDoRealtime) {
-			// automatically shift between transport modes depending
-			// on whether any peers are present (matching view if
-			// applicable)
-			const shouldUseRealtime = () => {
-				const hasPeers = this.presence.getViewPeers().length > 0;
-				return (
-					hasPeers ||
-					(automaticTransportSelection !== 'peers-only' &&
-						this.presence.selfReplicaIds.size > 1)
-				);
-			};
-			const decideIfUpgrade = () => {
-				if (switchoverTimeout) {
-					clearTimeout(switchoverTimeout);
-				}
-				const shouldUpgrade = shouldUseRealtime();
-				if (shouldUpgrade && this.mode === 'pull') {
-					this.setMode('realtime');
-				} else if (!shouldUpgrade && this.mode === 'realtime') {
-					// wait 1 second then switch to pull mode if still empty
-					switchoverTimeout = setTimeout(() => {
-						if (!shouldUseRealtime() && this.mode === 'realtime') {
-							this.setMode('pull');
-						}
-					}, 1000);
-				}
-			};
-			let switchoverTimeout: NodeJS.Timeout;
-			this.presence.subscribe('peersChanged', decideIfUpgrade);
-			if (automaticTransportSelection !== 'peers-only') {
-				this.presence.subscribe('selfChanged', decideIfUpgrade);
-			}
-		}
+		this.transportSelector = new TransportSelector({
+			selection: automaticTransportSelection,
+			realtimeGracePeriod,
+			presence: this.presence,
+			getMode: () => this.mode,
+			canDoRealtime: () => this.canDoRealtime,
+			setMode: this.setMode,
+		});
 
 		if (autoStart) {
 			this.start();
@@ -496,6 +482,7 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 		this.activeSync.stop();
 		this.activeSync = newSync;
+		this.transportSelector.modeChanged();
 	};
 
 	setPullInterval = (interval: number) => {
@@ -583,11 +570,13 @@ export class ServerSync<Presence = any, Profile = any>
 
 	public start = () => {
 		this.ctx.log('info', 'Starting sync');
+		this.transportSelector.start();
 		return this.activeSync.start();
 	};
 
 	public stop = () => {
 		this.ctx.log('info', 'Stopping sync');
+		this.transportSelector.stop();
 		return this.activeSync.stop();
 	};
 
@@ -596,6 +585,7 @@ export class ServerSync<Presence = any, Profile = any>
 	}
 
 	public destroy = () => {
+		this.transportSelector.destroy();
 		this.dispose();
 		this.webSocketSync.destroy();
 		this.pushPullSync.destroy();

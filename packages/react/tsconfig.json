@@ -4,7 +4,7 @@
 		"rootDir": "./src",
 		"outDir": "./dist/esm",
 		"lib": ["esnext", "dom"],
-		"types": ["vitest/browser"]
+		"types": ["vitest/browser", "node"]
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"]
 }
