@@ -25,6 +25,7 @@ import {
 } from '../persistence/interfaces.js';
 import { initializePersistence } from '../persistence/persistence.js';
 import { ServerSyncOptions } from '../sync/Sync.js';
+import type { AutomaticTransportSelection } from '../sync/TransportSelector.js';
 import { ShutdownHandler } from './ShutdownHandler.js';
 import { Time } from './Time.js';
 
@@ -354,8 +355,14 @@ export interface SyncConfig<Profile = any, Presence = any>
 	 * The built-in behavior is essentially switching modes based on
 	 * the number of peers detected by client.sync.presence.
 	 */
-	automaticTransportSelection?: boolean | 'peers-only';
+	automaticTransportSelection?: AutomaticTransportSelection;
 	initialTransport?: SyncTransportMode;
+	/**
+	 * How long, in milliseconds, to keep a connected WebSocket without other
+	 * replicas before automatically switching to HTTP. Defaults to 1000.
+	 * Applies only when automatic transport selection is enabled.
+	 */
+	realtimeGracePeriod?: number;
 	autoStart?: boolean;
 	/**
 	 * Optionally specify an interval, in milliseconds, to poll the server
