@@ -1,5 +1,13 @@
 # @lo-fi/server
 
+## 4.3.1
+
+### Patch Changes
+
+- 7537306: Keep peer presence consistent when realtime updates and sync snapshots arrive out of order.
+- Updated dependencies [7537306]
+  - @verdant-web/common@3.3.1
+
 ## 4.3.0
 
 ### Minor Changes

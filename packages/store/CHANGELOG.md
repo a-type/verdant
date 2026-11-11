@@ -1,5 +1,18 @@
 # @lo-fi/web
 
+## 5.7.0
+
+### Minor Changes
+
+- 3e0619b: Make the WebSocket grace period for automatic transport selection configurable.
+
+### Patch Changes
+
+- 7537306: Keep peer presence consistent when realtime updates and sync snapshots arrive out of order.
+- cc05043: Recover closed realtime sync sockets when the app returns to the foreground, the network comes online, or a periodic connection check finds a missed reconnect. Avoid token errors when local changes occur while realtime authentication is pending.
+- Updated dependencies [7537306]
+  - @verdant-web/common@3.3.1
+
 ## 5.6.0
 
 ### Minor Changes
