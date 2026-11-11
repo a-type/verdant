@@ -495,6 +495,14 @@ export class ServerSync<Presence = any, Profile = any>
 
 	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
+			if (
+				this.activeSync.mode === 'realtime' &&
+				!this.activeSync.isConnected &&
+				!this.endpointProvider.tokenInfo
+			) {
+				this.ctx.log('debug', 'Ignoring outgoing message while awaiting auth');
+				return;
+			}
 			// before sync, replace 'originator' authz subjects
 			// with token userId. This is the easiest place to
 			// do this and allows the rest of the system to be

@@ -5,7 +5,11 @@ export class BackoffScheduler extends EventSubscriber<{
 }> {
 	private readonly backoff: Backoff;
 	private timer: NodeJS.Timeout | null = null;
-	private isScheduled = false;
+	private _isScheduled = false;
+
+	get isScheduled() {
+		return this._isScheduled;
+	}
 
 	constructor(backoff: Backoff) {
 		super();
@@ -13,12 +17,13 @@ export class BackoffScheduler extends EventSubscriber<{
 	}
 
 	next = () => {
-		if (!this.isScheduled) {
-			this.isScheduled = true;
+		if (!this._isScheduled) {
+			this._isScheduled = true;
 			this.timer = setTimeout(() => {
-				this.emit('trigger');
-				this.isScheduled = false;
+				this.timer = null;
+				this._isScheduled = false;
 				this.backoff.next();
+				this.emit('trigger');
 			}, this.backoff.current);
 		}
 	};
@@ -29,6 +34,7 @@ export class BackoffScheduler extends EventSubscriber<{
 			clearTimeout(this.timer);
 			this.timer = null;
 		}
+		this._isScheduled = false;
 	};
 }
 
