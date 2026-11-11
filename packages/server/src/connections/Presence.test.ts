@@ -55,4 +55,36 @@ describe('Presence replica tracking', () => {
 		expect(updated?.replicaId).toBe('a');
 		expect(await presence.removeReplica('user', 'a')).toBeUndefined();
 	});
+
+	it('serializes snapshots with presence updates and departures', async () => {
+		const info = (id: string) => ({
+			id,
+			replicaId: `replica-${id}`,
+			presence: {},
+		});
+		const a = presence.setWithVersion('a', info('a'));
+		const first = presence.snapshot();
+		const b = presence.setWithVersion('b', info('b'));
+		const second = presence.snapshot();
+		const [aUpdate, firstSnapshot, bUpdate, secondSnapshot] = await Promise.all(
+			[a, first, b, second],
+		);
+		expect(firstSnapshot.presenceVersion).toEqual(aUpdate.presenceVersion);
+		expect(Object.keys(firstSnapshot.peerPresence)).toEqual(['a']);
+		expect(bUpdate.presenceVersion.revision).toBe(
+			aUpdate.presenceVersion.revision + 1,
+		);
+		expect(secondSnapshot.presenceVersion).toEqual(bUpdate.presenceVersion);
+		expect(Object.keys(secondSnapshot.peerPresence)).toEqual(['a', 'b']);
+
+		const lost = vi.fn();
+		presence.subscribe('lost', lost);
+		await presence.remove('b');
+		const afterRemoval = await presence.snapshot();
+		expect(afterRemoval.presenceVersion.revision).toBe(
+			bUpdate.presenceVersion.revision + 1,
+		);
+		expect(lost).toHaveBeenCalledWith('b', afterRemoval.presenceVersion);
+		expect(Object.keys(afterRemoval.peerPresence)).toEqual(['a']);
+	});
 });

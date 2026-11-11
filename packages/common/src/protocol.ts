@@ -4,6 +4,12 @@ import { DocumentBaseline } from './baseline.js';
 import { Operation } from './operation.js';
 import { UserInfo, VerdantInternalPresence } from './presence.js';
 
+/** Monotonic within one in-memory server instance; the epoch changes on restart. */
+export type PresenceVersion = {
+	epoch: string;
+	revision: number;
+};
+
 export type HeartbeatMessage = {
 	type: 'heartbeat';
 };
@@ -89,6 +95,7 @@ export type SyncResponseMessage = {
 	 * A map of connected clients' presences values
 	 */
 	peerPresence: Record<string, UserInfo<any, any>>;
+	presenceVersion?: PresenceVersion;
 
 	/**
 	 * The timestamp sent in the original sync message -
@@ -140,6 +147,7 @@ export type PresenceChangedMessage = {
 	replicaId: string;
 
 	userInfo: UserInfo<any, any>;
+	presenceVersion?: PresenceVersion;
 };
 
 /**
@@ -149,6 +157,7 @@ export type PresenceChangedMessage = {
 export type PresenceOfflineMessage = {
 	type: 'presence-offline';
 	userId: string;
+	presenceVersion?: PresenceVersion;
 };
 
 export type GlobalAckMessage = {
@@ -168,6 +177,7 @@ export type ServerAckMessage = {
 	 * peers without waiting for their next full sync.
 	 */
 	peerPresence?: Record<string, UserInfo<any, any>>;
+	presenceVersion?: PresenceVersion;
 };
 
 export type ServerNeedSinceMessage = {

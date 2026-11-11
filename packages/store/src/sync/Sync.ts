@@ -303,6 +303,7 @@ export class ServerSync<Presence = any, Profile = any>
 		}
 
 		this.presence.subscribe('update', this.handlePresenceUpdate);
+		this.presence.subscribe('versionReset', this.handlePresenceVersionReset);
 
 		ctx.internalEvents.subscribe('outgoingSyncMessage', this.send);
 		this.webSocketSync.subscribe('message', this.handleMessage);
@@ -459,6 +460,21 @@ export class ServerSync<Presence = any, Profile = any>
 		);
 	};
 
+	private handlePresenceVersionReset = async () => {
+		const activeSync = this.activeSync;
+		if (activeSync.status !== 'active' || !activeSync.hasSynced) return;
+		const message = await (
+			await this.ctx.meta
+		).messageCreator.createSyncStep1();
+		if (
+			this.activeSync === activeSync &&
+			activeSync.status === 'active' &&
+			activeSync.hasSynced
+		) {
+			activeSync.send(message);
+		}
+	};
+
 	setMode = (transport: SyncTransportMode) => {
 		if (transport === 'realtime' && !this.canDoRealtime) {
 			throw new Error(
@@ -495,6 +511,14 @@ export class ServerSync<Presence = any, Profile = any>
 
 	send = async (message: ClientMessage) => {
 		if (this.activeSync.status === 'active') {
+			if (
+				this.activeSync.mode === 'realtime' &&
+				!this.activeSync.isConnected &&
+				!this.endpointProvider.tokenInfo
+			) {
+				this.ctx.log('debug', 'Ignoring outgoing message while awaiting auth');
+				return;
+			}
 			// before sync, replace 'originator' authz subjects
 			// with token userId. This is the easiest place to
 			// do this and allows the rest of the system to be

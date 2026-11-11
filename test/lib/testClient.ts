@@ -20,6 +20,8 @@ export function createTestClient({
 	onOperation,
 	oldSchemas,
 	disableRebasing,
+	webSocket,
+	fetchAuth,
 }: {
 	server?: { port: number };
 	library: string;
@@ -37,6 +39,8 @@ export function createTestClient({
 	onOperation?: (operation: Operation) => void;
 	oldSchemas?: StorageSchema[];
 	disableRebasing?: boolean;
+	webSocket?: typeof WebSocket;
+	fetchAuth?: () => Promise<{ accessToken: string }>;
 }) {
 	const client = new Client({
 		migrations,
@@ -44,6 +48,7 @@ export function createTestClient({
 		sync: server
 			? {
 					authEndpoint: `http://localhost:${server.port}/auth/${library}?user=${user}&type=${type}`,
+					fetchAuth,
 					initialPresence: {} as any,
 					defaultProfile: {} as any,
 					initialTransport: transport,
@@ -71,6 +76,7 @@ export function createTestClient({
 		EXPERIMENTAL_weakRefs: true,
 		oldSchemas,
 		environment: {
+			...(webSocket ? { WebSocket: webSocket } : {}),
 			location: {
 				reload: vi.fn(() => {
 					if (log || logId) {

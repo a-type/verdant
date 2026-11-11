@@ -31,7 +31,10 @@ export class WebSocketSync
 	readonly mode = 'realtime';
 	private ctx: Context;
 
-	private heartbeat = new Heartbeat();
+	private heartbeat = new Heartbeat({ restartOnTabFocus: false });
+	private connectionCheck: ReturnType<typeof setInterval> | null = null;
+	private connectionGeneration = 0;
+	private connecting = false;
 
 	private reconnectScheduler = new BackoffScheduler(
 		new Backoff(2_000, 60_000, 1.5),
@@ -53,9 +56,7 @@ export class WebSocketSync
 
 		this.reconnectScheduler.subscribe('trigger', this.initializeSocket);
 		this.heartbeat.subscribe('beat', this.sendHeartbeat);
-		window.addEventListener('beforeunload', () => {
-			return this.sendDisconnecting();
-		});
+		window.addEventListener('beforeunload', this.sendDisconnectingOnUnload);
 	}
 
 	get hasSynced() {
@@ -66,6 +67,7 @@ export class WebSocketSync
 		if (!this.socket) {
 			throw new Error('Invalid sync state: online but socket is null');
 		}
+		this.reconnectScheduler.reset();
 		this.synced = false;
 		if (this.connectQueue.length) {
 			for (const msg of this.connectQueue) {
@@ -93,14 +95,24 @@ export class WebSocketSync
 			this.synced = false;
 			this.heartbeat.stop();
 		} else {
+			const generation = this.connectionGeneration;
+			const socket = this.socket;
 			this.ctx.log('debug', 'Starting sync');
 			this.hasStartedSync = true;
 			this.synced = false;
 			const meta = await this.ctx.meta;
-			this.send(
-				await meta.messageCreator.createPresenceUpdate(this.presence.self),
+			const presence = await meta.messageCreator.createPresenceUpdate(
+				this.presence.self,
 			);
-			this.send(await meta.messageCreator.createSyncStep1());
+			const sync = await meta.messageCreator.createSyncStep1();
+			if (
+				generation !== this.connectionGeneration ||
+				this.socket !== socket ||
+				!this.isConnected
+			)
+				return;
+			this.send(presence);
+			this.send(sync);
 			this.heartbeat.start();
 		}
 		this.emit('onlineChange', online);
@@ -184,7 +196,7 @@ export class WebSocketSync
 
 	private onError = (event: Event) => {
 		this.ctx.log('error', 'Sync socket error', event, event.target);
-		if (this.disposed) return;
+		if (this.disposed || this.status !== 'active') return;
 		// this could be an auth error which requires us to get a new token
 		// so clearing the endpoint cache to force a refresh of the token too
 		this.endpointProvider.clearCache();
@@ -196,32 +208,99 @@ export class WebSocketSync
 	private onClose = (event: CloseEvent) => {
 		this.ctx.log('info', 'Sync socket disconnected', event.code);
 		this.onOnlineChange(false);
-		if (this.disposed) return;
+		if (this.disposed || this.status !== 'active') return;
 		this.reconnectScheduler.next();
 		this.ctx.log('info', `Attempting reconnect to websocket sync`);
 	};
 
 	private initializeSocket = async () => {
-		const endpoint = await this.endpointProvider.getEndpoints();
-		// abusing protocols to pass the auth token
-		this.socket = new this.ctx.environment.WebSocket(endpoint.websocket, [
-			'Bearer',
-			endpoint.token,
-		]);
-		this.socket.addEventListener('message', this.onMessage);
-		this.socket.addEventListener('open', this.onOpen);
-		this.socket.addEventListener('error', this.onError);
-		this.socket.addEventListener('close', this.onClose);
-		return this.socket;
+		if (
+			this.status !== 'active' ||
+			this.connecting ||
+			(this.socket && this.socket.readyState !== WEBSOCKET_CLOSED)
+		) {
+			return;
+		}
+		const generation = this.connectionGeneration;
+		this.connecting = true;
+		try {
+			const endpoint = await this.endpointProvider.getEndpoints();
+			if (
+				generation !== this.connectionGeneration ||
+				this.status !== 'active'
+			) {
+				return;
+			}
+			this.removeSocketListeners(this.socket);
+			// abusing protocols to pass the auth token
+			this.socket = new this.ctx.environment.WebSocket(endpoint.websocket, [
+				'Bearer',
+				endpoint.token,
+			]);
+			this.socket.addEventListener('message', this.onMessage);
+			this.socket.addEventListener('open', this.onOpen);
+			this.socket.addEventListener('error', this.onError);
+			this.socket.addEventListener('close', this.onClose);
+		} catch (error) {
+			this.ctx.log('error', 'Failed to initialize sync socket', error);
+			if (
+				generation === this.connectionGeneration &&
+				this.status === 'active'
+			) {
+				this.reconnectScheduler.next();
+			}
+		} finally {
+			if (generation === this.connectionGeneration) {
+				this.connecting = false;
+			}
+		}
+	};
+
+	private removeSocketListeners = (socket: WebSocket | null) => {
+		socket?.removeEventListener('message', this.onMessage);
+		socket?.removeEventListener('close', this.onClose);
+		socket?.removeEventListener('error', this.onError);
+		socket?.removeEventListener('open', this.onOpen);
+	};
+
+	private recoverSocket = (immediate: boolean) => {
+		if (
+			this.status !== 'active' ||
+			this.connecting ||
+			(this.socket && this.socket.readyState !== WEBSOCKET_CLOSED)
+		) {
+			return;
+		}
+		if (!immediate && this.reconnectScheduler.isScheduled) return;
+		this.ctx.log('info', 'Recovering closed websocket sync connection');
+		if (this.hasStartedSync) void this.onOnlineChange(false);
+		this.reconnectScheduler.reset();
+		void this.initializeSocket();
+	};
+
+	private onForeground = () => {
+		if (this.status !== 'active') return;
+		if (this.isConnected) this.heartbeat.start(true);
+		else this.recoverSocket(true);
+	};
+
+	private onVisibilityChange = () => {
+		if (document.visibilityState === 'visible') this.onForeground();
+	};
+
+	private onNetworkOnline = () => this.recoverSocket(true);
+	private checkConnection = () => this.recoverSocket(false);
+	private sendDisconnectingOnUnload = () => {
+		void this.sendDisconnecting();
 	};
 
 	private sendHeartbeat = async () => {
 		this.send(await (await this.ctx.meta).messageCreator.createHeartbeat());
 	};
 
-	reconnect = () => {
-		this.stop();
-		this.start();
+	reconnect = async () => {
+		await this.stop();
+		await this.start();
 	};
 
 	private canSkipSyncWait = (message: ClientMessage) => {
@@ -299,28 +378,51 @@ export class WebSocketSync
 
 	destroy = () => {
 		this.dispose();
-		this.stop();
+		window.removeEventListener('beforeunload', this.sendDisconnectingOnUnload);
+		void this.stop();
 	};
 
 	start = async () => {
-		if (this.socket) {
-			return;
-		}
-		await this.initializeSocket();
+		if (this.status === 'active' || this.disposed) return;
 		this._status = 'active';
+		window.addEventListener('pageshow', this.onForeground);
+		window.addEventListener('online', this.onNetworkOnline);
+		document.addEventListener('visibilitychange', this.onVisibilityChange);
+		this.connectionCheck = setInterval(this.checkConnection, 5_000);
+		await this.initializeSocket();
 	};
 
 	stop = async () => {
-		await this.sendDisconnecting();
-		this.socket?.removeEventListener('message', this.onMessage);
-		this.socket?.removeEventListener('close', this.onClose);
-		this.socket?.removeEventListener('error', this.onError);
-		this.socket?.removeEventListener('open', this.onOpen);
-		if (this.socket?.readyState === WEBSOCKET_OPEN) {
-			this.socket.close();
-		}
+		const socket = this.socket;
 		this.socket = null;
 		this._status = 'paused';
+		this.connectionGeneration++;
+		this.connecting = false;
+		this.hasStartedSync = false;
+		this.synced = false;
+		this.heartbeat.stop();
+		this.reconnectScheduler.reset();
+		if (this.connectionCheck) clearInterval(this.connectionCheck);
+		this.connectionCheck = null;
+		window.removeEventListener('pageshow', this.onForeground);
+		window.removeEventListener('online', this.onNetworkOnline);
+		document.removeEventListener('visibilitychange', this.onVisibilityChange);
+		this.removeSocketListeners(socket);
+		if (!socket) return;
+		try {
+			if (socket.readyState === WEBSOCKET_OPEN) {
+				const message = await (
+					await this.ctx.meta
+				).messageCreator.createDisconnecting('client-shutdown');
+				if (socket.readyState === WEBSOCKET_OPEN) {
+					socket.send(JSON.stringify(message));
+				}
+			}
+		} finally {
+			if (socket.readyState === WEBSOCKET_OPEN || socket.readyState === 0) {
+				socket.close();
+			}
+		}
 	};
 
 	ignoreIncoming(): void {
@@ -338,3 +440,4 @@ export class WebSocketSync
 }
 
 const WEBSOCKET_OPEN = 1;
+const WEBSOCKET_CLOSED = 3;

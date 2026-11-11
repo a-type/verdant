@@ -1,13 +1,15 @@
 import {
 	EventSubscriber,
+	generateId,
 	initialInternalPresence,
+	PresenceVersion,
 	UserInfo,
 	UserInfoUpdate,
 } from '@verdant-web/common';
 import { UserProfiles } from '../Profiles.js';
 
 export type PresenceEvents = {
-	lost: (userId: string) => void;
+	lost: (userId: string, version: PresenceVersion) => void;
 };
 
 export type PresenceStorageItem = UserInfo<any, any> & {
@@ -140,25 +142,50 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 	}
 
 	private lastTouched = new Map<string, Map<string, number>>();
+	private readonly epoch = generateId();
+	private revision = 0;
+	private pending: Promise<void> = Promise.resolve();
+
+	private serialize = <T>(operation: () => Promise<T>): Promise<T> => {
+		const result = this.pending.then(operation);
+		this.pending = result.then(
+			() => undefined,
+			() => undefined,
+		);
+		return result;
+	};
+
+	private version = (): PresenceVersion => ({
+		epoch: this.epoch,
+		revision: this.revision,
+	});
 
 	set = async (
 		userId: string,
 		userInfo: UserInfoUpdate,
-	): Promise<UserInfo<any, any>> => {
-		const now = Date.now();
-		const existing = await this.storage.get(userId, now);
-		const replicaLastSeen = pruneReplicas(existing?.replicaLastSeen, now);
-		replicaLastSeen[userInfo.replicaId] = now;
-		this.recordTouch(userId, userInfo.replicaId, now);
-		const value = await this.storage.set(
-			userId,
-			{ ...userInfo, replicaLastSeen },
-			await this.profiles.get(userId),
-			now + DEFAULT_EXPIRATION_TIME,
-		);
+	): Promise<UserInfo<any, any>> =>
+		(await this.setWithVersion(userId, userInfo)).userInfo;
 
-		return toUserInfo(value, now);
-	};
+	setWithVersion = (userId: string, userInfo: UserInfoUpdate) =>
+		this.serialize(async () => {
+			const now = Date.now();
+			const existing = await this.storage.get(userId, now);
+			const replicaLastSeen = pruneReplicas(existing?.replicaLastSeen, now);
+			replicaLastSeen[userInfo.replicaId] = now;
+			this.recordTouch(userId, userInfo.replicaId, now);
+			const value = await this.storage.set(
+				userId,
+				{ ...userInfo, replicaLastSeen },
+				await this.profiles.get(userId),
+				now + DEFAULT_EXPIRATION_TIME,
+			);
+
+			this.revision++;
+			return {
+				userInfo: toUserInfo(value, now),
+				presenceVersion: this.version(),
+			};
+		});
 
 	private recordTouch = (userId: string, replicaId: string, now: number) => {
 		let userTouches = this.lastTouched.get(userId);
@@ -174,28 +201,30 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 	 * changing the user's presence. Throttled to avoid a storage
 	 * write per message. Does nothing if the user has no presence.
 	 */
-	touchReplica = async (userId: string, replicaId: string) => {
-		const now = Date.now();
-		const lastTouch = this.lastTouched.get(userId)?.get(replicaId);
-		if (lastTouch && now - lastTouch < REPLICA_TOUCH_THROTTLE) return;
-		const existing = await this.storage.get(userId, now);
-		if (!existing) return;
-		this.recordTouch(userId, replicaId, now);
-		const replicaLastSeen = pruneReplicas(existing.replicaLastSeen, now);
-		replicaLastSeen[replicaId] = now;
-		await this.storage.set(
-			userId,
-			{
-				id: existing.id,
-				replicaId: existing.replicaId,
-				presence: existing.presence,
-				internal: existing.internal,
-				replicaLastSeen,
-			},
-			existing.profile,
-			now + DEFAULT_EXPIRATION_TIME,
-		);
-	};
+	touchReplica = (userId: string, replicaId: string) =>
+		this.serialize(async () => {
+			const now = Date.now();
+			const lastTouch = this.lastTouched.get(userId)?.get(replicaId);
+			if (lastTouch && now - lastTouch < REPLICA_TOUCH_THROTTLE) return;
+			const existing = await this.storage.get(userId, now);
+			if (!existing) return;
+			this.recordTouch(userId, replicaId, now);
+			const replicaLastSeen = pruneReplicas(existing.replicaLastSeen, now);
+			replicaLastSeen[replicaId] = now;
+			await this.storage.set(
+				userId,
+				{
+					id: existing.id,
+					replicaId: existing.replicaId,
+					presence: existing.presence,
+					internal: existing.internal,
+					replicaLastSeen,
+				},
+				existing.profile,
+				now + DEFAULT_EXPIRATION_TIME,
+			);
+			this.revision++;
+		});
 
 	/**
 	 * Removes one replica from a user's active replicas. Returns
@@ -205,62 +234,84 @@ export class Presence extends EventSubscriber<PresenceEvents> {
 	removeReplica = async (
 		userId: string,
 		replicaId: string,
-	): Promise<UserInfo<any, any> | undefined> => {
-		this.lastTouched.get(userId)?.delete(replicaId);
-		const now = Date.now();
-		const existing = await this.storage.get(userId, now);
-		if (!existing) return undefined;
-		const replicaLastSeen = pruneReplicas(existing.replicaLastSeen, now);
-		if (!(replicaId in replicaLastSeen)) return undefined;
-		delete replicaLastSeen[replicaId];
-		const remaining = Object.keys(replicaLastSeen);
-		if (remaining.length === 0) return undefined;
-		const value = await this.storage.set(
-			userId,
-			{
-				id: existing.id,
-				// point the user's primary replica at one which is still active
-				replicaId:
-					existing.replicaId === replicaId ? remaining[0] : existing.replicaId,
-				presence: existing.presence,
-				internal: existing.internal,
-				replicaLastSeen,
-			},
-			existing.profile,
-			existing.expiresAt,
-		);
-		return toUserInfo(value, now);
-	};
+	): Promise<UserInfo<any, any> | undefined> =>
+		(await this.removeReplicaWithVersion(userId, replicaId))?.userInfo;
 
-	keepAlive = (userId: string, duration = DEFAULT_EXPIRATION_TIME) => {
-		const time = Date.now() + duration;
-		this.storage.setExpiresAt(userId, time);
-	};
+	removeReplicaWithVersion = (userId: string, replicaId: string) =>
+		this.serialize(async () => {
+			this.lastTouched.get(userId)?.delete(replicaId);
+			const now = Date.now();
+			const existing = await this.storage.get(userId, now);
+			if (!existing) return undefined;
+			const replicaLastSeen = pruneReplicas(existing.replicaLastSeen, now);
+			if (!(replicaId in replicaLastSeen)) return undefined;
+			delete replicaLastSeen[replicaId];
+			const remaining = Object.keys(replicaLastSeen);
+			if (remaining.length === 0) return undefined;
+			const value = await this.storage.set(
+				userId,
+				{
+					id: existing.id,
+					// point the user's primary replica at one which is still active
+					replicaId:
+						existing.replicaId === replicaId
+							? remaining[0]
+							: existing.replicaId,
+					presence: existing.presence,
+					internal: existing.internal,
+					replicaLastSeen,
+				},
+				existing.profile,
+				existing.expiresAt,
+			);
+			this.revision++;
+			return {
+				userInfo: toUserInfo(value, now),
+				presenceVersion: this.version(),
+			};
+		});
 
-	get = async (userId: string) => {
-		const now = Date.now();
-		const value = await this.storage.get(userId, now);
-		return value ? toUserInfo(value, now) : undefined;
-	};
+	keepAlive = (userId: string, duration = DEFAULT_EXPIRATION_TIME) =>
+		this.serialize(async () => {
+			const time = Date.now() + duration;
+			await this.storage.setExpiresAt(userId, time);
+		});
+
+	get = (userId: string) =>
+		this.serialize(async () => {
+			const now = Date.now();
+			const value = await this.storage.get(userId, now);
+			return value ? toUserInfo(value, now) : undefined;
+		});
 
 	remove = async (userId: string) => {
-		this.lastTouched.delete(userId);
-		await this.storage.remove(userId);
-		this.emit('lost', userId);
+		const version = await this.serialize(async () => {
+			this.lastTouched.delete(userId);
+			await this.storage.remove(userId);
+			this.revision++;
+			return this.version();
+		});
+		this.emit('lost', userId, version);
 	};
 
-	all = async (): Promise<Record<string, UserInfo<any, any>>> => {
-		const now = Date.now();
-		const items = await this.storage.all();
-		const result: Record<string, UserInfo<any, any>> = {};
-		for (const [userId, item] of Object.entries(items)) {
-			result[userId] = toUserInfo(item, now);
-		}
-		return result;
-	};
+	snapshot = () =>
+		this.serialize(async () => {
+			const now = Date.now();
+			const items = await this.storage.all();
+			const result: Record<string, UserInfo<any, any>> = {};
+			for (const [userId, item] of Object.entries(items)) {
+				result[userId] = toUserInfo(item, now);
+			}
+			return { peerPresence: result, presenceVersion: this.version() };
+		});
 
-	clear = () => {
-		this.lastTouched.clear();
-		this.storage.clear();
-	};
+	all = async (): Promise<Record<string, UserInfo<any, any>>> =>
+		(await this.snapshot()).peerPresence;
+
+	clear = () =>
+		this.serialize(async () => {
+			this.lastTouched.clear();
+			await this.storage.clear();
+			this.revision++;
+		});
 }
